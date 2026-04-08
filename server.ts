@@ -506,6 +506,15 @@ app.get('/api/dashboard/top-cas', verifyToken, async (req: Request, res: Respons
     } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
+// --- SERVE STATIC FILES (PROD) ---
+const __dirname = path.resolve();
+app.use(express.static(path.join(__dirname, 'dist')));
+
+// Serve index.html for any layout or unknown route to support React Router
+app.get('*', (req: Request, res: Response) => {
+    res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+});
+
 app.listen(port, () => {
     console.log(`Server Valorizaciones running on http://localhost:${port}`);
 });
