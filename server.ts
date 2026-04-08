@@ -510,8 +510,8 @@ app.get('/api/dashboard/top-cas', verifyToken, async (req: Request, res: Respons
 const __dirname = path.resolve();
 app.use(express.static(path.join(__dirname, 'dist')));
 
-// Serve index.html for any layout or unknown route to support React Router
-app.get('(.*)', (req: Request, res: Response) => {
+// SPA Fallback: Serve index.html for any remaining routes
+app.use((req: Request, res: Response) => {
     res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 
