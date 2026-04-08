@@ -511,7 +511,7 @@ const __dirname = path.resolve();
 app.use(express.static(path.join(__dirname, 'dist')));
 
 // Serve index.html for any layout or unknown route to support React Router
-app.get('/*', (req: Request, res: Response) => {
+app.get('(.*)', (req: Request, res: Response) => {
     res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 
