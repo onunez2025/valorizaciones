@@ -212,15 +212,15 @@ export default function ValuationsPage() {
         <div className="flex flex-col h-full gap-6 animate-in fade-in duration-500 p-2">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-4xl font-black tracking-tighter">Valorizaciones CAS</h1>
-                    <p className="text-muted-foreground mt-1 text-sm font-bold uppercase tracking-widest opacity-50">Gestión quincenal de pagos y descuentos.</p>
+                    <h1 className="text-3xl font-black tracking-tight text-foreground">Valorizaciones CAS</h1>
+                    <p className="text-muted-foreground text-sm font-medium">Gestión quincenal de pagos y descuentos.</p>
                 </div>
                 {selectedCas && (
-                    <div className="flex items-center gap-3 bg-primary/10 border border-primary/20 px-6 py-3 rounded-2xl shadow-sm">
-                        <div className="w-2.5 h-2.5 bg-primary rounded-full animate-pulse shadow-[0_0_10px_rgba(var(--primary-rgb),0.4)]" />
+                    <div className="flex items-center gap-3 bg-primary/10 border border-primary/20 px-4 py-2 rounded-lg shadow-sm">
+                        <div className="w-2.5 h-2.5 bg-primary rounded-full animate-pulse" />
                         <div className="flex flex-col">
-                            <span className="text-[10px] font-black uppercase tracking-wider text-primary opacity-80">Gestionando</span>
-                            <span className="text-base font-black tracking-tight">{selectedCas.Nombre_CAS}</span>
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-primary">Gestionando</span>
+                            <span className="text-sm font-black tracking-tight">{selectedCas.Nombre_CAS}</span>
                         </div>
                     </div>
                 )}
@@ -230,8 +230,8 @@ export default function ValuationsPage() {
             <div className="relative" ref={dropdownRef}>
                 <div 
                     className={cn(
-                        "bg-card rounded-[2rem] border border-border/60 p-2 shadow-xl shadow-black/5 flex items-center gap-2 transition-all group hover:border-primary/30",
-                        isDropdownOpen && "ring-4 ring-primary/5 border-primary/40"
+                        "bg-card rounded-xl border border-border shadow-sm p-1 flex items-center gap-2 transition-all group hover:border-primary/30",
+                        isDropdownOpen && "ring-2 ring-primary/5 border-primary/40"
                     )}
                 >
                     <div className="p-3.5 bg-primary/10 rounded-2xl text-primary transition-transform group-hover:scale-105">
@@ -240,9 +240,9 @@ export default function ValuationsPage() {
                     
                     <button 
                         onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                        className="flex-1 text-left px-3 py-2"
+                        className="flex-1 text-left px-3 py-1.5"
                     >
-                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 mb-0.5">Seleccionar Centro de Atención (CAS)</p>
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60 mb-0.5">Seleccionar Centro de Atención (CAS)</p>
                         <p className={cn(
                             "text-lg font-black tracking-tight flex items-center gap-2",
                             !selectedCas && "text-muted-foreground/30 italic"
@@ -320,7 +320,7 @@ export default function ValuationsPage() {
 
             <div className="flex-1 min-h-0">
                 {!selectedCas ? (
-                    <div className="h-full bg-card rounded-[3rem] border border-border/60 border-dashed flex flex-col items-center justify-center p-12 text-center shadow-inner relative overflow-hidden group">
+                    <div className="h-full bg-card rounded-xl border border-border border-dashed flex flex-col items-center justify-center p-12 text-center shadow-sm relative overflow-hidden group">
                         <div className="absolute inset-0 bg-primary/[0.01] group-hover:bg-primary/[0.02] transition-colors" />
                         <div className="w-24 h-24 bg-primary/5 rounded-full flex items-center justify-center mb-8 border border-primary/10 relative">
                             <Search className="w-10 h-10 text-primary opacity-40" />
@@ -339,9 +339,9 @@ export default function ValuationsPage() {
                                             type="date" 
                                             value={startDate}
                                             onChange={(e) => setStartDate(e.target.value)}
-                                            className="bg-background border border-border rounded-2xl pl-12 pr-5 py-3.5 text-sm font-bold focus:ring-4 focus:ring-primary/5 focus:border-primary/20 outline-none transition-all shadow-sm"
+                                            className="bg-background border border-border rounded-md pl-10 pr-4 py-2 text-sm font-medium focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all shadow-sm"
                                         />
-                                        <Calendar className="absolute left-4.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-muted-foreground/40 group-focus-within:text-primary transition-colors" />
+                                        <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/40 group-focus-within:text-primary transition-colors" />
                                     </div>
                                 </div>
                                 <div className="space-y-2.5">
@@ -359,10 +359,10 @@ export default function ValuationsPage() {
                                 <button 
                                     onClick={handleFetchValuation}
                                     disabled={loadingData}
-                                    className="bg-primary text-primary-foreground px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest hover:opacity-90 active:scale-95 transition-all flex items-center gap-2.5 disabled:opacity-50 shadow-xl shadow-primary/20"
+                                    className="bg-primary text-primary-foreground px-6 py-2 rounded-md font-bold text-sm transition-all flex items-center gap-2 disabled:opacity-50 shadow-sm"
                                 >
                                     {loadingData ? <Activity className="w-4 h-4 animate-spin" /> : <Filter className="w-4 h-4" /> }
-                                    {loadingData ? "Cargando Información..." : "Consultar Valorización"}
+                                    {loadingData ? "Cargando..." : "Consultar Valorización"}
                                 </button>
                         </div>
 
@@ -370,54 +370,54 @@ export default function ValuationsPage() {
                         <div className="flex-1 grid grid-cols-1 xl:grid-cols-4 gap-6 min-h-0">
                             {/* Panel Izquierdo: Resumen y Acciones */}
                             <div className="xl:col-span-1 space-y-6 overflow-y-auto pr-2 custom-scrollbar">
-                                <div className="bg-card border border-border/80 rounded-[2rem] p-6 shadow-sm space-y-6">
+                                <div className="bg-card border border-border rounded-xl p-5 shadow-sm space-y-6">
                                     <div className="flex items-center justify-between">
                                         <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">Resumen de Cuenta</h3>
                                         <Calculator className="w-4 h-4 text-primary" />
                                     </div>
                                     
                                     <div className="space-y-4">
-                                        <div className="flex justify-between items-center p-4 bg-muted/20 rounded-2xl border border-border/30">
-                                            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Servicios</span>
-                                            <span className="text-lg font-black tracking-tight">S/ {totalTickets.toLocaleString()}</span>
-                                        </div>
-                                        <div className="flex justify-between items-center p-4 bg-red-500/5 rounded-2xl border border-red-200/20">
-                                            <span className="text-[10px] font-black uppercase tracking-widest text-red-600/60">Penalidades</span>
-                                            <span className="text-lg font-black text-red-600 tracking-tight">- S/ {totalPenalties.toLocaleString()}</span>
-                                        </div>
-                                        <div className="flex justify-between items-center p-5 bg-primary text-white rounded-3xl shadow-xl shadow-primary/20">
-                                            <div className="flex flex-col">
-                                                <span className="text-[10px] font-black uppercase tracking-widest opacity-60">Total Neto</span>
-                                                <span className="text-xs opacity-40">Periodo actual</span>
-                                            </div>
-                                            <span className="text-2xl font-black tracking-tighter">S/ {grandTotal.toLocaleString()}</span>
-                                        </div>
+                                        <div className="flex justify-between items-center p-3 bg-muted/20 rounded-lg border border-border/30">
+                                             <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Servicios</span>
+                                             <span className="text-base font-black tracking-tight">S/ {totalTickets.toLocaleString()}</span>
+                                         </div>
+                                         <div className="flex justify-between items-center p-3 bg-red-50/50 rounded-lg border border-red-100">
+                                             <span className="text-[10px] font-bold uppercase tracking-widest text-red-600">Penalidades</span>
+                                             <span className="text-base font-black text-red-600 tracking-tight">- S/ {totalPenalties.toLocaleString()}</span>
+                                         </div>                                               
+                                         <div className="flex justify-between items-center p-4 bg-primary text-white rounded-xl shadow-md">
+                                             <div className="flex flex-col">
+                                                 <span className="text-[10px] font-bold uppercase tracking-widest opacity-80">Total Neto</span>
+                                                 <span className="text-[10px] opacity-70">Periodo actual</span>
+                                             </div>
+                                             <span className="text-xl font-black tracking-tight">S/ {grandTotal.toLocaleString()}</span>
+                                         </div>
                                     </div>
 
                                     <div className="grid grid-cols-1 gap-3 pt-4 border-t border-border/50">
                                         <button 
                                             onClick={handleExportExcel}
-                                            className="w-full flex items-center justify-center gap-2 p-3.5 bg-muted/30 hover:bg-muted text-[10px] font-black uppercase tracking-widest rounded-2xl transition-all border border-border/40"
+                                            className="w-full flex items-center justify-center gap-2 p-3.5 bg-muted/30 hover:bg-muted text-[10px] font-black uppercase tracking-widest rounded-xl transition-all border border-border/40"
                                         >
                                             <Download className="w-4 h-4" /> Exportar a Excel
                                         </button>
                                         <button 
                                             onClick={() => setShowCloseModal(true)}
-                                            className="w-full flex items-center justify-center gap-2 p-4 bg-foreground text-background hover:opacity-90 text-[10px] font-black uppercase tracking-widest rounded-3xl transition-all shadow-lg shadow-black/10"
+                                            className="w-full flex items-center justify-center gap-2 p-3 bg-foreground text-background hover:opacity-90 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all shadow-sm"
                                         >
-                                            <Lock className="w-4 h-4" /> Cerrar Quincena
+                                            <Lock className="w-3 h-3" /> Cerrar Quincena
                                         </button>
                                     </div>
                                 </div>
                             </div>
 
                             {/* Panel Derecho: Tabs y Tablas */}
-                            <div className="xl:col-span-3 flex flex-col bg-card border border-border/80 rounded-[2.5rem] overflow-hidden shadow-sm">
+                            <div className="xl:col-span-3 flex flex-col bg-card border border-border rounded-xl overflow-hidden shadow-sm">
                                 <div className="flex p-2 bg-muted/20 border-b border-border/40">
                                     <button 
                                         onClick={() => setActiveTab('services')}
                                         className={cn(
-                                            "flex-1 flex items-center justify-center gap-2 py-4 text-[10px] font-black uppercase tracking-[0.15em] rounded-2xl transition-all",
+                                            "flex-1 flex items-center justify-center gap-2 py-4 text-[10px] font-black uppercase tracking-[0.15em] rounded-xl transition-all",
                                             activeTab === 'services' ? "bg-background text-primary shadow-sm" : "text-muted-foreground hover:bg-background/40"
                                         )}
                                     >
@@ -426,7 +426,7 @@ export default function ValuationsPage() {
                                     <button 
                                         onClick={() => setActiveTab('penalties')}
                                         className={cn(
-                                            "flex-1 flex items-center justify-center gap-2 py-4 text-[10px] font-black uppercase tracking-[0.15em] rounded-2xl transition-all",
+                                            "flex-1 flex items-center justify-center gap-2 py-4 text-[10px] font-black uppercase tracking-[0.15em] rounded-xl transition-all",
                                             activeTab === 'penalties' ? "bg-background text-red-600 shadow-sm" : "text-muted-foreground hover:bg-background/40"
                                         )}
                                     >
@@ -438,7 +438,7 @@ export default function ValuationsPage() {
                                     {activeTab === 'services' ? (
                                         <div className="space-y-4">
                                             {sortedDates.map(date => (
-                                                <div key={date} className="bg-background/50 rounded-[2rem] border border-border overflow-hidden transition-all group hover:border-primary/20">
+                                                <div key={date} className="bg-background/50 rounded-xl border border-border overflow-hidden transition-all group hover:border-primary/20">
                                                     <button 
                                                         onClick={() => toggleDate(date)}
                                                         className="w-full flex items-center justify-between p-5 hover:bg-muted/10 transition-all font-black text-xs uppercase tracking-widest text-muted-foreground"
@@ -495,7 +495,7 @@ export default function ValuationsPage() {
                                                                                     {ticket.TarifaBase === 0 ? (
                                                                                         <button 
                                                                                             onClick={() => handleOpenTarifarioModal(ticket)}
-                                                                                            className="px-3 py-1.5 bg-amber-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-md shadow-amber-500/20"
+                                                                                            className="px-3 py-1.5 bg-amber-500 text-white rounded-lg text-[10px] font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-md shadow-amber-500/20"
                                                                                         >
                                                                                             Vincular Tarifa
                                                                                         </button>
@@ -507,7 +507,7 @@ export default function ValuationsPage() {
                                                                             <td className="px-6 py-4">
                                                                                 <button 
                                                                                     onClick={() => setShowPenaltyModal({show: true, type: 'penalty'})}
-                                                                                    className="p-2.5 bg-red-500/10 text-red-600 rounded-xl hover:bg-red-500 hover:text-white transition-all opacity-0 group-hover/row:opacity-100"
+                                                                                    className="p-2.5 bg-red-500/10 text-red-600 rounded-lg hover:bg-red-500 hover:text-white transition-all opacity-0 group-hover/row:opacity-100"
                                                                                     title="Aplicar Sanción"
                                                                                 >
                                                                                     <AlertTriangle className="w-4 h-4" />
@@ -527,9 +527,9 @@ export default function ValuationsPage() {
                                             {penalties.length > 0 ? (
                                                 <div className="grid grid-cols-1 gap-4">
                                                     {penalties.map(penalty => (
-                                                        <div key={penalty.Id} className="bg-red-50/30 border border-red-200/30 rounded-[1.5rem] p-5 flex items-center justify-between hover:border-red-500/30 transition-all group">
+                                                        <div key={penalty.Id} className="bg-red-50/30 border border-red-200/30 rounded-xl p-5 flex items-center justify-between hover:border-red-500/30 transition-all group">
                                                             <div className="flex items-center gap-5">
-                                                                <div className="p-3.5 bg-red-500/10 text-red-600 rounded-2xl group-hover:scale-110 transition-transform shadow-sm">
+                                                                <div className="p-3.5 bg-red-500/10 text-red-600 rounded-lg group-hover:scale-110 transition-transform shadow-sm">
                                                                     <AlertTriangle className="w-6 h-6" />
                                                                 </div>
                                                                 <div className="space-y-1">
@@ -593,8 +593,8 @@ export default function ValuationsPage() {
             {showCloseModal && (
                 <Modal isOpen={showCloseModal} onClose={() => !isClosing && setShowCloseModal(false)} title="Cierre de Quincena">
                     <div className="p-8 space-y-8">
-                        <div className="flex items-center gap-6 p-6 bg-amber-500/5 border border-amber-200/20 rounded-[2rem]">
-                            <div className="p-4 bg-amber-500/10 text-amber-600 rounded-2xl">
+                        <div className="flex items-center gap-6 p-6 bg-amber-500/5 border border-amber-200/20 rounded-xl">
+                            <div className="p-4 bg-amber-500/10 text-amber-600 rounded-lg">
                                 <AlertCircle className="w-8 h-8" />
                             </div>
                             <div className="space-y-1">
@@ -606,11 +606,11 @@ export default function ValuationsPage() {
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">
-                            <div className="p-5 bg-muted/20 rounded-2xl border border-border/40">
+                            <div className="p-5 bg-muted/20 rounded-xl border border-border/40">
                                 <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground block mb-2 opacity-50">Total Bruto</span>
                                 <span className="text-2xl font-black tracking-tighter">S/ {totalTickets.toLocaleString()}</span>
                             </div>
-                            <div className="p-5 bg-red-500/5 rounded-2xl border border-red-200/20">
+                            <div className="p-5 bg-red-500/5 rounded-xl border border-red-200/20">
                                 <span className="text-[10px] font-black uppercase tracking-widest text-red-600/60 block mb-2">Penalidades</span>
                                 <span className="text-2xl font-black text-red-600 tracking-tighter">S/ {totalPenalties.toLocaleString()}</span>
                             </div>
@@ -620,14 +620,14 @@ export default function ValuationsPage() {
                             <button 
                                 onClick={() => setShowCloseModal(false)}
                                 disabled={isClosing}
-                                className="px-8 py-3.5 text-[11px] font-black uppercase tracking-widest text-muted-foreground hover:bg-muted rounded-2xl transition-all"
+                                className="px-8 py-3.5 text-[11px] font-black uppercase tracking-widest text-muted-foreground hover:bg-muted rounded-xl transition-all"
                             >
                                 Cancelar y Revisar
                             </button>
                             <button 
                                 onClick={handleCloseFortnightCurrent}
                                 disabled={isClosing}
-                                className="px-10 py-3.5 bg-foreground text-background font-black text-[11px] uppercase tracking-widest rounded-[1.5rem] shadow-xl shadow-black/10 hover:opacity-90 active:scale-95 transition-all flex items-center gap-2"
+                                className="px-10 py-3.5 bg-foreground text-background font-black text-[11px] uppercase tracking-widest rounded-xl shadow-xl shadow-black/10 hover:opacity-90 active:scale-95 transition-all flex items-center gap-2"
                             >
                                 {isClosing && <Activity className="w-4 h-4 animate-spin" />}
                                 {isClosing ? "Procesando Cierre..." : "Confirmar Cierre Final"}
@@ -649,19 +649,19 @@ function StatCard({ title, value, subtitle, icon, trend, trendUp, color }: any) 
     };
 
     return (
-        <div className="bg-card border border-border rounded-[2.5rem] p-7 shadow-sm shadow-black/5 hover:translate-y-[-4px] transition-all group overflow-hidden relative">
+        <div className="bg-card border border-border rounded-xl p-6 shadow-sm hover:translate-y-[-2px] transition-all group overflow-hidden relative">
             <div className={`absolute top-0 right-0 w-32 h-32 ${colorClasses[color]} opacity-[0.05] rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-700`} />
             <div className="flex flex-col gap-5">
                 <div className="flex items-center justify-between">
-                    <div className={`p-4 rounded-2xl ${colorClasses[color]}/10 text-${color}-600 shadow-sm border border-${color}-500/10`}>
+                    <div className={`p-3 rounded-lg ${colorClasses[color]}/10 text-${color}-600 shadow-sm border border-${color}-500/10`}>
                         {icon}
                     </div>
                 </div>
                 <div className="space-y-1">
-                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">{title}</p>
-                    <p className="text-3xl font-black tracking-tighter text-foreground">{value}</p>
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">{title}</p>
+                    <p className="text-2xl font-black tracking-tight text-foreground">{value}</p>
                 </div>
-                <p className="text-[11px] font-bold text-muted-foreground uppercase opacity-60 flex items-center gap-2">
+                <p className="text-[10px] font-bold text-muted-foreground uppercase opacity-60 flex items-center gap-2">
                     <AlertCircle className="w-3.5 h-3.5" />
                     {subtitle}
                 </p>

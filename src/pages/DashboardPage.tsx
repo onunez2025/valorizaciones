@@ -133,13 +133,13 @@ export default function DashboardPage() {
     return (
         <div className="p-4 space-y-8 animate-in fade-in duration-500">
             {/* Header con Filtros Mejorados */}
-            <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6 bg-card/40 p-6 rounded-[2.5rem] border border-border/50 backdrop-blur-md shadow-2xl shadow-black/5">
+            <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6 bg-card p-6 rounded-xl border border-border shadow-sm">
                 <div className="space-y-1">
-                    <h1 className="text-4xl font-black tracking-tighter text-foreground flex items-center gap-3">
+                    <h1 className="text-3xl font-black tracking-tight text-foreground flex items-center gap-3">
                         Auditoría Analítica
-                        <div className="w-2.5 h-2.5 bg-primary rounded-full animate-pulse shadow-[0_0_15px_rgba(var(--primary-rgb),0.5)]" />
+                        <div className="w-2 h-2 bg-primary rounded-full animate-pulse shadow-[0_0_10px_rgba(var(--primary-rgb),0.5)]" />
                     </h1>
-                    <p className="text-muted-foreground font-bold uppercase tracking-widest text-[10px] opacity-60">
+                    <p className="text-muted-foreground font-bold uppercase tracking-[0.15em] text-[10px] opacity-60">
                         Inteligencia de negocios CAS en tiempo real.
                     </p>
                 </div>
@@ -150,7 +150,7 @@ export default function DashboardPage() {
                         <button 
                             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                             className={cn(
-                                "flex items-center justify-between gap-3 bg-background/80 px-5 py-3 rounded-2xl border border-border shadow-sm hover:border-primary/40 transition-all min-w-[280px] max-w-[320px]",
+                                "flex items-center justify-between gap-3 bg-background px-5 py-3 rounded-lg border border-border shadow-sm hover:border-primary/40 transition-all min-w-[280px] max-w-[320px]",
                                 isDropdownOpen && "ring-2 ring-primary/20 border-primary/50"
                             )}
                         >
@@ -164,7 +164,7 @@ export default function DashboardPage() {
                         </button>
 
                         {isDropdownOpen && (
-                            <div className="absolute top-full left-0 mt-2 w-full bg-card border border-border rounded-3xl shadow-2xl shadow-black/20 z-50 animate-in fade-in zoom-in-95 duration-200 overflow-hidden backdrop-blur-xl">
+                            <div className="absolute top-full left-0 mt-2 w-full bg-card border border-border rounded-xl shadow-xl z-50 animate-in fade-in zoom-in-95 duration-200 overflow-hidden">
                                 <div className="p-3 border-b border-border/50">
                                     <div className="relative">
                                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
@@ -182,7 +182,7 @@ export default function DashboardPage() {
                                     <button 
                                         onClick={() => { setSelectedCas('all'); setIsDropdownOpen(false); }}
                                         className={cn(
-                                            "w-full flex items-center justify-between px-4 py-3 rounded-2xl text-[10px] font-black uppercase transition-colors mb-1",
+                                            "w-full flex items-center justify-between px-4 py-3 rounded-lg text-[10px] font-black uppercase transition-colors mb-1",
                                             selectedCas === 'all' ? "bg-primary text-white" : "hover:bg-muted text-muted-foreground"
                                         )}
                                     >
@@ -195,8 +195,8 @@ export default function DashboardPage() {
                                             key={cas.ID_CAS}
                                             onClick={() => { setSelectedCas(cas.RUC); setIsDropdownOpen(false); }}
                                             className={cn(
-                                                "w-full flex items-center justify-between px-4 py-3 rounded-2xl text-[10px] font-black uppercase transition-colors text-left",
-                                                selectedCas === cas.RUC ? "bg-primary text-white shadow-lg shadow-primary/20" : "hover:bg-muted text-foreground/80"
+                                                "w-full flex items-center justify-between px-4 py-3 rounded-lg text-[10px] font-black uppercase transition-colors text-left",
+                                                selectedCas === cas.RUC ? "bg-primary text-white shadow-md shadow-primary/20" : "hover:bg-muted text-foreground/80"
                                             )}
                                         >
                                             <div className="flex flex-col gap-0.5">
@@ -218,7 +218,7 @@ export default function DashboardPage() {
                     </div>
 
                     {/* Filtro Periodo Custom */}
-                    <div className="flex items-center gap-1 bg-background/50 p-1 rounded-2xl border border-border shadow-inner">
+                    <div className="flex items-center gap-1 bg-muted/40 p-1 rounded-xl border border-border shadow-inner">
                         {[
                             { id: '7', label: '7D' },
                             { id: '30', label: '30D' },
@@ -230,9 +230,9 @@ export default function DashboardPage() {
                                 key={p.id}
                                 onClick={() => setPeriod(p.id)}
                                 className={cn(
-                                    "px-4 py-3 rounded-xl text-[10px] font-black transition-all",
+                                    "px-4 py-2.5 rounded-lg text-[10px] font-black transition-all",
                                     period === p.id 
-                                        ? "bg-foreground text-background shadow-lg shadow-foreground/10" 
+                                        ? "bg-foreground text-background shadow-md shadow-foreground/10" 
                                         : "text-muted-foreground hover:bg-muted"
                                 )}
                             >
@@ -245,8 +245,8 @@ export default function DashboardPage() {
 
             {/* Selector de Rango Personalizado */}
             {period === 'custom' && (
-                <div className="flex flex-wrap items-center gap-4 bg-muted/30 p-4 rounded-3xl border border-border/40 animate-in slide-in-from-top-2 mx-6">
-                    <div className="flex items-center gap-3 bg-background px-4 py-2 rounded-2xl border border-border shadow-sm">
+                <div className="flex flex-wrap items-center gap-4 bg-muted/30 p-4 rounded-xl border border-border/40 animate-in slide-in-from-top-2 mx-6">
+                    <div className="flex items-center gap-3 bg-background px-4 py-2 rounded-lg border border-border shadow-sm">
                         <Calendar className="w-4 h-4 text-primary" />
                         <input 
                             type="date" 
@@ -256,7 +256,7 @@ export default function DashboardPage() {
                         />
                     </div>
                     <span className="text-muted-foreground text-[10px] font-black opacity-40">HASTA</span>
-                    <div className="flex items-center gap-3 bg-background px-4 py-2 rounded-2xl border border-border shadow-sm">
+                    <div className="flex items-center gap-3 bg-background px-4 py-2 rounded-lg border border-border shadow-sm">
                         <Calendar className="w-4 h-4 text-primary" />
                         <input 
                             type="date" 
@@ -310,7 +310,7 @@ export default function DashboardPage() {
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* Grafico de Tendencias */}
-                <div className="lg:col-span-2 bg-card border border-border rounded-[2.5rem] p-8 shadow-sm shadow-black/5 hover:border-primary/20 transition-all">
+                <div className="lg:col-span-2 bg-card border border-border rounded-xl p-8 shadow-sm hover:border-primary/20 transition-all">
                     <div className="flex items-center justify-between mb-8">
                         <div>
                             <h3 className="text-lg font-black tracking-tight text-foreground/80 uppercase tracking-widest text-[10px]">Historial de Gastos</h3>
@@ -355,7 +355,7 @@ export default function DashboardPage() {
                 </div>
 
                 {/* Ranking de CAS */}
-                <div className="bg-card border border-border rounded-[2.5rem] p-8 shadow-sm shadow-black/5 flex flex-col justify-between">
+                <div className="bg-card border border-border rounded-xl p-8 shadow-sm flex flex-col justify-between">
                     <div>
                         <h3 className="text-lg font-black tracking-tight text-foreground/80 uppercase tracking-widest text-[10px] mb-1">Productividad</h3>
                         <p className="text-2xl font-black mb-6">{selectedCas === 'all' ? 'Top 5 CAS Activos' : 'Desempeño Local'}</p>
@@ -391,7 +391,7 @@ export default function DashboardPage() {
                             <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Auditados</span>
                             <span className="text-lg font-black">100% Completo</span>
                         </div>
-                        <div className="p-3 bg-emerald-500/10 text-emerald-600 rounded-2xl shadow-sm">
+                        <div className="p-3 bg-emerald-500/10 text-emerald-600 rounded-lg shadow-sm">
                             <ArrowUpRight className="w-6 h-6" />
                         </div>
                     </div>
@@ -410,16 +410,16 @@ function StatCard({ title, value, subtitle, icon, trend, trendUp, color }: any) 
     };
 
     return (
-        <div className="bg-card border border-border rounded-[2rem] p-7 shadow-sm shadow-black/5 hover:translate-y-[-4px] transition-all group overflow-hidden relative">
+        <div className="bg-card border border-border rounded-xl p-7 shadow-sm hover:translate-y-[-2px] transition-all group overflow-hidden relative">
             <div className={`absolute top-0 right-0 w-32 h-32 ${colorClasses[color]} opacity-[0.05] rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-700`} />
             
             <div className="flex flex-col gap-5">
                 <div className="flex items-center justify-between">
-                    <div className={`p-3.5 rounded-2xl ${colorClasses[color]}/10 text-${color}-600 shadow-sm border border-${color}-500/10`}>
+                    <div className={`p-3 rounded-lg ${colorClasses[color]}/10 text-${color}-600 shadow-sm border border-${color}-500/10`}>
                         {icon}
                     </div>
                     <div className={cn(
-                        "flex items-center gap-1 text-[10px] font-black px-2.5 py-1.5 rounded-xl border",
+                        "flex items-center gap-1 text-[10px] font-bold px-2.5 py-1.5 rounded-lg border",
                         trendUp ? "bg-emerald-500/5 text-emerald-600 border-emerald-200/20" : "bg-red-500/5 text-red-600 border-red-200/20"
                     )}>
                         {trendUp ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
@@ -428,11 +428,11 @@ function StatCard({ title, value, subtitle, icon, trend, trendUp, color }: any) 
                 </div>
                 
                 <div className="space-y-1">
-                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">{title}</p>
-                    <p className="text-3xl font-black tracking-tighter text-foreground">{value}</p>
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">{title}</p>
+                    <p className="text-2xl font-black tracking-tight text-foreground">{value}</p>
                 </div>
                 
-                <p className="text-[11px] font-bold text-muted-foreground uppercase opacity-60 flex items-center gap-2">
+                <p className="text-[10px] font-bold text-muted-foreground uppercase opacity-60 flex items-center gap-2">
                     <AlertCircle className="w-3.5 h-3.5" />
                     {subtitle}
                 </p>

@@ -35,13 +35,13 @@ export function Modal({ isOpen, onClose, title, subtitle, children, size = 'md',
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-background/80 backdrop-blur-sm animate-in fade-in duration-200">
             <div className="fixed inset-0" onClick={onClose} />
             <div className={cn(
-                "relative w-full mx-4 bg-card text-foreground rounded-md shadow-lg border border-border animate-in zoom-in-95 duration-200",
+                "relative w-full mx-4 bg-card text-foreground rounded-xl shadow-xl border border-border animate-in zoom-in-95 duration-200",
                 sizeClasses[size]
             )}>
-                <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+                <div className="flex items-center justify-between px-6 py-5 border-b border-border">
                     <div className="flex flex-col">
-                        <h2 className="text-lg font-bold leading-none tracking-tight">{title}</h2>
-                        {subtitle && <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-[0.2em] mt-1.5">{subtitle}</p>}
+                        <h2 className="text-xl font-black leading-none tracking-tight">{title}</h2>
+                        {subtitle && <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-[0.2em] mt-2">{subtitle}</p>}
                     </div>
                     {!hideCloseButton && (
                         <button

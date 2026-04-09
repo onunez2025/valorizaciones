@@ -131,11 +131,11 @@ export default function TarifarioPage() {
             <div className="relative" ref={dropdownRef}>
                 <div 
                     className={cn(
-                        "bg-card rounded-[2.5rem] border border-border/80 p-2.5 shadow-2xl shadow-black/5 flex items-center gap-3 transition-all group hover:border-primary/40",
+                        "bg-card rounded-xl border border-border p-2.5 shadow-sm flex items-center gap-3 transition-all group hover:border-primary/40",
                         isDropdownOpen && "ring-4 ring-primary/5 border-primary/40"
                     )}
                 >
-                    <div className="p-4 bg-primary/10 rounded-3xl text-primary transition-transform group-hover:scale-105 shadow-inner">
+                    <div className="p-4 bg-primary/10 rounded-lg text-primary transition-transform group-hover:scale-105 shadow-inner">
                         <Building2 className="w-6 h-6" />
                     </div>
                     
@@ -159,7 +159,7 @@ export default function TarifarioPage() {
                 </div>
 
                 {isDropdownOpen && (
-                    <div className="absolute top-full left-0 mt-3 w-full bg-card/90 border border-border/50 rounded-[3rem] shadow-2xl shadow-black/30 z-[100] animate-in fade-in slide-in-from-top-4 duration-300 overflow-hidden backdrop-blur-3xl">
+                    <div className="absolute top-full left-0 mt-3 w-full bg-card border border-border rounded-xl shadow-xl z-[100] animate-in fade-in slide-in-from-top-4 duration-300 overflow-hidden">
                         <div className="p-6 border-b border-border/40 bg-muted/20">
                             <div className="relative group">
                                 <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-muted-foreground opacity-50 group-focus-within:text-primary transition-all group-focus-within:opacity-100" />
@@ -167,7 +167,7 @@ export default function TarifarioPage() {
                                     autoFocus
                                     type="text" 
                                     placeholder="Buscar por sede o identificador..."
-                                    className="w-full bg-background/50 border border-transparent rounded-[1.5rem] pl-14 pr-6 py-4 text-sm font-black focus:ring-4 focus:ring-primary/5 focus:border-primary/20 outline-none transition-all placeholder:opacity-40 tracking-tight"
+                                    className="w-full bg-background/50 border border-border rounded-lg pl-14 pr-6 py-4 text-sm font-bold focus:ring-4 focus:ring-primary/5 focus:border-primary/20 outline-none transition-all placeholder:opacity-40 tracking-tight"
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
                                 />
@@ -179,9 +179,9 @@ export default function TarifarioPage() {
                                     key={cas.RUC}
                                     onClick={() => handleSelectCas(cas)}
                                     className={cn(
-                                        "w-full flex items-center justify-between px-7 py-4.5 rounded-[1.8rem] transition-all group",
+                                        "w-full flex items-center justify-between px-7 py-4.5 rounded-lg transition-all group",
                                         selectedCas?.RUC === cas.RUC 
-                                            ? "bg-primary text-white shadow-xl shadow-primary/30 scale-[1.02]" 
+                                            ? "bg-primary text-white shadow-lg" 
                                             : "hover:bg-primary/5 text-foreground/80 hover:translate-x-2"
                                     )}
                                 >
@@ -214,7 +214,7 @@ export default function TarifarioPage() {
                 )}
             </div>
 
-            <div className="flex-1 min-h-0 bg-card rounded-[3.5rem] border border-border/60 shadow-sm overflow-hidden flex flex-col relative">
+            <div className="flex-1 min-h-0 bg-card rounded-xl border border-border shadow-sm overflow-hidden flex flex-col relative">
                 {!selectedCas ? (
                     <div className="h-full flex flex-col items-center justify-center p-12 text-center">
                         <div className="w-32 h-32 bg-primary/[0.03] rounded-full flex items-center justify-center mb-10 border border-primary/5 relative">
@@ -228,11 +228,11 @@ export default function TarifarioPage() {
                     <>
                         <div className="p-8 border-b border-border/40 flex items-center justify-between bg-muted/5">
                             <div className="flex items-center gap-6">
-                                <div className="p-4 bg-emerald-500/10 rounded-3xl text-emerald-600 border border-emerald-500/10">
+                                <div className="p-4 bg-emerald-500/10 rounded-lg text-emerald-600 border border-emerald-500/10">
                                     <DollarSign className="w-6 h-6" />
                                 </div>
                                 <div>
-                                    <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 mb-1">Precios Configurados</h3>
+                                    <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60 mb-1">Precios Configurados</h3>
                                     <p className="text-2xl font-black tracking-tight">{rates.length} Items en lista</p>
                                 </div>
                             </div>
@@ -241,14 +241,14 @@ export default function TarifarioPage() {
                                     <div className="flex items-center gap-3 animate-in zoom-in-95">
                                         <button 
                                             onClick={() => { setIsEditing(false); setEditRates(rates); }}
-                                            className="px-6 py-3.5 bg-muted rounded-2xl font-black text-[10px] uppercase tracking-widest text-muted-foreground hover:bg-muted/80 transition-all"
+                                            className="px-6 py-3.5 bg-muted rounded-lg font-bold text-[10px] uppercase tracking-widest text-muted-foreground hover:bg-muted/80 transition-all"
                                         >
                                             Descartar
                                         </button>
                                         <button 
                                             onClick={handleSave}
                                             disabled={saving}
-                                            className="px-8 py-3.5 bg-emerald-600 text-white rounded-[1.8rem] font-black text-[10px] uppercase tracking-widest shadow-xl shadow-emerald-600/20 flex items-center gap-2"
+                                            className="px-8 py-3.5 bg-emerald-600 text-white rounded-lg font-bold text-[10px] uppercase tracking-widest shadow-lg flex items-center gap-2"
                                         >
                                             {saving ? "Guardando..." : <><Save className="w-4 h-4" /> Guardar Tarifario</>}
                                         </button>
@@ -256,7 +256,7 @@ export default function TarifarioPage() {
                                 ) : (
                                     <button 
                                         onClick={handleAddRow}
-                                        className="px-8 py-3.5 bg-foreground text-background rounded-[1.8rem] font-black text-[10px] uppercase tracking-widest shadow-xl shadow-black/10 flex items-center gap-2 hover:translate-y-[-2px] transition-all"
+                                        className="px-8 py-3.5 bg-foreground text-background rounded-lg font-bold text-[10px] uppercase tracking-widest shadow-lg flex items-center gap-2 transition-all"
                                     >
                                         <Plus className="w-4 h-4" /> Agregar Tarifa
                                     </button>
@@ -273,10 +273,10 @@ export default function TarifarioPage() {
                                 <table className="w-full text-left">
                                     <thead className="sticky top-0 bg-card z-10">
                                         <tr>
-                                            <th className="px-6 py-4 bg-muted/30 rounded-l-2xl font-black text-[10px] uppercase tracking-widest text-muted-foreground">Categoría</th>
+                                            <th className="px-6 py-4 bg-muted/30 rounded-l-lg font-black text-[10px] uppercase tracking-widest text-muted-foreground">Categoría</th>
                                             <th className="px-6 py-4 bg-muted/30 font-black text-[10px] uppercase tracking-widest text-muted-foreground">Cód. Servicio</th>
                                             <th className="px-6 py-4 bg-muted/30 font-black text-[10px] uppercase tracking-widest text-muted-foreground text-right">Importe Unitario</th>
-                                            <th className="px-6 py-4 bg-muted/30 rounded-r-2xl text-right"></th>
+                                            <th className="px-6 py-4 bg-muted/30 rounded-r-lg text-right"></th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border/30">
@@ -321,7 +321,7 @@ export default function TarifarioPage() {
                                                                 setEditRates(newRates);
                                                                 setIsEditing(true);
                                                             }}
-                                                            className="bg-muted/30 px-4 py-2 rounded-xl border border-transparent focus:border-emerald-500/30 text-right font-black text-base tracking-tighter w-32 outline-none transition-all"
+                                                            className="bg-muted/30 px-4 py-2 rounded-lg border border-transparent focus:border-emerald-500/30 text-right font-black text-base tracking-tighter w-32 outline-none transition-all"
                                                         />
                                                     </div>
                                                 </td>
@@ -332,7 +332,7 @@ export default function TarifarioPage() {
                                                             setEditRates(newRates);
                                                             setIsEditing(true);
                                                         }}
-                                                        className="p-3 text-red-400 hover:bg-red-50 hover:text-red-600 rounded-2xl transition-all"
+                                                        className="p-3 text-red-400 hover:bg-red-50 hover:text-red-600 rounded-lg transition-all"
                                                     >
                                                         <Trash2 className="w-5 h-5" />
                                                     </button>
@@ -342,7 +342,7 @@ export default function TarifarioPage() {
                                         {editRates.length === 0 && (
                                             <tr>
                                                 <td colSpan={4} className="py-20 text-center">
-                                                    <div className="p-8 bg-amber-500/5 rounded-3xl border border-dashed border-amber-200/30 inline-block max-w-sm">
+                                                    <div className="p-8 bg-amber-500/5 rounded-lg border border-dashed border-amber-200/30 inline-block max-w-sm">
                                                         <AlertCircle className="w-10 h-10 text-amber-500 mx-auto mb-4 opacity-40" />
                                                         <p className="text-xs font-black uppercase tracking-widest text-amber-900/60 leading-relaxed">Este CAS no tiene tarifas configuradas.</p>
                                                         <button onClick={handleAddRow} className="mt-4 text-[10px] font-black text-primary underline">Agregar Primera Tarifa</button>

@@ -93,7 +93,7 @@ export default function PenaltyModal({ isOpen, onClose, onSuccess, ruc, tickets,
                                     else setShowDropdown(true);
                                 }}
                                 onFocus={() => setShowDropdown(true)}
-                                className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm font-bold focus:ring-2 focus:ring-primary/20 outline-none pr-10"
+                                className="w-full bg-background border border-border rounded-lg px-3 py-2.5 text-sm font-bold focus:ring-4 focus:ring-primary/5 focus:border-primary transition-all outline-none pr-10"
                             />
                             <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
                                 <Search className="w-4 h-4 text-muted-foreground/40" />
@@ -145,7 +145,7 @@ export default function PenaltyModal({ isOpen, onClose, onSuccess, ruc, tickets,
                             value={formData.fecha}
                             onChange={(e) => setFormData({...formData, fecha: e.target.value})}
                             required
-                            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm font-bold focus:ring-2 focus:ring-primary/20 outline-none"
+                            className="w-full bg-background border border-border rounded-lg px-3 py-2.5 text-sm font-bold focus:ring-4 focus:ring-primary/5 focus:border-primary transition-all outline-none"
                         />
                     </div>
                 </div>
@@ -157,7 +157,7 @@ export default function PenaltyModal({ isOpen, onClose, onSuccess, ruc, tickets,
                             value={formData.motivo}
                             onChange={(e) => setFormData({...formData, motivo: e.target.value})}
                             required
-                            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm font-bold focus:ring-2 focus:ring-primary/20 outline-none"
+                            className="w-full bg-background border border-border rounded-lg px-3 py-2.5 text-sm font-bold focus:ring-4 focus:ring-primary/5 focus:border-primary transition-all outline-none"
                         >
                             <option value="">-- Seleccionar motivo --</option>
                             {motives.map(m => (
@@ -171,7 +171,7 @@ export default function PenaltyModal({ isOpen, onClose, onSuccess, ruc, tickets,
                             value={formData.motivo}
                             onChange={(e) => setFormData({...formData, motivo: e.target.value})}
                             required
-                            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm font-bold focus:ring-2 focus:ring-primary/20 outline-none"
+                            className="w-full bg-background border border-border rounded-lg px-3 py-2.5 text-sm font-bold focus:ring-4 focus:ring-primary/5 focus:border-primary transition-all outline-none"
                         />
                     )}
                 </div>
@@ -186,7 +186,7 @@ export default function PenaltyModal({ isOpen, onClose, onSuccess, ruc, tickets,
                             value={formData.importe}
                             onChange={(e) => setFormData({...formData, importe: e.target.value})}
                             required
-                            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm font-bold focus:ring-2 focus:ring-primary/20 outline-none"
+                            className="w-full bg-background border border-border rounded-lg px-3 py-2.5 text-sm font-bold focus:ring-4 focus:ring-primary/5 focus:border-primary transition-all outline-none"
                         />
                     </div>
                 </div>
@@ -198,7 +198,7 @@ export default function PenaltyModal({ isOpen, onClose, onSuccess, ruc, tickets,
                         value={formData.descripcion}
                         onChange={(e) => setFormData({...formData, descripcion: e.target.value})}
                         required
-                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm font-medium focus:ring-2 focus:ring-primary/20 outline-none resize-none"
+                        className="w-full bg-background border border-border rounded-xl px-3 py-3 text-sm font-medium focus:ring-4 focus:ring-primary/5 focus:border-primary transition-all outline-none resize-none"
                         placeholder="Detalle los motivos del descuento o adicional..."
                     />
                 </div>

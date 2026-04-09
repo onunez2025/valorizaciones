@@ -65,15 +65,15 @@ export default function LoginPage() {
 
                 <div className="relative z-10">
                     <div className="flex items-center gap-3 mb-6">
-                        <span className="text-2xl font-bold tracking-tight">Valorizaciones</span>
+                        <span className="text-2xl font-black tracking-tight uppercase">Valorizaciones</span>
                     </div>
-                    <h1 className="text-5xl font-bold mb-4 leading-tight">
-                        Gestión de<br />Pagos y<br />Penalidades
+                    <h1 className="text-6xl font-black mb-4 leading-[0.9] tracking-tighter">
+                        GESTOR DE<br />VALORIZACIÓN<br />QUINCENAL
                     </h1>
                     <div className="text-slate-400 text-lg max-w-md space-y-6">
-                        <p>Control automatizado de valorizaciones quincenales para la red CAS.</p>
+                        <p className="font-bold tracking-widest text-xs opacity-60 uppercase">Control automatizado de pagos y penalidades para la red CAS.</p>
                         <div className="flex flex-col w-fit gap-2">
-                            <span className="text-2xl font-bold text-slate-100 tracking-tight">Gerencia de Atención al Cliente</span>
+                            <span className="text-2xl font-black text-slate-100 tracking-tight">GAC - MT Industrial</span>
                         </div>
                     </div>
                 </div>
@@ -97,27 +97,27 @@ export default function LoginPage() {
 
                 <div className="w-full max-w-md space-y-8">
                     <div className="text-center">
-                        <h2 className="text-3xl font-bold tracking-tight">Bienvenido</h2>
-                        <p className="mt-2 text-muted-foreground text-sm">
-                            Ingresa tus credenciales para acceder al sistema
+                        <h2 className="text-3xl font-black tracking-tight uppercase">Bienvenido</h2>
+                        <p className="mt-2 text-muted-foreground text-xs font-bold uppercase tracking-widest opacity-40">
+                            Ingresa tus credenciales para acceder.
                         </p>
                     </div>
 
                     <form onSubmit={handleLogin} className="space-y-6 mt-8">
                         <div className="space-y-4">
                             <div>
-                                <label className="block text-sm font-medium mb-1.5 ml-1">
+                                <label className="block text-[10px] font-black uppercase tracking-widest mb-1.5 ml-1 opacity-50">
                                     Usuario
                                 </label>
                                 <div className="relative">
-                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-muted-foreground">
-                                        <User className="w-5 h-5" />
+                                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-muted-foreground/40">
+                                        <User className="w-4 h-4" />
                                     </div>
                                     <input
                                         type="text"
                                         value={username}
                                         onChange={(e) => setUsername(e.target.value)}
-                                        className="block w-full pl-10 pr-3 py-2.5 bg-input/50 border border-input rounded-lg focus:ring-2 focus:ring-primary focus:border-primary transition-all outline-none"
+                                        className="block w-full pl-11 pr-3 py-3 bg-muted/30 border border-border rounded-xl focus:ring-4 focus:ring-primary/5 focus:border-primary transition-all outline-none text-sm font-bold"
                                         placeholder="Ingrese usuario"
                                         required
                                         autoFocus
@@ -126,18 +126,18 @@ export default function LoginPage() {
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium mb-1.5 ml-1">
+                                <label className="block text-[10px] font-black uppercase tracking-widest mb-1.5 ml-1 opacity-50">
                                     Contraseña
                                 </label>
                                 <div className="relative">
-                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-muted-foreground">
-                                        <Lock className="w-5 h-5" />
+                                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-muted-foreground/40">
+                                        <Lock className="w-4 h-4" />
                                     </div>
                                     <input
                                         type={showPassword ? 'text' : 'password'}
                                         value={password}
                                         onChange={(e) => setPassword(e.target.value)}
-                                        className="block w-full pl-10 pr-10 py-2.5 bg-input/50 border border-input rounded-lg focus:ring-2 focus:ring-primary focus:border-primary transition-all outline-none"
+                                        className="block w-full pl-11 pr-11 py-3 bg-muted/30 border border-border rounded-xl focus:ring-4 focus:ring-primary/5 focus:border-primary transition-all outline-none text-sm font-bold"
                                         placeholder="Ingrese contraseña"
                                         required
                                     />
@@ -174,7 +174,7 @@ export default function LoginPage() {
                             type="submit"
                             disabled={loading}
                             className={cn(
-                                "w-full flex justify-center h-10 px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-bold text-primary-foreground bg-gradient-to-r from-primary/80 to-primary hover:from-primary hover:to-primary/80 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ring transition-all transform active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed", 
+                                "w-full flex justify-center items-center h-12 px-4 py-2 border border-transparent rounded-xl shadow-lg text-xs font-black uppercase tracking-widest text-primary-foreground bg-primary hover:opacity-90 transition-all transform active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed", 
                                 loading && "animate-pulse"
                             )}
                         >

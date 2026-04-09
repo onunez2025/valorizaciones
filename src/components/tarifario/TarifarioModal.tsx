@@ -93,7 +93,7 @@ export default function TarifarioModal({ isOpen, onClose, onSuccess, initialData
                                 type="number" 
                                 value={importe}
                                 onChange={(e) => setImporte(Number(e.target.value))}
-                                className="w-full pl-10 pr-4 py-3 bg-card border border-border rounded-xl text-lg font-black focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+                                className="w-full pl-10 pr-4 py-3 bg-card border border-border rounded-xl text-lg font-black focus:ring-4 focus:ring-primary/5 focus:border-primary outline-none transition-all"
                                 placeholder="0.00"
                                 autoFocus
                             />
@@ -108,7 +108,7 @@ export default function TarifarioModal({ isOpen, onClose, onSuccess, initialData
                                 type="date" 
                                 value={fechaInicio}
                                 onChange={(e) => setFechaInicio(e.target.value)}
-                                className="w-full pl-10 pr-4 py-2.5 bg-card border border-border rounded-xl text-sm font-bold focus:ring-2 focus:ring-primary/20 outline-none"
+                                className="w-full pl-10 pr-4 py-2.5 bg-card border border-border rounded-xl text-sm font-bold focus:ring-4 focus:ring-primary/5 focus:border-primary outline-none"
                             />
                         </div>
                     </div>
@@ -121,7 +121,7 @@ export default function TarifarioModal({ isOpen, onClose, onSuccess, initialData
                                 type="date" 
                                 value={fechaFin}
                                 onChange={(e) => setFechaFin(e.target.value)}
-                                className="w-full pl-10 pr-4 py-2.5 bg-card border border-border rounded-xl text-sm font-bold focus:ring-2 focus:ring-primary/20 outline-none"
+                                className="w-full pl-10 pr-4 py-2.5 bg-card border border-border rounded-xl text-sm font-bold focus:ring-4 focus:ring-primary/5 focus:border-primary outline-none"
                             />
                         </div>
                     </div>
