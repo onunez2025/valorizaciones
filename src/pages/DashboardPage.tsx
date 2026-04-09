@@ -133,13 +133,13 @@ export default function DashboardPage() {
     return (
         <div className="p-4 space-y-8 animate-in fade-in duration-500">
             {/* Header con Filtros Mejorados */}
-            <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6 bg-card p-6 rounded-xl border border-border shadow-sm">
+            <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6 bg-card p-5 rounded-xl border border-border shadow-sm">
                 <div className="space-y-1">
-                    <h1 className="text-3xl font-black tracking-tight text-foreground flex items-center gap-3">
+                    <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-3">
                         Auditoría Analítica
                         <div className="w-2 h-2 bg-primary rounded-full animate-pulse shadow-[0_0_10px_rgba(var(--primary-rgb),0.5)]" />
                     </h1>
-                    <p className="text-muted-foreground font-bold uppercase tracking-[0.15em] text-[10px] opacity-60">
+                    <p className="text-muted-foreground text-[11px] font-medium opacity-60">
                         Inteligencia de negocios CAS en tiempo real.
                     </p>
                 </div>
@@ -150,17 +150,17 @@ export default function DashboardPage() {
                         <button 
                             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                             className={cn(
-                                "flex items-center justify-between gap-3 bg-background px-5 py-3 rounded-lg border border-border shadow-sm hover:border-primary/40 transition-all min-w-[280px] max-w-[320px]",
+                                "flex items-center justify-between gap-3 bg-background px-4 py-2.5 rounded-lg border border-border shadow-sm hover:border-primary/40 transition-all min-w-[260px] max-w-[300px]",
                                 isDropdownOpen && "ring-2 ring-primary/20 border-primary/50"
                             )}
                         >
-                            <div className="flex items-center gap-3 truncate">
+                            <div className="flex items-center gap-2 truncate">
                                 <Building2 className="w-4 h-4 text-primary shrink-0" />
-                                <span className="text-[11px] font-black uppercase truncate tracking-tight">
+                                <span className="text-[11px] font-bold uppercase truncate tracking-widest">
                                     {activeCasName}
                                 </span>
                             </div>
-                            <ChevronDown className={cn("w-4 h-4 text-muted-foreground transition-transform duration-300", isDropdownOpen && "rotate-180")} />
+                            <ChevronDown className={cn("w-3.5 h-3.5 text-muted-foreground transition-transform duration-300", isDropdownOpen && "rotate-180")} />
                         </button>
 
                         {isDropdownOpen && (
@@ -230,7 +230,7 @@ export default function DashboardPage() {
                                 key={p.id}
                                 onClick={() => setPeriod(p.id)}
                                 className={cn(
-                                    "px-4 py-2.5 rounded-lg text-[10px] font-black transition-all",
+                                    "px-3.5 py-2 rounded-lg text-[10px] font-bold transition-all",
                                     period === p.id 
                                         ? "bg-foreground text-background shadow-md shadow-foreground/10" 
                                         : "text-muted-foreground hover:bg-muted"
@@ -245,22 +245,22 @@ export default function DashboardPage() {
 
             {/* Selector de Rango Personalizado */}
             {period === 'custom' && (
-                <div className="flex flex-wrap items-center gap-4 bg-muted/30 p-4 rounded-xl border border-border/40 animate-in slide-in-from-top-2 mx-6">
-                    <div className="flex items-center gap-3 bg-background px-4 py-2 rounded-lg border border-border shadow-sm">
-                        <Calendar className="w-4 h-4 text-primary" />
+                <div className="flex flex-wrap items-center gap-4 bg-muted/30 p-3 rounded-xl border border-border/40 animate-in slide-in-from-top-2 mx-6">
+                    <div className="flex items-center gap-3 bg-background px-3 py-1.5 rounded-lg border border-border shadow-sm">
+                        <Calendar className="w-3.5 h-3.5 text-primary" />
                         <input 
                             type="date" 
-                            className="bg-transparent border-none text-[11px] font-black focus:ring-0 outline-none cursor-pointer"
+                            className="bg-transparent border-none text-[10px] font-bold focus:ring-0 outline-none cursor-pointer"
                             value={customRange.start}
                             onChange={(e) => setCustomRange({...customRange, start: e.target.value})}
                         />
                     </div>
-                    <span className="text-muted-foreground text-[10px] font-black opacity-40">HASTA</span>
-                    <div className="flex items-center gap-3 bg-background px-4 py-2 rounded-lg border border-border shadow-sm">
-                        <Calendar className="w-4 h-4 text-primary" />
+                    <span className="text-muted-foreground text-[9px] font-bold opacity-40">HASTA</span>
+                    <div className="flex items-center gap-3 bg-background px-3 py-1.5 rounded-lg border border-border shadow-sm">
+                        <Calendar className="w-3.5 h-3.5 text-primary" />
                         <input 
                             type="date" 
-                            className="bg-transparent border-none text-[11px] font-black focus:ring-0 outline-none cursor-pointer"
+                            className="bg-transparent border-none text-[10px] font-bold focus:ring-0 outline-none cursor-pointer"
                             value={customRange.end}
                             onChange={(e) => setCustomRange({...customRange, end: e.target.value})}
                         />
@@ -310,11 +310,11 @@ export default function DashboardPage() {
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* Grafico de Tendencias */}
-                <div className="lg:col-span-2 bg-card border border-border rounded-xl p-8 shadow-sm hover:border-primary/20 transition-all">
+                <div className="lg:col-span-2 bg-card border border-border rounded-xl p-6 shadow-sm hover:border-primary/20 transition-all">
                     <div className="flex items-center justify-between mb-8">
                         <div>
-                            <h3 className="text-lg font-black tracking-tight text-foreground/80 uppercase tracking-widest text-[10px]">Historial de Gastos</h3>
-                            <p className="text-2xl font-black">{selectedCas === 'all' ? 'Crecimiento Mensual' : 'Tendencia Individual'}</p>
+                            <h3 className="text-muted-foreground font-bold uppercase tracking-widest text-[10px] mb-1">Historial de Gastos</h3>
+                            <p className="text-xl font-bold tracking-tight">{selectedCas === 'all' ? 'Crecimiento Mensual' : 'Tendencia Individual'}</p>
                         </div>
                         <div className="flex gap-4">
                             <div className="flex items-center gap-2">
@@ -355,10 +355,10 @@ export default function DashboardPage() {
                 </div>
 
                 {/* Ranking de CAS */}
-                <div className="bg-card border border-border rounded-xl p-8 shadow-sm flex flex-col justify-between">
+                <div className="bg-card border border-border rounded-xl p-6 shadow-sm flex flex-col justify-between">
                     <div>
-                        <h3 className="text-lg font-black tracking-tight text-foreground/80 uppercase tracking-widest text-[10px] mb-1">Productividad</h3>
-                        <p className="text-2xl font-black mb-6">{selectedCas === 'all' ? 'Top 5 CAS Activos' : 'Desempeño Local'}</p>
+                        <h3 className="text-muted-foreground font-bold uppercase tracking-widest text-[10px] mb-1">Productividad</h3>
+                        <p className="text-xl font-bold tracking-tight mb-6">{selectedCas === 'all' ? 'Top 5 CAS Activos' : 'Desempeño Local'}</p>
                         
                         <div className="space-y-6">
                             {topCas.length > 0 ? topCas.map((cas, index) => (
@@ -410,16 +410,16 @@ function StatCard({ title, value, subtitle, icon, trend, trendUp, color }: any) 
     };
 
     return (
-        <div className="bg-card border border-border rounded-xl p-7 shadow-sm hover:translate-y-[-2px] transition-all group overflow-hidden relative">
+        <div className="bg-card border border-border rounded-xl p-5 shadow-sm hover:translate-y-[-2px] transition-all group overflow-hidden relative">
             <div className={`absolute top-0 right-0 w-32 h-32 ${colorClasses[color]} opacity-[0.05] rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-700`} />
             
             <div className="flex flex-col gap-5">
                 <div className="flex items-center justify-between">
-                    <div className={`p-3 rounded-lg ${colorClasses[color]}/10 text-${color}-600 shadow-sm border border-${color}-500/10`}>
+                    <div className={`p-2.5 rounded-lg ${colorClasses[color]}/10 text-${color}-600 shadow-sm border border-${color}-500/10`}>
                         {icon}
                     </div>
                     <div className={cn(
-                        "flex items-center gap-1 text-[10px] font-bold px-2.5 py-1.5 rounded-lg border",
+                        "flex items-center gap-1 text-[9px] font-bold px-2 py-1 rounded-lg border",
                         trendUp ? "bg-emerald-500/5 text-emerald-600 border-emerald-200/20" : "bg-red-500/5 text-red-600 border-red-200/20"
                     )}>
                         {trendUp ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
@@ -428,12 +428,12 @@ function StatCard({ title, value, subtitle, icon, trend, trendUp, color }: any) 
                 </div>
                 
                 <div className="space-y-1">
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">{title}</p>
-                    <p className="text-2xl font-black tracking-tight text-foreground">{value}</p>
+                    <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/60">{title}</p>
+                    <p className="text-xl font-bold tracking-tight text-foreground">{value}</p>
                 </div>
                 
-                <p className="text-[10px] font-bold text-muted-foreground uppercase opacity-60 flex items-center gap-2">
-                    <AlertCircle className="w-3.5 h-3.5" />
+                <p className="text-[9px] font-bold text-muted-foreground uppercase opacity-60 flex items-center gap-2">
+                    <AlertCircle className="w-3 h-3" />
                     {subtitle}
                 </p>
             </div>

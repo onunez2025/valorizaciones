@@ -212,8 +212,8 @@ export default function ValuationsPage() {
         <div className="flex flex-col h-full gap-6 animate-in fade-in duration-500 p-2">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-3xl font-black tracking-tight text-foreground">Valorizaciones CAS</h1>
-                    <p className="text-muted-foreground text-sm font-medium">Gestión quincenal de pagos y descuentos.</p>
+                    <h1 className="text-2xl font-bold tracking-tight text-foreground">Valorizaciones CAS</h1>
+                    <p className="text-muted-foreground text-[11px] font-medium opacity-60">Gestión quincenal de pagos y descuentos.</p>
                 </div>
                 {selectedCas && (
                     <div className="flex items-center gap-3 bg-primary/10 border border-primary/20 px-4 py-2 rounded-lg shadow-sm">
@@ -230,25 +230,25 @@ export default function ValuationsPage() {
             <div className="relative" ref={dropdownRef}>
                 <div 
                     className={cn(
-                        "bg-card rounded-xl border border-border shadow-sm p-1 flex items-center gap-2 transition-all group hover:border-primary/30",
+                        "bg-card rounded-xl border border-border shadow-sm p-0.5 flex items-center gap-2 transition-all group hover:border-primary/30",
                         isDropdownOpen && "ring-2 ring-primary/5 border-primary/40"
                     )}
                 >
-                    <div className="p-3.5 bg-primary/10 rounded-2xl text-primary transition-transform group-hover:scale-105">
-                        <Building2 className="w-6 h-6" />
+                    <div className="p-2.5 bg-primary/10 rounded-xl text-primary transition-transform group-hover:scale-105">
+                        <Building2 className="w-5 h-5" />
                     </div>
                     
                     <button 
                         onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                        className="flex-1 text-left px-3 py-1.5"
+                        className="flex-1 text-left px-3 py-1"
                     >
-                        <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60 mb-0.5">Seleccionar Centro de Atención (CAS)</p>
+                        <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/60 mb-0">Seleccionar Centro de Atención (CAS)</p>
                         <p className={cn(
-                            "text-lg font-black tracking-tight flex items-center gap-2",
+                            "text-base font-bold tracking-tight flex items-center gap-2",
                             !selectedCas && "text-muted-foreground/30 italic"
                         )}>
                             {selectedCas ? selectedCas.Nombre_CAS : "-- Localice una empresa en la lista --"}
-                            {selectedCas && <span className="text-xs font-bold text-muted-foreground opacity-40">(RUC: {selectedCas.RUC})</span>}
+                            {selectedCas && <span className="text-[11px] font-bold text-muted-foreground opacity-40">(RUC: {selectedCas.RUC})</span>}
                         </p>
                     </button>
 
@@ -292,17 +292,17 @@ export default function ValuationsPage() {
                                         setSearchQuery('');
                                     }}
                                     className={cn(
-                                        "w-full flex items-center justify-between px-6 py-4 rounded-[1.5rem] transition-all group",
+                                        "w-full flex items-center justify-between px-4 py-3 rounded-lg transition-all group",
                                         selectedCas?.RUC === cas.RUC 
                                             ? "bg-primary text-white shadow-lg shadow-primary/25" 
                                             : "hover:bg-primary/5 text-foreground/80 hover:translate-x-1"
                                     )}
                                 >
                                     <div className="flex flex-col gap-0.5 text-left">
-                                        <span className="text-sm font-black tracking-tight">{cas.Nombre_CAS}</span>
-                                        <span className={cn("text-[10px] font-bold opacity-60", selectedCas?.RUC === cas.RUC ? "text-white" : "text-muted-foreground")}>RUC: {cas.RUC}</span>
+                                        <span className="text-[13px] font-bold tracking-tight">{cas.Nombre_CAS}</span>
+                                        <span className={cn("text-[9px] font-bold opacity-60", selectedCas?.RUC === cas.RUC ? "text-white" : "text-muted-foreground")}>RUC: {cas.RUC}</span>
                                     </div>
-                                    {selectedCas?.RUC === cas.RUC && <Check className="w-4 h-4" />}
+                                    {selectedCas?.RUC === cas.RUC && <Check className="w-3.5 h-3.5" />}
                                 </button>
                             ))}
                             {filteredCasList.length === 0 && (
@@ -331,35 +331,35 @@ export default function ValuationsPage() {
                     </div>
                 ) : (
                     <div className="flex flex-col gap-6 h-full">
-                        <div className="bg-card rounded-[2rem] border border-border/60 p-6 shadow-sm flex flex-wrap items-end gap-6">
-                                <div className="space-y-2.5">
-                                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 ml-2">Inicio de Periodo</label>
+                        <div className="bg-card rounded-xl border border-border p-4 shadow-sm flex flex-wrap items-end gap-6">
+                                <div className="space-y-1.5">
+                                    <label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/60 ml-2">Inicio de Periodo</label>
                                     <div className="relative group">
                                         <input 
                                             type="date" 
                                             value={startDate}
                                             onChange={(e) => setStartDate(e.target.value)}
-                                            className="bg-background border border-border rounded-md pl-10 pr-4 py-2 text-sm font-medium focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all shadow-sm"
+                                            className="bg-background border border-border rounded-lg pl-10 pr-4 py-1.5 text-xs font-semibold focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all shadow-sm h-10"
                                         />
                                         <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/40 group-focus-within:text-primary transition-colors" />
                                     </div>
                                 </div>
-                                <div className="space-y-2.5">
-                                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 ml-2">Fin de Periodo</label>
+                                <div className="space-y-1.5">
+                                    <label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/60 ml-2">Fin de Periodo</label>
                                     <div className="relative group">
                                         <input 
                                             type="date" 
                                             value={endDate}
                                             onChange={(e) => setEndDate(e.target.value)}
-                                            className="bg-background border border-border rounded-2xl pl-12 pr-5 py-3.5 text-sm font-bold focus:ring-4 focus:ring-primary/5 focus:border-primary/20 outline-none transition-all shadow-sm"
+                                            className="bg-background border border-border rounded-lg pl-10 pr-4 py-1.5 text-xs font-semibold focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all shadow-sm h-10"
                                         />
-                                        <Calendar className="absolute left-4.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-muted-foreground/40 group-focus-within:text-primary transition-colors" />
+                                        <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/40 group-focus-within:text-primary transition-colors" />
                                     </div>
                                 </div>
                                 <button 
                                     onClick={handleFetchValuation}
                                     disabled={loadingData}
-                                    className="bg-primary text-primary-foreground px-6 py-2 rounded-md font-bold text-sm transition-all flex items-center gap-2 disabled:opacity-50 shadow-sm"
+                                    className="h-10 bg-primary text-primary-foreground px-6 py-2 rounded-lg font-bold text-xs transition-all flex items-center gap-2 disabled:opacity-50 shadow-sm"
                                 >
                                     {loadingData ? <Activity className="w-4 h-4 animate-spin" /> : <Filter className="w-4 h-4" /> }
                                     {loadingData ? "Cargando..." : "Consultar Valorización"}
@@ -376,21 +376,21 @@ export default function ValuationsPage() {
                                         <Calculator className="w-4 h-4 text-primary" />
                                     </div>
                                     
-                                    <div className="space-y-4">
+                                    <div className="space-y-3">
                                         <div className="flex justify-between items-center p-3 bg-muted/20 rounded-lg border border-border/30">
-                                             <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Servicios</span>
-                                             <span className="text-base font-black tracking-tight">S/ {totalTickets.toLocaleString()}</span>
+                                             <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Servicios</span>
+                                             <span className="text-sm font-bold tracking-tight">S/ {totalTickets.toLocaleString()}</span>
                                          </div>
                                          <div className="flex justify-between items-center p-3 bg-red-50/50 rounded-lg border border-red-100">
-                                             <span className="text-[10px] font-bold uppercase tracking-widest text-red-600">Penalidades</span>
-                                             <span className="text-base font-black text-red-600 tracking-tight">- S/ {totalPenalties.toLocaleString()}</span>
+                                             <span className="text-[9px] font-bold uppercase tracking-widest text-red-600">Penalidades</span>
+                                             <span className="text-sm font-bold text-red-600 tracking-tight">- S/ {totalPenalties.toLocaleString()}</span>
                                          </div>                                               
-                                         <div className="flex justify-between items-center p-4 bg-primary text-white rounded-xl shadow-md">
+                                         <div className="flex justify-between items-center p-3.5 bg-primary text-white rounded-xl shadow-md">
                                              <div className="flex flex-col">
-                                                 <span className="text-[10px] font-bold uppercase tracking-widest opacity-80">Total Neto</span>
-                                                 <span className="text-[10px] opacity-70">Periodo actual</span>
+                                                 <span className="text-[9px] font-bold uppercase tracking-widest opacity-80">Total Neto</span>
+                                                 <span className="text-[9px] opacity-70">A la fecha</span>
                                              </div>
-                                             <span className="text-xl font-black tracking-tight">S/ {grandTotal.toLocaleString()}</span>
+                                             <span className="text-lg font-bold tracking-tight">S/ {grandTotal.toLocaleString()}</span>
                                          </div>
                                     </div>
 
@@ -413,24 +413,24 @@ export default function ValuationsPage() {
 
                             {/* Panel Derecho: Tabs y Tablas */}
                             <div className="xl:col-span-3 flex flex-col bg-card border border-border rounded-xl overflow-hidden shadow-sm">
-                                <div className="flex p-2 bg-muted/20 border-b border-border/40">
+                                <div className="flex p-1.5 bg-muted/20 border-b border-border/40">
                                     <button 
                                         onClick={() => setActiveTab('services')}
                                         className={cn(
-                                            "flex-1 flex items-center justify-center gap-2 py-4 text-[10px] font-black uppercase tracking-[0.15em] rounded-xl transition-all",
+                                            "flex-1 flex items-center justify-center gap-2 py-2.5 text-[10px] font-bold uppercase tracking-widest rounded-lg transition-all",
                                             activeTab === 'services' ? "bg-background text-primary shadow-sm" : "text-muted-foreground hover:bg-background/40"
                                         )}
                                     >
-                                        <Briefcase className="w-4 h-4" /> Servicios ({tickets.length})
+                                        <Briefcase className="w-3.5 h-3.5" /> Servicios ({tickets.length})
                                     </button>
                                     <button 
                                         onClick={() => setActiveTab('penalties')}
                                         className={cn(
-                                            "flex-1 flex items-center justify-center gap-2 py-4 text-[10px] font-black uppercase tracking-[0.15em] rounded-xl transition-all",
+                                            "flex-1 flex items-center justify-center gap-2 py-2.5 text-[10px] font-bold uppercase tracking-widest rounded-lg transition-all",
                                             activeTab === 'penalties' ? "bg-background text-red-600 shadow-sm" : "text-muted-foreground hover:bg-background/40"
                                         )}
                                     >
-                                        <AlertTriangle className="w-4 h-4" /> Penalidades ({penalties.length})
+                                        <AlertTriangle className="w-3.5 h-3.5" /> Penalidades ({penalties.length})
                                     </button>
                                 </div>
 
@@ -441,25 +441,25 @@ export default function ValuationsPage() {
                                                 <div key={date} className="bg-background/50 rounded-xl border border-border overflow-hidden transition-all group hover:border-primary/20">
                                                     <button 
                                                         onClick={() => toggleDate(date)}
-                                                        className="w-full flex items-center justify-between p-5 hover:bg-muted/10 transition-all font-black text-xs uppercase tracking-widest text-muted-foreground"
+                                                        className="w-full flex items-center justify-between px-4 py-3 hover:bg-muted/10 transition-all font-bold text-[11px] uppercase tracking-widest text-muted-foreground"
                                                     >
-                                                        <div className="flex items-center gap-4">
-                                                            <div className="flex items-center gap-2 px-3 py-1.5 bg-muted rounded-xl">
-                                                                <Calendar className="w-4 h-4" />
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="flex items-center gap-2 px-2.5 py-1.5 bg-muted rounded-lg">
+                                                                <Calendar className="w-3.5 h-3.5" />
                                                                 <span>{date}</span>
                                                             </div>
                                                             <span className="opacity-40">•</span>
                                                             <span>{groupedTickets[date].count} Servicios</span>
                                                             {groupedTickets[date].zeroPriceCount > 0 && (
-                                                                <span className="text-amber-600 bg-amber-50 px-2 py-1 rounded-lg flex items-center gap-1 text-[10px]">
+                                                                <span className="text-amber-600 bg-amber-50 px-2 py-1 rounded-lg flex items-center gap-1 text-[9px]">
                                                                     <AlertCircle className="w-3 h-3" />
                                                                     {groupedTickets[date].zeroPriceCount} Sin tarifa
                                                                 </span>
                                                             )}
                                                         </div>
-                                                        <div className="flex items-center gap-6">
-                                                            <span className="text-foreground tracking-tight">S/ {(groupedTickets[date].totalBase + groupedTickets[date].totalAdicional).toLocaleString()}</span>
-                                                            <ChevronRight className={cn("w-5 h-5 transition-transform duration-500", expandedDates.includes(date) && "rotate-90 text-primary")} />
+                                                        <div className="flex items-center gap-4">
+                                                            <span className="text-foreground tracking-tight font-bold">S/ {(groupedTickets[date].totalBase + groupedTickets[date].totalAdicional).toLocaleString()}</span>
+                                                            <ChevronRight className={cn("w-4 h-4 transition-transform duration-500", expandedDates.includes(date) && "rotate-90 text-primary")} />
                                                         </div>
                                                     </button>
                                                     
@@ -468,39 +468,39 @@ export default function ValuationsPage() {
                                                             <table className="w-full text-left text-xs">
                                                                 <thead className="bg-muted/30 border-b border-border">
                                                                     <tr>
-                                                                        <th className="px-6 py-4 font-black text-[10px] uppercase tracking-widest text-muted-foreground">Ticket</th>
-                                                                        <th className="px-6 py-4 font-black text-[10px] uppercase tracking-widest text-muted-foreground">Servicio Realizado</th>
-                                                                        <th className="px-6 py-4 font-black text-[10px] uppercase tracking-widest text-muted-foreground">Categoría</th>
-                                                                        <th className="px-6 py-4 font-black text-[10px] uppercase tracking-widest text-muted-foreground text-right">Monto</th>
-                                                                        <th className="px-6 py-4"></th>
+                                                                        <th className="px-4 py-3 font-bold text-[10px] uppercase tracking-widest text-muted-foreground">Ticket</th>
+                                                                        <th className="px-4 py-3 font-bold text-[10px] uppercase tracking-widest text-muted-foreground">Servicio Realizado</th>
+                                                                        <th className="px-4 py-3 font-bold text-[10px] uppercase tracking-widest text-muted-foreground">Categoría</th>
+                                                                        <th className="px-4 py-3 font-bold text-[10px] uppercase tracking-widest text-muted-foreground text-right">Monto</th>
+                                                                        <th className="px-4 py-3"></th>
                                                                     </tr>
                                                                 </thead>
                                                                 <tbody className="divide-y divide-border/50">
                                                                     {groupedTickets[date].tickets.map((ticket, idx) => (
                                                                         <tr key={ticket.Ticket} className="hover:bg-muted/5 transition-colors group/row">
-                                                                            <td className="px-6 py-4 font-black text-primary text-sm tracking-tight">{ticket.Ticket}</td>
-                                                                            <td className="px-6 py-4">
+                                                                            <td className="px-4 py-3 font-bold text-primary text-[13px] tracking-tight">{ticket.Ticket}</td>
+                                                                            <td className="px-4 py-3">
                                                                                 <div className="flex flex-col gap-0.5">
-                                                                                    <span className="font-bold text-foreground/80 line-clamp-1">{ticket.ServicioNombre || 'Servicio General'}</span>
+                                                                                    <span className="font-bold text-foreground/80 text-[13px] line-clamp-1">{ticket.ServicioNombre || 'Servicio General'}</span>
                                                                                     <span className="text-[10px] font-bold text-muted-foreground opacity-50">{ticket.Servicio}</span>
                                                                                 </div>
                                                                             </td>
-                                                                            <td className="px-6 py-4">
-                                                                                <span className="px-2.5 py-1 bg-muted rounded-lg font-black text-[9px] uppercase tracking-widest border border-border/50">
+                                                                            <td className="px-4 py-3">
+                                                                                <span className="px-2 py-0.5 bg-muted rounded-lg font-bold text-[9px] uppercase tracking-widest border border-border/50">
                                                                                     {ticket.Categoria}
                                                                                 </span>
                                                                             </td>
-                                                                            <td className="px-6 py-4 text-right">
+                                                                            <td className="px-4 py-3 text-right">
                                                                                 <div className="flex flex-col items-end">
                                                                                     {ticket.TarifaBase === 0 ? (
                                                                                         <button 
                                                                                             onClick={() => handleOpenTarifarioModal(ticket)}
-                                                                                            className="px-3 py-1.5 bg-amber-500 text-white rounded-lg text-[10px] font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-md shadow-amber-500/20"
+                                                                                            className="px-2 py-1 bg-amber-500 text-white rounded-lg text-[9px] font-bold uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-md shadow-amber-500/20"
                                                                                         >
                                                                                             Vincular Tarifa
                                                                                         </button>
                                                                                     ) : (
-                                                                                        <span className="font-black text-sm tracking-tight">S/ {(ticket.TarifaBase + (ticket.Adicionales || 0)).toLocaleString()}</span>
+                                                                                        <span className="font-bold text-[13px] tracking-tight">S/ {(ticket.TarifaBase + (ticket.Adicionales || 0)).toLocaleString()}</span>
                                                                                     )}
                                                                                 </div>
                                                                             </td>

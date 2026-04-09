@@ -123,51 +123,51 @@ export default function TarifarioPage() {
         <div className="flex flex-col h-full gap-6 animate-in fade-in duration-500 p-2">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-4xl font-black tracking-tighter">Tarifario de Servicios</h1>
-                    <p className="text-muted-foreground mt-1 text-sm font-bold uppercase tracking-widest opacity-50">Configuración dinámica de precios por centro de atención.</p>
+                    <h1 className="text-2xl font-bold tracking-tight text-foreground">Tarifario de Servicios</h1>
+                    <p className="text-muted-foreground text-[11px] font-medium opacity-60">Configuración dinámica de precios por centro de atención.</p>
                 </div>
             </div>
 
             <div className="relative" ref={dropdownRef}>
                 <div 
                     className={cn(
-                        "bg-card rounded-xl border border-border p-2.5 shadow-sm flex items-center gap-3 transition-all group hover:border-primary/40",
-                        isDropdownOpen && "ring-4 ring-primary/5 border-primary/40"
+                        "bg-card rounded-xl border border-border p-0.5 shadow-sm flex items-center gap-2 transition-all group hover:border-primary/40",
+                        isDropdownOpen && "ring-2 ring-primary/5 border-primary/40"
                     )}
                 >
-                    <div className="p-4 bg-primary/10 rounded-lg text-primary transition-transform group-hover:scale-105 shadow-inner">
-                        <Building2 className="w-6 h-6" />
+                    <div className="p-2.5 bg-primary/10 rounded-xl text-primary transition-transform group-hover:scale-105">
+                        <Building2 className="w-5 h-5" />
                     </div>
                     
                     <button 
                         onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                        className="flex-1 text-left px-3 py-2"
+                        className="flex-1 text-left px-3 py-1"
                     >
-                        <p className="text-[10px] font-black uppercase tracking-[0.25em] text-muted-foreground/60 mb-1">Empresa en Configuración</p>
+                        <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/60 mb-0">Empresa en Configuración</p>
                         <p className={cn(
-                            "text-xl font-black tracking-tight flex items-center gap-2",
-                            !selectedCas && "text-muted-foreground/20 italic"
+                            "text-base font-bold tracking-tight flex items-center gap-2",
+                            !selectedCas && "text-muted-foreground/30 italic"
                         )}>
                             {selectedCas ? selectedCas.Nombre_CAS : "-- Seleccione un CAS para editar precios --"}
-                            {selectedCas && <span className="text-xs font-bold text-muted-foreground/50 border-l border-border pl-3 ml-1">RUC {selectedCas.RUC}</span>}
+                            {selectedCas && <span className="text-[11px] font-bold text-muted-foreground opacity-40">(RUC: {selectedCas.RUC})</span>}
                         </p>
                     </button>
 
-                    <div className="p-4">
-                        <ChevronDown className={cn("w-5 h-5 text-muted-foreground/30 transition-transform duration-500", isDropdownOpen && "rotate-180 text-primary")} />
+                    <div className="p-3">
+                        <ChevronDown className={cn("w-5 h-5 text-muted-foreground/20 transition-transform duration-500", isDropdownOpen && "rotate-180 text-primary")} />
                     </div>
                 </div>
 
                 {isDropdownOpen && (
                     <div className="absolute top-full left-0 mt-3 w-full bg-card border border-border rounded-xl shadow-xl z-[100] animate-in fade-in slide-in-from-top-4 duration-300 overflow-hidden">
-                        <div className="p-6 border-b border-border/40 bg-muted/20">
+                        <div className="p-4 border-b border-border/40">
                             <div className="relative group">
-                                <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-muted-foreground opacity-50 group-focus-within:text-primary transition-all group-focus-within:opacity-100" />
+                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
                                 <input 
                                     autoFocus
                                     type="text" 
                                     placeholder="Buscar por sede o identificador..."
-                                    className="w-full bg-background/50 border border-border rounded-lg pl-14 pr-6 py-4 text-sm font-bold focus:ring-4 focus:ring-primary/5 focus:border-primary/20 outline-none transition-all placeholder:opacity-40 tracking-tight"
+                                    className="w-full bg-muted/30 border border-transparent rounded-lg pl-11 pr-5 py-3 text-sm font-bold focus:bg-background focus:ring-4 focus:ring-primary/5 focus:border-primary/20 outline-none transition-all"
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
                                 />
@@ -179,25 +179,23 @@ export default function TarifarioPage() {
                                     key={cas.RUC}
                                     onClick={() => handleSelectCas(cas)}
                                     className={cn(
-                                        "w-full flex items-center justify-between px-7 py-4.5 rounded-lg transition-all group",
+                                        "w-full flex items-center justify-between px-5 py-3.5 rounded-lg transition-all group",
                                         selectedCas?.RUC === cas.RUC 
                                             ? "bg-primary text-white shadow-lg" 
-                                            : "hover:bg-primary/5 text-foreground/80 hover:translate-x-2"
+                                            : "hover:bg-primary/5 text-foreground/80 hover:translate-x-1"
                                     )}
                                 >
-                                    <div className="flex items-center gap-5 text-left">
-                                        <div className={cn("p-2.5 rounded-xl transition-colors", selectedCas?.RUC === cas.RUC ? "bg-white/10" : "bg-muted/50")}>
-                                            <Target className="w-4 h-4" />
+                                    <div className="flex items-center gap-4 text-left">
+                                        <div className={cn("p-2 rounded-lg transition-colors", selectedCas?.RUC === cas.RUC ? "bg-white/10" : "bg-muted/50")}>
+                                            <Target className="w-3.5 h-3.5" />
                                         </div>
                                         <div className="flex flex-col gap-0.5">
-                                            <span className="text-base font-black tracking-tighter uppercase">{cas.Nombre_CAS}</span>
-                                            <span className={cn("text-[9px] font-black tracking-[0.1em] opacity-60", selectedCas?.RUC === cas.RUC ? "text-white" : "text-muted-foreground text-primary/60")}>ID: {cas.ID_CAS} • RUC: {cas.RUC}</span>
+                                            <span className="text-[13px] font-bold tracking-tight uppercase">{cas.Nombre_CAS}</span>
+                                            <span className={cn("text-[9px] font-bold tracking-widest opacity-60", selectedCas?.RUC === cas.RUC ? "text-white" : "text-muted-foreground")}>RUC: {cas.RUC}</span>
                                         </div>
                                     </div>
                                     {selectedCas?.RUC === cas.RUC && (
-                                        <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
-                                            <Check className="w-4 h-4" />
-                                        </div>
+                                        <Check className="w-3.5 h-3.5" />
                                     )}
                                 </button>
                             ))}
@@ -226,14 +224,14 @@ export default function TarifarioPage() {
                     </div>
                 ) : (
                     <>
-                        <div className="p-8 border-b border-border/40 flex items-center justify-between bg-muted/5">
-                            <div className="flex items-center gap-6">
-                                <div className="p-4 bg-emerald-500/10 rounded-lg text-emerald-600 border border-emerald-500/10">
-                                    <DollarSign className="w-6 h-6" />
+                        <div className="p-6 border-b border-border/40 flex items-center justify-between bg-muted/5">
+                            <div className="flex items-center gap-5">
+                                <div className="p-3 bg-emerald-500/10 rounded-lg text-emerald-600 border border-emerald-500/10">
+                                    <DollarSign className="w-5 h-5" />
                                 </div>
                                 <div>
-                                    <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60 mb-1">Precios Configurados</h3>
-                                    <p className="text-2xl font-black tracking-tight">{rates.length} Items en lista</p>
+                                    <h3 className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/60 mb-0.5">Precios Configurados</h3>
+                                    <p className="text-xl font-bold tracking-tight">{rates.length} Items en lista</p>
                                 </div>
                             </div>
                             <div className="flex items-center gap-3">
@@ -241,14 +239,14 @@ export default function TarifarioPage() {
                                     <div className="flex items-center gap-3 animate-in zoom-in-95">
                                         <button 
                                             onClick={() => { setIsEditing(false); setEditRates(rates); }}
-                                            className="px-6 py-3.5 bg-muted rounded-lg font-bold text-[10px] uppercase tracking-widest text-muted-foreground hover:bg-muted/80 transition-all"
+                                            className="px-5 py-2.5 bg-muted rounded-lg font-bold text-[10px] uppercase tracking-widest text-muted-foreground hover:bg-muted/80 transition-all"
                                         >
                                             Descartar
                                         </button>
                                         <button 
                                             onClick={handleSave}
                                             disabled={saving}
-                                            className="px-8 py-3.5 bg-emerald-600 text-white rounded-lg font-bold text-[10px] uppercase tracking-widest shadow-lg flex items-center gap-2"
+                                            className="px-6 py-2.5 bg-emerald-600 text-white rounded-lg font-bold text-[10px] uppercase tracking-widest shadow-lg flex items-center gap-2"
                                         >
                                             {saving ? "Guardando..." : <><Save className="w-4 h-4" /> Guardar Tarifario</>}
                                         </button>
@@ -256,9 +254,9 @@ export default function TarifarioPage() {
                                 ) : (
                                     <button 
                                         onClick={handleAddRow}
-                                        className="px-8 py-3.5 bg-foreground text-background rounded-lg font-bold text-[10px] uppercase tracking-widest shadow-lg flex items-center gap-2 transition-all"
+                                        className="h-10 px-6 bg-foreground text-background rounded-lg font-bold text-[10px] uppercase tracking-widest shadow-lg flex items-center gap-2 transition-all hover:opacity-90 active:scale-95"
                                     >
-                                        <Plus className="w-4 h-4" /> Agregar Tarifa
+                                        <Plus className="w-3.5 h-3.5" /> Agregar Tarifa
                                     </button>
                                 )}
                             </div>
@@ -273,16 +271,16 @@ export default function TarifarioPage() {
                                 <table className="w-full text-left">
                                     <thead className="sticky top-0 bg-card z-10">
                                         <tr>
-                                            <th className="px-6 py-4 bg-muted/30 rounded-l-lg font-black text-[10px] uppercase tracking-widest text-muted-foreground">Categoría</th>
-                                            <th className="px-6 py-4 bg-muted/30 font-black text-[10px] uppercase tracking-widest text-muted-foreground">Cód. Servicio</th>
-                                            <th className="px-6 py-4 bg-muted/30 font-black text-[10px] uppercase tracking-widest text-muted-foreground text-right">Importe Unitario</th>
-                                            <th className="px-6 py-4 bg-muted/30 rounded-r-lg text-right"></th>
+                                            <th className="px-6 py-3 bg-muted/30 rounded-l-lg font-bold text-[10px] uppercase tracking-widest text-muted-foreground">Categoría</th>
+                                            <th className="px-6 py-3 bg-muted/30 font-bold text-[10px] uppercase tracking-widest text-muted-foreground">Cód. Servicio</th>
+                                            <th className="px-6 py-3 bg-muted/30 font-bold text-[10px] uppercase tracking-widest text-muted-foreground text-right">Importe Unitario</th>
+                                            <th className="px-6 py-3 bg-muted/30 rounded-r-lg text-right"></th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border/30">
                                         {editRates.map((rate, idx) => (
                                             <tr key={idx} className="group hover:bg-muted/10 transition-all border-transparent border-l-4 hover:border-primary">
-                                                <td className="px-6 py-6">
+                                                <td className="px-6 py-4">
                                                     <input 
                                                         type="text"
                                                         value={rate.Categoria}
@@ -293,10 +291,10 @@ export default function TarifarioPage() {
                                                             setIsEditing(true);
                                                         }}
                                                         placeholder="LAVADORA, TV, ETC..."
-                                                        className="bg-transparent border-none outline-none font-black text-sm tracking-tight w-full placeholder:opacity-20"
+                                                        className="bg-transparent border-none outline-none font-bold text-[13px] tracking-tight w-full placeholder:opacity-20"
                                                     />
                                                 </td>
-                                                <td className="px-6 py-6 font-black text-xs text-primary">
+                                                <td className="px-6 py-4">
                                                     <input 
                                                         type="text"
                                                         value={rate.Servicio}
@@ -309,9 +307,9 @@ export default function TarifarioPage() {
                                                         className="bg-transparent border-none outline-none w-full font-bold uppercase"
                                                     />
                                                 </td>
-                                                <td className="px-6 py-6 text-right">
+                                                <td className="px-6 py-4 text-right">
                                                     <div className="flex items-center justify-end gap-2">
-                                                        <span className="text-xs font-black text-muted-foreground opacity-40">S/ </span>
+                                                        <span className="text-[11px] font-bold text-muted-foreground opacity-40">S/ </span>
                                                         <input 
                                                             type="number"
                                                             value={rate.Importe}
@@ -321,11 +319,11 @@ export default function TarifarioPage() {
                                                                 setEditRates(newRates);
                                                                 setIsEditing(true);
                                                             }}
-                                                            className="bg-muted/30 px-4 py-2 rounded-lg border border-transparent focus:border-emerald-500/30 text-right font-black text-base tracking-tighter w-32 outline-none transition-all"
+                                                            className="bg-muted/30 px-3 py-1.5 rounded-lg border border-transparent focus:border-emerald-500/30 text-right font-bold text-[13px] tracking-tight w-28 outline-none transition-all"
                                                         />
                                                     </div>
                                                 </td>
-                                                <td className="px-6 py-6 text-right opacity-0 group-hover:opacity-100 transition-all">
+                                                <td className="px-6 py-4 text-right opacity-0 group-hover:opacity-100 transition-all">
                                                     <button 
                                                         onClick={() => {
                                                             const newRates = editRates.filter((_, i) => i !== idx);

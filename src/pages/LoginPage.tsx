@@ -67,13 +67,13 @@ export default function LoginPage() {
                     <div className="flex items-center gap-3 mb-6">
                         <span className="text-2xl font-black tracking-tight uppercase">Valorizaciones</span>
                     </div>
-                    <h1 className="text-6xl font-black mb-4 leading-[0.9] tracking-tighter">
+                    <h1 className="text-4xl font-bold mb-4 leading-none tracking-tight">
                         GESTOR DE<br />VALORIZACIÓN<br />QUINCENAL
                     </h1>
-                    <div className="text-slate-400 text-lg max-w-md space-y-6">
-                        <p className="font-bold tracking-widest text-xs opacity-60 uppercase">Control automatizado de pagos y penalidades para la red CAS.</p>
+                    <div className="text-slate-400 text-base max-w-md space-y-6">
+                        <p className="font-medium text-[11px] opacity-60 uppercase tracking-widest">Control automatizado de pagos y penalidades para la red CAS.</p>
                         <div className="flex flex-col w-fit gap-2">
-                            <span className="text-2xl font-black text-slate-100 tracking-tight">GAC - MT Industrial</span>
+                            <span className="text-xl font-bold text-slate-100 tracking-tight">GAC - MT Industrial</span>
                         </div>
                     </div>
                 </div>
@@ -97,8 +97,8 @@ export default function LoginPage() {
 
                 <div className="w-full max-w-md space-y-8">
                     <div className="text-center">
-                        <h2 className="text-3xl font-black tracking-tight uppercase">Bienvenido</h2>
-                        <p className="mt-2 text-muted-foreground text-xs font-bold uppercase tracking-widest opacity-40">
+                        <h2 className="text-2xl font-bold tracking-tight uppercase">Bienvenido</h2>
+                        <p className="mt-2 text-muted-foreground text-[10px] font-bold uppercase tracking-widest opacity-40">
                             Ingresa tus credenciales para acceder.
                         </p>
                     </div>
@@ -106,7 +106,7 @@ export default function LoginPage() {
                     <form onSubmit={handleLogin} className="space-y-6 mt-8">
                         <div className="space-y-4">
                             <div>
-                                <label className="block text-[10px] font-black uppercase tracking-widest mb-1.5 ml-1 opacity-50">
+                                <label className="block text-[10px] font-bold uppercase tracking-widest mb-1.5 ml-1 opacity-50">
                                     Usuario
                                 </label>
                                 <div className="relative">
@@ -126,7 +126,7 @@ export default function LoginPage() {
                             </div>
 
                             <div>
-                                <label className="block text-[10px] font-black uppercase tracking-widest mb-1.5 ml-1 opacity-50">
+                                <label className="block text-[10px] font-bold uppercase tracking-widest mb-1.5 ml-1 opacity-50">
                                     Contraseña
                                 </label>
                                 <div className="relative">
@@ -174,7 +174,7 @@ export default function LoginPage() {
                             type="submit"
                             disabled={loading}
                             className={cn(
-                                "w-full flex justify-center items-center h-12 px-4 py-2 border border-transparent rounded-xl shadow-lg text-xs font-black uppercase tracking-widest text-primary-foreground bg-primary hover:opacity-90 transition-all transform active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed", 
+                                "w-full flex justify-center items-center h-12 px-4 py-2 border border-transparent rounded-xl shadow-lg text-[11px] font-bold uppercase tracking-widest text-primary-foreground bg-primary hover:opacity-90 transition-all transform active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed", 
                                 loading && "animate-pulse"
                             )}
                         >
