@@ -11,21 +11,35 @@ interface PenaltyModalProps {
     ruc: string;
     tickets: ValuationTicket[];
     type: 'penalty' | 'additional';
+    initialTicket?: string;
+    initialDate?: string;
 }
 
-export default function PenaltyModal({ isOpen, onClose, onSuccess, ruc, tickets, type }: PenaltyModalProps) {
+export default function PenaltyModal({ isOpen, onClose, onSuccess, ruc, tickets, type, initialTicket, initialDate }: PenaltyModalProps) {
     const [motives, setMotives] = useState<PenaltyMotive[]>([]);
     const [loading, setLoading] = useState(false);
     const [showDropdown, setShowDropdown] = useState(false);
     const [searchResults, setSearchResults] = useState<ValuationTicket[]>([]);
     
     const [formData, setFormData] = useState({
-        ticket: '',
+        ticket: initialTicket || '',
         motivo: '',
         descripcion: '',
         importe: '',
-        fecha: new Date().toISOString().split('T')[0]
+        fecha: initialDate || new Date().toISOString().split('T')[0]
     });
+
+    useEffect(() => {
+        if (isOpen) {
+            setFormData({
+                ticket: initialTicket || '',
+                motivo: '',
+                descripcion: '',
+                importe: '',
+                fecha: initialDate || new Date().toISOString().split('T')[0]
+            });
+        }
+    }, [isOpen, initialTicket, initialDate]);
 
     useEffect(() => {
         if (isOpen && type === 'penalty') {

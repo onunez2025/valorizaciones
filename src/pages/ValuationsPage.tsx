@@ -27,13 +27,16 @@ export default function ValuationsPage() {
     const [tickets, setTickets] = useState<ValuationTicket[]>([]);
     const [penalties, setPenalties] = useState<Penalty[]>([]);
     const [loadingData, setLoadingData] = useState(false);
-    const [showPenaltyModal, setShowPenaltyModal] = useState<{show: boolean, type: 'penalty' | 'additional'}>({show: false, type: 'penalty'});
+    const [showPenaltyModal, setShowPenaltyModal] = useState<{show: boolean, type: 'penalty' | 'additional', ticket?: string, date?: string}>({show: false, type: 'penalty'});
     const [expandedDates, setExpandedDates] = useState<string[]>([]);
     const [showTarifarioModal, setShowTarifarioModal] = useState(false);
     const [showCloseModal, setShowCloseModal] = useState(false);
     const [isClosing, setIsClosing] = useState(false);
     const [modalData, setModalData] = useState<any>(null);
     const [activeTab, setActiveTab] = useState<'services' | 'penalties'>('services');
+    const [globalSearch, setGlobalSearch] = useState('');
+    const [globalSearchResult, setGlobalSearchResult] = useState<any>(null);
+    const [isSearchingGlobal, setIsSearchingGlobal] = useState(false);
 
     // Estado para el Dropdown Custom
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -215,6 +218,34 @@ export default function ValuationsPage() {
                     <h1 className="text-2xl font-bold tracking-tight text-foreground">Valorizaciones CAS</h1>
                     <p className="text-muted-foreground text-[11px] font-medium opacity-60">Gestión quincenal de pagos y descuentos.</p>
                 </div>
+
+                <div className="flex-1 max-w-md mx-4">
+                    <div className="relative group">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                        <input 
+                            type="text" 
+                            placeholder="Buscador Rápido: Ingrese N° de Ticket..."
+                            className="w-full bg-card border border-border rounded-xl pl-10 pr-4 py-2 text-sm font-bold focus:ring-4 focus:ring-primary/5 focus:border-primary outline-none transition-all shadow-sm"
+                            value={globalSearch}
+                            onChange={(e) => setGlobalSearch(e.target.value)}
+                            onKeyDown={async (e) => {
+                                if (e.key === 'Enter' && globalSearch) {
+                                    setIsSearchingGlobal(true);
+                                    try {
+                                        const result = await ApiClient.request(`/tickets/find/${globalSearch}`);
+                                        setGlobalSearchResult(result);
+                                    } catch (err) {
+                                        setGlobalSearchResult({ error: 'Ticket no encontrado' });
+                                    } finally {
+                                        setIsSearchingGlobal(false);
+                                    }
+                                }
+                            }}
+                        />
+                        {isSearchingGlobal && <Activity className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-primary animate-spin" />}
+                    </div>
+                </div>
+
                 {selectedCas && (
                     <div className="flex items-center gap-3 bg-primary/10 border border-primary/20 px-4 py-2 rounded-lg shadow-sm">
                         <div className="w-2.5 h-2.5 bg-primary rounded-full animate-pulse" />
@@ -225,6 +256,52 @@ export default function ValuationsPage() {
                     </div>
                 )}
             </div>
+
+            {globalSearchResult && (
+                <div className="bg-primary/5 border border-primary/20 rounded-2xl p-4 flex items-center justify-between animate-in slide-in-from-top-4 duration-300">
+                    {globalSearchResult.error ? (
+                        <div className="flex items-center gap-3 text-red-600">
+                            <AlertCircle className="w-5 h-5" />
+                            <span className="text-sm font-bold">{globalSearchResult.error}</span>
+                        </div>
+                    ) : (
+                        <div className="flex flex-wrap items-center gap-6">
+                            <div className="flex flex-col">
+                                <span className="text-[10px] font-bold uppercase tracking-widest text-primary opacity-60">Ticket Encontrado</span>
+                                <span className="text-lg font-black">{globalSearchResult.Ticket}</span>
+                            </div>
+                            <div className="h-8 w-px bg-primary/10" />
+                            <div className="flex flex-col">
+                                <span className="text-[10px] font-bold uppercase tracking-widest opacity-40">Centro de Atención (CAS)</span>
+                                <span className="text-sm font-bold">{globalSearchResult.CAS_Nombre}</span>
+                            </div>
+                            <div className="h-8 w-px bg-primary/10" />
+                            <div className="flex flex-col">
+                                <span className="text-[10px] font-bold uppercase tracking-widest opacity-40">Fecha de Cierre</span>
+                                <span className="text-sm font-bold">{new Date(globalSearchResult.Fecha).toLocaleDateString()}</span>
+                            </div>
+                            <button 
+                                onClick={() => {
+                                    const cas = casList.find(c => c.RUC === globalSearchResult.RUC);
+                                    if (cas) setSelectedCas(cas);
+                                    setShowPenaltyModal({
+                                        show: true, 
+                                        type: 'penalty', 
+                                        ticket: globalSearchResult.Ticket,
+                                        date: globalSearchResult.Fecha.split('T')[0]
+                                    });
+                                }}
+                                className="bg-red-600 text-white px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-red-700 transition-all shadow-lg shadow-red-600/20 flex items-center gap-2"
+                            >
+                                <AlertTriangle className="w-4 h-4" /> Aplicar Penalidad
+                            </button>
+                        </div>
+                    )}
+                    <button onClick={() => setGlobalSearchResult(null)} className="p-2 hover:bg-primary/10 rounded-full transition-colors">
+                        <X className="w-5 h-5 text-muted-foreground" />
+                    </button>
+                </div>
+            )}
 
             {/* Selector de CAS Custom Moderno */}
             <div className="relative" ref={dropdownRef}>
@@ -506,7 +583,12 @@ export default function ValuationsPage() {
                                                                             </td>
                                                                             <td className="px-6 py-4">
                                                                                 <button 
-                                                                                    onClick={() => setShowPenaltyModal({show: true, type: 'penalty'})}
+                                                                                    onClick={() => setShowPenaltyModal({
+                                                                                        show: true, 
+                                                                                        type: 'penalty', 
+                                                                                        ticket: ticket.Ticket,
+                                                                                        date: ticket.Fecha.split('T')[0]
+                                                                                    })}
                                                                                     className="p-2.5 bg-red-500/10 text-red-600 rounded-lg hover:bg-red-500 hover:text-white transition-all opacity-0 group-hover/row:opacity-100"
                                                                                     title="Aplicar Sanción"
                                                                                 >
@@ -575,6 +657,8 @@ export default function ValuationsPage() {
                     type={showPenaltyModal.type} 
                     ruc={selectedCas.RUC}
                     tickets={tickets}
+                    initialTicket={showPenaltyModal.ticket}
+                    initialDate={showPenaltyModal.date}
                     onSuccess={handleFetchValuation}
                     onClose={() => setShowPenaltyModal({show: false, type: 'penalty'})} 
                 />
