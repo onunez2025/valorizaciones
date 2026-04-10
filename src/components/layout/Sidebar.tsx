@@ -40,15 +40,19 @@ export function Sidebar({ className }: { className?: string }) {
 
     return (
         <div className={cn(
-            "flex flex-col h-full border-r border-border transition-colors duration-300",
+            "flex flex-col h-full border-r border-border transition-colors duration-300 font-sans",
             theme === 'dark' ? "bg-card text-card-foreground" : "bg-white text-slate-800",
             className
         )}>
-            {/* Header / Logo */}
-            <div className="p-6 flex items-center gap-3 border-b border-border">
-                <div>
-                    <h1 className="font-bold text-lg leading-none tracking-tight">Valorizaciones</h1>
-                    <p className="text-xs text-muted-foreground mt-1">Control de Servicios</p>
+            {/* Header / Logo Section - StandardIZED Padding (Matches Tablero Control) */}
+            <div className="p-6 flex items-center gap-3 min-h-[62px]">
+                <div className="w-10 h-10 flex items-center justify-center shrink-0 overflow-hidden bg-primary/10 rounded drop-shadow-sm border border-primary/20">
+                     {/* Placeholder for future logo */}
+                    <span className="text-[12px] font-black text-primary">VAL</span>
+                </div>
+                <div className="overflow-hidden">
+                    <h1 className="font-bold text-lg leading-none tracking-tight truncate">Valorizaciones</h1>
+                    <p className="text-[10px] text-muted-foreground mt-1 uppercase tracking-widest font-bold opacity-60">Control Gestión</p>
                 </div>
             </div>
 
@@ -59,16 +63,14 @@ export function Sidebar({ className }: { className?: string }) {
                         key={item.to}
                         to={item.to}
                         className={({ isActive }) => cn(
-                            "flex items-center justify-between px-3 py-2.5 rounded-md text-sm font-medium transition-colors",
+                            "flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors",
                             isActive
                                 ? "bg-primary text-primary-foreground shadow-sm"
                                 : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
                         )}
                     >
-                        <div className="flex items-center gap-3">
-                            <item.icon className="w-4 h-4" />
-                            {item.label}
-                        </div>
+                        <item.icon className="w-4 h-4" />
+                        {item.label}
                     </NavLink>
                 ))}
             </nav>
