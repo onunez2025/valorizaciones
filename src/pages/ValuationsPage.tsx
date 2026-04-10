@@ -332,17 +332,48 @@ export default function ValuationsPage() {
             <div className="flex-1 min-h-0">
                 <div className="grid grid-cols-1 xl:grid-cols-4 gap-6 h-full pb-2">
                     {/* Resumen */}
-                    <div className="xl:col-span-1 space-y-6">
-                        <div className="bg-card border border-border rounded-2xl p-6 shadow-sm space-y-6 sticky top-0">
-                            <div className="flex items-center justify-between"><h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">Resumen de Cuenta</h3><Calculator className="w-5 h-5 text-primary" /></div>
-                            <div className="space-y-3">
-                                <div className="flex justify-between items-center p-4 bg-muted/20 rounded-xl border border-border/30"><span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Servicios</span><span className="text-base font-bold tracking-tight">S/ {totalTickets.toLocaleString()}</span></div>
-                                <div className="flex justify-between items-center p-4 bg-red-50/50 rounded-xl border border-red-100"><span className="text-[10px] font-bold uppercase tracking-widest text-red-600">Penalidades</span><span className="text-base font-bold text-red-600 tracking-tight">- S/ {totalPenalties.toLocaleString()}</span></div>                                               
-                                <div className="flex justify-between items-center p-5 bg-primary text-white rounded-2xl shadow-xl shadow-primary/20"><div className="flex flex-col"><span className="text-[10px] font-bold uppercase tracking-widest opacity-80">Total Neto</span><span className="text-[9px] opacity-70">Cálculo en tiempo real</span></div><span className="text-xl font-black tracking-tight">S/ {grandTotal.toLocaleString()}</span></div>
+                    <div className="xl:col-span-1 h-full">
+                        <div className="bg-card border border-border rounded-2xl p-6 shadow-sm h-full flex flex-col justify-between">
+                            <div className="space-y-6">
+                                <div className="flex items-center justify-between">
+                                    <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">Resumen de Cuenta</h3>
+                                    <Calculator className="w-5 h-5 text-primary" />
+                                </div>
+                                
+                                <div className="space-y-3">
+                                    <div className="flex justify-between items-center p-4 bg-muted/20 rounded-xl border border-border/30">
+                                        <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Servicios</span>
+                                        <span className="text-base font-bold tracking-tight">S/ {totalTickets.toLocaleString()}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center p-4 bg-red-50/50 rounded-xl border border-red-100">
+                                        <span className="text-[10px] font-bold uppercase tracking-widest text-red-600">Penalidades</span>
+                                        <span className="text-base font-bold text-red-600 tracking-tight">- S/ {totalPenalties.toLocaleString()}</span>
+                                    </div>                                               
+                                    <div className="flex justify-between items-center p-5 bg-gradient-to-br from-primary via-indigo-600 to-primary text-white rounded-2xl shadow-xl shadow-primary/20">
+                                        <div className="flex flex-col">
+                                            <span className="text-[10px] font-bold uppercase tracking-widest opacity-80">Total Neto</span>
+                                            <span className="text-[9px] opacity-70">Cálculo en tiempo real</span>
+                                        </div>
+                                        <span className="text-xl font-black tracking-tight">S/ {grandTotal.toLocaleString()}</span>
+                                    </div>
+                                </div>
                             </div>
-                            <div className="grid grid-cols-1 gap-3 pt-4 border-t border-border/50">
-                                <button onClick={handleExportExcel} disabled={!selectedCas || tickets.length === 0} className="w-full flex items-center justify-center gap-2 p-4 bg-muted/40 hover:bg-muted text-[10px] font-black uppercase tracking-widest rounded-xl transition-all border border-border/40 disabled:opacity-30 disabled:cursor-not-allowed"><Download className="w-4 h-4" /> Exportar a Excel</button>
-                                <button onClick={() => setShowCloseModal(true)} disabled={!selectedCas || tickets.length === 0} className="w-full flex items-center justify-center gap-2 p-4 bg-foreground text-background hover:opacity-90 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all shadow-xl shadow-black/10 disabled:opacity-30 disabled:cursor-not-allowed"><Lock className="w-4 h-4" /> Cerrar Quincena</button>
+
+                            <div className="grid grid-cols-1 gap-3 pt-6 mt-6 border-t border-border/50">
+                                <button 
+                                    onClick={handleExportExcel} 
+                                    disabled={!selectedCas || tickets.length === 0} 
+                                    className="w-full flex items-center justify-center gap-2 p-4 bg-background border border-border rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-muted transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                                >
+                                    <Download className="w-4 h-4" /> Exportar a Excel
+                                </button>
+                                <button 
+                                    onClick={() => setShowCloseModal(true)} 
+                                    disabled={!selectedCas || tickets.length === 0} 
+                                    className="w-full flex items-center justify-center gap-2 p-4 bg-gradient-to-r from-primary to-indigo-600 text-white hover:opacity-90 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all shadow-xl shadow-primary/20 disabled:opacity-30 disabled:cursor-not-allowed"
+                                >
+                                    <Lock className="w-4 h-4" /> Cerrar Quincena
+                                </button>
                             </div>
                         </div>
                     </div>
