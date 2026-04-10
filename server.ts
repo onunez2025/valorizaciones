@@ -1,4 +1,5 @@
 import express from 'express';
+import { fileURLToPath } from 'url';
 import type { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
@@ -529,7 +530,8 @@ app.get('/api/dashboard/top-cas', verifyToken, async (req: Request, res: Respons
 });
 
 // --- SERVE STATIC FILES (PROD) ---
-const __dirname = path.resolve();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 app.use(express.static(path.join(__dirname, 'dist')));
 
 // SPA Fallback: Serve index.html for any remaining routes
