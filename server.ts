@@ -453,15 +453,20 @@ app.get('/api/dashboard/stats', verifyToken, async (req: Request, res: Response)
                 SELECT s.Ticket, 
                     CASE WHEN LEFT(s.NombreTecnico, 3) IN ('SB2', 'SS ', 'AC ', 'EMS', 'SIL', 'VYA', 'SEY', 'TP ', 'TYG', 'FSI', 'LM ', 'TCP', 'MG ', 'AYD', 'SLR', 'REY', 'VR ', 'LV ', 'MR ', 'AXX', 'COT', 'SNT', 'NUL') 
                     THEN LEFT(s.NombreTecnico, 3) ELSE 'GAC' END as Prefix,
-                    s.IdServicio
+                    s.IdServicio, s.CodigoExternoEquipo
                 FROM [SIATC].[Dashboard_FSM] s
                 WHERE s.CheckOut >= @start AND s.CheckOut < DATEADD(DAY, 1, @end)
                   AND s.Estado = 'Closed'
+                  AND s.VisitaRealizada = 'true'
+                  AND s.TrabajoRealizado = 'true'
             ),
             TicketsCAS AS (
-                SELECT tf.*, cas.ID_CAS, cas.RUC
+                SELECT tf.*, cas.ID_CAS, cas.RUC, ISNULL(m.Categoria, 'N/A') as Categoria
                 FROM TicketsFilt tf
-                LEFT JOIN [dbo].[GAC_APP_TB_CAS] cas ON tf.Prefix = cas.Abrev_nombre_colaboradores
+                LEFT JOIN [dbo].[GAC_APP_TB_CAS] cas ON TRIM(tf.Prefix) = TRIM(cas.Abrev_nombre_colaboradores)
+                OUTER APPLY (
+                    SELECT TOP 1 Categoria FROM [dbo].[GAC_APP_TB_MATERIALES] WHERE ID_Externo = tf.CodigoExternoEquipo
+                ) m
                 WHERE 1=1
         `;
 
@@ -473,9 +478,9 @@ app.get('/api/dashboard/stats', verifyToken, async (req: Request, res: Response)
         query += `
             ),
             ResumenServicios AS (
-                SELECT ID_CAS, IdServicio, COUNT(*) as Cnt
+                SELECT ID_CAS, IdServicio, Categoria, COUNT(*) as Cnt
                 FROM TicketsCAS
-                GROUP BY ID_CAS, IdServicio
+                GROUP BY ID_CAS, IdServicio, Categoria
             ),
             ValSanciones AS (
                 SELECT SUM(d.Importe) as Total FROM [dbo].[GAC_APP_TB_TICKETS_DESCUENTOS] d
@@ -489,7 +494,10 @@ app.get('/api/dashboard/stats', verifyToken, async (req: Request, res: Response)
                 (SELECT COUNT(*) FROM TicketsCAS) as TotalTickets,
                 (SELECT SUM(rs.Cnt * ISNULL(t.Importe, 0)) 
                  FROM ResumenServicios rs 
-                 LEFT JOIN [dbo].[GAC_APP_TB_TARIFARIO] t ON t.Empresa = rs.ID_CAS AND t.Servicio = rs.IdServicio AND t.Estado = 'A'
+                 LEFT JOIN [dbo].[GAC_APP_TB_TARIFARIO] t ON t.Empresa = rs.ID_CAS 
+                    AND (t.Servicio = rs.IdServicio)
+                    AND TRIM(t.Categoria) = TRIM(rs.Categoria)
+                    AND t.Estado = 'A'
                 ) as BaseImporte,
                 ISNULL((SELECT Total FROM ValAdicionales), 0) as Adicionales,
                 ISNULL((SELECT Total FROM ValSanciones), 0) as Sanciones
@@ -500,10 +508,10 @@ app.get('/api/dashboard/stats', verifyToken, async (req: Request, res: Response)
         const bruto = (result.BaseImporte || 0) + (result.Adicionales || 0);
 
         res.json({
-            totalTickets: result.TotalTickets || 0,
-            bruto: bruto,
-            sanciones: result.Sanciones || 0,
-            neto: bruto - (result.Sanciones || 0)
+            TotalTickets: result.TotalTickets || 0,
+            Bruto: bruto,
+            Sanciones: result.Sanciones || 0,
+            Neto: bruto - (result.Sanciones || 0)
         });
     } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
@@ -518,16 +526,20 @@ app.get('/api/dashboard/trends', verifyToken, async (req: Request, res: Response
 
         let query = `
             WITH TicketsFilt AS (
-                SELECT s.Ticket, s.CheckOut, s.IdServicio,
+                SELECT s.Ticket, s.CheckOut, s.IdServicio, s.CodigoExternoEquipo,
                     CASE WHEN LEFT(s.NombreTecnico, 3) IN ('SB2', 'SS ', 'AC ', 'EMS', 'SIL', 'VYA', 'SEY', 'TP ', 'TYG', 'FSI', 'LM ', 'TCP', 'MG ', 'AYD', 'SLR', 'REY', 'VR ', 'LV ', 'MR ', 'AXX', 'COT', 'SNT', 'NUL') 
                     THEN LEFT(s.NombreTecnico, 3) ELSE 'GAC' END as Prefix
                 FROM [SIATC].[Dashboard_FSM] s
                 WHERE s.CheckOut >= DATEADD(MONTH, @m, GETDATE()) AND s.Estado = 'Closed'
+                  AND s.VisitaRealizada = 'true' AND s.TrabajoRealizado = 'true'
             ),
             TicketsCAS AS (
-                SELECT tf.*, cas.ID_CAS, cas.RUC
+                SELECT tf.*, cas.ID_CAS, cas.RUC, ISNULL(m.Categoria, 'N/A') as Categoria
                 FROM TicketsFilt tf
-                LEFT JOIN [dbo].[GAC_APP_TB_CAS] cas ON tf.Prefix = cas.Abrev_nombre_colaboradores
+                LEFT JOIN [dbo].[GAC_APP_TB_CAS] cas ON TRIM(tf.Prefix) = TRIM(cas.Abrev_nombre_colaboradores)
+                OUTER APPLY (
+                    SELECT TOP 1 Categoria FROM [dbo].[GAC_APP_TB_MATERIALES] WHERE ID_Externo = tf.CodigoExternoEquipo
+                ) m
                 WHERE 1=1
         `;
 
@@ -544,9 +556,10 @@ app.get('/api/dashboard/trends', verifyToken, async (req: Request, res: Response
                     MONTH(twc.CheckOut) as MesNum,
                     twc.ID_CAS, 
                     twc.IdServicio, 
+                    twc.Categoria,
                     COUNT(*) as Cnt
                 FROM TicketsCAS twc
-                GROUP BY YEAR(twc.CheckOut), MONTH(twc.CheckOut), twc.ID_CAS, twc.IdServicio
+                GROUP BY YEAR(twc.CheckOut), MONTH(twc.CheckOut), twc.ID_CAS, twc.IdServicio, twc.Categoria
             ),
             SancionesMensuales AS (
                 SELECT YEAR(twc.CheckOut) as Anio, MONTH(twc.CheckOut) as MesNum, SUM(d.Importe) as TotalSanciones
@@ -563,7 +576,10 @@ app.get('/api/dashboard/trends', verifyToken, async (req: Request, res: Response
                 SUM(rm.Cnt * ISNULL(t.Importe, 0)) as Bruto,
                 ISNULL(MIN(sm.TotalSanciones), 0) as Sanciones
             FROM ResumenMensual rm
-            LEFT JOIN [dbo].[GAC_APP_TB_TARIFARIO] t ON t.Empresa = rm.ID_CAS AND t.Servicio = rm.IdServicio AND t.Estado = 'A'
+            LEFT JOIN [dbo].[GAC_APP_TB_TARIFARIO] t ON t.Empresa = rm.ID_CAS 
+                AND (t.Servicio = rm.IdServicio)
+                AND TRIM(t.Categoria) = TRIM(rm.Categoria) 
+                AND t.Estado = 'A'
             LEFT JOIN SancionesMensuales sm ON rm.Anio = sm.Anio AND rm.MesNum = sm.MesNum
             GROUP BY rm.Anio, rm.MesNum
             ORDER BY rm.Anio ASC, rm.MesNum ASC
@@ -591,6 +607,7 @@ app.get('/api/dashboard/top-cas', verifyToken, async (req: Request, res: Respons
                 FROM [SIATC].[Dashboard_FSM] s
                 WHERE s.CheckOut >= @start AND s.CheckOut < DATEADD(DAY, 1, @end)
                   AND s.Estado = 'Closed'
+                  AND s.VisitaRealizada = 'true' AND s.TrabajoRealizado = 'true'
             ),
             PrefixCounts AS (
                 SELECT Prefix, COUNT(*) as Total FROM RawTickets GROUP BY Prefix
@@ -598,7 +615,7 @@ app.get('/api/dashboard/top-cas', verifyToken, async (req: Request, res: Respons
             TicketsWithCAS AS (
                 SELECT cas.Nombre_CAS, pc.Total, cas.RUC
                 FROM PrefixCounts pc
-                JOIN [dbo].[GAC_APP_TB_CAS] cas ON pc.Prefix = cas.Abrev_nombre_colaboradores
+                JOIN [dbo].[GAC_APP_TB_CAS] cas ON TRIM(pc.Prefix) = TRIM(cas.Abrev_nombre_colaboradores)
                 WHERE 1=1
         `;
 
