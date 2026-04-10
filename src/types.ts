@@ -8,6 +8,7 @@ export type Permission =
   | 'val.penalties.rebuttal'
   | 'val.tarifario.view'
   | 'val.tarifario.edit'
+  | 'val.config.view'
   | 'val.config.users'
   | 'val.config.roles';
 
