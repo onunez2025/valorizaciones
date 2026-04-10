@@ -460,16 +460,16 @@ app.get('/api/dashboard/stats', verifyToken, async (req: Request, res: Response)
             FROM [APPGAC].[ServiciosViewSQL] s
             JOIN [dbo].[GAC_APP_TB_CAS] cas ON s.IdCAS = cas.ID_CAS
             LEFT JOIN [dbo].[GAC_APP_TB_TARIFARIO] t ON t.Empresa = s.IdCAS AND t.Servicio = s.IdServicio AND t.Estado = 'A'
-            LEFT JOIN (
-                SELECT Ticket, SUM(Importe) as TotalAdicionales 
+            OUTER APPLY (
+                SELECT SUM(Importe) as TotalAdicionales 
                 FROM [dbo].[GAC_APP_TB_TICKETS_VALORIZACION_ADICIONAL] 
-                GROUP BY Ticket
-            ) a ON s.Ticket = a.Ticket
-            LEFT JOIN (
-                SELECT Ticket, SUM(Importe) as TotalSanciones 
+                WHERE Ticket = s.Ticket
+            ) a
+            OUTER APPLY (
+                SELECT SUM(Importe) as TotalSanciones 
                 FROM [dbo].[GAC_APP_TB_TICKETS_DESCUENTOS] 
-                GROUP BY Ticket
-            ) d ON s.Ticket = d.Ticket
+                WHERE Ticket = s.Ticket
+            ) d
             WHERE ${dateFilter} AND s.Estado = 'Closed'
         `);
 
@@ -497,19 +497,23 @@ app.get('/api/dashboard/trends', verifyToken, async (req: Request, res: Response
         const db = await getDb();
         const trends = await db.request().query(`
             SELECT 
-                FORMAT(s.CheckOut, 'MMM', 'es-PE') as Mes,
+                CASE MONTH(s.CheckOut)
+                    WHEN 1 THEN 'Ene' WHEN 2 THEN 'Feb' WHEN 3 THEN 'Mar' WHEN 4 THEN 'Abr'
+                    WHEN 5 THEN 'May' WHEN 6 THEN 'Jun' WHEN 7 THEN 'Jul' WHEN 8 THEN 'Ago'
+                    WHEN 9 THEN 'Sep' WHEN 10 THEN 'Oct' WHEN 11 THEN 'Nov' WHEN 12 THEN 'Dic'
+                END as Mes,
                 SUM(ISNULL(t.Importe, 0)) as Bruto,
                 SUM(ISNULL(d.TotalSanciones, 0)) as Sanciones
             FROM [APPGAC].[ServiciosViewSQL] s
             JOIN [dbo].[GAC_APP_TB_CAS] c ON s.IdCAS = c.ID_CAS
             LEFT JOIN [dbo].[GAC_APP_TB_TARIFARIO] t ON t.Empresa = s.IdCAS AND t.Servicio = s.IdServicio AND t.Estado = 'A'
-            LEFT JOIN (
-                SELECT Ticket, SUM(Importe) as TotalSanciones 
+            OUTER APPLY (
+                SELECT SUM(Importe) as TotalSanciones 
                 FROM [dbo].[GAC_APP_TB_TICKETS_DESCUENTOS] 
-                GROUP BY Ticket
-            ) d ON s.Ticket = d.Ticket
+                WHERE Ticket = s.Ticket
+            ) d
             WHERE ${filter}
-            GROUP BY FORMAT(s.CheckOut, 'MMM', 'es-PE'), MONTH(s.CheckOut)
+            GROUP BY MONTH(s.CheckOut)
             ORDER BY MONTH(s.CheckOut)
         `);
         res.json(trends.recordset);
