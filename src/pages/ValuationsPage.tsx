@@ -1,12 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
-import { Search, Filter, Calendar, ChevronRight, Calculator, Download, AlertTriangle, CheckCircle2, FileText, X, ChevronDown, Briefcase, Building2, Check, Activity } from 'lucide-react';
+import { Search, Filter, Calendar, ChevronRight, Calculator, Download, AlertTriangle, CheckCircle2, FileText, X, ChevronDown, Briefcase, Building2, Check, Activity, AlertCircle, Lock } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { ApiClient } from '../services/apiClient';
 import type { CAS, ValuationTicket, Penalty } from '../types';
 import { cn } from '../utils/cn';
 import { useDialog } from '../context/DialogContext';
 import PenaltyModal from '../components/penalties/PenaltyModal';
-import { PlusCircle, Lock, AlertCircle } from 'lucide-react';
 import TarifarioModal from '../components/tarifario/TarifarioModal';
 import { Modal } from '../components/common/Modal';
 
@@ -38,7 +37,6 @@ export default function ValuationsPage() {
     const [globalSearchResult, setGlobalSearchResult] = useState<any>(null);
     const [isSearchingGlobal, setIsSearchingGlobal] = useState(false);
 
-    // Estado para el Dropdown Custom
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const dropdownRef = useRef<HTMLDivElement>(null);
@@ -64,7 +62,10 @@ export default function ValuationsPage() {
     }, []);
 
     const handleFetchValuation = async () => {
-        if (!selectedCas) return;
+        if (!selectedCas) {
+            alert({ message: "Por favor, seleccione un Centro de Atención (CAS) primero." });
+            return;
+        }
         setLoadingData(true);
         try {
             const data = await ApiClient.request(`/valuations/${selectedCas.RUC}?start=${startDate}&end=${endDate}`);
@@ -152,7 +153,6 @@ export default function ValuationsPage() {
 
     const handleExportExcel = () => {
         if (!selectedCas || tickets.length === 0) return;
-
         const summaryData = [
             ["REPORTE DE VALORIZACIÓN QUINCENAL"],
             ["CAS:", selectedCas.Nombre_CAS],
@@ -165,36 +165,16 @@ export default function ValuationsPage() {
             [""],
             ["TOTAL NETO A PAGAR", "", grandTotal]
         ];
-
         const servicesData = [
             ["TICKET", "FECHA CIERRE", "SERVICIO", "CATEGORÍA", "TARIFA BASE", "ADICIONALES", "TOTAL"],
-            ...tickets.map(t => [
-                t.Ticket, 
-                new Date(t.Fecha).toLocaleDateString(), 
-                t.ServicioNombre || t.Servicio, 
-                t.Categoria, 
-                t.TarifaBase, 
-                (t.Adicionales || 0), 
-                (t.TarifaBase + (t.Adicionales || 0))
-            ])
+            ...tickets.map(t => [t.Ticket, new Date(t.Fecha).toLocaleDateString(), t.ServicioNombre || t.Servicio, t.Categoria, t.TarifaBase, (t.Adicionales || 0), (t.TarifaBase + (t.Adicionales || 0))])
         ];
-
         const penaltiesData = [
             ["ID", "FECHA", "MOTIVO", "DESCRIPCIÓN", "TICKET REF.", "ESTADO", "IMPORTE"],
-            ...penalties.map(p => [
-                p.Id, 
-                new Date(p.Fecha).toLocaleDateString(), 
-                p.Motivo, 
-                p.Descripcion, 
-                p.Ticket || '-', 
-                p.Estado, 
-                -p.Importe
-            ])
+            ...penalties.map(p => [p.Id, new Date(p.Fecha).toLocaleDateString(), p.Motivo, p.Descripcion, p.Ticket || '-', p.Estado, -p.Importe])
         ];
-
         const wb = XLSX.utils.book_new();
-        const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
-        XLSX.utils.book_append_sheet(wb, wsSummary, "Resumen");
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(summaryData), "Resumen");
         XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(servicesData), "Detalle Servicios");
         XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(penaltiesData), "Detalle Penalidades");
         XLSX.writeFile(wb, `Valorizacion_${selectedCas.Nombre_CAS.replace(/\s/g, '_')}_${startDate}.xlsx`);
@@ -212,51 +192,16 @@ export default function ValuationsPage() {
     };
 
     return (
-        <div className="flex flex-col h-full gap-6 animate-in fade-in duration-500 p-2">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex flex-col h-full gap-5 animate-in fade-in duration-500 p-1">
+            {/* Cabecera */}
+            <div className="flex items-center justify-between px-1">
                 <div>
                     <h1 className="text-2xl font-bold tracking-tight text-foreground">Valorizaciones CAS</h1>
                     <p className="text-muted-foreground text-[11px] font-medium opacity-60">Gestión quincenal de pagos y descuentos.</p>
                 </div>
-
-                <div className="flex-1 max-w-md mx-4">
-                    <div className="relative group">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
-                        <input 
-                            type="text" 
-                            placeholder="Buscador Rápido: Ingrese N° de Ticket..."
-                            className="w-full bg-card border border-border rounded-xl pl-10 pr-4 py-2 text-sm font-bold focus:ring-4 focus:ring-primary/5 focus:border-primary outline-none transition-all shadow-sm"
-                            value={globalSearch}
-                            onChange={(e) => setGlobalSearch(e.target.value)}
-                            onKeyDown={async (e) => {
-                                if (e.key === 'Enter' && globalSearch) {
-                                    setIsSearchingGlobal(true);
-                                    try {
-                                        const result = await ApiClient.request(`/tickets/find/${globalSearch}`);
-                                        setGlobalSearchResult(result);
-                                    } catch (err) {
-                                        setGlobalSearchResult({ error: 'Ticket no encontrado' });
-                                    } finally {
-                                        setIsSearchingGlobal(false);
-                                    }
-                                }
-                            }}
-                        />
-                        {isSearchingGlobal && <Activity className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-primary animate-spin" />}
-                    </div>
-                </div>
-
-                {selectedCas && (
-                    <div className="flex items-center gap-3 bg-primary/10 border border-primary/20 px-4 py-2 rounded-lg shadow-sm">
-                        <div className="w-2.5 h-2.5 bg-primary rounded-full animate-pulse" />
-                        <div className="flex flex-col">
-                            <span className="text-[10px] font-bold uppercase tracking-wider text-primary">Gestionando</span>
-                            <span className="text-sm font-black tracking-tight">{selectedCas.Nombre_CAS}</span>
-                        </div>
-                    </div>
-                )}
             </div>
 
+            {/* Banner Global Search Result */}
             {globalSearchResult && (
                 <div className="bg-primary/5 border border-primary/20 rounded-2xl p-4 flex items-center justify-between animate-in slide-in-from-top-4 duration-300">
                     {globalSearchResult.error ? (
@@ -272,24 +217,19 @@ export default function ValuationsPage() {
                             </div>
                             <div className="h-8 w-px bg-primary/10" />
                             <div className="flex flex-col">
-                                <span className="text-[10px] font-bold uppercase tracking-widest opacity-40">Centro de Atención (CAS)</span>
+                                <span className="text-[10px] font-bold uppercase tracking-widest opacity-40">CAS</span>
                                 <span className="text-sm font-bold">{globalSearchResult.CAS_Nombre}</span>
                             </div>
                             <div className="h-8 w-px bg-primary/10" />
                             <div className="flex flex-col">
-                                <span className="text-[10px] font-bold uppercase tracking-widest opacity-40">Fecha de Cierre</span>
+                                <span className="text-[10px] font-bold uppercase tracking-widest opacity-40">Fecha</span>
                                 <span className="text-sm font-bold">{new Date(globalSearchResult.Fecha).toLocaleDateString()}</span>
                             </div>
                             <button 
                                 onClick={() => {
                                     const cas = casList.find(c => c.RUC === globalSearchResult.RUC);
                                     if (cas) setSelectedCas(cas);
-                                    setShowPenaltyModal({
-                                        show: true, 
-                                        type: 'penalty', 
-                                        ticket: globalSearchResult.Ticket,
-                                        date: globalSearchResult.Fecha.split('T')[0]
-                                    });
+                                    setShowPenaltyModal({ show: true, type: 'penalty', ticket: globalSearchResult.Ticket, date: globalSearchResult.Fecha.split('T')[0] });
                                 }}
                                 className="bg-red-600 text-white px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-red-700 transition-all shadow-lg shadow-red-600/20 flex items-center gap-2"
                             >
@@ -303,351 +243,186 @@ export default function ValuationsPage() {
                 </div>
             )}
 
-            {/* Selector de CAS Custom Moderno */}
-            <div className="relative" ref={dropdownRef}>
-                <div 
-                    className={cn(
-                        "bg-card rounded-xl border border-border shadow-sm p-0.5 flex items-center gap-2 transition-all group hover:border-primary/30",
-                        isDropdownOpen && "ring-2 ring-primary/5 border-primary/40"
-                    )}
-                >
-                    <div className="p-2.5 bg-primary/10 rounded-xl text-primary transition-transform group-hover:scale-105">
-                        <Building2 className="w-5 h-5" />
-                    </div>
-                    
-                    <button 
-                        onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                        className="flex-1 text-left px-3 py-1"
+            {/* Barra de Filtros Unificada (Fila Única Permanente) */}
+            <div className="bg-card rounded-xl border border-border p-2 shadow-sm flex flex-wrap items-center gap-3">
+                {/* Selector de CAS */}
+                <div className="relative flex-1 min-w-[280px]" ref={dropdownRef}>
+                    <div 
+                        className={cn(
+                            "bg-background rounded-lg border border-border flex items-center gap-2 transition-all hover:border-primary/30 h-11",
+                            isDropdownOpen && "ring-2 ring-primary/5 border-primary/40 ring-offset-2"
+                        )}
                     >
-                        <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/60 mb-0">Seleccionar Centro de Atención (CAS)</p>
-                        <p className={cn(
-                            "text-base font-bold tracking-tight flex items-center gap-2",
-                            !selectedCas && "text-muted-foreground/30 italic"
-                        )}>
-                            {selectedCas ? selectedCas.Nombre_CAS : "-- Localice una empresa en la lista --"}
-                            {selectedCas && <span className="text-[11px] font-bold text-muted-foreground opacity-40">(RUC: {selectedCas.RUC})</span>}
-                        </p>
-                    </button>
-
-                    {selectedCas && (
-                        <button 
-                            onClick={(e) => { e.stopPropagation(); setSelectedCas(null); handleFetchValuation(); }}
-                            className="p-3 text-muted-foreground hover:bg-red-50 hover:text-red-500 rounded-2xl transition-all"
-                        >
-                            <X className="w-5 h-5" />
+                        <div className="ml-3 text-primary/40">
+                            <Building2 className="w-4 h-4" />
+                        </div>
+                        <button onClick={() => setIsDropdownOpen(!isDropdownOpen)} className="flex-1 text-left px-1 py-1 overflow-hidden">
+                            <p className="text-[8px] font-bold uppercase tracking-widest text-muted-foreground/60 mb-0">Centro de Atención (CAS)</p>
+                            <p className={cn("text-[12px] font-bold tracking-tight truncate", !selectedCas && "text-muted-foreground/30 italic font-medium")}>
+                                {selectedCas ? selectedCas.Nombre_CAS : "Seleccionar Empresa..."}
+                            </p>
                         </button>
+                        {selectedCas && (
+                            <button onClick={(e) => { e.stopPropagation(); setSelectedCas(null); setTickets([]); setPenalties([]); }} className="p-2 text-muted-foreground hover:text-red-500 transition-all">
+                                <X className="w-4 h-4" />
+                            </button>
+                        )}
+                        <ChevronDown className={cn("w-4 h-4 mr-3 text-muted-foreground/30 transition-transform", isDropdownOpen && "rotate-180 text-primary")} />
+                    </div>
+
+                    {isDropdownOpen && (
+                        <div className="absolute top-full left-0 mt-2 w-full bg-card border border-border rounded-xl shadow-xl z-[100] animate-in fade-in zoom-in-95 duration-200 overflow-hidden">
+                            <div className="p-3 border-b border-border/40">
+                                <input autoFocus type="text" placeholder="Buscar CAS..." className="w-full bg-muted/30 border border-transparent rounded-lg px-3 py-2 text-xs font-bold focus:bg-background focus:border-primary/20 outline-none transition-all" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+                            </div>
+                            <div className="max-h-[280px] overflow-y-auto p-2 space-y-1 custom-scrollbar">
+                                {filteredCasList.map(cas => (
+                                    <button key={cas.RUC} onClick={() => { setSelectedCas(cas); setIsDropdownOpen(false); setSearchQuery(''); }} className={cn("w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-left transition-all", selectedCas?.RUC === cas.RUC ? "bg-primary text-white shadow-md shadow-primary/20" : "hover:bg-primary/5 text-xs font-bold")}>
+                                        <div className="flex flex-col"><span className="truncate max-w-[200px]">{cas.Nombre_CAS}</span><span className="text-[10px] opacity-60">RUC: {cas.RUC}</span></div>
+                                        {selectedCas?.RUC === cas.RUC && <Check className="w-3.5 h-3.5" />}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
                     )}
-                    
-                    <div className="p-3">
-                        <ChevronDown className={cn("w-5 h-5 text-muted-foreground/30 transition-transform duration-300", isDropdownOpen && "rotate-180 text-primary")} />
+                </div>
+
+                {/* Rango de Fechas */}
+                <div className="flex items-center gap-2 bg-muted/20 p-1 rounded-lg border border-border/30">
+                    <div className="relative">
+                        <input type="date" title="Inicio" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="bg-background border border-border rounded-md pl-8 pr-2 py-1.5 text-xs font-bold focus:ring-1 focus:ring-primary outline-none h-9 w-[140px]" />
+                        <Calendar className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/40" />
+                    </div>
+                    <div className="relative">
+                        <input type="date" title="Fin" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="bg-background border border-border rounded-md pl-8 pr-2 py-1.5 text-xs font-bold focus:ring-1 focus:ring-primary outline-none h-9 w-[140px]" />
+                        <Calendar className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/40" />
                     </div>
                 </div>
 
-                {/* Popover del Selector */}
-                {isDropdownOpen && (
-                    <div className="absolute top-full left-0 mt-3 w-full bg-card border border-border/50 rounded-[2.5rem] shadow-2xl shadow-black/20 z-[100] animate-in fade-in zoom-in-95 duration-200 overflow-hidden backdrop-blur-2xl">
-                        <div className="p-5 border-b border-border/40">
-                            <div className="relative group">
-                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
-                                <input 
-                                    autoFocus
-                                    type="text" 
-                                    placeholder="Buscar por nombre o RUC..."
-                                    className="w-full bg-muted/30 border border-transparent rounded-[1.2rem] pl-11 pr-5 py-3.5 text-sm font-bold focus:bg-background focus:ring-4 focus:ring-primary/5 focus:border-primary/20 outline-none transition-all"
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                />
-                            </div>
-                        </div>
-                        <div className="max-h-[350px] overflow-y-auto p-3 custom-scrollbar space-y-1">
-                            {filteredCasList.map(cas => (
-                                <button 
-                                    key={cas.RUC}
-                                    onClick={() => {
-                                        setSelectedCas(cas);
-                                        setIsDropdownOpen(false);
-                                        setSearchQuery('');
-                                    }}
-                                    className={cn(
-                                        "w-full flex items-center justify-between px-4 py-3 rounded-lg transition-all group",
-                                        selectedCas?.RUC === cas.RUC 
-                                            ? "bg-primary text-white shadow-lg shadow-primary/25" 
-                                            : "hover:bg-primary/5 text-foreground/80 hover:translate-x-1"
-                                    )}
-                                >
-                                    <div className="flex flex-col gap-0.5 text-left">
-                                        <span className="text-[13px] font-bold tracking-tight">{cas.Nombre_CAS}</span>
-                                        <span className={cn("text-[9px] font-bold opacity-60", selectedCas?.RUC === cas.RUC ? "text-white" : "text-muted-foreground")}>RUC: {cas.RUC}</span>
-                                    </div>
-                                    {selectedCas?.RUC === cas.RUC && <Check className="w-3.5 h-3.5" />}
-                                </button>
-                            ))}
-                            {filteredCasList.length === 0 && (
-                                <div className="py-12 text-center">
-                                    <div className="w-16 h-16 bg-muted/20 rounded-full flex items-center justify-center mx-auto mb-4 border border-border/50">
-                                        <Building2 className="w-8 h-8 text-muted-foreground opacity-20" />
-                                    </div>
-                                    <p className="text-sm font-black text-muted-foreground opacity-40 uppercase tracking-widest">No se encontraron CAS</p>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                )}
+                {/* Buscador de Tickets */}
+                <div className="flex-1 max-w-[220px] relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                    <input 
+                        type="text" 
+                        placeholder="N° Ticket..." 
+                        className="w-full bg-background border border-border rounded-lg pl-9 pr-3 h-11 text-xs font-bold focus:ring-2 focus:ring-primary/10 focus:border-primary outline-none transition-all" 
+                        value={globalSearch} 
+                        onChange={(e) => setGlobalSearch(e.target.value)}
+                        onKeyDown={async (e) => {
+                            if (e.key === 'Enter' && globalSearch) {
+                                setIsSearchingGlobal(true);
+                                try {
+                                    const result = await ApiClient.request(`/tickets/find/${globalSearch}`);
+                                    setGlobalSearchResult(result);
+                                } catch (err) { setGlobalSearchResult({ error: 'Ticket no encontrado' }); } finally { setIsSearchingGlobal(false); }
+                            }
+                        }}
+                    />
+                    {isSearchingGlobal && <Activity className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-primary animate-spin" />}
+                </div>
+
+                {/* Botón Consultar */}
+                <button onClick={handleFetchValuation} disabled={loadingData} className="h-11 bg-primary text-primary-foreground px-6 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all flex items-center gap-2 hover:opacity-95 active:scale-95 disabled:opacity-50 shadow-lg shadow-primary/10">
+                    {loadingData ? <Activity className="w-4 h-4 animate-spin" /> : <Filter className="w-4 h-4" /> }
+                    {loadingData ? "Cargando" : "Consultar"}
+                </button>
             </div>
 
+            {/* Contenido Principal */}
             <div className="flex-1 min-h-0">
-                {!selectedCas ? (
-                    <div className="h-full bg-card rounded-xl border border-border border-dashed flex flex-col items-center justify-center p-12 text-center shadow-sm relative overflow-hidden group">
-                        <div className="absolute inset-0 bg-primary/[0.01] group-hover:bg-primary/[0.02] transition-colors" />
-                        <div className="w-24 h-24 bg-primary/5 rounded-full flex items-center justify-center mb-8 border border-primary/10 relative">
-                            <Search className="w-10 h-10 text-primary opacity-40" />
-                            <div className="absolute inset-0 bg-primary/10 rounded-full animate-ping opacity-20 duration-[2000ms]" />
-                        </div>
-                        <h3 className="text-2xl font-black tracking-tight">Seleccione una Empresa</h3>
-                        <p className="text-muted-foreground max-w-xs mt-3 leading-relaxed font-bold opacity-60">Para comenzar la auditoría, localice la sede CAS en el buscador superior.</p>
-                    </div>
-                ) : (
-                    <div className="flex flex-col gap-6 h-full">
-                        <div className="bg-card rounded-xl border border-border p-4 shadow-sm flex flex-wrap items-end gap-6">
-                                <div className="space-y-1.5">
-                                    <label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/60 ml-2">Inicio de Periodo</label>
-                                    <div className="relative group">
-                                        <input 
-                                            type="date" 
-                                            value={startDate}
-                                            onChange={(e) => setStartDate(e.target.value)}
-                                            className="bg-background border border-border rounded-lg pl-10 pr-4 py-1.5 text-xs font-semibold focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all shadow-sm h-10"
-                                        />
-                                        <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/40 group-focus-within:text-primary transition-colors" />
-                                    </div>
-                                </div>
-                                <div className="space-y-1.5">
-                                    <label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/60 ml-2">Fin de Periodo</label>
-                                    <div className="relative group">
-                                        <input 
-                                            type="date" 
-                                            value={endDate}
-                                            onChange={(e) => setEndDate(e.target.value)}
-                                            className="bg-background border border-border rounded-lg pl-10 pr-4 py-1.5 text-xs font-semibold focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all shadow-sm h-10"
-                                        />
-                                        <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/40 group-focus-within:text-primary transition-colors" />
-                                    </div>
-                                </div>
-                                <button 
-                                    onClick={handleFetchValuation}
-                                    disabled={loadingData}
-                                    className="h-10 bg-primary text-primary-foreground px-6 py-2 rounded-lg font-bold text-xs transition-all flex items-center gap-2 disabled:opacity-50 shadow-sm"
-                                >
-                                    {loadingData ? <Activity className="w-4 h-4 animate-spin" /> : <Filter className="w-4 h-4" /> }
-                                    {loadingData ? "Cargando..." : "Consultar Valorización"}
-                                </button>
-                        </div>
-
-                        {/* El resto del contenido (Tablas, Resumen, etc.) se mantiene pero con estilos suavizados */}
-                        <div className="flex-1 grid grid-cols-1 xl:grid-cols-4 gap-6 min-h-0">
-                            {/* Panel Izquierdo: Resumen y Acciones */}
-                            <div className="xl:col-span-1 space-y-6 overflow-y-auto pr-2 custom-scrollbar">
-                                <div className="bg-card border border-border rounded-xl p-5 shadow-sm space-y-6">
-                                    <div className="flex items-center justify-between">
-                                        <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">Resumen de Cuenta</h3>
-                                        <Calculator className="w-4 h-4 text-primary" />
-                                    </div>
-                                    
-                                    <div className="space-y-3">
-                                        <div className="flex justify-between items-center p-3 bg-muted/20 rounded-lg border border-border/30">
-                                             <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Servicios</span>
-                                             <span className="text-sm font-bold tracking-tight">S/ {totalTickets.toLocaleString()}</span>
-                                         </div>
-                                         <div className="flex justify-between items-center p-3 bg-red-50/50 rounded-lg border border-red-100">
-                                             <span className="text-[9px] font-bold uppercase tracking-widest text-red-600">Penalidades</span>
-                                             <span className="text-sm font-bold text-red-600 tracking-tight">- S/ {totalPenalties.toLocaleString()}</span>
-                                         </div>                                               
-                                         <div className="flex justify-between items-center p-3.5 bg-primary text-white rounded-xl shadow-md">
-                                             <div className="flex flex-col">
-                                                 <span className="text-[9px] font-bold uppercase tracking-widest opacity-80">Total Neto</span>
-                                                 <span className="text-[9px] opacity-70">A la fecha</span>
-                                             </div>
-                                             <span className="text-lg font-bold tracking-tight">S/ {grandTotal.toLocaleString()}</span>
-                                         </div>
-                                    </div>
-
-                                    <div className="grid grid-cols-1 gap-3 pt-4 border-t border-border/50">
-                                        <button 
-                                            onClick={handleExportExcel}
-                                            className="w-full flex items-center justify-center gap-2 p-3.5 bg-muted/30 hover:bg-muted text-[10px] font-black uppercase tracking-widest rounded-xl transition-all border border-border/40"
-                                        >
-                                            <Download className="w-4 h-4" /> Exportar a Excel
-                                        </button>
-                                        <button 
-                                            onClick={() => setShowCloseModal(true)}
-                                            className="w-full flex items-center justify-center gap-2 p-3 bg-foreground text-background hover:opacity-90 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all shadow-sm"
-                                        >
-                                            <Lock className="w-3 h-3" /> Cerrar Quincena
-                                        </button>
-                                    </div>
-                                </div>
+                <div className="grid grid-cols-1 xl:grid-cols-4 gap-6 h-full pb-2">
+                    {/* Resumen */}
+                    <div className="xl:col-span-1 space-y-6">
+                        <div className="bg-card border border-border rounded-2xl p-6 shadow-sm space-y-6 sticky top-0">
+                            <div className="flex items-center justify-between"><h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">Resumen de Cuenta</h3><Calculator className="w-5 h-5 text-primary" /></div>
+                            <div className="space-y-3">
+                                <div className="flex justify-between items-center p-4 bg-muted/20 rounded-xl border border-border/30"><span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Servicios</span><span className="text-base font-bold tracking-tight">S/ {totalTickets.toLocaleString()}</span></div>
+                                <div className="flex justify-between items-center p-4 bg-red-50/50 rounded-xl border border-red-100"><span className="text-[10px] font-bold uppercase tracking-widest text-red-600">Penalidades</span><span className="text-base font-bold text-red-600 tracking-tight">- S/ {totalPenalties.toLocaleString()}</span></div>                                               
+                                <div className="flex justify-between items-center p-5 bg-primary text-white rounded-2xl shadow-xl shadow-primary/20"><div className="flex flex-col"><span className="text-[10px] font-bold uppercase tracking-widest opacity-80">Total Neto</span><span className="text-[9px] opacity-70">Cálculo en tiempo real</span></div><span className="text-xl font-black tracking-tight">S/ {grandTotal.toLocaleString()}</span></div>
                             </div>
+                            <div className="grid grid-cols-1 gap-3 pt-4 border-t border-border/50">
+                                <button onClick={handleExportExcel} disabled={!selectedCas || tickets.length === 0} className="w-full flex items-center justify-center gap-2 p-4 bg-muted/40 hover:bg-muted text-[10px] font-black uppercase tracking-widest rounded-xl transition-all border border-border/40 disabled:opacity-30 disabled:cursor-not-allowed"><Download className="w-4 h-4" /> Exportar a Excel</button>
+                                <button onClick={() => setShowCloseModal(true)} disabled={!selectedCas || tickets.length === 0} className="w-full flex items-center justify-center gap-2 p-4 bg-foreground text-background hover:opacity-90 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all shadow-xl shadow-black/10 disabled:opacity-30 disabled:cursor-not-allowed"><Lock className="w-4 h-4" /> Cerrar Quincena</button>
+                            </div>
+                        </div>
+                    </div>
 
-                            {/* Panel Derecho: Tabs y Tablas */}
-                            <div className="xl:col-span-3 flex flex-col bg-card border border-border rounded-xl overflow-hidden shadow-sm">
-                                <div className="flex p-1.5 bg-muted/20 border-b border-border/40">
-                                    <button 
-                                        onClick={() => setActiveTab('services')}
-                                        className={cn(
-                                            "flex-1 flex items-center justify-center gap-2 py-2.5 text-[10px] font-bold uppercase tracking-widest rounded-lg transition-all",
-                                            activeTab === 'services' ? "bg-background text-primary shadow-sm" : "text-muted-foreground hover:bg-background/40"
-                                        )}
-                                    >
-                                        <Briefcase className="w-3.5 h-3.5" /> Servicios ({tickets.length})
-                                    </button>
-                                    <button 
-                                        onClick={() => setActiveTab('penalties')}
-                                        className={cn(
-                                            "flex-1 flex items-center justify-center gap-2 py-2.5 text-[10px] font-bold uppercase tracking-widest rounded-lg transition-all",
-                                            activeTab === 'penalties' ? "bg-background text-red-600 shadow-sm" : "text-muted-foreground hover:bg-background/40"
-                                        )}
-                                    >
-                                        <AlertTriangle className="w-3.5 h-3.5" /> Penalidades ({penalties.length})
-                                    </button>
+                    {/* Tabs y Listado */}
+                    <div className="xl:col-span-3 flex flex-col bg-card border border-border rounded-2xl overflow-hidden shadow-sm">
+                        <div className="flex p-2 bg-muted/20 border-b border-border/40">
+                            <button onClick={() => setActiveTab('services')} className={cn("flex-1 flex items-center justify-center gap-2 py-3 text-[10px] font-bold uppercase tracking-widest rounded-xl transition-all", activeTab === 'services' ? "bg-background text-primary shadow-sm ring-1 ring-border/50" : "text-muted-foreground hover:bg-background/40")}>
+                                <Briefcase className="w-4 h-4" /> Servicios Realizados ({tickets.length})
+                            </button>
+                            <button onClick={() => setActiveTab('penalties')} className={cn("flex-1 flex items-center justify-center gap-2 py-3 text-[10px] font-bold uppercase tracking-widest rounded-xl transition-all", activeTab === 'penalties' ? "bg-background text-red-600 shadow-sm ring-1 ring-border/50" : "text-muted-foreground hover:bg-background/40")}>
+                                <AlertTriangle className="w-4 h-4" /> Penalidades Aplicadas ({penalties.length})
+                            </button>
+                        </div>
+
+                        <div className="flex-1 overflow-auto p-5 custom-scrollbar">
+                            {!selectedCas ? (
+                                <div className="h-full flex flex-col items-center justify-center text-center py-20 opacity-30">
+                                    <div className="w-20 h-20 bg-muted rounded-full flex items-center justify-center mb-6"><Building2 className="w-10 h-10" /></div>
+                                    <h3 className="text-lg font-black uppercase tracking-widest">Esperando Selección</h3>
+                                    <p className="text-xs font-bold max-w-[250px] mt-2">Seleccione una empresa y el rango de fechas para visualizar la auditoría.</p>
                                 </div>
-
-                                <div className="flex-1 overflow-auto p-4 custom-scrollbar">
-                                    {activeTab === 'services' ? (
-                                        <div className="space-y-4">
-                                            {sortedDates.map(date => (
-                                                <div key={date} className="bg-background/50 rounded-xl border border-border overflow-hidden transition-all group hover:border-primary/20">
-                                                    <button 
-                                                        onClick={() => toggleDate(date)}
-                                                        className="w-full flex items-center justify-between px-4 py-3 hover:bg-muted/10 transition-all font-bold text-[11px] uppercase tracking-widest text-muted-foreground"
-                                                    >
-                                                        <div className="flex items-center gap-3">
-                                                            <div className="flex items-center gap-2 px-2.5 py-1.5 bg-muted rounded-lg">
-                                                                <Calendar className="w-3.5 h-3.5" />
-                                                                <span>{date}</span>
-                                                            </div>
-                                                            <span className="opacity-40">•</span>
-                                                            <span>{groupedTickets[date].count} Servicios</span>
-                                                            {groupedTickets[date].zeroPriceCount > 0 && (
-                                                                <span className="text-amber-600 bg-amber-50 px-2 py-1 rounded-lg flex items-center gap-1 text-[9px]">
-                                                                    <AlertCircle className="w-3 h-3" />
-                                                                    {groupedTickets[date].zeroPriceCount} Sin tarifa
-                                                                </span>
-                                                            )}
-                                                        </div>
-                                                        <div className="flex items-center gap-4">
-                                                            <span className="text-foreground tracking-tight font-bold">S/ {(groupedTickets[date].totalBase + groupedTickets[date].totalAdicional).toLocaleString()}</span>
-                                                            <ChevronRight className={cn("w-4 h-4 transition-transform duration-500", expandedDates.includes(date) && "rotate-90 text-primary")} />
-                                                        </div>
-                                                    </button>
-                                                    
-                                                    {expandedDates.includes(date) && (
-                                                        <div className="border-t border-border animate-in slide-in-from-top duration-300">
-                                                            <table className="w-full text-left text-xs">
-                                                                <thead className="bg-muted/30 border-b border-border">
-                                                                    <tr>
-                                                                        <th className="px-4 py-3 font-bold text-[10px] uppercase tracking-widest text-muted-foreground">Ticket</th>
-                                                                        <th className="px-4 py-3 font-bold text-[10px] uppercase tracking-widest text-muted-foreground">Servicio Realizado</th>
-                                                                        <th className="px-4 py-3 font-bold text-[10px] uppercase tracking-widest text-muted-foreground">Categoría</th>
-                                                                        <th className="px-4 py-3 font-bold text-[10px] uppercase tracking-widest text-muted-foreground text-right">Monto</th>
-                                                                        <th className="px-4 py-3"></th>
-                                                                    </tr>
-                                                                </thead>
-                                                                <tbody className="divide-y divide-border/50">
-                                                                    {groupedTickets[date].tickets.map((ticket, idx) => (
-                                                                        <tr key={ticket.Ticket} className="hover:bg-muted/5 transition-colors group/row">
-                                                                            <td className="px-4 py-3 font-bold text-primary text-[13px] tracking-tight">{ticket.Ticket}</td>
-                                                                            <td className="px-4 py-3">
-                                                                                <div className="flex flex-col gap-0.5">
-                                                                                    <span className="font-bold text-foreground/80 text-[13px] line-clamp-1">{ticket.ServicioNombre || 'Servicio General'}</span>
-                                                                                    <span className="text-[10px] font-bold text-muted-foreground opacity-50">{ticket.Servicio}</span>
-                                                                                </div>
-                                                                            </td>
-                                                                            <td className="px-4 py-3">
-                                                                                <span className="px-2 py-0.5 bg-muted rounded-lg font-bold text-[9px] uppercase tracking-widest border border-border/50">
-                                                                                    {ticket.Categoria}
-                                                                                </span>
-                                                                            </td>
-                                                                            <td className="px-4 py-3 text-right">
-                                                                                <div className="flex flex-col items-end">
-                                                                                    {ticket.TarifaBase === 0 ? (
-                                                                                        <button 
-                                                                                            onClick={() => handleOpenTarifarioModal(ticket)}
-                                                                                            className="px-2 py-1 bg-amber-500 text-white rounded-lg text-[9px] font-bold uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-md shadow-amber-500/20"
-                                                                                        >
-                                                                                            Vincular Tarifa
-                                                                                        </button>
-                                                                                    ) : (
-                                                                                        <span className="font-bold text-[13px] tracking-tight">S/ {(ticket.TarifaBase + (ticket.Adicionales || 0)).toLocaleString()}</span>
-                                                                                    )}
-                                                                                </div>
-                                                                            </td>
-                                                                            <td className="px-6 py-4">
-                                                                                <button 
-                                                                                    onClick={() => setShowPenaltyModal({
-                                                                                        show: true, 
-                                                                                        type: 'penalty', 
-                                                                                        ticket: ticket.Ticket,
-                                                                                        date: ticket.Fecha.split('T')[0]
-                                                                                    })}
-                                                                                    className="p-2.5 bg-red-500/10 text-red-600 rounded-lg hover:bg-red-500 hover:text-white transition-all opacity-0 group-hover/row:opacity-100"
-                                                                                    title="Aplicar Sanción"
-                                                                                >
-                                                                                    <AlertTriangle className="w-4 h-4" />
-                                                                                </button>
-                                                                            </td>
-                                                                        </tr>
-                                                                    ))}
-                                                                </tbody>
-                                                            </table>
-                                                        </div>
-                                                    )}
+                            ) : activeTab === 'services' ? (
+                                <div className="space-y-4">
+                                    {tickets.length === 0 ? (
+                                        <div className="py-24 text-center opacity-40"><FileText className="w-12 h-12 mx-auto mb-4" /><p className="text-xs font-bold uppercase tracking-widest">No se detectaron servicios en el rango seleccionado</p></div>
+                                    ) : (
+                                        sortedDates.map(date => (
+                                            <div key={date} className="bg-background/40 rounded-xl border border-border overflow-hidden group hover:border-primary/20 transition-all">
+                                                <button onClick={() => toggleDate(date)} className="w-full flex items-center justify-between px-5 py-4 hover:bg-muted/10 font-bold text-[11px] uppercase tracking-widest text-muted-foreground transition-all">
+                                                    <div className="flex items-center gap-4">
+                                                        <div className="flex items-center gap-2 px-3 py-1.5 bg-muted/60 rounded-lg text-foreground"><Calendar className="w-4 h-4 opacity-40" /><span>{date}</span></div>
+                                                        <span className="opacity-20">|</span>
+                                                        <span>{groupedTickets[date].count} Servicios</span>
+                                                        {groupedTickets[date].zeroPriceCount > 0 && <span className="text-amber-600 bg-amber-50 px-2 py-1 rounded-lg flex items-center gap-1 text-[9px] border border-amber-100"><AlertCircle className="w-3.5 h-3.5" />{groupedTickets[date].zeroPriceCount} Sin Tarifa</span>}
+                                                    </div>
+                                                    <div className="flex items-center gap-5">
+                                                        <span className="text-foreground text-sm tracking-tight font-black">S/ {(groupedTickets[date].totalBase + groupedTickets[date].totalAdicional).toLocaleString()}</span>
+                                                        <ChevronRight className={cn("w-5 h-5 transition-transform duration-300", expandedDates.includes(date) && "rotate-90 text-primary")} />
+                                                    </div>
+                                                </button>
+                                                {expandedDates.includes(date) && (
+                                                    <div className="border-t border-border/40 animate-in slide-in-from-top-2 duration-300">
+                                                        <table className="w-full text-left text-xs"><thead className="bg-muted/20 border-b border-border/40"><tr><th className="px-6 py-4 font-bold text-[10px] uppercase tracking-widest text-muted-foreground">ID Ticket</th><th className="px-6 py-4 font-bold text-[10px] uppercase tracking-widest text-muted-foreground">Servicio</th><th className="px-6 py-4 font-bold text-[10px] uppercase tracking-widest text-muted-foreground">Categoría</th><th className="px-6 py-4 font-bold text-[10px] uppercase tracking-widest text-muted-foreground text-right">Subtotal</th><th className="px-6 py-4"></th></tr></thead>
+                                                        <tbody className="divide-y divide-border/20">{groupedTickets[date].tickets.map((ticket) => (
+                                                            <tr key={ticket.Ticket} className="hover:bg-primary/[0.02] transition-colors group/row">
+                                                                <td className="px-6 py-4 font-black text-primary text-sm tracking-tighter">{ticket.Ticket}</td>
+                                                                <td className="px-6 py-4"><div className="flex flex-col gap-0.5"><span className="font-bold text-foreground text-sm">{ticket.ServicioNombre || 'General'}</span><span className="text-[10px] font-medium opacity-40">{ticket.Servicio}</span></div></td>
+                                                                <td className="px-6 py-4"><span className="px-2.5 py-1 bg-muted rounded-md font-bold text-[9px] uppercase tracking-widest border border-border/40">{ticket.Categoria}</span></td>
+                                                                <td className="px-6 py-4 text-right">{ticket.TarifaBase === 0 ? <button onClick={() => handleOpenTarifarioModal(ticket)} className="px-3 py-1.5 bg-amber-500 text-white rounded-lg text-[9px] font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-md shadow-amber-500/20">Vincular Tarifa</button> : <span className="font-black text-sm tracking-tighter">S/ {(ticket.TarifaBase + (ticket.Adicionales || 0)).toLocaleString()}</span>}</td>
+                                                                <td className="px-6 py-4 text-right"><button onClick={() => setShowPenaltyModal({ show: true, type: 'penalty', ticket: ticket.Ticket, date: ticket.Fecha.split('T')[0] })} className="p-2.5 bg-red-500/10 text-red-600 rounded-lg hover:bg-red-600 hover:text-white transition-all opacity-0 group-hover/row:opacity-100 shadow-sm" title="Aplicar Penalidad"><AlertTriangle className="w-4 h-4" /></button></td>
+                                                            </tr>
+                                                        ))}</tbody></table>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+                            ) : (
+                                <div className="space-y-4">
+                                    {penalties.length > 0 ? (
+                                        <div className="grid grid-cols-1 gap-4">
+                                            {penalties.map(penalty => (
+                                                <div key={penalty.Id} className="bg-red-50/20 border border-red-100 rounded-2xl p-6 flex items-center justify-between hover:border-red-500/30 transition-all group">
+                                                    <div className="flex items-center gap-6"><div className="p-4 bg-red-500 text-white rounded-xl shadow-lg shadow-red-500/20 group-hover:scale-110 transition-transform"><AlertTriangle className="w-6 h-6" /></div>
+                                                    <div className="space-y-1"><div className="flex items-center gap-3"><span className="text-base font-black tracking-tight">{penalty.Motivo}</span><span className="px-2.5 py-1 bg-red-100 text-red-700 rounded-lg text-[10px] font-black tracking-widest uppercase">{penalty.Ticket || 'Descuento General'}</span></div>
+                                                    <p className="text-xs text-muted-foreground font-medium opacity-70 leading-relaxed font-sans">{penalty.Descripcion}</p><p className="text-[10px] font-black uppercase text-muted-foreground opacity-40">{new Date(penalty.Fecha).toLocaleDateString()} • Auditado</p></div></div>
+                                                    <div className="text-right"><p className="text-2xl font-black text-red-600 tracking-tighter">- S/ {penalty.Importe.toLocaleString()}</p><span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground opacity-30 italic">Débito CAS</span></div>
                                                 </div>
                                             ))}
                                         </div>
                                     ) : (
-                                        <div className="space-y-4">
-                                            {penalties.length > 0 ? (
-                                                <div className="grid grid-cols-1 gap-4">
-                                                    {penalties.map(penalty => (
-                                                        <div key={penalty.Id} className="bg-red-50/30 border border-red-200/30 rounded-xl p-5 flex items-center justify-between hover:border-red-500/30 transition-all group">
-                                                            <div className="flex items-center gap-5">
-                                                                <div className="p-3.5 bg-red-500/10 text-red-600 rounded-lg group-hover:scale-110 transition-transform shadow-sm">
-                                                                    <AlertTriangle className="w-6 h-6" />
-                                                                </div>
-                                                                <div className="space-y-1">
-                                                                    <div className="flex items-center gap-3">
-                                                                        <span className="text-sm font-black tracking-tight">{penalty.Motivo}</span>
-                                                                        <span className="px-2 py-0.5 bg-red-500/10 text-red-600 rounded-lg text-[9px] font-black tracking-widest uppercase">
-                                                                            {penalty.Ticket || 'General'}
-                                                                        </span>
-                                                                    </div>
-                                                                    <p className="text-xs text-muted-foreground font-bold opacity-60 leading-relaxed">{penalty.Descripcion}</p>
-                                                                    <p className="text-[9px] font-black uppercase text-muted-foreground opacity-40">{new Date(penalty.Fecha).toLocaleDateString()}</p>
-                                                                </div>
-                                                            </div>
-                                                            <div className="text-right">
-                                                                <p className="text-xl font-black text-red-600 tracking-tighter">- S/ {penalty.Importe.toLocaleString()}</p>
-                                                                <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-40 italic">Auditado</span>
-                                                            </div>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            ) : (
-                                                <div className="py-24 text-center">
-                                                    <div className="w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-6 border border-emerald-100">
-                                                        <CheckCircle2 className="w-10 h-10 text-emerald-500" />
-                                                    </div>
-                                                    <h3 className="text-xl font-black">Operación Limpia</h3>
-                                                    <p className="text-sm text-muted-foreground font-bold opacity-60 mt-2">No se han registrado penalidades en este periodo.</p>
-                                                </div>
-                                            )}
-                                        </div>
+                                        <div className="py-24 text-center"><div className="w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-6 border border-emerald-100 shadow-sm"><CheckCircle2 className="w-10 h-10 text-emerald-500" /></div><h3 className="text-xl font-black uppercase tracking-widest">Sin Observaciones</h3><p className="text-xs text-muted-foreground font-bold opacity-60 mt-2">No se han registrado penalizaciones en este periodo.</p></div>
                                     )}
                                 </div>
-                            </div>
+                            )}
                         </div>
                     </div>
-                )}
+                </div>
             </div>
 
             {/* Modales */}
@@ -655,7 +430,7 @@ export default function ValuationsPage() {
                 <PenaltyModal 
                     isOpen={showPenaltyModal.show}
                     type={showPenaltyModal.type} 
-                    ruc={selectedCas.RUC}
+                    ruc={selectedCas?.RUC || ''}
                     tickets={tickets}
                     initialTicket={showPenaltyModal.ticket}
                     initialDate={showPenaltyModal.date}
@@ -673,50 +448,17 @@ export default function ValuationsPage() {
                 />
             )}
 
-            {/* Modal de Cierre de Quincena Premium */}
             {showCloseModal && (
-                <Modal isOpen={showCloseModal} onClose={() => !isClosing && setShowCloseModal(false)} title="Cierre de Quincena">
+                <Modal isOpen={showCloseModal} onClose={() => !isClosing && setShowCloseModal(false)} title="Confirmar Cierre de Operaciones">
                     <div className="p-8 space-y-8">
-                        <div className="flex items-center gap-6 p-6 bg-amber-500/5 border border-amber-200/20 rounded-xl">
-                            <div className="p-4 bg-amber-500/10 text-amber-600 rounded-lg">
-                                <AlertCircle className="w-8 h-8" />
-                            </div>
-                            <div className="space-y-1">
-                                <h4 className="text-lg font-black tracking-tight">Confirmar Cierre de Operaciones</h4>
-                                <p className="text-xs text-muted-foreground font-bold opacity-60 leading-relaxed">
-                                    Esta acción bloqueará la edición de tickets y penalidades para el periodo <span className="text-foreground">{startDate}</span> al <span className="text-foreground">{endDate}</span>.
-                                </p>
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="p-5 bg-muted/20 rounded-xl border border-border/40">
-                                <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground block mb-2 opacity-50">Total Bruto</span>
-                                <span className="text-2xl font-black tracking-tighter">S/ {totalTickets.toLocaleString()}</span>
-                            </div>
-                            <div className="p-5 bg-red-500/5 rounded-xl border border-red-200/20">
-                                <span className="text-[10px] font-black uppercase tracking-widest text-red-600/60 block mb-2">Penalidades</span>
-                                <span className="text-2xl font-black text-red-600 tracking-tighter">S/ {totalPenalties.toLocaleString()}</span>
-                            </div>
-                        </div>
-
-                        <div className="pt-4 flex justify-end gap-4">
-                            <button 
-                                onClick={() => setShowCloseModal(false)}
-                                disabled={isClosing}
-                                className="px-8 py-3.5 text-[11px] font-black uppercase tracking-widest text-muted-foreground hover:bg-muted rounded-xl transition-all"
-                            >
-                                Cancelar y Revisar
-                            </button>
-                            <button 
-                                onClick={handleCloseFortnightCurrent}
-                                disabled={isClosing}
-                                className="px-10 py-3.5 bg-foreground text-background font-black text-[11px] uppercase tracking-widest rounded-xl shadow-xl shadow-black/10 hover:opacity-90 active:scale-95 transition-all flex items-center gap-2"
-                            >
-                                {isClosing && <Activity className="w-4 h-4 animate-spin" />}
-                                {isClosing ? "Procesando Cierre..." : "Confirmar Cierre Final"}
-                            </button>
-                        </div>
+                        <div className="flex items-center gap-6 p-6 bg-amber-50 border border-amber-200 rounded-2xl"><div className="p-4 bg-amber-500 text-white rounded-xl shadow-lg shadow-amber-500/20"><AlertCircle className="w-8 h-8" /></div>
+                        <div className="space-y-1"><h4 className="text-lg font-black tracking-tight">Bloqueo de Quincena</h4><p className="text-xs text-muted-foreground font-bold leading-relaxed">Esta acción es irreversible. Se bloquearán todos los tickets y descuentos del periodo <span className="text-foreground font-black underline">{startDate} / {endDate}</span>.</p></div></div>
+                        <div className="grid grid-cols-2 gap-4"><div className="p-6 bg-muted/20 rounded-2xl border border-border/40"><span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground block mb-2 opacity-50">Ingresos (Bruto)</span><span className="text-2xl font-black tracking-tighter">S/ {totalTickets.toLocaleString()}</span></div>
+                        <div className="p-6 bg-red-50 rounded-2xl border border-red-100"><span className="text-[10px] font-black uppercase tracking-widest text-red-600/60 block mb-2">Egresos (Penalidades)</span><span className="text-2xl font-black text-red-600 tracking-tighter">- S/ {totalPenalties.toLocaleString()}</span></div></div>
+                        <div className="pt-4 flex justify-end gap-4"><button onClick={() => setShowCloseModal(false)} disabled={isClosing} className="px-8 py-4 text-[11px] font-black uppercase tracking-widest text-muted-foreground hover:bg-muted rounded-xl transition-all">Regresar</button>
+                        <button onClick={handleCloseFortnightCurrent} disabled={isClosing} className="px-10 py-4 bg-foreground text-background font-black text-[11px] uppercase tracking-widest rounded-xl shadow-2xl hover:opacity-90 active:scale-95 transition-all flex items-center gap-3">
+                        {isClosing && <Activity className="w-4 h-4 animate-spin" />} {isClosing ? "Cerrando..." : "Confirmar Cierre Final"}
+                        </button></div>
                     </div>
                 </Modal>
             )}
@@ -724,31 +466,15 @@ export default function ValuationsPage() {
     );
 }
 
-function StatCard({ title, value, subtitle, icon, trend, trendUp, color }: any) {
-    const colorClasses: any = {
-        blue: "bg-blue-500",
-        red: "bg-red-500",
-        emerald: "bg-emerald-500",
-        amber: "bg-amber-500"
-    };
-
+function StatCard({ title, value, subtitle, icon, color }: any) {
+    const colorClasses: any = { blue: "bg-blue-500", red: "bg-red-500", emerald: "bg-emerald-500", amber: "bg-amber-500" };
     return (
-        <div className="bg-card border border-border rounded-xl p-6 shadow-sm hover:translate-y-[-2px] transition-all group overflow-hidden relative">
+        <div className="bg-card border border-border rounded-2xl p-6 shadow-sm hover:translate-y-[-4px] transition-all group overflow-hidden relative">
             <div className={`absolute top-0 right-0 w-32 h-32 ${colorClasses[color]} opacity-[0.05] rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-700`} />
             <div className="flex flex-col gap-5">
-                <div className="flex items-center justify-between">
-                    <div className={`p-3 rounded-lg ${colorClasses[color]}/10 text-${color}-600 shadow-sm border border-${color}-500/10`}>
-                        {icon}
-                    </div>
-                </div>
-                <div className="space-y-1">
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">{title}</p>
-                    <p className="text-2xl font-black tracking-tight text-foreground">{value}</p>
-                </div>
-                <p className="text-[10px] font-bold text-muted-foreground uppercase opacity-60 flex items-center gap-2">
-                    <AlertCircle className="w-3.5 h-3.5" />
-                    {subtitle}
-                </p>
+                <div className="flex items-center justify-between"><div className={`p-3 rounded-xl ${colorClasses[color]}/10 text-${color}-600 shadow-sm border border-${color}-500/10`}>{icon}</div></div>
+                <div className="space-y-1"><p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">{title}</p><p className="text-2xl font-black tracking-tight text-foreground">{value}</p></div>
+                <p className="text-[10px] font-bold text-muted-foreground uppercase opacity-60 flex items-center gap-2"><AlertCircle className="w-3.5 h-3.5" />{subtitle}</p>
             </div>
         </div>
     );
