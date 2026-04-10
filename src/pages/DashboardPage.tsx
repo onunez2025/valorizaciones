@@ -8,6 +8,7 @@ import {
 } from 'recharts';
 import { ApiClient } from '../services/apiClient';
 import { cn } from '../utils/cn';
+import { toTitleCase } from '../utils/formatters';
 
 interface DashboardStats {
     TotalTickets: number;
@@ -156,8 +157,8 @@ export default function DashboardPage() {
                         >
                             <div className="flex items-center gap-2 truncate">
                                 <Building2 className="w-4 h-4 text-primary shrink-0" />
-                                <span className="text-[11px] font-bold uppercase truncate tracking-widest">
-                                    {activeCasName}
+                                <span className="text-[11px] font-bold truncate">
+                                    {toTitleCase(activeCasName || '')}
                                 </span>
                             </div>
                             <ChevronDown className={cn("w-3.5 h-3.5 text-muted-foreground transition-transform duration-300", isDropdownOpen && "rotate-180")} />
@@ -182,7 +183,7 @@ export default function DashboardPage() {
                                     <button 
                                         onClick={() => { setSelectedCas('all'); setIsDropdownOpen(false); }}
                                         className={cn(
-                                            "w-full flex items-center justify-between px-4 py-3 rounded-lg text-[10px] font-black uppercase transition-colors mb-1",
+                                            "w-full flex items-center justify-between px-4 py-3 rounded-lg text-[10px] font-black transition-colors mb-1",
                                             selectedCas === 'all' ? "bg-primary text-white" : "hover:bg-muted text-muted-foreground"
                                         )}
                                     >
@@ -195,12 +196,12 @@ export default function DashboardPage() {
                                             key={cas.ID_CAS}
                                             onClick={() => { setSelectedCas(cas.RUC); setIsDropdownOpen(false); }}
                                             className={cn(
-                                                "w-full flex items-center justify-between px-4 py-3 rounded-lg text-[10px] font-black uppercase transition-colors text-left",
+                                                "w-full flex items-center justify-between px-4 py-3 rounded-lg text-[10px] font-black transition-colors text-left",
                                                 selectedCas === cas.RUC ? "bg-primary text-white shadow-md shadow-primary/20" : "hover:bg-muted text-foreground/80"
                                             )}
                                         >
                                             <div className="flex flex-col gap-0.5">
-                                                <span className="truncate max-w-[200px]">{cas.Nombre_CAS}</span>
+                                                <span className="truncate max-w-[200px]">{toTitleCase(cas.Nombre_CAS)}</span>
                                                 <span className={cn("text-[9px] opacity-60", selectedCas === cas.RUC ? "text-white" : "text-muted-foreground")}>{cas.RUC}</span>
                                             </div>
                                             {selectedCas === cas.RUC && <Check className="w-3 h-3" />}
@@ -209,7 +210,7 @@ export default function DashboardPage() {
                                     {filteredCasList.length === 0 && (
                                         <div className="py-8 text-center bg-muted/10 rounded-2xl">
                                             <Search className="w-6 h-6 text-muted-foreground mx-auto mb-2 opacity-20" />
-                                            <p className="text-[9px] font-black uppercase text-muted-foreground opacity-40">No se encontraron resultados</p>
+                                            <p className="text-[10px] font-black text-muted-foreground opacity-40">No se encontraron resultados</p>
                                         </div>
                                     )}
                                 </div>
@@ -255,7 +256,7 @@ export default function DashboardPage() {
                             onChange={(e) => setCustomRange({...customRange, start: e.target.value})}
                         />
                     </div>
-                    <span className="text-muted-foreground text-[9px] font-bold opacity-40">HASTA</span>
+                    <span className="text-muted-foreground text-[9px] font-bold opacity-40">Hasta</span>
                     <div className="flex items-center gap-3 bg-background px-3 py-1.5 rounded-lg border border-border shadow-sm">
                         <Calendar className="w-3.5 h-3.5 text-primary" />
                         <input 
@@ -313,17 +314,17 @@ export default function DashboardPage() {
                 <div className="lg:col-span-2 bg-card border border-border rounded-xl p-6 shadow-sm hover:border-primary/20 transition-all">
                     <div className="flex items-center justify-between mb-8">
                         <div>
-                            <h3 className="text-muted-foreground font-bold uppercase tracking-widest text-[10px] mb-1">Historial de Gastos</h3>
+                            <h3 className="text-muted-foreground font-bold text-[10px] mb-1">Historial de Gastos</h3>
                             <p className="text-xl font-bold tracking-tight">{selectedCas === 'all' ? 'Crecimiento Mensual' : 'Tendencia Individual'}</p>
                         </div>
                         <div className="flex gap-4">
                             <div className="flex items-center gap-2">
                                 <div className="w-3 h-3 bg-primary rounded-full" />
-                                <span className="text-[10px] font-bold uppercase tracking-widest opacity-50">Bruto</span>
+                                <span className="text-[10px] font-bold opacity-50">Bruto</span>
                             </div>
                             <div className="flex items-center gap-2">
                                 <div className="w-3 h-3 bg-red-500 rounded-full" />
-                                <span className="text-[10px] font-bold uppercase tracking-widest opacity-50">Sanciones</span>
+                                <span className="text-[10px] font-bold opacity-50">Sanciones</span>
                             </div>
                         </div>
                     </div>
@@ -357,7 +358,7 @@ export default function DashboardPage() {
                 {/* Ranking de CAS */}
                 <div className="bg-card border border-border rounded-xl p-6 shadow-sm flex flex-col justify-between">
                     <div>
-                        <h3 className="text-muted-foreground font-bold uppercase tracking-widest text-[10px] mb-1">Productividad</h3>
+                        <h3 className="text-muted-foreground font-bold text-[10px] mb-1">Productividad</h3>
                         <p className="text-xl font-bold tracking-tight mb-6">{selectedCas === 'all' ? 'Top 5 CAS Activos' : 'Desempeño Local'}</p>
                         
                         <div className="space-y-6">
@@ -365,8 +366,8 @@ export default function DashboardPage() {
                                 <div key={cas.label} className="group cursor-default">
                                     <div className="flex justify-between items-end mb-2">
                                         <div className="flex flex-col">
-                                            <span className="text-[10px] font-black uppercase text-muted-foreground tracking-tighter">Ranking {index + 1}</span>
-                                            <span className="text-sm font-black group-hover:text-primary transition-colors line-clamp-1">{cas.label}</span>
+                                            <span className="text-[10px] font-black text-muted-foreground tracking-tighter">Ranking {index + 1}</span>
+                                            <span className="text-sm font-black group-hover:text-primary transition-colors line-clamp-1">{toTitleCase(cas.label)}</span>
                                         </div>
                                         <span className="text-sm font-black opacity-40 group-hover:opacity-100 transition-opacity whitespace-nowrap">{cas.value} Tickets</span>
                                     </div>
@@ -380,7 +381,7 @@ export default function DashboardPage() {
                             )) : (
                                 <div className="text-center py-10">
                                     <AlertCircle className="w-8 h-8 text-muted-foreground mx-auto mb-2 opacity-20" />
-                                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-40">No hay datos para este filtro</p>
+                                    <p className="text-[10px] font-black text-muted-foreground opacity-40">No hay datos para este filtro</p>
                                 </div>
                             )}
                         </div>
@@ -388,7 +389,7 @@ export default function DashboardPage() {
                     
                     <div className="mt-8 pt-6 border-t border-border flex items-center justify-between">
                         <div className="flex flex-col">
-                            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Auditados</span>
+                            <span className="text-[10px] font-black text-muted-foreground">Auditados</span>
                             <span className="text-lg font-black">100% Completo</span>
                         </div>
                         <div className="p-3 bg-emerald-500/10 text-emerald-600 rounded-lg shadow-sm">
@@ -428,11 +429,11 @@ function StatCard({ title, value, subtitle, icon, trend, trendUp, color }: any) 
                 </div>
                 
                 <div className="space-y-1">
-                    <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/60">{title}</p>
+                    <p className="text-[9px] font-bold text-muted-foreground/60">{title}</p>
                     <p className="text-xl font-bold tracking-tight text-foreground">{value}</p>
                 </div>
                 
-                <p className="text-[9px] font-bold text-muted-foreground uppercase opacity-60 flex items-center gap-2">
+                <p className="text-[9px] font-bold text-muted-foreground opacity-60 flex items-center gap-2">
                     <AlertCircle className="w-3 h-3" />
                     {subtitle}
                 </p>
