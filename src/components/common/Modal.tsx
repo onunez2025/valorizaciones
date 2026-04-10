@@ -41,7 +41,7 @@ export function Modal({ isOpen, onClose, title, subtitle, children, size = 'md',
                 <div className="flex items-center justify-between px-6 py-5 border-b border-border">
                     <div className="flex flex-col">
                         <h2 className="text-xl font-black leading-none tracking-tight">{title}</h2>
-                        {subtitle && <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-[0.2em] mt-2">{subtitle}</p>}
+                        {subtitle && <p className="text-[10px] text-muted-foreground font-bold mt-2">{subtitle}</p>}
                     </div>
                     {!hideCloseButton && (
                         <button

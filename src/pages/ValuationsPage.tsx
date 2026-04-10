@@ -4,6 +4,7 @@ import * as XLSX from 'xlsx';
 import { ApiClient } from '../services/apiClient';
 import type { CAS, ValuationTicket, Penalty } from '../types';
 import { cn } from '../utils/cn';
+import { toTitleCase } from '../utils/formatters';
 import { useDialog } from '../context/DialogContext';
 import PenaltyModal from '../components/penalties/PenaltyModal';
 import TarifarioModal from '../components/tarifario/TarifarioModal';
@@ -211,18 +212,18 @@ export default function ValuationsPage() {
                         </div>
                     ) : (
                         <div className="flex flex-wrap items-center gap-6">
-                            <div className="flex flex-col">
-                                <span className="text-[10px] font-bold uppercase tracking-widest text-primary opacity-60">Ticket Encontrado</span>
+                        <div className="flex flex-col">
+                                <span className="text-[10px] font-bold text-primary opacity-60">Ticket encontrado</span>
                                 <span className="text-lg font-black">{globalSearchResult.Ticket}</span>
                             </div>
                             <div className="h-8 w-px bg-primary/10" />
                             <div className="flex flex-col">
-                                <span className="text-[10px] font-bold uppercase tracking-widest opacity-40">CAS</span>
-                                <span className="text-sm font-bold">{globalSearchResult.CAS_Nombre}</span>
+                                <span className="text-[10px] font-bold opacity-40">CAS</span>
+                                <span className="text-sm font-bold">{toTitleCase(globalSearchResult.CAS_Nombre)}</span>
                             </div>
                             <div className="h-8 w-px bg-primary/10" />
                             <div className="flex flex-col">
-                                <span className="text-[10px] font-bold uppercase tracking-widest opacity-40">Fecha</span>
+                                <span className="text-[10px] font-bold opacity-40">Fecha</span>
                                 <span className="text-sm font-bold">{new Date(globalSearchResult.Fecha).toLocaleDateString()}</span>
                             </div>
                             <button 
@@ -231,9 +232,9 @@ export default function ValuationsPage() {
                                     if (cas) setSelectedCas(cas);
                                     setShowPenaltyModal({ show: true, type: 'penalty', ticket: globalSearchResult.Ticket, date: globalSearchResult.Fecha.split('T')[0] });
                                 }}
-                                className="bg-red-600 text-white px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-red-700 transition-all shadow-lg shadow-red-600/20 flex items-center gap-2"
+                                className="bg-red-600 text-white px-5 py-2.5 rounded-xl text-xs font-black hover:bg-red-700 transition-all shadow-lg shadow-red-600/20 flex items-center gap-2"
                             >
-                                <AlertTriangle className="w-4 h-4" /> Aplicar Penalidad
+                                <AlertTriangle className="w-4 h-4" /> Aplicar penalidad
                             </button>
                         </div>
                     )}
@@ -257,9 +258,9 @@ export default function ValuationsPage() {
                             <Building2 className="w-4 h-4" />
                         </div>
                         <button onClick={() => setIsDropdownOpen(!isDropdownOpen)} className="flex-1 text-left px-1 py-1 overflow-hidden">
-                            <p className="text-[8px] font-bold uppercase tracking-widest text-muted-foreground/60 mb-0">Centro de Atención (CAS)</p>
+                            <p className="text-[8px] font-bold text-muted-foreground/60 mb-0">Centro de Atención (CAS)</p>
                             <p className={cn("text-[12px] font-bold tracking-tight truncate", !selectedCas && "text-muted-foreground/30 italic font-medium")}>
-                                {selectedCas ? selectedCas.Nombre_CAS : "Seleccionar Empresa..."}
+                                {selectedCas ? toTitleCase(selectedCas.Nombre_CAS) : "Seleccionar empresa..."}
                             </p>
                         </button>
                         {selectedCas && (
@@ -278,7 +279,7 @@ export default function ValuationsPage() {
                             <div className="max-h-[280px] overflow-y-auto p-2 space-y-1 custom-scrollbar">
                                 {filteredCasList.map(cas => (
                                     <button key={cas.RUC} onClick={() => { setSelectedCas(cas); setIsDropdownOpen(false); setSearchQuery(''); }} className={cn("w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-left transition-all", selectedCas?.RUC === cas.RUC ? "bg-primary text-white shadow-md shadow-primary/20" : "hover:bg-primary/5 text-xs font-bold")}>
-                                        <div className="flex flex-col"><span className="truncate max-w-[200px]">{cas.Nombre_CAS}</span><span className="text-[10px] opacity-60">RUC: {cas.RUC}</span></div>
+                                        <div className="flex flex-col"><span className="truncate max-w-[200px]">{toTitleCase(cas.Nombre_CAS)}</span><span className="text-[10px] opacity-60">RUC: {cas.RUC}</span></div>
                                         {selectedCas?.RUC === cas.RUC && <Check className="w-3.5 h-3.5" />}
                                     </button>
                                 ))}
@@ -322,7 +323,7 @@ export default function ValuationsPage() {
                 </div>
 
                 {/* Botón Consultar */}
-                <button onClick={handleFetchValuation} disabled={loadingData} className="h-11 bg-primary text-primary-foreground px-6 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all flex items-center gap-2 hover:opacity-95 active:scale-95 disabled:opacity-50 shadow-lg shadow-primary/10">
+                <button onClick={handleFetchValuation} disabled={loadingData} className="h-11 bg-primary text-primary-foreground px-6 rounded-xl font-black text-[10px] transition-all flex items-center gap-2 hover:opacity-95 active:scale-95 disabled:opacity-50 shadow-lg shadow-primary/10">
                     {loadingData ? <Activity className="w-4 h-4 animate-spin" /> : <Filter className="w-4 h-4" /> }
                     {loadingData ? "Cargando" : "Consultar"}
                 </button>
@@ -336,25 +337,25 @@ export default function ValuationsPage() {
                         <div className="bg-card border border-border rounded-2xl p-6 shadow-sm h-full flex flex-col justify-between">
                             <div className="space-y-6">
                                 <div className="flex items-center justify-between">
-                                    <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">Resumen de Cuenta</h3>
+                                    <h3 className="text-[10px] font-black text-muted-foreground/60">Resumen de cuenta</h3>
                                     <Calculator className="w-5 h-5 text-primary" />
                                 </div>
                                 
                                 <div className="space-y-3">
                                     <div className="flex justify-between items-center p-4 bg-muted/20 rounded-xl border border-border/30">
-                                        <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Servicios</span>
+                                        <span className="text-[10px] font-bold text-muted-foreground">Servicios</span>
                                         <span className="text-base font-bold tracking-tight">S/ {totalTickets.toLocaleString()}</span>
                                     </div>
                                     <div className="flex justify-between items-center p-4 bg-red-50/50 rounded-xl border border-red-100">
-                                        <span className="text-[10px] font-bold uppercase tracking-widest text-red-600">Penalidades</span>
+                                        <span className="text-[10px] font-bold text-red-600">Penalidades</span>
                                         <span className="text-base font-bold text-red-600 tracking-tight">- S/ {totalPenalties.toLocaleString()}</span>
                                     </div>                                               
                                     <div className="flex flex-col px-5 py-6 bg-white border-l-[6px] border-[#059669] rounded-xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(5,150,105,0.1)] transition-all duration-500 group/neto">
                                         <div className="flex items-center justify-between mb-3">
-                                            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[#059669] opacity-80">Total Neto</span>
+                                            <span className="text-[10px] font-black text-[#059669] opacity-80">Total neto</span>
                                             <div className="flex items-center gap-1.5 bg-emerald-50 px-2 py-1 rounded-md">
                                                 <div className="w-1.5 h-1.5 bg-[#059669] rounded-full animate-pulse" />
-                                                <span className="text-[8px] font-black text-[#059669] uppercase tracking-tighter">SIATC Live</span>
+                                                <span className="text-[8px] font-black text-[#059669]">Siatc Live</span>
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-2 whitespace-nowrap overflow-hidden">
@@ -363,7 +364,7 @@ export default function ValuationsPage() {
                                                 {grandTotal.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                             </span>
                                         </div>
-                                        <p className="text-[9px] text-muted-foreground/40 font-bold uppercase tracking-widest mt-2">Cálculo oficial de auditoría</p>
+                                        <p className="text-[9px] text-muted-foreground/40 font-bold mt-2">Cálculo oficial de auditoría</p>
                                     </div>
                                 </div>
                             </div>
@@ -372,16 +373,16 @@ export default function ValuationsPage() {
                                 <button 
                                     onClick={handleExportExcel} 
                                     disabled={!selectedCas || tickets.length === 0} 
-                                    className="w-full flex items-center justify-center gap-2 p-4 bg-background border border-border rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-muted transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                                    className="w-full flex items-center justify-center gap-2 p-4 bg-background border border-border rounded-xl text-[10px] font-black transition-all disabled:opacity-30 disabled:cursor-not-allowed"
                                 >
                                     <Download className="w-4 h-4" /> Exportar a Excel
                                 </button>
                                 <button 
                                     onClick={() => setShowCloseModal(true)} 
                                     disabled={!selectedCas || tickets.length === 0} 
-                                    className="w-full flex items-center justify-center gap-2 p-4 bg-gradient-to-r from-primary to-indigo-600 text-white hover:opacity-90 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all shadow-xl shadow-primary/20 disabled:opacity-30 disabled:cursor-not-allowed"
+                                    className="w-full flex items-center justify-center gap-2 p-4 bg-gradient-to-r from-primary to-indigo-600 text-white hover:opacity-90 text-[10px] font-black rounded-xl transition-all shadow-xl shadow-primary/20 disabled:opacity-30 disabled:cursor-not-allowed"
                                 >
-                                    <Lock className="w-4 h-4" /> Cerrar Quincena
+                                    <Lock className="w-4 h-4" /> Cerrar quincena
                                 </button>
                             </div>
                         </div>
@@ -390,11 +391,11 @@ export default function ValuationsPage() {
                     {/* Tabs y Listado */}
                     <div className="xl:col-span-3 flex flex-col bg-card border border-border rounded-2xl overflow-hidden shadow-sm">
                         <div className="flex p-2 bg-muted/20 border-b border-border/40">
-                            <button onClick={() => setActiveTab('services')} className={cn("flex-1 flex items-center justify-center gap-2 py-3 text-[10px] font-bold uppercase tracking-widest rounded-xl transition-all", activeTab === 'services' ? "bg-background text-primary shadow-sm ring-1 ring-border/50" : "text-muted-foreground hover:bg-background/40")}>
-                                <Briefcase className="w-4 h-4" /> Servicios Realizados ({tickets.length})
+                            <button onClick={() => setActiveTab('services')} className={cn("flex-1 flex items-center justify-center gap-2 py-3 text-[10px] font-bold rounded-xl transition-all", activeTab === 'services' ? "bg-background text-primary shadow-sm ring-1 ring-border/50" : "text-muted-foreground hover:bg-background/40")}>
+                                <Briefcase className="w-4 h-4" /> Servicios realizados ({tickets.length})
                             </button>
-                            <button onClick={() => setActiveTab('penalties')} className={cn("flex-1 flex items-center justify-center gap-2 py-3 text-[10px] font-bold uppercase tracking-widest rounded-xl transition-all", activeTab === 'penalties' ? "bg-background text-red-600 shadow-sm ring-1 ring-border/50" : "text-muted-foreground hover:bg-background/40")}>
-                                <AlertTriangle className="w-4 h-4" /> Penalidades Aplicadas ({penalties.length})
+                            <button onClick={() => setActiveTab('penalties')} className={cn("flex-1 flex items-center justify-center gap-2 py-3 text-[10px] font-bold rounded-xl transition-all", activeTab === 'penalties' ? "bg-background text-red-600 shadow-sm ring-1 ring-border/50" : "text-muted-foreground hover:bg-background/40")}>
+                                <AlertTriangle className="w-4 h-4" /> Penalidades aplicadas ({penalties.length})
                             </button>
                         </div>
 
@@ -402,22 +403,22 @@ export default function ValuationsPage() {
                             {!selectedCas ? (
                                 <div className="h-full flex flex-col items-center justify-center text-center py-20 opacity-30">
                                     <div className="w-20 h-20 bg-muted rounded-full flex items-center justify-center mb-6"><Building2 className="w-10 h-10" /></div>
-                                    <h3 className="text-lg font-black uppercase tracking-widest">Esperando Selección</h3>
+                                    <h3 className="text-lg font-black">Esperando selección</h3>
                                     <p className="text-xs font-bold max-w-[250px] mt-2">Seleccione una empresa y el rango de fechas para visualizar la auditoría.</p>
                                 </div>
                             ) : activeTab === 'services' ? (
                                 <div className="space-y-4">
                                     {tickets.length === 0 ? (
-                                        <div className="py-24 text-center opacity-40"><FileText className="w-12 h-12 mx-auto mb-4" /><p className="text-xs font-bold uppercase tracking-widest">No se detectaron servicios en el rango seleccionado</p></div>
+                                        <div className="py-24 text-center opacity-40"><FileText className="w-12 h-12 mx-auto mb-4" /><p className="text-xs font-bold">No se detectaron servicios en el rango seleccionado</p></div>
                                     ) : (
                                         sortedDates.map(date => (
                                             <div key={date} className="bg-background/40 rounded-xl border border-border overflow-hidden group hover:border-primary/20 transition-all">
-                                                <button onClick={() => toggleDate(date)} className="w-full flex items-center justify-between px-5 py-4 hover:bg-muted/10 font-bold text-[11px] uppercase tracking-widest text-muted-foreground transition-all">
+                                                <button onClick={() => toggleDate(date)} className="w-full flex items-center justify-between px-5 py-4 hover:bg-muted/10 font-bold text-[11px] text-muted-foreground transition-all">
                                                     <div className="flex items-center gap-4">
                                                         <div className="flex items-center gap-2 px-3 py-1.5 bg-muted/60 rounded-lg text-foreground"><Calendar className="w-4 h-4 opacity-40" /><span>{date}</span></div>
                                                         <span className="opacity-20">|</span>
-                                                        <span>{groupedTickets[date].count} Servicios</span>
-                                                        {groupedTickets[date].zeroPriceCount > 0 && <span className="text-amber-600 bg-amber-50 px-2 py-1 rounded-lg flex items-center gap-1 text-[9px] border border-amber-100"><AlertCircle className="w-3.5 h-3.5" />{groupedTickets[date].zeroPriceCount} Sin Tarifa</span>}
+                                                        <span>{groupedTickets[date].count} servicios</span>
+                                                        {groupedTickets[date].zeroPriceCount > 0 && <span className="text-amber-600 bg-amber-50 px-2 py-1 rounded-lg flex items-center gap-1 text-[9px] border border-amber-100"><AlertCircle className="w-3.5 h-3.5" />{groupedTickets[date].zeroPriceCount} Sin tarifa</span>}
                                                     </div>
                                                     <div className="flex items-center gap-5">
                                                         <span className="text-foreground text-sm tracking-tight font-black">S/ {(groupedTickets[date].totalBase + groupedTickets[date].totalAdicional).toLocaleString()}</span>
@@ -426,13 +427,13 @@ export default function ValuationsPage() {
                                                 </button>
                                                 {expandedDates.includes(date) && (
                                                     <div className="border-t border-border/40 animate-in slide-in-from-top-2 duration-300">
-                                                        <table className="w-full text-left text-xs"><thead className="bg-muted/20 border-b border-border/40"><tr><th className="px-6 py-4 font-bold text-[10px] uppercase tracking-widest text-muted-foreground">ID Ticket</th><th className="px-6 py-4 font-bold text-[10px] uppercase tracking-widest text-muted-foreground">Servicio</th><th className="px-6 py-4 font-bold text-[10px] uppercase tracking-widest text-muted-foreground">Categoría</th><th className="px-6 py-4 font-bold text-[10px] uppercase tracking-widest text-muted-foreground text-right">Subtotal</th><th className="px-6 py-4"></th></tr></thead>
+                                                        <table className="w-full text-left text-xs"><thead className="bg-muted/20 border-b border-border/40"><tr><th className="px-6 py-4 font-bold text-[10px] text-muted-foreground">ID Ticket</th><th className="px-6 py-4 font-bold text-[10px] text-muted-foreground">Servicio</th><th className="px-6 py-4 font-bold text-[10px] text-muted-foreground">Categoría</th><th className="px-6 py-4 font-bold text-[10px] text-muted-foreground text-right">Subtotal</th><th className="px-6 py-4"></th></tr></thead>
                                                         <tbody className="divide-y divide-border/20">{groupedTickets[date].tickets.map((ticket) => (
                                                             <tr key={ticket.Ticket} className="hover:bg-primary/[0.02] transition-colors group/row">
                                                                 <td className="px-6 py-4 font-black text-primary text-sm tracking-tighter">{ticket.Ticket}</td>
-                                                                <td className="px-6 py-4"><div className="flex flex-col gap-0.5"><span className="font-bold text-foreground text-sm">{ticket.ServicioNombre || 'General'}</span><span className="text-[10px] font-medium opacity-40">{ticket.Servicio}</span></div></td>
-                                                                <td className="px-6 py-4"><span className="px-2.5 py-1 bg-muted rounded-md font-bold text-[9px] uppercase tracking-widest border border-border/40">{ticket.Categoria}</span></td>
-                                                                <td className="px-6 py-4 text-right">{ticket.TarifaBase === 0 ? <button onClick={() => handleOpenTarifarioModal(ticket)} className="px-3 py-1.5 bg-amber-500 text-white rounded-lg text-[9px] font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-md shadow-amber-500/20">Vincular Tarifa</button> : <span className="font-black text-sm tracking-tighter">S/ {(ticket.TarifaBase + (ticket.Adicionales || 0)).toLocaleString()}</span>}</td>
+                                                                <td className="px-6 py-4"><div className="flex flex-col gap-0.5"><span className="font-bold text-foreground text-sm">{toTitleCase(ticket.ServicioNombre || 'General')}</span><span className="text-[10px] font-medium opacity-40">{ticket.Servicio}</span></div></td>
+                                                                <td className="px-6 py-4"><span className="px-2.5 py-1 bg-muted rounded-md font-bold text-[9px] border border-border/40">{toTitleCase(ticket.Categoria)}</span></td>
+                                                                <td className="px-6 py-4 text-right">{ticket.TarifaBase === 0 ? <button onClick={() => handleOpenTarifarioModal(ticket)} className="px-3 py-1.5 bg-amber-500 text-white rounded-lg text-[9px] font-black hover:scale-105 active:scale-95 transition-all shadow-md shadow-amber-500/20">Vincular tarifa</button> : <span className="font-black text-sm tracking-tighter">S/ {(ticket.TarifaBase + (ticket.Adicionales || 0)).toLocaleString()}</span>}</td>
                                                                 <td className="px-6 py-4 text-right"><button onClick={() => setShowPenaltyModal({ show: true, type: 'penalty', ticket: ticket.Ticket, date: ticket.Fecha.split('T')[0] })} className="p-2.5 bg-red-500/10 text-red-600 rounded-lg hover:bg-red-600 hover:text-white transition-all opacity-0 group-hover/row:opacity-100 shadow-sm" title="Aplicar Penalidad"><AlertTriangle className="w-4 h-4" /></button></td>
                                                             </tr>
                                                         ))}</tbody></table>
@@ -449,14 +450,14 @@ export default function ValuationsPage() {
                                             {penalties.map(penalty => (
                                                 <div key={penalty.Id} className="bg-red-50/20 border border-red-100 rounded-2xl p-6 flex items-center justify-between hover:border-red-500/30 transition-all group">
                                                     <div className="flex items-center gap-6"><div className="p-4 bg-red-500 text-white rounded-xl shadow-lg shadow-red-500/20 group-hover:scale-110 transition-transform"><AlertTriangle className="w-6 h-6" /></div>
-                                                    <div className="space-y-1"><div className="flex items-center gap-3"><span className="text-base font-black tracking-tight">{penalty.Motivo}</span><span className="px-2.5 py-1 bg-red-100 text-red-700 rounded-lg text-[10px] font-black tracking-widest uppercase">{penalty.Ticket || 'Descuento General'}</span></div>
-                                                    <p className="text-xs text-muted-foreground font-medium opacity-70 leading-relaxed font-sans">{penalty.Descripcion}</p><p className="text-[10px] font-black uppercase text-muted-foreground opacity-40">{new Date(penalty.Fecha).toLocaleDateString()} • Auditado</p></div></div>
-                                                    <div className="text-right"><p className="text-2xl font-black text-red-600 tracking-tighter">- S/ {penalty.Importe.toLocaleString()}</p><span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground opacity-30 italic">Débito CAS</span></div>
+                                                    <div className="space-y-1"><div className="flex items-center gap-3"><span className="text-base font-black tracking-tight">{toTitleCase(penalty.Motivo)}</span><span className="px-2.5 py-1 bg-red-100 text-red-700 rounded-lg text-[10px] font-black tracking-widest uppercase">{penalty.Ticket || 'Descuento general'}</span></div>
+                                                    <p className="text-xs text-muted-foreground font-medium opacity-70 leading-relaxed font-sans">{penalty.Descripcion}</p><p className="text-[10px] font-black text-muted-foreground opacity-40">{new Date(penalty.Fecha).toLocaleDateString()} • Auditado</p></div></div>
+                                                    <div className="text-right"><p className="text-2xl font-black text-red-600 tracking-tighter">- S/ {penalty.Importe.toLocaleString()}</p><span className="text-[9px] font-black text-muted-foreground opacity-30 italic">Débito CAS</span></div>
                                                 </div>
                                             ))}
                                         </div>
                                     ) : (
-                                        <div className="py-24 text-center"><div className="w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-6 border border-emerald-100 shadow-sm"><CheckCircle2 className="w-10 h-10 text-emerald-500" /></div><h3 className="text-xl font-black uppercase tracking-widest">Sin Observaciones</h3><p className="text-xs text-muted-foreground font-bold opacity-60 mt-2">No se han registrado penalizaciones en este periodo.</p></div>
+                                        <div className="py-24 text-center"><div className="w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-6 border border-emerald-100 shadow-sm"><CheckCircle2 className="w-10 h-10 text-emerald-500" /></div><h3 className="text-xl font-black">Sin observaciones</h3><p className="text-xs text-muted-foreground font-bold opacity-60 mt-2">No se han registrado penalizaciones en este periodo.</p></div>
                                     )}
                                 </div>
                             )}
@@ -493,11 +494,11 @@ export default function ValuationsPage() {
                     <div className="p-8 space-y-8">
                         <div className="flex items-center gap-6 p-6 bg-amber-50 border border-amber-200 rounded-2xl"><div className="p-4 bg-amber-500 text-white rounded-xl shadow-lg shadow-amber-500/20"><AlertCircle className="w-8 h-8" /></div>
                         <div className="space-y-1"><h4 className="text-lg font-black tracking-tight">Bloqueo de Quincena</h4><p className="text-xs text-muted-foreground font-bold leading-relaxed">Esta acción es irreversible. Se bloquearán todos los tickets y descuentos del periodo <span className="text-foreground font-black underline">{startDate} / {endDate}</span>.</p></div></div>
-                        <div className="grid grid-cols-2 gap-4"><div className="p-6 bg-muted/20 rounded-2xl border border-border/40"><span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground block mb-2 opacity-50">Ingresos (Bruto)</span><span className="text-2xl font-black tracking-tighter">S/ {totalTickets.toLocaleString()}</span></div>
-                        <div className="p-6 bg-red-50 rounded-2xl border border-red-100"><span className="text-[10px] font-black uppercase tracking-widest text-red-600/60 block mb-2">Egresos (Penalidades)</span><span className="text-2xl font-black text-red-600 tracking-tighter">- S/ {totalPenalties.toLocaleString()}</span></div></div>
-                        <div className="pt-4 flex justify-end gap-4"><button onClick={() => setShowCloseModal(false)} disabled={isClosing} className="px-8 py-4 text-[11px] font-black uppercase tracking-widest text-muted-foreground hover:bg-muted rounded-xl transition-all">Regresar</button>
-                        <button onClick={handleCloseFortnightCurrent} disabled={isClosing} className="px-10 py-4 bg-foreground text-background font-black text-[11px] uppercase tracking-widest rounded-xl shadow-2xl hover:opacity-90 active:scale-95 transition-all flex items-center gap-3">
-                        {isClosing && <Activity className="w-4 h-4 animate-spin" />} {isClosing ? "Cerrando..." : "Confirmar Cierre Final"}
+                        <div className="grid grid-cols-2 gap-4"><div className="p-6 bg-muted/20 rounded-2xl border border-border/40"><span className="text-[10px] font-black text-muted-foreground block mb-2 opacity-50">Ingresos (bruto)</span><span className="text-2xl font-black tracking-tighter">S/ {totalTickets.toLocaleString()}</span></div>
+                        <div className="p-6 bg-red-50 rounded-2xl border border-red-100"><span className="text-[10px] font-black text-red-600/60 block mb-2">Egresos (penalidades)</span><span className="text-2xl font-black text-red-600 tracking-tighter">- S/ {totalPenalties.toLocaleString()}</span></div></div>
+                        <div className="pt-4 flex justify-end gap-4"><button onClick={() => setShowCloseModal(false)} disabled={isClosing} className="px-8 py-4 text-[11px] font-black text-muted-foreground hover:bg-muted rounded-xl transition-all">Regresar</button>
+                        <button onClick={handleCloseFortnightCurrent} disabled={isClosing} className="px-10 py-4 bg-foreground text-background font-black text-[11px] rounded-xl shadow-2xl hover:opacity-90 active:scale-95 transition-all flex items-center gap-3">
+                        {isClosing && <Activity className="w-4 h-4 animate-spin" />} {isClosing ? "Cerrando..." : "Confirmar cierre final"}
                         </button></div>
                     </div>
                 </Modal>
@@ -513,8 +514,8 @@ function StatCard({ title, value, subtitle, icon, color }: any) {
             <div className={`absolute top-0 right-0 w-32 h-32 ${colorClasses[color]} opacity-[0.05] rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-700`} />
             <div className="flex flex-col gap-5">
                 <div className="flex items-center justify-between"><div className={`p-3 rounded-xl ${colorClasses[color]}/10 text-${color}-600 shadow-sm border border-${color}-500/10`}>{icon}</div></div>
-                <div className="space-y-1"><p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">{title}</p><p className="text-2xl font-black tracking-tight text-foreground">{value}</p></div>
-                <p className="text-[10px] font-bold text-muted-foreground uppercase opacity-60 flex items-center gap-2"><AlertCircle className="w-3.5 h-3.5" />{subtitle}</p>
+                <div className="space-y-1"><p className="text-[10px] font-bold text-muted-foreground/60">{title}</p><p className="text-2xl font-black tracking-tight text-foreground">{value}</p></div>
+                <p className="text-[10px] font-bold text-muted-foreground opacity-60 flex items-center gap-2"><AlertCircle className="w-3.5 h-3.5" />{subtitle}</p>
             </div>
         </div>
     );

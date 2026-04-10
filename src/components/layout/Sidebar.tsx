@@ -51,7 +51,7 @@ export function Sidebar({ className }: { className?: string }) {
                 </div>
                 <div className="overflow-hidden">
                     <h1 className="font-bold text-lg leading-none tracking-tight truncate">Valorizaciones</h1>
-                    <p className="text-[10px] text-muted-foreground mt-1 uppercase tracking-widest font-bold opacity-60">Control Gestión</p>
+                    <p className="text-[10px] text-muted-foreground mt-1 font-bold opacity-60">Control Gestión</p>
                 </div>
             </div>
 

@@ -3,6 +3,7 @@ import { Search, Save } from 'lucide-react';
 import { ApiClient } from '../../services/apiClient';
 import type { PenaltyMotive, ValuationTicket } from '../../types';
 import { Modal } from '../common/Modal';
+import { toTitleCase } from '../../utils/formatters';
 
 interface PenaltyModalProps {
     isOpen: boolean;
@@ -94,7 +95,7 @@ export default function PenaltyModal({ isOpen, onClose, onSuccess, ruc, tickets,
             <form onSubmit={handleSubmit} className="space-y-5 p-1">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="relative space-y-1.5 text-left">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Ticket Asociado (Opcional)</label>
+                        <label className="text-[10px] font-black text-muted-foreground ml-1">Ticket Asociado (Opcional)</label>
                         <div className="relative">
                             <input 
                                 type="text"
@@ -144,7 +145,7 @@ export default function PenaltyModal({ isOpen, onClose, onSuccess, ruc, tickets,
                                             >
                                                 <div className="flex flex-col">
                                                     <span className="text-sm font-black group-hover:text-primary transition-colors">{t.Ticket}</span>
-                                                    <span className="text-[10px] text-muted-foreground font-bold uppercase truncate">{t.ServicioNombre || t.Servicio}</span>
+                                                    <span className="text-[10px] text-muted-foreground font-bold truncate">{toTitleCase(t.ServicioNombre || t.Servicio)}</span>
                                                 </div>
                                             </button>
                                         ))}
@@ -153,7 +154,7 @@ export default function PenaltyModal({ isOpen, onClose, onSuccess, ruc, tickets,
                         )}
                     </div>
                     <div className="space-y-1.5 text-left">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Fecha</label>
+                        <label className="text-[10px] font-black text-muted-foreground ml-1">Fecha</label>
                         <input 
                             type="date"
                             value={formData.fecha}
@@ -165,7 +166,7 @@ export default function PenaltyModal({ isOpen, onClose, onSuccess, ruc, tickets,
                 </div>
 
                 <div className="space-y-1.5 text-left">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Motivo / Concepto</label>
+                    <label className="text-[10px] font-black text-muted-foreground ml-1">Motivo / Concepto</label>
                     {type === 'penalty' ? (
                         <select 
                             value={formData.motivo}
@@ -175,7 +176,7 @@ export default function PenaltyModal({ isOpen, onClose, onSuccess, ruc, tickets,
                         >
                             <option value="">-- Seleccionar motivo --</option>
                             {motives.map(m => (
-                                <option key={m.IdMotivo} value={m.Motivo}>{m.Motivo}</option>
+                                <option key={m.IdMotivo} value={m.Motivo}>{toTitleCase(m.Motivo)}</option>
                             ))}
                         </select>
                     ) : (
@@ -192,7 +193,7 @@ export default function PenaltyModal({ isOpen, onClose, onSuccess, ruc, tickets,
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-1.5 text-left">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Importe (S/)</label>
+                        <label className="text-[10px] font-black text-muted-foreground ml-1">Importe (S/)</label>
                         <input 
                             type="number"
                             step="0.01"
@@ -206,7 +207,7 @@ export default function PenaltyModal({ isOpen, onClose, onSuccess, ruc, tickets,
                 </div>
 
                 <div className="space-y-1.5 text-left">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Descripción / Observaciones</label>
+                    <label className="text-[10px] font-black text-muted-foreground ml-1">Descripción / Observaciones</label>
                     <textarea 
                         rows={3}
                         value={formData.descripcion}
@@ -221,14 +222,14 @@ export default function PenaltyModal({ isOpen, onClose, onSuccess, ruc, tickets,
                     <button 
                         type="button" 
                         onClick={onClose}
-                        className="flex-1 px-4 py-2.5 border border-border rounded-xl text-xs font-black uppercase tracking-widest hover:bg-accent transition-colors"
+                        className="flex-1 px-4 py-2.5 border border-border rounded-xl text-xs font-black hover:bg-accent transition-colors"
                     >
                         Cancelar
                     </button>
                     <button 
                         type="submit" 
                         disabled={loading}
-                        className="flex-1 px-4 py-2.5 bg-primary text-primary-foreground rounded-xl text-xs font-black uppercase tracking-widest hover:opacity-90 transition-all flex items-center justify-center gap-2 shadow-lg shadow-primary/20"
+                        className="flex-1 px-4 py-2.5 bg-primary text-primary-foreground rounded-xl text-xs font-black hover:opacity-90 transition-all flex items-center justify-center gap-2 shadow-lg shadow-primary/20"
                     >
                         {loading ? "Guardando..." : <><Save className="w-4 h-4" /> Guardar</>}
                     </button>

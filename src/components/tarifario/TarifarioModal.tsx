@@ -3,6 +3,7 @@ import { ApiClient } from '../../services/apiClient';
 import { Modal } from '../common/Modal';
 import { Check, Calendar, AlertCircle } from 'lucide-react';
 import { useDialog } from '../../context/DialogContext';
+import { toTitleCase } from '../../utils/formatters';
 
 interface TarifarioModalProps {
     isOpen: boolean;
@@ -65,20 +66,20 @@ export default function TarifarioModal({ isOpen, onClose, onSuccess, initialData
                 <div className="bg-primary/5 border border-primary/10 rounded-xl p-4 flex flex-col gap-3">
                     <div className="flex items-center gap-2 text-primary">
                         <AlertCircle className="w-4 h-4" />
-                        <span className="text-[10px] font-black uppercase tracking-widest">Información del Ticket</span>
+                        <span className="text-[10px] font-black">Información del Ticket</span>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                         <div className="flex flex-col">
-                            <span className="text-[10px] font-bold text-muted-foreground uppercase">CAS</span>
+                            <span className="text-[10px] font-bold text-muted-foreground">CAS</span>
                             <span className="text-sm font-black text-foreground truncate">{initialData.casNombre}</span>
                         </div>
                         <div className="flex flex-col">
-                            <span className="text-[10px] font-bold text-muted-foreground uppercase">Categoría</span>
-                            <span className="text-sm font-black text-foreground truncate">{initialData.categoria}</span>
+                            <span className="text-[10px] font-bold text-muted-foreground">Categoría</span>
+                            <span className="text-sm font-black text-foreground truncate">{toTitleCase(initialData.categoria)}</span>
                         </div>
                         <div className="flex flex-col col-span-2">
-                            <span className="text-[10px] font-bold text-muted-foreground uppercase">Servicio</span>
-                            <span className="text-sm font-black text-foreground">{initialData.servicioNombre} ({initialData.servicio})</span>
+                            <span className="text-[10px] font-bold text-muted-foreground">Servicio</span>
+                            <span className="text-sm font-black text-foreground">{toTitleCase(initialData.servicioNombre)} ({toTitleCase(initialData.servicio)})</span>
                         </div>
                     </div>
                 </div>
@@ -86,7 +87,7 @@ export default function TarifarioModal({ isOpen, onClose, onSuccess, initialData
                 {/* Form */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="flex flex-col gap-1.5 col-span-full">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Importe de Tarifa (S/)</label>
+                        <label className="text-[10px] font-black text-muted-foreground ml-1">Importe de Tarifa (S/)</label>
                         <div className="relative">
                             <span className="absolute left-4 top-1/2 -translate-y-1/2 font-black text-primary">S/</span>
                             <input 
@@ -101,7 +102,7 @@ export default function TarifarioModal({ isOpen, onClose, onSuccess, initialData
                     </div>
 
                     <div className="flex flex-col gap-1.5">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Fecha Inicio</label>
+                        <label className="text-[10px] font-black text-muted-foreground ml-1">Fecha Inicio</label>
                         <div className="relative">
                             <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                             <input 
@@ -114,7 +115,7 @@ export default function TarifarioModal({ isOpen, onClose, onSuccess, initialData
                     </div>
 
                     <div className="flex flex-col gap-1.5">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Fecha Fin (Opcional)</label>
+                        <label className="text-[10px] font-black text-muted-foreground ml-1">Fecha Fin (Opcional)</label>
                         <div className="relative">
                             <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                             <input 

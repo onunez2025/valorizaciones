@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { ApiClient } from '../services/apiClient';
 import { cn } from '../utils/cn';
+import { toTitleCase } from '../utils/formatters';
 import { useDialog } from '../context/DialogContext';
 
 interface CAS {
@@ -143,12 +144,12 @@ export default function TarifarioPage() {
                         onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                         className="flex-1 text-left px-3 py-1"
                     >
-                        <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/60 mb-0">Empresa en Configuración</p>
+                        <p className="text-[9px] font-bold text-muted-foreground/60 mb-0">Empresa en configuración</p>
                         <p className={cn(
                             "text-base font-bold tracking-tight flex items-center gap-2",
                             !selectedCas && "text-muted-foreground/30 italic"
                         )}>
-                            {selectedCas ? selectedCas.Nombre_CAS : "-- Seleccione un CAS para editar precios --"}
+                            {selectedCas ? toTitleCase(selectedCas.Nombre_CAS) : "-- Seleccione un CAS para editar precios --"}
                             {selectedCas && <span className="text-[11px] font-bold text-muted-foreground opacity-40">(RUC: {selectedCas.RUC})</span>}
                         </p>
                     </button>
@@ -190,8 +191,8 @@ export default function TarifarioPage() {
                                             <Target className="w-3.5 h-3.5" />
                                         </div>
                                         <div className="flex flex-col gap-0.5">
-                                            <span className="text-[13px] font-bold tracking-tight uppercase">{cas.Nombre_CAS}</span>
-                                            <span className={cn("text-[9px] font-bold tracking-widest opacity-60", selectedCas?.RUC === cas.RUC ? "text-white" : "text-muted-foreground")}>RUC: {cas.RUC}</span>
+                                            <span className="text-[13px] font-bold tracking-tight">{toTitleCase(cas.Nombre_CAS)}</span>
+                                            <span className={cn("text-[9px] font-bold opacity-60", selectedCas?.RUC === cas.RUC ? "text-white" : "text-muted-foreground")}>RUC: {cas.RUC}</span>
                                         </div>
                                     </div>
                                     {selectedCas?.RUC === cas.RUC && (
@@ -204,7 +205,7 @@ export default function TarifarioPage() {
                                     <div className="w-20 h-20 bg-muted/30 rounded-full flex items-center justify-center mx-auto mb-5 border-2 border-dashed border-border/50">
                                         <Search className="w-10 h-10 text-muted-foreground opacity-10" />
                                     </div>
-                                    <p className="text-xs font-black text-muted-foreground opacity-30 uppercase tracking-[0.3em]">Sin coincidencias</p>
+                                    <p className="text-xs font-black text-muted-foreground opacity-30">Sin coincidencias</p>
                                 </div>
                             )}
                         </div>
@@ -220,7 +221,7 @@ export default function TarifarioPage() {
                             <div className="absolute inset-0 bg-primary/10 rounded-full animate-pulse blur-2xl opacity-20" />
                         </div>
                         <h3 className="text-3xl font-black tracking-tight mb-4">Gestión de Tarifas CAS</h3>
-                        <p className="text-muted-foreground max-w-sm font-bold opacity-50 leading-relaxed uppercase tracking-widest text-[11px]">Personalización de precios según la sede para facturación automática.</p>
+                        <p className="text-muted-foreground max-w-sm font-bold opacity-50 leading-relaxed text-[11px]">Personalización de precios según la sede para facturación automática.</p>
                     </div>
                 ) : (
                     <>
@@ -230,7 +231,7 @@ export default function TarifarioPage() {
                                     <DollarSign className="w-5 h-5" />
                                 </div>
                                 <div>
-                                    <h3 className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/60 mb-0.5">Precios Configurados</h3>
+                                    <h3 className="text-[9px] font-bold text-muted-foreground/60 mb-0.5">Precios configurados</h3>
                                     <p className="text-xl font-bold tracking-tight">{rates.length} Items en lista</p>
                                 </div>
                             </div>
@@ -239,24 +240,24 @@ export default function TarifarioPage() {
                                     <div className="flex items-center gap-3 animate-in zoom-in-95">
                                         <button 
                                             onClick={() => { setIsEditing(false); setEditRates(rates); }}
-                                            className="px-5 py-2.5 bg-muted rounded-lg font-bold text-[10px] uppercase tracking-widest text-muted-foreground hover:bg-muted/80 transition-all"
+                                            className="px-5 py-2.5 bg-muted rounded-lg font-bold text-[10px] text-muted-foreground hover:bg-muted/80 transition-all"
                                         >
                                             Descartar
                                         </button>
                                         <button 
                                             onClick={handleSave}
                                             disabled={saving}
-                                            className="px-6 py-2.5 bg-emerald-600 text-white rounded-lg font-bold text-[10px] uppercase tracking-widest shadow-lg flex items-center gap-2"
+                                            className="px-6 py-2.5 bg-emerald-600 text-white rounded-lg font-bold text-[10px] shadow-lg flex items-center gap-2"
                                         >
-                                            {saving ? "Guardando..." : <><Save className="w-4 h-4" /> Guardar Tarifario</>}
+                                            {saving ? "Guardando..." : <><Save className="w-4 h-4" /> Guardar tarifario</>}
                                         </button>
                                     </div>
                                 ) : (
                                     <button 
                                         onClick={handleAddRow}
-                                        className="h-10 px-6 bg-foreground text-background rounded-lg font-bold text-[10px] uppercase tracking-widest shadow-lg flex items-center gap-2 transition-all hover:opacity-90 active:scale-95"
+                                        className="h-10 px-6 bg-foreground text-background rounded-lg font-bold text-[10px] shadow-lg flex items-center gap-2 transition-all hover:opacity-90 active:scale-95"
                                     >
-                                        <Plus className="w-3.5 h-3.5" /> Agregar Tarifa
+                                        <Plus className="w-3.5 h-3.5" /> Agregar tarifa
                                     </button>
                                 )}
                             </div>
@@ -271,9 +272,9 @@ export default function TarifarioPage() {
                                 <table className="w-full text-left">
                                     <thead className="sticky top-0 bg-card z-10">
                                         <tr>
-                                            <th className="px-6 py-3 bg-muted/30 rounded-l-lg font-bold text-[10px] uppercase tracking-widest text-muted-foreground">Categoría</th>
-                                            <th className="px-6 py-3 bg-muted/30 font-bold text-[10px] uppercase tracking-widest text-muted-foreground">Cód. Servicio</th>
-                                            <th className="px-6 py-3 bg-muted/30 font-bold text-[10px] uppercase tracking-widest text-muted-foreground text-right">Importe Unitario</th>
+                                            <th className="px-6 py-3 bg-muted/30 rounded-l-lg font-bold text-[10px] text-muted-foreground">Categoría</th>
+                                            <th className="px-6 py-3 bg-muted/30 font-bold text-[10px] text-muted-foreground">Cód. servicio</th>
+                                            <th className="px-6 py-3 bg-muted/30 font-bold text-[10px] text-muted-foreground text-right">Importe unitario</th>
                                             <th className="px-6 py-3 bg-muted/30 rounded-r-lg text-right"></th>
                                         </tr>
                                     </thead>
@@ -286,11 +287,11 @@ export default function TarifarioPage() {
                                                         value={rate.Categoria}
                                                         onChange={(e) => {
                                                             const newRates = [...editRates];
-                                                            newRates[idx].Categoria = e.target.value.toUpperCase();
+                                                            newRates[idx].Categoria = e.target.value;
                                                             setEditRates(newRates);
                                                             setIsEditing(true);
                                                         }}
-                                                        placeholder="LAVADORA, TV, ETC..."
+                                                        placeholder="Ej. Lavadora, TV, etc..."
                                                         className="bg-transparent border-none outline-none font-bold text-[13px] tracking-tight w-full placeholder:opacity-20"
                                                     />
                                                 </td>
@@ -300,11 +301,11 @@ export default function TarifarioPage() {
                                                         value={rate.Servicio}
                                                         onChange={(e) => {
                                                             const newRates = [...editRates];
-                                                            newRates[idx].Servicio = e.target.value.toUpperCase();
+                                                            newRates[idx].Servicio = e.target.value;
                                                             setEditRates(newRates);
                                                             setIsEditing(true);
                                                         }}
-                                                        className="bg-transparent border-none outline-none w-full font-bold uppercase"
+                                                        className="bg-transparent border-none outline-none w-full font-bold"
                                                     />
                                                 </td>
                                                 <td className="px-6 py-4 text-right">
@@ -342,7 +343,7 @@ export default function TarifarioPage() {
                                                 <td colSpan={4} className="py-20 text-center">
                                                     <div className="p-8 bg-amber-500/5 rounded-lg border border-dashed border-amber-200/30 inline-block max-w-sm">
                                                         <AlertCircle className="w-10 h-10 text-amber-500 mx-auto mb-4 opacity-40" />
-                                                        <p className="text-xs font-black uppercase tracking-widest text-amber-900/60 leading-relaxed">Este CAS no tiene tarifas configuradas.</p>
+                                                        <p className="text-xs font-black text-amber-900/60 leading-relaxed">Este CAS no tiene tarifas configuradas.</p>
                                                         <button onClick={handleAddRow} className="mt-4 text-[10px] font-black text-primary underline">Agregar Primera Tarifa</button>
                                                     </div>
                                                 </td>
@@ -355,11 +356,11 @@ export default function TarifarioPage() {
                         
                         {!isEditing && (
                             <div className="p-8 border-t border-border/40 bg-muted/5 flex items-center justify-between">
-                                <span className="text-[10px] font-black uppercase text-muted-foreground opacity-30 flex items-center gap-2 tracking-[0.2em]">
+                                <span className="text-[10px] font-black text-muted-foreground opacity-30 flex items-center gap-2">
                                     <FileText className="w-4 h-4" /> Auditoría de precios activa
                                 </span>
                                 <div className="text-right">
-                                    <p className="text-[9px] font-black uppercase text-muted-foreground opacity-40 mb-1">Última actualización</p>
+                                    <p className="text-[9px] font-black text-muted-foreground opacity-40 mb-1">Última actualización</p>
                                     <p className="text-xs font-bold">{new Date().toLocaleDateString('es-PE', { day: '2-digit', month: 'long', year: 'numeric'})}</p>
                                 </div>
                             </div>
