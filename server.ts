@@ -445,25 +445,24 @@ app.get('/api/dashboard/stats', verifyToken, async (req: Request, res: Response)
         const db = await getDb();
         const request = db.request();
         
+        request.input('start', sql.DateTime, start || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000));
+        request.input('end', sql.DateTime, end || new Date());
+
         let query = `
-            WITH TicketsFiltrados AS (
-                SELECT s.Ticket, 
+            WITH RawTickets AS (
+                SELECT s.Ticket, s.CheckOut, s.IdServicio,
                     CASE WHEN LEFT(s.NombreTecnico, 3) IN ('SB2', 'SS ', 'AC ', 'EMS', 'SIL', 'VYA', 'SEY', 'TP ', 'TYG', 'FSI', 'LM ', 'TCP', 'MG ', 'AYD', 'SLR', 'REY', 'VR ', 'LV ', 'MR ', 'AXX', 'COT', 'SNT', 'NUL') 
-                    THEN LEFT(s.NombreTecnico, 3) ELSE 'GAC' END as EmpresaCode,
-                    s.IdServicio
+                    THEN LEFT(s.NombreTecnico, 3) ELSE 'GAC' END as EmpresaCode
                 FROM [SIATC].[Dashboard_FSM] s
                 WHERE s.CheckOut >= @start AND s.CheckOut < DATEADD(DAY, 1, @end)
                   AND s.Estado = 'Closed'
             ),
-            TicketsConCAS AS (
-                SELECT tf.Ticket, cas.ID_CAS, tf.IdServicio
-                FROM TicketsFiltrados tf
-                JOIN [dbo].[GAC_APP_TB_CAS] cas ON tf.EmpresaCode = cas.Abrev_nombre_colaboradores OR tf.EmpresaCode = cas.ID_CAS
+            TicketsWithCAS AS (
+                SELECT rt.*, cas.ID_CAS, cas.RUC
+                FROM RawTickets rt
+                LEFT JOIN [dbo].[GAC_APP_TB_CAS] cas ON rt.EmpresaCode = cas.Abrev_nombre_colaboradores OR rt.EmpresaCode = cas.ID_CAS
                 WHERE 1=1
         `;
-
-        request.input('start', sql.DateTime, start || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000));
-        request.input('end', sql.DateTime, end || new Date());
 
         if (ruc && ruc !== 'all') {
             query += ` AND cas.RUC = @ruc `;
@@ -473,61 +472,55 @@ app.get('/api/dashboard/stats', verifyToken, async (req: Request, res: Response)
         query += `
             )
             SELECT 
-                COUNT(tc.Ticket) as TotalTickets,
+                COUNT(twc.Ticket) as TotalTickets,
                 SUM(ISNULL(t.Importe, 0)) as BaseImporte,
                 SUM(ISNULL(a.TotalAdicionales, 0)) as AdicionalesImporte,
                 SUM(ISNULL(d.TotalSanciones, 0)) as SancionesImporte
-            FROM TicketsConCAS tc
-            LEFT JOIN [dbo].[GAC_APP_TB_TARIFARIO] t ON t.Empresa = tc.ID_CAS AND t.Servicio = tc.IdServicio AND t.Estado = 'A'
-            LEFT JOIN (
-                SELECT Ticket, SUM(Importe) as TotalAdicionales 
-                FROM [dbo].[GAC_APP_TB_TICKETS_VALORIZACION_ADICIONAL] 
-                GROUP BY Ticket
-            ) a ON tc.Ticket = a.Ticket
-            LEFT JOIN (
-                SELECT Ticket, SUM(Importe) as TotalSanciones 
-                FROM [dbo].[GAC_APP_TB_TICKETS_DESCUENTOS] 
-                GROUP BY Ticket
-            ) d ON tc.Ticket = d.Ticket
+            FROM TicketsWithCAS twc
+            LEFT JOIN [dbo].[GAC_APP_TB_TARIFARIO] t ON t.Empresa = twc.ID_CAS AND t.Servicio = twc.IdServicio AND t.Estado = 'A'
+            OUTER APPLY (
+                SELECT SUM(Importe) as TotalAdicionales FROM [dbo].[GAC_APP_TB_TICKETS_VALORIZACION_ADICIONAL] WHERE Ticket = twc.Ticket
+            ) a
+            OUTER APPLY (
+                SELECT SUM(Importe) as TotalSanciones FROM [dbo].[GAC_APP_TB_TICKETS_DESCUENTOS] WHERE Ticket = twc.Ticket
+            ) d
         `;
 
         const stats = await request.query(query);
-
         const result = stats.recordset[0];
         const bruto = (result.BaseImporte || 0) + (result.AdicionalesImporte || 0);
-        const sanciones = result.SancionesImporte || 0;
 
         res.json({
-            TotalTickets: result.TotalTickets || 0,
-            Bruto: bruto,
-            Sanciones: sanciones,
-            Neto: bruto - sanciones
+            totalTickets: result.TotalTickets || 0,
+            bruto: bruto,
+            sanciones: result.SancionesImporte || 0,
+            neto: bruto - (result.SancionesImporte || 0)
         });
     } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
 app.get('/api/dashboard/trends', verifyToken, async (req: Request, res: Response) => {
     try {
-        const { months = 6, ruc } = req.query;
+        const { months = 6, ruc } = req.query as any;
         const db = await getDb();
         const request = db.request();
 
+        request.input('m', sql.Int, -Number(months));
+
         let query = `
-            WITH TicketsFiltrados AS (
+            WITH RawTickets AS (
                 SELECT s.Ticket, s.CheckOut, s.IdServicio,
                     CASE WHEN LEFT(s.NombreTecnico, 3) IN ('SB2', 'SS ', 'AC ', 'EMS', 'SIL', 'VYA', 'SEY', 'TP ', 'TYG', 'FSI', 'LM ', 'TCP', 'MG ', 'AYD', 'SLR', 'REY', 'VR ', 'LV ', 'MR ', 'AXX', 'COT', 'SNT', 'NUL') 
                     THEN LEFT(s.NombreTecnico, 3) ELSE 'GAC' END as EmpresaCode
                 FROM [SIATC].[Dashboard_FSM] s
                 WHERE s.CheckOut >= DATEADD(MONTH, @m, GETDATE()) AND s.Estado = 'Closed'
             ),
-            TicketsConCAS AS (
-                SELECT tf.Ticket, cas.ID_CAS, tf.IdServicio, tf.CheckOut
-                FROM TicketsFiltrados tf
-                JOIN [dbo].[GAC_APP_TB_CAS] cas ON tf.EmpresaCode = cas.Abrev_nombre_colaboradores OR tf.EmpresaCode = cas.ID_CAS
+            TicketsWithCAS AS (
+                SELECT rt.*, cas.ID_CAS, cas.RUC
+                FROM RawTickets rt
+                LEFT JOIN [dbo].[GAC_APP_TB_CAS] cas ON rt.EmpresaCode = cas.Abrev_nombre_colaboradores OR rt.EmpresaCode = cas.ID_CAS
                 WHERE 1=1
         `;
-
-        request.input('m', sql.Int, -Number(months));
 
         if (ruc && ruc !== 'all') {
             query += ` AND cas.RUC = @ruc `;
@@ -537,23 +530,20 @@ app.get('/api/dashboard/trends', verifyToken, async (req: Request, res: Response
         query += `
             )
             SELECT 
-                CASE MONTH(tc.CheckOut)
+                CASE MONTH(twc.CheckOut)
                     WHEN 1 THEN 'Ene' WHEN 2 THEN 'Feb' WHEN 3 THEN 'Mar' WHEN 4 THEN 'Abr'
                     WHEN 5 THEN 'May' WHEN 6 THEN 'Jun' WHEN 7 THEN 'Jul' WHEN 8 THEN 'Ago'
                     WHEN 9 THEN 'Sep' WHEN 10 THEN 'Oct' WHEN 11 THEN 'Nov' WHEN 12 THEN 'Dic'
                 END as Mes,
                 SUM(ISNULL(t.Importe, 0)) as Bruto,
-                SUM(ISNULL(d.TotalSanciones, 0)) as Sanciones,
-                MIN(tc.CheckOut) as SortDate
-            FROM TicketsConCAS tc
-            LEFT JOIN [dbo].[GAC_APP_TB_TARIFARIO] t ON t.Empresa = tc.ID_CAS AND t.Servicio = tc.IdServicio AND t.Estado = 'A'
-            LEFT JOIN (
-                SELECT Ticket, SUM(Importe) as TotalSanciones 
-                FROM [dbo].[GAC_APP_TB_TICKETS_DESCUENTOS] 
-                GROUP BY Ticket
-            ) d ON tc.Ticket = d.Ticket
-            GROUP BY MONTH(tc.CheckOut), YEAR(tc.CheckOut)
-            ORDER BY YEAR(tc.CheckOut) ASC, MONTH(tc.CheckOut) ASC
+                SUM(ISNULL(d.TotalSanciones, 0)) as Sanciones
+            FROM TicketsWithCAS twc
+            LEFT JOIN [dbo].[GAC_APP_TB_TARIFARIO] t ON t.Empresa = twc.ID_CAS AND t.Servicio = twc.IdServicio AND t.Estado = 'A'
+            OUTER APPLY (
+                SELECT SUM(Importe) as TotalSanciones FROM [dbo].[GAC_APP_TB_TICKETS_DESCUENTOS] WHERE Ticket = twc.Ticket
+            ) d
+            GROUP BY YEAR(twc.CheckOut), MONTH(twc.CheckOut)
+            ORDER BY YEAR(twc.CheckOut) ASC, MONTH(twc.CheckOut) ASC
         `;
 
         const trends = await request.query(query);
@@ -563,26 +553,45 @@ app.get('/api/dashboard/trends', verifyToken, async (req: Request, res: Response
 
 app.get('/api/dashboard/top-cas', verifyToken, async (req: Request, res: Response) => {
     try {
-        const { start, end, ruc } = req.query;
-        let dateFilter = (start && end) 
-            ? `s.CheckOut BETWEEN '${start}' AND '${end}'`
-            : `s.CheckOut >= DATEADD(month, -1, GETDATE())`;
-        
+        const { start, end, ruc } = req.query as any;
+        const db = await getDb();
+        const request = db.request();
+
+        request.input('start', sql.DateTime, start || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000));
+        request.input('end', sql.DateTime, end || new Date());
+
+        let query = `
+            WITH RawTickets AS (
+                SELECT s.Ticket,
+                    CASE WHEN LEFT(s.NombreTecnico, 3) IN ('SB2', 'SS ', 'AC ', 'EMS', 'SIL', 'VYA', 'SEY', 'TP ', 'TYG', 'FSI', 'LM ', 'TCP', 'MG ', 'AYD', 'SLR', 'REY', 'VR ', 'LV ', 'MR ', 'AXX', 'COT', 'SNT', 'NUL') 
+                    THEN LEFT(s.NombreTecnico, 3) ELSE 'GAC' END as EmpresaCode
+                FROM [SIATC].[Dashboard_FSM] s
+                WHERE s.CheckOut >= @start AND s.CheckOut < DATEADD(DAY, 1, @end)
+                  AND s.Estado = 'Closed'
+            ),
+            TicketsWithCAS AS (
+                SELECT rt.*, cas.Nombre_CAS, cas.RUC
+                FROM RawTickets rt
+                JOIN [dbo].[GAC_APP_TB_CAS] cas ON rt.EmpresaCode = cas.Abrev_nombre_colaboradores OR rt.EmpresaCode = cas.ID_CAS
+                WHERE cas.Nombre_CAS IS NOT NULL
+        `;
+
         if (ruc && ruc !== 'all') {
-            dateFilter += ` AND c.RUC = '${ruc}'`;
+            query += ` AND cas.RUC = @ruc `;
+            request.input('ruc', sql.VarChar, ruc);
         }
 
-        const db = await getDb();
-        const top = await db.request().query(`
+        query += `
+            )
             SELECT TOP 5 
                 Nombre_CAS as label, 
                 COUNT(*) as value
-            FROM [APPGAC].[ServiciosViewSQL] s
-            JOIN [dbo].[GAC_APP_TB_CAS] c ON s.IdCAS = c.ID_CAS
-            WHERE ${dateFilter}
+            FROM TicketsWithCAS
             GROUP BY Nombre_CAS
             ORDER BY value DESC
-        `);
+        `;
+
+        const top = await request.query(query);
         res.json(top.recordset);
     } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
