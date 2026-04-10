@@ -441,23 +441,27 @@ app.post('/api/tarifarios/batch', verifyToken, async (req: Request, res: Respons
 // --- DASHBOARD ANALYTICS ---
 app.get('/api/dashboard/stats', verifyToken, async (req: Request, res: Response) => {
     try {
-        const { start, end, ruc } = req.query;
-        let dateFilter = (start && end) 
-            ? `s.CheckOut BETWEEN '${start}' AND '${end}'`
-            : `s.CheckOut >= DATEADD(month, -1, GETDATE())`;
-        
-        if (ruc && ruc !== 'all') {
-            dateFilter += ` AND cas.RUC = '${ruc}'`;
-        }
-
         const db = await getDb();
-        const stats = await db.request().query(`
+        const request = db.request();
+        
+        let query = `
             WITH TicketsFiltrados AS (
                 SELECT s.Ticket, s.IDEmpresa, s.IdServicio
                 FROM [SIATC].[Dashboard_FSM] s
                 JOIN [dbo].[GAC_APP_TB_CAS] cas ON s.IDEmpresa = cas.ID_CAS OR s.IDEmpresa = cas.Abrev_nombre_colaboradores
-                WHERE ${dateFilter.replace(/s\./g, 's.')} AND s.Estado = 'Closed'
-                ${ruc && ruc !== 'all' ? ` AND cas.RUC = '${ruc}'` : ''}
+                WHERE s.CheckOut BETWEEN @start AND @end 
+                  AND s.Estado = 'Closed'
+        `;
+
+        request.input('start', sql.DateTime, start || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000));
+        request.input('end', sql.DateTime, end || new Date());
+
+        if (ruc && ruc !== 'all') {
+            query += ` AND cas.RUC = @ruc `;
+            request.input('ruc', sql.VarChar, ruc);
+        }
+
+        query += `
             )
             SELECT 
                 COUNT(tf.Ticket) as TotalTickets,
@@ -476,7 +480,9 @@ app.get('/api/dashboard/stats', verifyToken, async (req: Request, res: Response)
                 FROM [dbo].[GAC_APP_TB_TICKETS_DESCUENTOS] 
                 GROUP BY Ticket
             ) d ON tf.Ticket = d.Ticket
-        `);
+        `;
+
+        const stats = await request.query(query);
 
         const result = stats.recordset[0];
         const bruto = (result.BaseImporte || 0) + (result.AdicionalesImporte || 0);
@@ -494,19 +500,25 @@ app.get('/api/dashboard/stats', verifyToken, async (req: Request, res: Response)
 app.get('/api/dashboard/trends', verifyToken, async (req: Request, res: Response) => {
     try {
         const { months = 6, ruc } = req.query;
-        let filter = `s.CheckOut >= DATEADD(month, -${months}, GETDATE()) AND s.Estado = 'Closed'`;
-        if (ruc && ruc !== 'all') {
-            filter += ` AND c.RUC = '${ruc}'`;
-        }
-
         const db = await getDb();
-        const trends = await db.request().query(`
+        const request = db.request();
+
+        let query = `
             WITH TicketsFiltrados AS (
                 SELECT s.Ticket, s.IDEmpresa, s.IdServicio, s.CheckOut
                 FROM [SIATC].[Dashboard_FSM] s
                 JOIN [dbo].[GAC_APP_TB_CAS] cas ON s.IDEmpresa = cas.ID_CAS OR s.IDEmpresa = cas.Abrev_nombre_colaboradores
-                WHERE s.CheckOut >= DATEADD(month, -${months}, GETDATE()) AND s.Estado = 'Closed'
-                ${ruc && ruc !== 'all' ? ` AND cas.RUC = '${ruc}'` : ''}
+                WHERE s.CheckOut >= DATEADD(month, @m, GETDATE()) AND s.Estado = 'Closed'
+        `;
+
+        request.input('m', sql.Int, -Number(months));
+
+        if (ruc && ruc !== 'all') {
+            query += ` AND cas.RUC = @ruc `;
+            request.input('ruc', sql.VarChar, ruc);
+        }
+
+        query += `
             )
             SELECT 
                 CASE MONTH(tf.CheckOut)
@@ -525,7 +537,9 @@ app.get('/api/dashboard/trends', verifyToken, async (req: Request, res: Response
             ) d ON tf.Ticket = d.Ticket
             GROUP BY MONTH(tf.CheckOut)
             ORDER BY MONTH(tf.CheckOut)
-        `);
+        `;
+
+        const trends = await request.query(query);
         res.json(trends.recordset);
     } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
