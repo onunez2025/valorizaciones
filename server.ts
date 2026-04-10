@@ -310,7 +310,7 @@ app.get('/api/penalties/:ruc', verifyToken, async (req: Request, res: Response) 
                     d.Fecha,
                     COALESCE(m.Motivo, d.Motivo) as Motivo,
                     d.Descripcion,
-                    CAST(d.Importe AS FLOAT) as Importe,
+                    d.Importe,
                     d.Estado
                 FROM [dbo].[GAC_APP_TB_TICKETS_DESCUENTOS] d
                 JOIN [APPGAC].[ServiciosViewSQL] s ON d.Ticket = s.Ticket
@@ -337,7 +337,7 @@ app.get('/api/tarifarios/:casId', verifyToken, async (req: Request, res: Respons
                     COALESCE(s.Descripcion, t.Servicio) as ServicioNombre,
                     t.Fecha_inicio,
                     t.Fecha_fin,
-                    CAST(t.Importe AS FLOAT) as Importe,
+                    t.Importe,
                     t.Estado
                 FROM [dbo].[GAC_APP_TB_TARIFARIO] t
                 LEFT JOIN [SIATC].[FSM_TipoServicio] s ON (t.Servicio = s.Id OR t.Servicio = s.Descripcion)
@@ -358,7 +358,7 @@ app.post('/api/tarifarios/create', verifyToken, async (req: Request, res: Respon
             .input('empresa', empresa)
             .input('categoria', categoria)
             .input('servicio', servicio)
-            .input('importe', String(importe))
+            .input('importe', sql.Decimal(18, 2), importe)
             .input('fecha_inicio', fecha_inicio)
             .input('fecha_fin', fecha_fin || null)
             .input('estado', estado || 'A')
@@ -381,7 +381,7 @@ app.post('/api/tarifarios/update', verifyToken, async (req: Request, res: Respon
         const db = await getDb();
         await db.request()
             .input('id', id)
-            .input('importe', importe)
+            .input('importe', sql.Decimal(18, 2), importe)
             .input('estado', estado)
             .query(`
                 UPDATE [dbo].[GAC_APP_TB_TARIFARIO] 
@@ -413,7 +413,7 @@ app.post('/api/tarifarios/batch', verifyToken, async (req: Request, res: Respons
                     .input(`casId_${id}`, casId)
                     .input(`cat_${id}`, rate.Categoria)
                     .input(`serv_${id}`, rate.Servicio)
-                    .input(`imp_${id}`, String(rate.Importe))
+                    .input(`imp_${id}`, sql.Decimal(18, 2), rate.Importe)
                     .query(`
                         IF EXISTS (SELECT 1 FROM [dbo].[GAC_APP_TB_TARIFARIO] WHERE ID_Tarifario = @id_${id})
                         BEGIN
@@ -451,27 +451,38 @@ app.get('/api/dashboard/stats', verifyToken, async (req: Request, res: Response)
         }
 
         const db = await getDb();
-        const stats = await db.request()
-            .input('ruc', ruc || 'all')
-            .query(`
+        const stats = await db.request().query(`
             SELECT 
-                COUNT(*) as TotalTickets,
-                SUM(ISNULL(TarifaBase, 0) + ISNULL(Adicionales, 0)) as Bruto,
-                ISNULL((SELECT SUM(TRY_CAST(Importe AS FLOAT)) FROM [dbo].[GAC_APP_TB_TICKETS_DESCUENTOS] d 
-                    JOIN [APPGAC].[ServiciosViewSQL] sv ON d.Ticket = sv.Ticket
-                    WHERE @ruc IS NULL OR @ruc = 'all' OR sv.IdCAS = (SELECT TOP 1 ID_CAS FROM [dbo].[GAC_APP_TB_CAS] WHERE RUC = @ruc)
-                ), 0) as Sanciones
-            FROM (
-                SELECT s.Ticket, 
-                ISNULL((SELECT TOP 1 TRY_CAST(Importe AS FLOAT) FROM [dbo].[GAC_APP_TB_TARIFARIO] t WHERE t.Empresa = s.IdCAS), 0) as TarifaBase,
-                0 as Adicionales
-                FROM [APPGAC].[ServiciosViewSQL] s
-                JOIN [dbo].[GAC_APP_TB_CAS] cas ON s.IdCAS = cas.ID_CAS
-                WHERE ${dateFilter}
-                  AND s.Estado = 'Closed'
-            ) sub
+                COUNT(s.Ticket) as TotalTickets,
+                SUM(ISNULL(t.Importe, 0)) as BaseImporte,
+                SUM(ISNULL(a.TotalAdicionales, 0)) as AdicionalesImporte,
+                SUM(ISNULL(d.TotalSanciones, 0)) as SancionesImporte
+            FROM [APPGAC].[ServiciosViewSQL] s
+            JOIN [dbo].[GAC_APP_TB_CAS] cas ON s.IdCAS = cas.ID_CAS
+            LEFT JOIN [dbo].[GAC_APP_TB_TARIFARIO] t ON t.Empresa = s.IdCAS AND t.Servicio = s.IdServicio AND t.Estado = 'A'
+            LEFT JOIN (
+                SELECT Ticket, SUM(Importe) as TotalAdicionales 
+                FROM [dbo].[GAC_APP_TB_TICKETS_VALORIZACION_ADICIONAL] 
+                GROUP BY Ticket
+            ) a ON s.Ticket = a.Ticket
+            LEFT JOIN (
+                SELECT Ticket, SUM(Importe) as TotalSanciones 
+                FROM [dbo].[GAC_APP_TB_TICKETS_DESCUENTOS] 
+                GROUP BY Ticket
+            ) d ON s.Ticket = d.Ticket
+            WHERE ${dateFilter} AND s.Estado = 'Closed'
         `);
-        res.json(stats.recordset[0] || { TotalTickets: 0, Bruto: 0, Sanciones: 0 });
+
+        const result = stats.recordset[0];
+        const bruto = (result.BaseImporte || 0) + (result.AdicionalesImporte || 0);
+        const sanciones = result.SancionesImporte || 0;
+
+        res.json({
+            TotalTickets: result.TotalTickets || 0,
+            Bruto: bruto,
+            Sanciones: sanciones,
+            Neto: bruto - sanciones
+        });
     } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
@@ -486,18 +497,20 @@ app.get('/api/dashboard/trends', verifyToken, async (req: Request, res: Response
         const db = await getDb();
         const trends = await db.request().query(`
             SELECT 
-                FORMAT(CheckOut, 'MMM', 'es-PE') as Mes,
-                SUM(ISNULL(TarifaBase, 0)) as Bruto,
-                SUM(ISNULL(TarifaBase, 0)) * 0.05 as Sanciones
-            FROM (
-                SELECT s.CheckOut, 
-                (SELECT TOP 1 TRY_CAST(Importe AS FLOAT) FROM [dbo].[GAC_APP_TB_TARIFARIO] t WHERE t.Empresa = s.IdCAS) as TarifaBase
-                FROM [APPGAC].[ServiciosViewSQL] s
-                JOIN [dbo].[GAC_APP_TB_CAS] c ON s.IdCAS = c.ID_CAS
-                WHERE ${filter}
-            ) t
-            GROUP BY FORMAT(CheckOut, 'MMM', 'es-PE'), MONTH(CheckOut)
-            ORDER BY MONTH(CheckOut)
+                FORMAT(s.CheckOut, 'MMM', 'es-PE') as Mes,
+                SUM(ISNULL(t.Importe, 0)) as Bruto,
+                SUM(ISNULL(d.TotalSanciones, 0)) as Sanciones
+            FROM [APPGAC].[ServiciosViewSQL] s
+            JOIN [dbo].[GAC_APP_TB_CAS] c ON s.IdCAS = c.ID_CAS
+            LEFT JOIN [dbo].[GAC_APP_TB_TARIFARIO] t ON t.Empresa = s.IdCAS AND t.Servicio = s.IdServicio AND t.Estado = 'A'
+            LEFT JOIN (
+                SELECT Ticket, SUM(Importe) as TotalSanciones 
+                FROM [dbo].[GAC_APP_TB_TICKETS_DESCUENTOS] 
+                GROUP BY Ticket
+            ) d ON s.Ticket = d.Ticket
+            WHERE ${filter}
+            GROUP BY FORMAT(s.CheckOut, 'MMM', 'es-PE'), MONTH(s.CheckOut)
+            ORDER BY MONTH(s.CheckOut)
         `);
         res.json(trends.recordset);
     } catch (err: any) { res.status(500).json({ error: err.message }); }
