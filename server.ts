@@ -452,25 +452,30 @@ app.get('/api/dashboard/stats', verifyToken, async (req: Request, res: Response)
 
         const db = await getDb();
         const stats = await db.request().query(`
+            WITH TicketsFiltrados AS (
+                SELECT s.Ticket, s.IDEmpresa, s.IdServicio
+                FROM [SIATC].[Dashboard_FSM] s
+                JOIN [dbo].[GAC_APP_TB_CAS] cas ON s.IDEmpresa = cas.ID_CAS OR s.IDEmpresa = cas.Abrev_nombre_colaboradores
+                WHERE ${dateFilter.replace(/s\./g, 's.')} AND s.Estado = 'Closed'
+                ${ruc && ruc !== 'all' ? ` AND cas.RUC = '${ruc}'` : ''}
+            )
             SELECT 
-                COUNT(s.Ticket) as TotalTickets,
+                COUNT(tf.Ticket) as TotalTickets,
                 SUM(ISNULL(t.Importe, 0)) as BaseImporte,
                 SUM(ISNULL(a.TotalAdicionales, 0)) as AdicionalesImporte,
                 SUM(ISNULL(d.TotalSanciones, 0)) as SancionesImporte
-            FROM [APPGAC].[ServiciosViewSQL] s
-            JOIN [dbo].[GAC_APP_TB_CAS] cas ON s.IdCAS = cas.ID_CAS
-            LEFT JOIN [dbo].[GAC_APP_TB_TARIFARIO] t ON t.Empresa = s.IdCAS AND t.Servicio = s.IdServicio AND t.Estado = 'A'
-            OUTER APPLY (
-                SELECT SUM(Importe) as TotalAdicionales 
+            FROM TicketsFiltrados tf
+            LEFT JOIN [dbo].[GAC_APP_TB_TARIFARIO] t ON t.Empresa = tf.IDEmpresa AND t.Servicio = tf.IdServicio AND t.Estado = 'A'
+            LEFT JOIN (
+                SELECT Ticket, SUM(Importe) as TotalAdicionales 
                 FROM [dbo].[GAC_APP_TB_TICKETS_VALORIZACION_ADICIONAL] 
-                WHERE Ticket = s.Ticket
-            ) a
-            OUTER APPLY (
-                SELECT SUM(Importe) as TotalSanciones 
+                GROUP BY Ticket
+            ) a ON tf.Ticket = a.Ticket
+            LEFT JOIN (
+                SELECT Ticket, SUM(Importe) as TotalSanciones 
                 FROM [dbo].[GAC_APP_TB_TICKETS_DESCUENTOS] 
-                WHERE Ticket = s.Ticket
-            ) d
-            WHERE ${dateFilter} AND s.Estado = 'Closed'
+                GROUP BY Ticket
+            ) d ON tf.Ticket = d.Ticket
         `);
 
         const result = stats.recordset[0];
@@ -496,25 +501,30 @@ app.get('/api/dashboard/trends', verifyToken, async (req: Request, res: Response
 
         const db = await getDb();
         const trends = await db.request().query(`
+            WITH TicketsFiltrados AS (
+                SELECT s.Ticket, s.IDEmpresa, s.IdServicio, s.CheckOut
+                FROM [SIATC].[Dashboard_FSM] s
+                JOIN [dbo].[GAC_APP_TB_CAS] cas ON s.IDEmpresa = cas.ID_CAS OR s.IDEmpresa = cas.Abrev_nombre_colaboradores
+                WHERE s.CheckOut >= DATEADD(month, -${months}, GETDATE()) AND s.Estado = 'Closed'
+                ${ruc && ruc !== 'all' ? ` AND cas.RUC = '${ruc}'` : ''}
+            )
             SELECT 
-                CASE MONTH(s.CheckOut)
+                CASE MONTH(tf.CheckOut)
                     WHEN 1 THEN 'Ene' WHEN 2 THEN 'Feb' WHEN 3 THEN 'Mar' WHEN 4 THEN 'Abr'
                     WHEN 5 THEN 'May' WHEN 6 THEN 'Jun' WHEN 7 THEN 'Jul' WHEN 8 THEN 'Ago'
                     WHEN 9 THEN 'Sep' WHEN 10 THEN 'Oct' WHEN 11 THEN 'Nov' WHEN 12 THEN 'Dic'
                 END as Mes,
                 SUM(ISNULL(t.Importe, 0)) as Bruto,
                 SUM(ISNULL(d.TotalSanciones, 0)) as Sanciones
-            FROM [APPGAC].[ServiciosViewSQL] s
-            JOIN [dbo].[GAC_APP_TB_CAS] c ON s.IdCAS = c.ID_CAS
-            LEFT JOIN [dbo].[GAC_APP_TB_TARIFARIO] t ON t.Empresa = s.IdCAS AND t.Servicio = s.IdServicio AND t.Estado = 'A'
-            OUTER APPLY (
-                SELECT SUM(Importe) as TotalSanciones 
+            FROM TicketsFiltrados tf
+            LEFT JOIN [dbo].[GAC_APP_TB_TARIFARIO] t ON t.Empresa = tf.IDEmpresa AND t.Servicio = tf.IdServicio AND t.Estado = 'A'
+            LEFT JOIN (
+                SELECT Ticket, SUM(Importe) as TotalSanciones 
                 FROM [dbo].[GAC_APP_TB_TICKETS_DESCUENTOS] 
-                WHERE Ticket = s.Ticket
-            ) d
-            WHERE ${filter}
-            GROUP BY MONTH(s.CheckOut)
-            ORDER BY MONTH(s.CheckOut)
+                GROUP BY Ticket
+            ) d ON tf.Ticket = d.Ticket
+            GROUP BY MONTH(tf.CheckOut)
+            ORDER BY MONTH(tf.CheckOut)
         `);
         res.json(trends.recordset);
     } catch (err: any) { res.status(500).json({ error: err.message }); }
