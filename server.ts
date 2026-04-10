@@ -532,11 +532,11 @@ app.get('/api/dashboard/top-cas', verifyToken, async (req: Request, res: Respons
 // --- SERVE STATIC FILES (PROD) ---
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-app.use(express.static(path.join(__dirname, 'dist')));
+app.use(express.static(path.join(__dirname, '..', 'dist')));
 
 // SPA Fallback: Serve index.html for any remaining routes
 app.use((req: Request, res: Response) => {
-    res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+    res.sendFile(path.join(__dirname, '..', 'dist', 'index.html'));
 });
 
 app.listen(port, () => {
