@@ -452,7 +452,7 @@ app.get('/api/dashboard/stats', verifyToken, async (req: Request, res: Response)
                     THEN LEFT(s.NombreTecnico, 3) ELSE 'GAC' END as EmpresaCode,
                     s.IdServicio
                 FROM [SIATC].[Dashboard_FSM] s
-                WHERE s.CheckOut BETWEEN @start AND @end 
+                WHERE s.CheckOut >= @start AND s.CheckOut < DATEADD(DAY, 1, @end)
                   AND s.Estado = 'Closed'
             ),
             TicketsConCAS AS (
@@ -518,7 +518,7 @@ app.get('/api/dashboard/trends', verifyToken, async (req: Request, res: Response
                     CASE WHEN LEFT(s.NombreTecnico, 3) IN ('SB2', 'SS ', 'AC ', 'EMS', 'SIL', 'VYA', 'SEY', 'TP ', 'TYG', 'FSI', 'LM ', 'TCP', 'MG ', 'AYD', 'SLR', 'REY', 'VR ', 'LV ', 'MR ', 'AXX', 'COT', 'SNT', 'NUL') 
                     THEN LEFT(s.NombreTecnico, 3) ELSE 'GAC' END as EmpresaCode
                 FROM [SIATC].[Dashboard_FSM] s
-                WHERE s.CheckOut >= DATEADD(month, @m, GETDATE()) AND s.Estado = 'Closed'
+                WHERE s.CheckOut >= DATEADD(MONTH, @m, GETDATE()) AND s.Estado = 'Closed'
             ),
             TicketsConCAS AS (
                 SELECT tf.Ticket, cas.ID_CAS, tf.IdServicio, tf.CheckOut
@@ -543,7 +543,8 @@ app.get('/api/dashboard/trends', verifyToken, async (req: Request, res: Response
                     WHEN 9 THEN 'Sep' WHEN 10 THEN 'Oct' WHEN 11 THEN 'Nov' WHEN 12 THEN 'Dic'
                 END as Mes,
                 SUM(ISNULL(t.Importe, 0)) as Bruto,
-                SUM(ISNULL(d.TotalSanciones, 0)) as Sanciones
+                SUM(ISNULL(d.TotalSanciones, 0)) as Sanciones,
+                MIN(tc.CheckOut) as SortDate
             FROM TicketsConCAS tc
             LEFT JOIN [dbo].[GAC_APP_TB_TARIFARIO] t ON t.Empresa = tc.ID_CAS AND t.Servicio = tc.IdServicio AND t.Estado = 'A'
             LEFT JOIN (
@@ -551,8 +552,8 @@ app.get('/api/dashboard/trends', verifyToken, async (req: Request, res: Response
                 FROM [dbo].[GAC_APP_TB_TICKETS_DESCUENTOS] 
                 GROUP BY Ticket
             ) d ON tc.Ticket = d.Ticket
-            GROUP BY MONTH(tc.CheckOut)
-            ORDER BY MONTH(tc.CheckOut)
+            GROUP BY MONTH(tc.CheckOut), YEAR(tc.CheckOut)
+            ORDER BY YEAR(tc.CheckOut) ASC, MONTH(tc.CheckOut) ASC
         `;
 
         const trends = await request.query(query);
