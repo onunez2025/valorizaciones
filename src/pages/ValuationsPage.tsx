@@ -358,8 +358,8 @@ export default function ValuationsPage() {
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-2 whitespace-nowrap overflow-hidden">
-                                            <span className="text-xl font-bold text-[#059669]/40 mt-1">S/</span>
-                                            <span className="text-4xl font-black tracking-tighter text-slate-800 group-hover/neto:text-[#059669] transition-colors duration-500">
+                                            <span className="text-2xl font-bold text-[#059669]/40 mt-1">S/</span>
+                                            <span className="text-3xl font-black tracking-tighter text-slate-800 group-hover/neto:text-[#059669] transition-colors duration-500">
                                                 {grandTotal.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                             </span>
                                         </div>
