@@ -449,18 +449,19 @@ app.get('/api/dashboard/stats', verifyToken, async (req: Request, res: Response)
         request.input('end', sql.DateTime, end || new Date());
 
         let query = `
-            WITH RawTickets AS (
-                SELECT s.Ticket, s.CheckOut, s.IdServicio,
+            WITH TicketsFilt AS (
+                SELECT s.Ticket, 
                     CASE WHEN LEFT(s.NombreTecnico, 3) IN ('SB2', 'SS ', 'AC ', 'EMS', 'SIL', 'VYA', 'SEY', 'TP ', 'TYG', 'FSI', 'LM ', 'TCP', 'MG ', 'AYD', 'SLR', 'REY', 'VR ', 'LV ', 'MR ', 'AXX', 'COT', 'SNT', 'NUL') 
-                    THEN LEFT(s.NombreTecnico, 3) ELSE 'GAC' END as EmpresaCode
+                    THEN LEFT(s.NombreTecnico, 3) ELSE 'GAC' END as Prefix,
+                    s.IdServicio
                 FROM [SIATC].[Dashboard_FSM] s
                 WHERE s.CheckOut >= @start AND s.CheckOut < DATEADD(DAY, 1, @end)
                   AND s.Estado = 'Closed'
             ),
-            TicketsWithCAS AS (
-                SELECT rt.*, cas.ID_CAS, cas.RUC
-                FROM RawTickets rt
-                LEFT JOIN [dbo].[GAC_APP_TB_CAS] cas ON rt.EmpresaCode = cas.Abrev_nombre_colaboradores OR rt.EmpresaCode = cas.ID_CAS
+            TicketsCAS AS (
+                SELECT tf.*, cas.ID_CAS, cas.RUC
+                FROM TicketsFilt tf
+                LEFT JOIN [dbo].[GAC_APP_TB_CAS] cas ON tf.Prefix = cas.Abrev_nombre_colaboradores
                 WHERE 1=1
         `;
 
@@ -470,31 +471,39 @@ app.get('/api/dashboard/stats', verifyToken, async (req: Request, res: Response)
         }
 
         query += `
+            ),
+            ResumenServicios AS (
+                SELECT ID_CAS, IdServicio, COUNT(*) as Cnt
+                FROM TicketsCAS
+                GROUP BY ID_CAS, IdServicio
+            ),
+            ValSanciones AS (
+                SELECT SUM(d.Importe) as Total FROM [dbo].[GAC_APP_TB_TICKETS_DESCUENTOS] d
+                WHERE d.Ticket IN (SELECT Ticket FROM TicketsCAS)
+            ),
+            ValAdicionales AS (
+                SELECT SUM(a.Importe) as Total FROM [dbo].[GAC_APP_TB_TICKETS_VALORIZACION_ADICIONAL] a
+                WHERE a.Ticket IN (SELECT Ticket FROM TicketsCAS)
             )
             SELECT 
-                COUNT(twc.Ticket) as TotalTickets,
-                SUM(ISNULL(t.Importe, 0)) as BaseImporte,
-                SUM(ISNULL(a.TotalAdicionales, 0)) as AdicionalesImporte,
-                SUM(ISNULL(d.TotalSanciones, 0)) as SancionesImporte
-            FROM TicketsWithCAS twc
-            LEFT JOIN [dbo].[GAC_APP_TB_TARIFARIO] t ON t.Empresa = twc.ID_CAS AND t.Servicio = twc.IdServicio AND t.Estado = 'A'
-            OUTER APPLY (
-                SELECT SUM(Importe) as TotalAdicionales FROM [dbo].[GAC_APP_TB_TICKETS_VALORIZACION_ADICIONAL] WHERE Ticket = twc.Ticket
-            ) a
-            OUTER APPLY (
-                SELECT SUM(Importe) as TotalSanciones FROM [dbo].[GAC_APP_TB_TICKETS_DESCUENTOS] WHERE Ticket = twc.Ticket
-            ) d
+                (SELECT COUNT(*) FROM TicketsCAS) as TotalTickets,
+                (SELECT SUM(rs.Cnt * ISNULL(t.Importe, 0)) 
+                 FROM ResumenServicios rs 
+                 LEFT JOIN [dbo].[GAC_APP_TB_TARIFARIO] t ON t.Empresa = rs.ID_CAS AND t.Servicio = rs.IdServicio AND t.Estado = 'A'
+                ) as BaseImporte,
+                ISNULL((SELECT Total FROM ValAdicionales), 0) as Adicionales,
+                ISNULL((SELECT Total FROM ValSanciones), 0) as Sanciones
         `;
 
         const stats = await request.query(query);
         const result = stats.recordset[0];
-        const bruto = (result.BaseImporte || 0) + (result.AdicionalesImporte || 0);
+        const bruto = (result.BaseImporte || 0) + (result.Adicionales || 0);
 
         res.json({
             totalTickets: result.TotalTickets || 0,
             bruto: bruto,
-            sanciones: result.SancionesImporte || 0,
-            neto: bruto - (result.SancionesImporte || 0)
+            sanciones: result.Sanciones || 0,
+            neto: bruto - (result.Sanciones || 0)
         });
     } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
@@ -508,17 +517,17 @@ app.get('/api/dashboard/trends', verifyToken, async (req: Request, res: Response
         request.input('m', sql.Int, -Number(months));
 
         let query = `
-            WITH RawTickets AS (
+            WITH TicketsFilt AS (
                 SELECT s.Ticket, s.CheckOut, s.IdServicio,
                     CASE WHEN LEFT(s.NombreTecnico, 3) IN ('SB2', 'SS ', 'AC ', 'EMS', 'SIL', 'VYA', 'SEY', 'TP ', 'TYG', 'FSI', 'LM ', 'TCP', 'MG ', 'AYD', 'SLR', 'REY', 'VR ', 'LV ', 'MR ', 'AXX', 'COT', 'SNT', 'NUL') 
-                    THEN LEFT(s.NombreTecnico, 3) ELSE 'GAC' END as EmpresaCode
+                    THEN LEFT(s.NombreTecnico, 3) ELSE 'GAC' END as Prefix
                 FROM [SIATC].[Dashboard_FSM] s
                 WHERE s.CheckOut >= DATEADD(MONTH, @m, GETDATE()) AND s.Estado = 'Closed'
             ),
-            TicketsWithCAS AS (
-                SELECT rt.*, cas.ID_CAS, cas.RUC
-                FROM RawTickets rt
-                LEFT JOIN [dbo].[GAC_APP_TB_CAS] cas ON rt.EmpresaCode = cas.Abrev_nombre_colaboradores OR rt.EmpresaCode = cas.ID_CAS
+            TicketsCAS AS (
+                SELECT tf.*, cas.ID_CAS, cas.RUC
+                FROM TicketsFilt tf
+                LEFT JOIN [dbo].[GAC_APP_TB_CAS] cas ON tf.Prefix = cas.Abrev_nombre_colaboradores
                 WHERE 1=1
         `;
 
@@ -528,22 +537,36 @@ app.get('/api/dashboard/trends', verifyToken, async (req: Request, res: Response
         }
 
         query += `
+            ),
+            ResumenMensual AS (
+                SELECT 
+                    YEAR(twc.CheckOut) as Anio,
+                    MONTH(twc.CheckOut) as MesNum,
+                    twc.ID_CAS, 
+                    twc.IdServicio, 
+                    COUNT(*) as Cnt
+                FROM TicketsCAS twc
+                GROUP BY YEAR(twc.CheckOut), MONTH(twc.CheckOut), twc.ID_CAS, twc.IdServicio
+            ),
+            SancionesMensuales AS (
+                SELECT YEAR(twc.CheckOut) as Anio, MONTH(twc.CheckOut) as MesNum, SUM(d.Importe) as TotalSanciones
+                FROM [dbo].[GAC_APP_TB_TICKETS_DESCUENTOS] d
+                JOIN TicketsCAS twc ON d.Ticket = twc.Ticket
+                GROUP BY YEAR(twc.CheckOut), MONTH(twc.CheckOut)
             )
             SELECT 
-                CASE MONTH(twc.CheckOut)
+                CASE rm.MesNum
                     WHEN 1 THEN 'Ene' WHEN 2 THEN 'Feb' WHEN 3 THEN 'Mar' WHEN 4 THEN 'Abr'
                     WHEN 5 THEN 'May' WHEN 6 THEN 'Jun' WHEN 7 THEN 'Jul' WHEN 8 THEN 'Ago'
                     WHEN 9 THEN 'Sep' WHEN 10 THEN 'Oct' WHEN 11 THEN 'Nov' WHEN 12 THEN 'Dic'
                 END as Mes,
-                SUM(ISNULL(t.Importe, 0)) as Bruto,
-                SUM(ISNULL(d.TotalSanciones, 0)) as Sanciones
-            FROM TicketsWithCAS twc
-            LEFT JOIN [dbo].[GAC_APP_TB_TARIFARIO] t ON t.Empresa = twc.ID_CAS AND t.Servicio = twc.IdServicio AND t.Estado = 'A'
-            OUTER APPLY (
-                SELECT SUM(Importe) as TotalSanciones FROM [dbo].[GAC_APP_TB_TICKETS_DESCUENTOS] WHERE Ticket = twc.Ticket
-            ) d
-            GROUP BY YEAR(twc.CheckOut), MONTH(twc.CheckOut)
-            ORDER BY YEAR(twc.CheckOut) ASC, MONTH(twc.CheckOut) ASC
+                SUM(rm.Cnt * ISNULL(t.Importe, 0)) as Bruto,
+                ISNULL(MIN(sm.TotalSanciones), 0) as Sanciones
+            FROM ResumenMensual rm
+            LEFT JOIN [dbo].[GAC_APP_TB_TARIFARIO] t ON t.Empresa = rm.ID_CAS AND t.Servicio = rm.IdServicio AND t.Estado = 'A'
+            LEFT JOIN SancionesMensuales sm ON rm.Anio = sm.Anio AND rm.MesNum = sm.MesNum
+            GROUP BY rm.Anio, rm.MesNum
+            ORDER BY rm.Anio ASC, rm.MesNum ASC
         `;
 
         const trends = await request.query(query);
