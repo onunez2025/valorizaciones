@@ -72,8 +72,8 @@ export function MainLayout() {
                         </button>
                         <div className="flex items-center gap-2">
                              {/* Logo Placeholder logic */}
-                            <div className="w-8 h-8 bg-primary/10 rounded flex items-center justify-center border border-primary/20 overflow-hidden">
-                                <span className="text-[10px] font-black text-primary">VAL</span>
+                            <div className="w-8 h-8 flex items-center justify-center overflow-hidden">
+                                <img src="/Logo.png" alt="Logo" className="h-full w-full object-contain" />
                             </div>
                             <span className="font-bold text-lg hidden sm:inline-block">Valorizaciones</span>
                         </div>
