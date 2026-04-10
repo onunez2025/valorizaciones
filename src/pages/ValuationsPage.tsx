@@ -349,7 +349,7 @@ export default function ValuationsPage() {
                                         <span className="text-[10px] font-bold uppercase tracking-widest text-red-600">Penalidades</span>
                                         <span className="text-base font-bold text-red-600 tracking-tight">- S/ {totalPenalties.toLocaleString()}</span>
                                     </div>                                               
-                                    <div className="flex flex-col p-6 bg-white border-l-[6px] border-[#059669] rounded-xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(5,150,105,0.1)] transition-all duration-500 group/neto">
+                                    <div className="flex flex-col px-5 py-6 bg-white border-l-[6px] border-[#059669] rounded-xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(5,150,105,0.1)] transition-all duration-500 group/neto">
                                         <div className="flex items-center justify-between mb-3">
                                             <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[#059669] opacity-80">Total Neto</span>
                                             <div className="flex items-center gap-1.5 bg-emerald-50 px-2 py-1 rounded-md">
@@ -359,7 +359,7 @@ export default function ValuationsPage() {
                                         </div>
                                         <div className="flex items-center gap-2 whitespace-nowrap overflow-hidden">
                                             <span className="text-2xl font-bold text-[#059669]/40 mt-1">S/</span>
-                                            <span className="text-3xl font-black tracking-tighter text-slate-800 group-hover/neto:text-[#059669] transition-colors duration-500">
+                                            <span className="text-[27px] font-black tracking-tighter text-slate-800 group-hover/neto:text-[#059669] transition-colors duration-500">
                                                 {grandTotal.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                             </span>
                                         </div>
