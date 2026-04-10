@@ -585,18 +585,21 @@ app.get('/api/dashboard/top-cas', verifyToken, async (req: Request, res: Respons
 
         let query = `
             WITH RawTickets AS (
-                SELECT s.Ticket,
+                SELECT 
                     CASE WHEN LEFT(s.NombreTecnico, 3) IN ('SB2', 'SS ', 'AC ', 'EMS', 'SIL', 'VYA', 'SEY', 'TP ', 'TYG', 'FSI', 'LM ', 'TCP', 'MG ', 'AYD', 'SLR', 'REY', 'VR ', 'LV ', 'MR ', 'AXX', 'COT', 'SNT', 'NUL') 
-                    THEN LEFT(s.NombreTecnico, 3) ELSE 'GAC' END as EmpresaCode
+                    THEN LEFT(s.NombreTecnico, 3) ELSE 'GAC' END as Prefix
                 FROM [SIATC].[Dashboard_FSM] s
                 WHERE s.CheckOut >= @start AND s.CheckOut < DATEADD(DAY, 1, @end)
                   AND s.Estado = 'Closed'
             ),
+            PrefixCounts AS (
+                SELECT Prefix, COUNT(*) as Total FROM RawTickets GROUP BY Prefix
+            ),
             TicketsWithCAS AS (
-                SELECT rt.*, cas.Nombre_CAS, cas.RUC
-                FROM RawTickets rt
-                JOIN [dbo].[GAC_APP_TB_CAS] cas ON rt.EmpresaCode = cas.Abrev_nombre_colaboradores OR rt.EmpresaCode = cas.ID_CAS
-                WHERE cas.Nombre_CAS IS NOT NULL
+                SELECT cas.Nombre_CAS, pc.Total, cas.RUC
+                FROM PrefixCounts pc
+                JOIN [dbo].[GAC_APP_TB_CAS] cas ON pc.Prefix = cas.Abrev_nombre_colaboradores
+                WHERE 1=1
         `;
 
         if (ruc && ruc !== 'all') {
@@ -608,7 +611,7 @@ app.get('/api/dashboard/top-cas', verifyToken, async (req: Request, res: Respons
             )
             SELECT TOP 5 
                 Nombre_CAS as label, 
-                COUNT(*) as value
+                SUM(Total) as value
             FROM TicketsWithCAS
             GROUP BY Nombre_CAS
             ORDER BY value DESC
