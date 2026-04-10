@@ -77,9 +77,11 @@ export default function LoginPage() {
                         <p>Control automatizado de pagos, penalidades<br />y servicios de terceros.</p>
                         <div className="flex flex-col w-fit gap-2">
                             <span className="text-2xl font-bold text-slate-100 tracking-tight">Gerencia de Atención al Cliente</span>
-                            <div className="h-10 w-fit px-4 bg-white/5 rounded border border-white/10 flex items-center justify-center">
-                                <img src="/Logo - Grupo Sole - Transparente blanco.png" alt="Grupo Sole" className="h-5 object-contain opacity-90" />
-                            </div>
+                            <img 
+                                src="/Logo - Grupo Sole - Transparente blanco.png" 
+                                alt="Logo Grupo Sole" 
+                                className="h-auto max-w-[12rem] object-contain"
+                            />
                         </div>
                     </div>
                 </div>
