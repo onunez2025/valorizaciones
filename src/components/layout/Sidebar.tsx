@@ -46,9 +46,8 @@ export function Sidebar({ className }: { className?: string }) {
         )}>
             {/* Header / Logo Section - StandardIZED Padding (Matches Tablero Control) */}
             <div className="p-6 flex items-center gap-3 min-h-[62px]">
-                <div className="w-10 h-10 flex items-center justify-center shrink-0 overflow-hidden bg-primary/10 rounded drop-shadow-sm border border-primary/20">
-                     {/* Placeholder for future logo */}
-                    <span className="text-[12px] font-black text-primary">VAL</span>
+                <div className="w-10 h-10 flex items-center justify-center shrink-0 overflow-hidden">
+                    <img src="/Logo.png" alt="Logo" className="h-full w-full object-contain" />
                 </div>
                 <div className="overflow-hidden">
                     <h1 className="font-bold text-lg leading-none tracking-tight truncate">Valorizaciones</h1>

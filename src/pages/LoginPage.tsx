@@ -64,9 +64,8 @@ export default function LoginPage() {
 
                 <div className="relative z-10">
                     <div className="flex items-center gap-3 mb-6">
-                        <div className="w-12 h-12 flex items-center justify-center shrink-0 overflow-hidden bg-white/10 rounded border border-white/20">
-                             {/* Placeholder Logo */}
-                            <span className="text-sm font-black text-white">VAL</span>
+                        <div className="w-12 h-12 flex items-center justify-center shrink-0 overflow-hidden">
+                            <img src="/Logo.png" alt="Valorizaciones Logo" className="h-full w-full object-contain" />
                         </div>
                         <span className="text-2xl font-bold tracking-tight">Valorizaciones</span>
                     </div>
