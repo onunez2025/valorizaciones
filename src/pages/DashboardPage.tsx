@@ -132,17 +132,15 @@ export default function DashboardPage() {
     );
 
     return (
-        <div className="p-4 space-y-8 animate-in fade-in duration-500">
-            {/* Header con Filtros Mejorados */}
-            <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6 bg-card p-5 rounded-xl border border-border shadow-sm">
-                <div className="space-y-1">
+        <div className="p-4 space-y-4 animate-in fade-in duration-700">
+            {/* Header Section - Estilo Liquidaciones */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
                     <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-3">
                         Auditoría Analítica
                         <div className="w-2 h-2 bg-primary rounded-full animate-pulse shadow-[0_0_10px_rgba(var(--primary-rgb),0.5)]" />
                     </h1>
-                    <p className="text-muted-foreground text-[11px] font-medium opacity-60">
-                        Inteligencia de negocios CAS en tiempo real.
-                    </p>
+                    <p className="text-muted-foreground text-sm font-medium">Inteligencia de negocios CAS en tiempo real.</p>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-4">
@@ -151,7 +149,7 @@ export default function DashboardPage() {
                         <button 
                             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                             className={cn(
-                                "flex items-center justify-between gap-3 bg-background px-4 py-2.5 rounded-lg border border-border shadow-sm hover:border-primary/40 transition-all min-w-[260px] max-w-[300px]",
+                                "flex items-center justify-between gap-3 bg-background px-4 py-2 rounded-lg border border-border shadow-sm hover:border-primary/40 transition-all min-w-[200px]",
                                 isDropdownOpen && "ring-2 ring-primary/20 border-primary/50"
                             )}
                         >
@@ -165,7 +163,7 @@ export default function DashboardPage() {
                         </button>
 
                         {isDropdownOpen && (
-                            <div className="absolute top-full left-0 mt-2 w-full bg-card border border-border rounded-xl shadow-xl z-50 animate-in fade-in zoom-in-95 duration-200 overflow-hidden">
+                            <div className="absolute top-full right-0 mt-2 w-[300px] bg-card border border-border rounded-xl shadow-xl z-50 animate-in fade-in zoom-in-95 duration-200 overflow-hidden">
                                 <div className="p-3 border-b border-border/50">
                                     <div className="relative">
                                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
@@ -207,33 +205,27 @@ export default function DashboardPage() {
                                             {selectedCas === cas.RUC && <Check className="w-3 h-3" />}
                                         </button>
                                     ))}
-                                    {filteredCasList.length === 0 && (
-                                        <div className="py-8 text-center bg-muted/10 rounded-2xl">
-                                            <Search className="w-6 h-6 text-muted-foreground mx-auto mb-2 opacity-20" />
-                                            <p className="text-[10px] font-black text-muted-foreground opacity-40">No se encontraron resultados</p>
-                                        </div>
-                                    )}
                                 </div>
                             </div>
                         )}
                     </div>
 
                     {/* Filtro Periodo Custom */}
-                    <div className="flex items-center gap-1 bg-muted/40 p-1 rounded-xl border border-border shadow-inner">
+                    <div className="flex items-center gap-1 bg-muted/40 p-1 rounded-lg border border-border shadow-inner">
                         {[
                             { id: '7', label: '7D' },
                             { id: '30', label: '30D' },
                             { id: '90', label: '90D' },
-                            { id: 'year', label: 'AÑO' },
-                            { id: 'custom', label: 'RANGO' },
+                            { id: 'year', label: 'Año' },
+                            { id: 'custom', label: 'Rango' },
                         ].map((p) => (
                             <button
                                 key={p.id}
                                 onClick={() => setPeriod(p.id)}
                                 className={cn(
-                                    "px-3.5 py-2 rounded-lg text-[10px] font-bold transition-all",
+                                    "px-3 py-1.5 rounded-md text-[10px] font-bold transition-all",
                                     period === p.id 
-                                        ? "bg-foreground text-background shadow-md shadow-foreground/10" 
+                                        ? "bg-foreground text-background shadow-md" 
                                         : "text-muted-foreground hover:bg-muted"
                                 )}
                             >
@@ -246,7 +238,7 @@ export default function DashboardPage() {
 
             {/* Selector de Rango Personalizado */}
             {period === 'custom' && (
-                <div className="flex flex-wrap items-center gap-4 bg-muted/30 p-3 rounded-xl border border-border/40 animate-in slide-in-from-top-2 mx-6">
+                <div className="flex flex-wrap items-center gap-4 bg-muted/30 p-3 rounded-xl border border-border/40 animate-in slide-in-from-top-2">
                     <div className="flex items-center gap-3 bg-background px-3 py-1.5 rounded-lg border border-border shadow-sm">
                         <Calendar className="w-3.5 h-3.5 text-primary" />
                         <input 
@@ -269,8 +261,8 @@ export default function DashboardPage() {
                 </div>
             )}
 
-            {/* Metricas Principales */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {/* Metricas Principales - Idéntico a Liquidaciones */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 <StatCard 
                     title="Total Bruto Valorizado" 
                     value={`S/ ${(stats?.Bruto || 0).toLocaleString()}`} 
@@ -404,39 +396,42 @@ export default function DashboardPage() {
 
 function StatCard({ title, value, subtitle, icon, trend, trendUp, color }: any) {
     const colorClasses: any = {
-        blue: "bg-blue-500",
-        red: "bg-red-500",
-        emerald: "bg-emerald-500",
-        amber: "bg-amber-500"
+        blue: "text-blue-600",
+        red: "text-red-600",
+        emerald: "text-emerald-600",
+        amber: "text-amber-600"
+    };
+
+    const bgClasses: any = {
+        blue: "bg-blue-500/10",
+        red: "bg-red-500/10",
+        emerald: "bg-emerald-500/10",
+        amber: "bg-amber-500/10"
     };
 
     return (
-        <div className="bg-card border border-border rounded-xl p-5 shadow-sm hover:translate-y-[-2px] transition-all group overflow-hidden relative">
-            <div className={`absolute top-0 right-0 w-32 h-32 ${colorClasses[color]} opacity-[0.05] rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-700`} />
-            
-            <div className="flex flex-col gap-5">
-                <div className="flex items-center justify-between">
-                    <div className={`p-2.5 rounded-lg ${colorClasses[color]}/10 text-${color}-600 shadow-sm border border-${color}-500/10`}>
+        <div className="bg-card border-2 border-border rounded-xl p-2.5 shadow-sm group transition-all">
+            <div className="flex items-center justify-between mb-1">
+                <div className="flex items-center gap-3">
+                    <div className={cn("p-1.5 rounded-lg transition-transform group-hover:scale-110", bgClasses[color], colorClasses[color])}>
                         {icon}
                     </div>
-                    <div className={cn(
-                        "flex items-center gap-1 text-[9px] font-bold px-2 py-1 rounded-lg border",
-                        trendUp ? "bg-emerald-500/5 text-emerald-600 border-emerald-200/20" : "bg-red-500/5 text-red-600 border-red-200/20"
-                    )}>
-                        {trendUp ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
-                        {trend}
-                    </div>
+                    <span className="text-[9px] font-bold text-muted-foreground">{title}</span>
                 </div>
-                
-                <div className="space-y-1">
-                    <p className="text-[9px] font-bold text-muted-foreground/60">{title}</p>
-                    <p className="text-xl font-bold tracking-tight text-foreground">{value}</p>
+                <div className={cn(
+                    "flex items-center gap-1 text-[8px] font-bold px-1.5 py-0.5 rounded-full border",
+                    trendUp ? "bg-emerald-500/5 text-emerald-600 border-emerald-200/20" : "bg-red-500/5 text-red-600 border-red-200/20"
+                )}>
+                    {trendUp ? <ArrowUpRight className="w-2.5 h-2.5" /> : <ArrowDownRight className="w-2.5 h-2.5" />}
+                    {trend}
                 </div>
-                
-                <p className="text-[9px] font-bold text-muted-foreground opacity-60 flex items-center gap-2">
-                    <AlertCircle className="w-3 h-3" />
-                    {subtitle}
-                </p>
+            </div>
+            
+            <p className="text-lg font-bold transition-colors group-hover:text-primary">{value}</p>
+            
+            <div className="flex items-center gap-1.5 mt-0.5 opacity-60">
+                <AlertCircle className="w-2.5 h-2.5 text-muted-foreground shrink-0" />
+                <p className="text-[9px] text-muted-foreground font-medium truncate">{subtitle}</p>
             </div>
         </div>
     );
