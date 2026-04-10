@@ -349,12 +349,21 @@ export default function ValuationsPage() {
                                         <span className="text-[10px] font-bold uppercase tracking-widest text-red-600">Penalidades</span>
                                         <span className="text-base font-bold text-red-600 tracking-tight">- S/ {totalPenalties.toLocaleString()}</span>
                                     </div>                                               
-                                    <div className="flex justify-between items-center p-5 bg-gradient-to-br from-primary via-indigo-600 to-primary text-white rounded-2xl shadow-xl shadow-primary/20">
-                                        <div className="flex flex-col">
-                                            <span className="text-[10px] font-bold uppercase tracking-widest opacity-80">Total Neto</span>
-                                            <span className="text-[9px] opacity-70">Cálculo en tiempo real</span>
+                                    <div className="flex flex-col p-6 bg-white border-l-[6px] border-[#059669] rounded-xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(5,150,105,0.1)] transition-all duration-500 group/neto">
+                                        <div className="flex items-center justify-between mb-3">
+                                            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[#059669] opacity-80">Total Neto</span>
+                                            <div className="flex items-center gap-1.5 bg-emerald-50 px-2 py-1 rounded-md">
+                                                <div className="w-1.5 h-1.5 bg-[#059669] rounded-full animate-pulse" />
+                                                <span className="text-[8px] font-black text-[#059669] uppercase tracking-tighter">SIATC Live</span>
+                                            </div>
                                         </div>
-                                        <span className="text-xl font-black tracking-tight">S/ {grandTotal.toLocaleString()}</span>
+                                        <div className="flex items-center gap-2 whitespace-nowrap overflow-hidden">
+                                            <span className="text-xl font-bold text-[#059669]/40 mt-1">S/</span>
+                                            <span className="text-4xl font-black tracking-tighter text-slate-800 group-hover/neto:text-[#059669] transition-colors duration-500">
+                                                {grandTotal.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                            </span>
+                                        </div>
+                                        <p className="text-[9px] text-muted-foreground/40 font-bold uppercase tracking-widest mt-2">Cálculo oficial de auditoría</p>
                                     </div>
                                 </div>
                             </div>
