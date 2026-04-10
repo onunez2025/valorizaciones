@@ -441,6 +441,7 @@ app.post('/api/tarifarios/batch', verifyToken, async (req: Request, res: Respons
 // --- DASHBOARD ANALYTICS ---
 app.get('/api/dashboard/stats', verifyToken, async (req: Request, res: Response) => {
     try {
+        const { start, end, ruc } = req.query as any;
         const db = await getDb();
         const request = db.request();
         
