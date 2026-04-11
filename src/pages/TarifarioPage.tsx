@@ -16,9 +16,12 @@ interface CAS {
 
 interface Rate {
     ID_TARIFARIO?: string;
+    Id?: string; // Compatible con el backend
     Empresa: number;
     Categoria: string;
     Servicio: string;
+    ServicioCode?: string;
+    ServicioNombre?: string;
     Importe: number;
     Nombre_CAS?: string;
     RUC?: string;
@@ -64,8 +67,14 @@ export default function TarifarioPage() {
         try {
             // RUTA PLURALIZADA CORRECTA
             const data = await ApiClient.request(`/tarifarios/${cas.ID_CAS}`); 
-            setRates(data);
-            setEditRates(data);
+            // Mapeamos para que 'Servicio' contenga el código y ID_TARIFARIO el id correcto
+            const mappedData = data.map((r: any) => ({
+                ...r,
+                Servicio: r.ServicioCode || r.Servicio,
+                ID_TARIFARIO: r.Id // Backend devuelve Id en la query
+            }));
+            setRates(mappedData);
+            setEditRates(mappedData);
         } catch (err) {
             console.error("Error fetching rates:", err);
             alert({ message: "No se pudieron cargar las tarifas del CAS seleccionado. Verifique la conexión." });
@@ -114,6 +123,16 @@ export default function TarifarioPage() {
             setSaving(false);
         }
     };
+
+    // Agrupar por categoría
+    const groupedRates = editRates.reduce((acc, rate) => {
+        const cat = rate.Categoria || 'SIN CATEGORÍA';
+        if (!acc[cat]) acc[cat] = [];
+        acc[cat].push(rate);
+        return acc;
+    }, {} as Record<string, Rate[]>);
+
+    const categories = Object.keys(groupedRates).sort();
 
     const filteredCasList = casList.filter(cas => 
         cas.Nombre_CAS.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -269,88 +288,111 @@ export default function TarifarioPage() {
                                     <Activity className="w-10 h-10 text-primary animate-spin opacity-20" />
                                 </div>
                             ) : (
-                                <table className="w-full text-left">
-                                    <thead className="sticky top-0 bg-card z-10">
-                                        <tr>
-                                            <th className="px-6 py-3 bg-muted/30 rounded-l-lg font-bold text-[10px] text-muted-foreground">Categoría</th>
-                                            <th className="px-6 py-3 bg-muted/30 font-bold text-[10px] text-muted-foreground">Cód. servicio</th>
-                                            <th className="px-6 py-3 bg-muted/30 font-bold text-[10px] text-muted-foreground text-right">Importe unitario</th>
-                                            <th className="px-6 py-3 bg-muted/30 rounded-r-lg text-right"></th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-border/30">
-                                        {editRates.map((rate, idx) => (
-                                            <tr key={idx} className="group hover:bg-muted/10 transition-all border-transparent border-l-4 hover:border-primary">
-                                                <td className="px-6 py-4">
-                                                    <input 
-                                                        type="text"
-                                                        value={rate.Categoria}
-                                                        onChange={(e) => {
-                                                            const newRates = [...editRates];
-                                                            newRates[idx].Categoria = e.target.value;
-                                                            setEditRates(newRates);
-                                                            setIsEditing(true);
-                                                        }}
-                                                        placeholder="Ej. Lavadora, TV, etc..."
-                                                        className="bg-transparent border-none outline-none font-bold text-[13px] tracking-tight w-full placeholder:opacity-20"
-                                                    />
-                                                </td>
-                                                <td className="px-6 py-4">
-                                                    <input 
-                                                        type="text"
-                                                        value={rate.Servicio}
-                                                        onChange={(e) => {
-                                                            const newRates = [...editRates];
-                                                            newRates[idx].Servicio = e.target.value;
-                                                            setEditRates(newRates);
-                                                            setIsEditing(true);
-                                                        }}
-                                                        className="bg-transparent border-none outline-none w-full font-bold"
-                                                    />
-                                                </td>
-                                                <td className="px-6 py-4 text-right">
-                                                    <div className="flex items-center justify-end gap-2">
-                                                        <span className="text-[11px] font-bold text-muted-foreground opacity-40">S/ </span>
-                                                        <input 
-                                                            type="number"
-                                                            value={rate.Importe}
-                                                            onChange={(e) => {
-                                                                const newRates = [...editRates];
-                                                                newRates[idx].Importe = parseFloat(e.target.value) || 0;
-                                                                setEditRates(newRates);
-                                                                setIsEditing(true);
-                                                            }}
-                                                            className="bg-muted/30 px-3 py-1.5 rounded-lg border border-transparent focus:border-emerald-500/30 text-right font-bold text-[13px] tracking-tight w-28 outline-none transition-all"
-                                                        />
-                                                    </div>
-                                                </td>
-                                                <td className="px-6 py-4 text-right opacity-0 group-hover:opacity-100 transition-all">
-                                                    <button 
-                                                        onClick={() => {
-                                                            const newRates = editRates.filter((_, i) => i !== idx);
-                                                            setEditRates(newRates);
-                                                            setIsEditing(true);
-                                                        }}
-                                                        className="p-3 text-red-400 hover:bg-red-50 hover:text-red-600 rounded-lg transition-all"
-                                                    >
-                                                        <Trash2 className="w-5 h-5" />
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                        {editRates.length === 0 && (
-                                            <tr>
-                                                <td colSpan={4} className="py-20 text-center">
-                                                    <div className="p-8 bg-amber-500/5 rounded-lg border border-dashed border-amber-200/30 inline-block max-w-sm">
-                                                        <AlertCircle className="w-10 h-10 text-amber-500 mx-auto mb-4 opacity-40" />
-                                                        <p className="text-xs font-black text-amber-900/60 leading-relaxed">Este CAS no tiene tarifas configuradas.</p>
-                                                        <button onClick={handleAddRow} className="mt-4 text-[10px] font-black text-primary underline">Agregar Primera Tarifa</button>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        )}
-                                    </tbody>
-                                </table>
+                                <div className="space-y-6">
+                                    {categories.map(category => (
+                                        <div key={category} className="bg-muted/5 rounded-xl border border-border/40 overflow-hidden">
+                                            <div className="px-6 py-3 bg-muted/20 border-b border-border/40 flex items-center justify-between">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-2 h-2 rounded-full bg-primary" />
+                                                    <h4 className="text-[11px] font-black uppercase tracking-[0.2em] text-foreground/70">{category}</h4>
+                                                </div>
+                                                <span className="text-[9px] font-bold text-muted-foreground opacity-40 uppercase tracking-widest">{groupedRates[category].length} Servicios</span>
+                                            </div>
+                                            <table className="w-full text-left">
+                                                <thead>
+                                                    <tr className="border-b border-border/20">
+                                                        <th className="px-6 py-3 font-bold text-[9px] uppercase tracking-widest text-muted-foreground/60 w-1/2">Servicio / Descripción</th>
+                                                        <th className="px-6 py-3 font-bold text-[9px] uppercase tracking-widest text-muted-foreground/60 text-right">Importe Unitario</th>
+                                                        <th className="px-6 py-3 text-right"></th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-border/20">
+                                                    {groupedRates[category].map((rate, idx) => {
+                                                        const globalIdx = editRates.findIndex(r => r === rate);
+                                                        return (
+                                                            <tr key={`${category}-${idx}`} className="group hover:bg-primary/[0.02] transition-colors">
+                                                                <td className="px-6 py-4">
+                                                                    <div className="flex flex-col gap-1.5">
+                                                                        <div className="flex items-center gap-3">
+                                                                            <input 
+                                                                                type="text"
+                                                                                value={rate.Servicio}
+                                                                                onChange={(e) => {
+                                                                                    const newRates = [...editRates];
+                                                                                    newRates[globalIdx].Servicio = e.target.value.toUpperCase();
+                                                                                    setEditRates(newRates);
+                                                                                    setIsEditing(true);
+                                                                                }}
+                                                                                placeholder="CÓDIGO DE SERVICIO"
+                                                                                className="bg-transparent border-none outline-none font-bold text-[13px] tracking-tight uppercase placeholder:opacity-20 w-32 shrink-0 focus:ring-1 focus:ring-primary/20 rounded"
+                                                                            />
+                                                                            <div className="h-4 w-[1px] bg-border/40" />
+                                                                            <span className="text-[11px] font-bold text-foreground/80 truncate">
+                                                                                {rate.ServicioNombre || (rate.Servicio ? "DESCRIPCIÓN NO DISPONIBLE" : "NUEVO SERVICIO")}
+                                                                            </span>
+                                                                        </div>
+                                                                        <div className="flex items-center gap-2">
+                                                                            <span className="text-[8px] font-black uppercase text-muted-foreground/30 tracking-widest">Cat:</span>
+                                                                            <input 
+                                                                                type="text"
+                                                                                value={rate.Categoria}
+                                                                                onChange={(e) => {
+                                                                                    const newRates = [...editRates];
+                                                                                    newRates[globalIdx].Categoria = e.target.value.toUpperCase();
+                                                                                    setEditRates(newRates);
+                                                                                    setIsEditing(true);
+                                                                                }}
+                                                                                className="text-[9px] bg-muted/30 px-2 py-0.5 rounded border border-transparent focus:border-primary/20 outline-none w-auto font-black uppercase text-muted-foreground/60 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                                            />
+                                                                        </div>
+                                                                    </div>
+                                                                </td>
+                                                                <td className="px-6 py-4 text-right">
+                                                                    <div className="flex items-center justify-end gap-2">
+                                                                        <span className="text-[11px] font-bold text-primary/40">S/ </span>
+                                                                        <input 
+                                                                            type="number"
+                                                                            value={rate.Importe}
+                                                                            onChange={(e) => {
+                                                                                const newRates = [...editRates];
+                                                                                newRates[globalIdx].Importe = parseFloat(e.target.value) || 0;
+                                                                                setEditRates(newRates);
+                                                                                setIsEditing(true);
+                                                                            }}
+                                                                            className="bg-primary/5 px-3 py-1.5 rounded-lg border border-transparent focus:border-primary/20 text-right font-bold text-[13px] tracking-tight w-24 outline-none transition-all group-hover:bg-primary/10"
+                                                                        />
+                                                                    </div>
+                                                                </td>
+                                                                <td className="px-6 py-4 text-right opacity-0 group-hover:opacity-100 transition-all">
+                                                                    <button 
+                                                                        onClick={() => {
+                                                                            const newRates = editRates.filter((_, i) => i !== globalIdx);
+                                                                            setEditRates(newRates);
+                                                                            setIsEditing(true);
+                                                                        }}
+                                                                        className="p-2 text-red-400 hover:bg-red-50 hover:text-red-600 rounded-lg transition-all"
+                                                                    >
+                                                                        <Trash2 className="w-4 h-4" />
+                                                                    </button>
+                                                                </td>
+                                                            </tr>
+                                                        );
+                                                    })}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    ))}
+
+                                    {editRates.length === 0 && (
+                                        <div className="py-20 text-center">
+                                            <div className="p-8 bg-amber-500/5 rounded-lg border border-dashed border-amber-200/30 inline-block max-w-sm">
+                                                <AlertCircle className="w-10 h-10 text-amber-500 mx-auto mb-4 opacity-40" />
+                                                <p className="text-xs font-black uppercase tracking-widest text-amber-900/60 leading-relaxed">Este CAS no tiene tarifas configuradas.</p>
+                                                <button onClick={handleAddRow} className="mt-4 text-[10px] font-black text-primary underline">Agregar Primera Tarifa</button>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
                             )}
                         </div>
                         
@@ -371,3 +413,4 @@ export default function TarifarioPage() {
         </div>
     );
 }
+
