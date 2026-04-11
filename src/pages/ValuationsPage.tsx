@@ -446,17 +446,16 @@ export default function ValuationsPage() {
                                             <p className="text-xs font-bold">No se detectaron servicios en el rango seleccionado</p>
                                         </div>
                                     ) : (
-                                        <div className="overflow-x-auto">
-                                            <table className="w-full border-separate border-spacing-0">
-                                                <thead className="bg-white sticky top-0 z-20 border-b border-border shadow-sm">
-                                                    <tr className="text-[15px] font-medium text-muted-foreground">
-                                                        <th className="px-5 py-4 text-left">Fecha de Proceso</th>
-                                                        <th className="px-5 py-4 text-center">Servicios</th>
-                                                        <th className="px-5 py-4 text-center">Estado de Auditoría</th>
-                                                        <th className="px-5 py-4 text-right">Acumulado Diario</th>
-                                                        <th className="px-5 py-4 text-center w-10"></th>
-                                                    </tr>
-                                                </thead>
+                                        <table className="w-full border-separate border-spacing-0">
+                                            <thead className="bg-white sticky top-[-20px] z-30 border-b border-border shadow-sm">
+                                                <tr className="text-[15px] font-medium text-muted-foreground bg-white">
+                                                    <th className="px-5 py-4 text-left">Fecha de Proceso</th>
+                                                    <th className="px-5 py-4 text-center">Servicios</th>
+                                                    <th className="px-5 py-4 text-center">Estado de Auditoría</th>
+                                                    <th className="px-5 py-4 text-right">Acumulado Diario</th>
+                                                    <th className="px-5 py-4 text-center w-10"></th>
+                                                </tr>
+                                            </thead>
                                                 <tbody className="divide-y divide-border/10">
                                                     {sortedDates.map(date => (
                                                         <React.Fragment key={date}>
@@ -581,7 +580,6 @@ export default function ValuationsPage() {
                                                     ))}
                                                 </tbody>
                                             </table>
-                                        </div>
                                     )}
                                 </div>
                             ) : (
