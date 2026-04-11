@@ -18,6 +18,7 @@ export default function MaterialsPage() {
     const [selectedCategory, setSelectedCategory] = useState('Todas');
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [editingMaterial, setEditingMaterial] = useState<Material | null>(null);
+    const [isManualCategory, setIsManualCategory] = useState(false);
     const { alert, confirm } = useDialog();
 
     useEffect(() => {
@@ -116,7 +117,11 @@ export default function MaterialsPage() {
                     </select>
                 </div>
                 <button 
-                    onClick={() => { setEditingMaterial({ ID_Material: '', ID_Externo: '', Nombre: '', Categoria: '', Estado: 'Activo', Sector: 'GAC' }); setIsEditModalOpen(true); }}
+                    onClick={() => { 
+                        setEditingMaterial({ ID_Material: '', ID_Externo: '', Nombre: '', Categoria: '', Estado: 'Activo', Sector: 'GAC' }); 
+                        setIsManualCategory(false);
+                        setIsEditModalOpen(true); 
+                    }}
                     className="bg-primary text-white h-11 px-6 rounded-xl font-black text-sm shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-2"
                 >
                     <Plus className="w-4 h-4" /> Nuevo Producto
@@ -175,7 +180,11 @@ export default function MaterialsPage() {
                                         <td className="px-6 py-4 text-right">
                                             <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                                 <button 
-                                                    onClick={() => { setEditingMaterial(m); setIsEditModalOpen(true); }}
+                                                    onClick={() => { 
+                                                        setEditingMaterial(m); 
+                                                        setIsManualCategory(false);
+                                                        setIsEditModalOpen(true); 
+                                                    }}
                                                     className="p-2 bg-primary/10 text-primary rounded-lg hover:bg-primary hover:text-white transition-all shadow-sm"
                                                     title="Editar"
                                                 >
@@ -220,15 +229,48 @@ export default function MaterialsPage() {
                                     required
                                 />
                             </div>
-                            <div className="flex flex-col gap-1.5">
-                                <label className="text-[10px] font-black text-muted-foreground ml-1">Categoría</label>
-                                <input 
-                                    type="text" 
-                                    className="w-full px-4 py-2.5 bg-card border border-border rounded-xl text-sm font-black focus:ring-4 focus:ring-primary/5 focus:border-primary outline-none transition-all"
-                                    value={editingMaterial.Categoria}
-                                    onChange={(e) => setEditingMaterial({...editingMaterial, Categoria: e.target.value})}
-                                    required
-                                />
+                            <div className="flex flex-col gap-1.5 overflow-hidden">
+                                <div className="flex items-center justify-between">
+                                    <label className="text-[10px] font-black text-muted-foreground ml-1">Categoría</label>
+                                    <button 
+                                        type="button"
+                                        onClick={() => setIsManualCategory(!isManualCategory)}
+                                        className="text-[9px] font-black text-primary hover:underline"
+                                    >
+                                        {isManualCategory ? 'Ver Lista' : '+ Nueva'}
+                                    </button>
+                                </div>
+                                {isManualCategory ? (
+                                    <input 
+                                        type="text" 
+                                        className="w-full px-4 py-2.5 bg-card border border-border rounded-xl text-sm font-black focus:ring-4 focus:ring-primary/5 focus:border-primary outline-none transition-all"
+                                        value={editingMaterial.Categoria}
+                                        onChange={(e) => setEditingMaterial({...editingMaterial, Categoria: e.target.value})}
+                                        placeholder="Nueva categoría..."
+                                        autoFocus
+                                        required
+                                    />
+                                ) : (
+                                    <select 
+                                        className="w-full px-4 py-2.5 bg-card border border-border rounded-xl text-sm font-black focus:ring-4 focus:ring-primary/5 focus:border-primary outline-none transition-all cursor-pointer appearance-none"
+                                        value={editingMaterial.Categoria}
+                                        onChange={(e) => {
+                                            if (e.target.value === 'NEW') {
+                                                setIsManualCategory(true);
+                                                setEditingMaterial({...editingMaterial, Categoria: ''});
+                                            } else {
+                                                setEditingMaterial({...editingMaterial, Categoria: e.target.value});
+                                            }
+                                        }}
+                                        required
+                                    >
+                                        <option value="" disabled>Seleccionar...</option>
+                                        {categories.filter(c => c !== 'Todas' && c !== '').map(cat => (
+                                            <option key={cat} value={cat}>{cat}</option>
+                                        ))}
+                                        <option value="NEW" className="text-primary font-bold">➕ Nueva Categoría...</option>
+                                    </select>
+                                )}
                             </div>
                         </div>
 
