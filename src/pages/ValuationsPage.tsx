@@ -198,7 +198,7 @@ export default function ValuationsPage() {
             <div className="flex items-center justify-between px-1">
                 <div>
                     <h1 className="text-2xl font-bold tracking-tight text-foreground">Valorizaciones CAS</h1>
-                    <p className="text-muted-foreground text-[11px] font-medium opacity-60">Gestión quincenal de pagos y descuentos.</p>
+                    <p className="text-muted-foreground text-sm">Gestión quincenal de pagos y descuentos.</p>
                 </div>
             </div>
 
@@ -258,8 +258,8 @@ export default function ValuationsPage() {
                             <Building2 className="w-4 h-4" />
                         </div>
                         <button onClick={() => setIsDropdownOpen(!isDropdownOpen)} className="flex-1 text-left px-1 py-1 overflow-hidden">
-                            <p className="text-[8px] font-bold text-muted-foreground/60 mb-0">Centro de Atención (CAS)</p>
-                            <p className={cn("text-[12px] font-bold tracking-tight truncate", !selectedCas && "text-muted-foreground/30 italic font-medium")}>
+                            <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-0">Centro de Atención (CAS)</p>
+                            <p className={cn("text-sm font-bold tracking-tight truncate", !selectedCas && "text-muted-foreground/30 italic font-medium")}>
                                 {selectedCas ? toTitleCase(selectedCas.Nombre_CAS) : "Seleccionar empresa..."}
                             </p>
                         </button>
@@ -274,12 +274,12 @@ export default function ValuationsPage() {
                     {isDropdownOpen && (
                         <div className="absolute top-full left-0 mt-2 w-full bg-card border border-border rounded-xl shadow-xl z-[100] animate-in fade-in zoom-in-95 duration-200 overflow-hidden">
                             <div className="p-3 border-b border-border/40">
-                                <input autoFocus type="text" placeholder="Buscar CAS..." className="w-full bg-muted/30 border border-transparent rounded-lg px-3 py-2 text-xs font-bold focus:bg-background focus:border-primary/20 outline-none transition-all" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+                                <input autoFocus type="text" placeholder="Buscar CAS..." className="w-full bg-muted/30 border border-transparent rounded-lg px-3 py-2 text-sm font-medium focus:bg-background focus:border-primary/20 outline-none transition-all" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
                             </div>
                             <div className="max-h-[280px] overflow-y-auto p-2 space-y-1 custom-scrollbar">
                                 {filteredCasList.map(cas => (
-                                    <button key={cas.RUC} onClick={() => { setSelectedCas(cas); setIsDropdownOpen(false); setSearchQuery(''); }} className={cn("w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-left transition-all", selectedCas?.RUC === cas.RUC ? "bg-primary text-white shadow-md shadow-primary/20" : "hover:bg-primary/5 text-xs font-bold")}>
-                                        <div className="flex flex-col"><span className="truncate max-w-[200px]">{toTitleCase(cas.Nombre_CAS)}</span><span className="text-[10px] opacity-60">RUC: {cas.RUC}</span></div>
+                                    <button key={cas.RUC} onClick={() => { setSelectedCas(cas); setIsDropdownOpen(false); setSearchQuery(''); }} className={cn("w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-left transition-all", selectedCas?.RUC === cas.RUC ? "bg-primary text-white shadow-md shadow-primary/20" : "hover:bg-primary/5 text-sm font-medium")}>
+                                        <div className="flex flex-col"><span className="truncate max-w-[200px]">{toTitleCase(cas.Nombre_CAS)}</span><span className="text-[11px] opacity-60">RUC: {cas.RUC}</span></div>
                                         {selectedCas?.RUC === cas.RUC && <Check className="w-3.5 h-3.5" />}
                                     </button>
                                 ))}
@@ -291,11 +291,11 @@ export default function ValuationsPage() {
                 {/* Rango de Fechas */}
                 <div className="flex items-center gap-2 bg-muted/20 p-1 rounded-lg border border-border/30">
                     <div className="relative">
-                        <input type="date" title="Inicio" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="bg-background border border-border rounded-md pl-8 pr-2 py-1.5 text-xs font-bold focus:ring-1 focus:ring-primary outline-none h-9 w-[140px]" />
+                        <input type="date" title="Inicio" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="bg-background border border-border rounded-md pl-8 pr-2 py-1.5 text-sm font-medium focus:ring-1 focus:ring-primary outline-none h-9 w-[150px]" />
                         <Calendar className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/40" />
                     </div>
                     <div className="relative">
-                        <input type="date" title="Fin" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="bg-background border border-border rounded-md pl-8 pr-2 py-1.5 text-xs font-bold focus:ring-1 focus:ring-primary outline-none h-9 w-[140px]" />
+                        <input type="date" title="Fin" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="bg-background border border-border rounded-md pl-8 pr-2 py-1.5 text-sm font-medium focus:ring-1 focus:ring-primary outline-none h-9 w-[150px]" />
                         <Calendar className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/40" />
                     </div>
                 </div>
@@ -306,7 +306,7 @@ export default function ValuationsPage() {
                     <input 
                         type="text" 
                         placeholder="N° Ticket..." 
-                        className="w-full bg-background border border-border rounded-lg pl-9 pr-3 h-11 text-xs font-bold focus:ring-2 focus:ring-primary/10 focus:border-primary outline-none transition-all" 
+                        className="w-full bg-background border border-border rounded-lg pl-9 pr-3 h-11 text-sm font-medium focus:ring-2 focus:ring-primary/10 focus:border-primary outline-none transition-all" 
                         value={globalSearch} 
                         onChange={(e) => setGlobalSearch(e.target.value)}
                         onKeyDown={async (e) => {
@@ -323,7 +323,7 @@ export default function ValuationsPage() {
                 </div>
 
                 {/* Botón Consultar */}
-                <button onClick={handleFetchValuation} disabled={loadingData} className="h-11 bg-primary text-primary-foreground px-6 rounded-xl font-black text-[10px] transition-all flex items-center gap-2 hover:opacity-95 active:scale-95 disabled:opacity-50 shadow-lg shadow-primary/10">
+                <button onClick={handleFetchValuation} disabled={loadingData} className="h-11 bg-primary text-primary-foreground px-6 rounded-xl font-bold text-sm transition-all flex items-center gap-2 hover:opacity-95 active:scale-95 disabled:opacity-50 shadow-lg shadow-primary/10">
                     {loadingData ? <Activity className="w-4 h-4 animate-spin" /> : <Filter className="w-4 h-4" /> }
                     {loadingData ? "Cargando" : "Consultar"}
                 </button>
@@ -337,25 +337,25 @@ export default function ValuationsPage() {
                         <div className="bg-card border border-border rounded-2xl p-6 shadow-sm h-full flex flex-col justify-between">
                             <div className="space-y-6">
                                 <div className="flex items-center justify-between">
-                                    <h3 className="text-[10px] font-black text-muted-foreground/60">Resumen de cuenta</h3>
+                                    <h3 className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Resumen de cuenta</h3>
                                     <Calculator className="w-5 h-5 text-primary" />
                                 </div>
                                 
                                 <div className="space-y-3">
                                     <div className="flex justify-between items-center p-4 bg-muted/20 rounded-xl border border-border/30">
-                                        <span className="text-[10px] font-bold text-muted-foreground">Servicios</span>
+                                        <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Servicios</span>
                                         <span className="text-base font-bold tracking-tight">S/ {totalTickets.toLocaleString()}</span>
                                     </div>
                                     <div className="flex justify-between items-center p-4 bg-red-50/50 rounded-xl border border-red-100">
-                                        <span className="text-[10px] font-bold text-red-600">Penalidades</span>
+                                        <span className="text-[11px] font-bold text-red-600 uppercase tracking-wider">Penalidades</span>
                                         <span className="text-base font-bold text-red-600 tracking-tight">- S/ {totalPenalties.toLocaleString()}</span>
                                     </div>                                               
                                     <div className="flex flex-col px-5 py-6 bg-white border-l-[6px] border-[#059669] rounded-xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(5,150,105,0.1)] transition-all duration-500 group/neto">
                                         <div className="flex items-center justify-between mb-3">
-                                            <span className="text-[10px] font-black text-[#059669] opacity-80">Total neto</span>
+                                            <span className="text-[11px] font-bold text-[#059669] uppercase tracking-wider">Total neto</span>
                                             <div className="flex items-center gap-1.5 bg-emerald-50 px-2 py-1 rounded-md">
                                                 <div className="w-1.5 h-1.5 bg-[#059669] rounded-full animate-pulse" />
-                                                <span className="text-[8px] font-black text-[#059669]">Siatc Live</span>
+                                                <span className="text-[10px] font-bold text-[#059669] uppercase tracking-wider">Siatc Live</span>
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-2 whitespace-nowrap overflow-hidden">
@@ -364,7 +364,7 @@ export default function ValuationsPage() {
                                                 {grandTotal.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                             </span>
                                         </div>
-                                        <p className="text-[9px] text-muted-foreground/40 font-bold mt-2">Cálculo oficial de auditoría</p>
+                                        <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mt-2">Cálculo oficial de auditoría</p>
                                     </div>
                                 </div>
                             </div>
@@ -373,14 +373,14 @@ export default function ValuationsPage() {
                                 <button 
                                     onClick={handleExportExcel} 
                                     disabled={!selectedCas || tickets.length === 0} 
-                                    className="w-full flex items-center justify-center gap-2 p-4 bg-background border border-border rounded-xl text-[10px] font-black transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                                    className="w-full flex items-center justify-center gap-2 p-4 bg-background border border-border rounded-xl text-sm font-bold transition-all disabled:opacity-30 disabled:cursor-not-allowed"
                                 >
                                     <Download className="w-4 h-4" /> Exportar a Excel
                                 </button>
                                 <button 
                                     onClick={() => setShowCloseModal(true)} 
                                     disabled={!selectedCas || tickets.length === 0} 
-                                    className="w-full flex items-center justify-center gap-2 p-4 bg-gradient-to-r from-primary to-indigo-600 text-white hover:opacity-90 text-[10px] font-black rounded-xl transition-all shadow-xl shadow-primary/20 disabled:opacity-30 disabled:cursor-not-allowed"
+                                    className="w-full flex items-center justify-center gap-2 p-4 bg-gradient-to-r from-primary to-indigo-600 text-white hover:opacity-90 text-sm font-bold rounded-xl transition-all shadow-xl shadow-primary/20 disabled:opacity-30 disabled:cursor-not-allowed"
                                 >
                                     <Lock className="w-4 h-4" /> Cerrar quincena
                                 </button>
@@ -391,10 +391,10 @@ export default function ValuationsPage() {
                     {/* Tabs y Listado */}
                     <div className="xl:col-span-3 flex flex-col bg-card border border-border rounded-2xl overflow-hidden shadow-sm">
                         <div className="flex p-2 bg-muted/20 border-b border-border/40">
-                            <button onClick={() => setActiveTab('services')} className={cn("flex-1 flex items-center justify-center gap-2 py-3 text-[10px] font-bold rounded-xl transition-all", activeTab === 'services' ? "bg-background text-primary shadow-sm ring-1 ring-border/50" : "text-muted-foreground hover:bg-background/40")}>
+                            <button onClick={() => setActiveTab('services')} className={cn("flex-1 flex items-center justify-center gap-2 py-3 text-sm font-bold rounded-xl transition-all", activeTab === 'services' ? "bg-background text-primary shadow-sm ring-1 ring-border/50" : "text-muted-foreground hover:bg-background/40")}>
                                 <Briefcase className="w-4 h-4" /> Servicios realizados ({tickets.length})
                             </button>
-                            <button onClick={() => setActiveTab('penalties')} className={cn("flex-1 flex items-center justify-center gap-2 py-3 text-[10px] font-bold rounded-xl transition-all", activeTab === 'penalties' ? "bg-background text-red-600 shadow-sm ring-1 ring-border/50" : "text-muted-foreground hover:bg-background/40")}>
+                            <button onClick={() => setActiveTab('penalties')} className={cn("flex-1 flex items-center justify-center gap-2 py-3 text-sm font-bold rounded-xl transition-all", activeTab === 'penalties' ? "bg-background text-red-600 shadow-sm ring-1 ring-border/50" : "text-muted-foreground hover:bg-background/40")}>
                                 <AlertTriangle className="w-4 h-4" /> Penalidades aplicadas ({penalties.length})
                             </button>
                         </div>
