@@ -46,6 +46,17 @@ export interface ValuationTicket {
   Total: number;
   Estado: string;
   ServicioNombre?: string;
+  CodigoEquipo?: string;
+  NombreEquipo?: string;
+}
+
+export interface Material {
+  ID_Material: string;
+  ID_Externo: string;
+  Nombre: string;
+  Categoria: string;
+  Estado: string;
+  Sector?: string;
 }
 
 export interface Penalty {

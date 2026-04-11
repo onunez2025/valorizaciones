@@ -168,6 +168,8 @@ app.get('/api/valuations/:ruc', verifyToken, async (req: Request, res: Response)
                 SELECT 
                     s.Ticket, s.CheckOut as Fecha, s.Servicio as ServicioNombre, 
                     s.IdServicio as Servicio,
+                    s.CodigoExternoEquipo as CodigoEquipo,
+                    s.NombreEquipo as NombreEquipo,
                     ISNULL(m.Categoria, 'N/A') as Categoria,
                     ISNULL(rate.Importe, 0) as TarifaBase,
                     ISNULL((SELECT SUM(CAST(Importe AS FLOAT)) FROM [dbo].[GAC_APP_TB_TICKETS_VALORIZACION_ADICIONAL] WHERE Ticket = s.Ticket), 0) as Adicionales
@@ -416,6 +418,52 @@ app.post('/api/tarifarios/create', verifyToken, async (req: Request, res: Respon
                 )
             `);
         res.json({ success: true, id: newId });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+// --- MATERIALES ---
+app.get('/api/materials', verifyToken, async (req: Request, res: Response) => {
+    try {
+        const db = await getDb();
+        const result = await db.request().query("SELECT ID_Material, ID_Externo, Nombre, Categoria, Estado, Sector FROM [dbo].[GAC_APP_TB_MATERIALES] ORDER BY Categoria, Nombre");
+        res.json(result.recordset);
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+app.get('/api/materials/categories', verifyToken, async (req: Request, res: Response) => {
+    try {
+        const db = await getDb();
+        const result = await db.request().query("SELECT DISTINCT Categoria FROM [dbo].[GAC_APP_TB_MATERIALES] WHERE Categoria IS NOT NULL AND Categoria != '' ORDER BY Categoria");
+        res.json(result.recordset.map(r => r.Categoria));
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+app.post('/api/materials', verifyToken, async (req: Request, res: Response) => {
+    const { idExterno, nombre, categoria, sector } = req.body;
+    try {
+        const db = await getDb();
+        const check = await db.request().input('ext', idExterno).query("SELECT ID_Material FROM [dbo].[GAC_APP_TB_MATERIALES] WHERE ID_Externo = @ext");
+        
+        if (check.recordset.length > 0) {
+            const id = check.recordset[0].ID_Material;
+            await db.request()
+                .input('id', id)
+                .input('nombre', nombre)
+                .input('cat', categoria)
+                .input('sec', sector || 'GAC')
+                .query(`UPDATE [dbo].[GAC_APP_TB_MATERIALES] SET Nombre = @nombre, Categoria = @cat, Sector = @sec WHERE ID_Material = @id`);
+            res.json({ success: true, id, action: 'updated' });
+        } else {
+            const newId = crypto.randomBytes(4).toString('hex');
+            await db.request()
+                .input('id', newId)
+                .input('ext', idExterno)
+                .input('nombre', nombre)
+                .input('cat', categoria)
+                .input('sec', sector || 'GAC')
+                .query(`INSERT INTO [dbo].[GAC_APP_TB_MATERIALES] (ID_Material, ID_Externo, Nombre, Categoria, Sector, Estado, EstadoEnCatalogo) VALUES (@id, @ext, @nombre, @cat, @sec, 'Activo', 'Publicado')`);
+            res.json({ success: true, id: newId, action: 'created' });
+        }
     } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 

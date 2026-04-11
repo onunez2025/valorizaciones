@@ -8,6 +8,7 @@ import { toTitleCase } from '../utils/formatters';
 import { useDialog } from '../context/DialogContext';
 import PenaltyModal from '../components/penalties/PenaltyModal';
 import TarifarioModal from '../components/tarifario/TarifarioModal';
+import MaterialRegisterModal from '../components/materials/MaterialRegisterModal';
 import { Modal } from '../components/common/Modal';
 
 export default function ValuationsPage() {
@@ -30,9 +31,11 @@ export default function ValuationsPage() {
     const [showPenaltyModal, setShowPenaltyModal] = useState<{show: boolean, type: 'penalty' | 'additional', ticket?: string, date?: string}>({show: false, type: 'penalty'});
     const [expandedDates, setExpandedDates] = useState<string[]>([]);
     const [showTarifarioModal, setShowTarifarioModal] = useState(false);
+    const [showMaterialModal, setShowMaterialModal] = useState(false);
     const [showCloseModal, setShowCloseModal] = useState(false);
     const [isClosing, setIsClosing] = useState(false);
     const [modalData, setModalData] = useState<any>(null);
+    const [materialModalData, setMaterialModalData] = useState<{codigo: string, nombre: string} | null>(null);
     const [activeTab, setActiveTab] = useState<'services' | 'penalties'>('services');
     const [globalSearch, setGlobalSearch] = useState('');
     const [globalSearchResult, setGlobalSearchResult] = useState<any>(null);
@@ -222,6 +225,14 @@ export default function ValuationsPage() {
             servicioNombre: ticket.ServicioNombre || 'Servicio General'
         });
         setShowTarifarioModal(true);
+    };
+
+    const handleOpenMaterialModal = (ticket: ValuationTicket) => {
+        setMaterialModalData({
+            codigo: ticket.CodigoEquipo || '',
+            nombre: ticket.NombreEquipo || ''
+        });
+        setShowMaterialModal(true);
     };
 
     return (
@@ -541,20 +552,32 @@ export default function ValuationsPage() {
                                                                                                 </span>
                                                                                             </td>
                                                                                             <td className="px-6 py-4">
-                                                                                                <span className="font-medium text-muted-foreground text-xs">
-                                                                                                    {toTitleCase(ticket.Categoria)}
-                                                                                                </span>
+                                                                                                <div className="flex flex-col">
+                                                                                                    <span className="font-medium text-muted-foreground text-[10px] uppercase opacity-60">
+                                                                                                        {ticket.CodigoEquipo}
+                                                                                                    </span>
+                                                                                                    <span className="font-bold text-foreground text-xs truncate max-w-[200px]" title={ticket.NombreEquipo}>
+                                                                                                        {toTitleCase(ticket.Categoria)}
+                                                                                                    </span>
+                                                                                                </div>
                                                                                             </td>
                                                                                             <td className="px-6 py-4 text-right">
-                                                                                                {ticket.TarifaBase === 0 ? (
+                                                                                                {ticket.Categoria === 'N/A' ? (
+                                                                                                    <button 
+                                                                                                        onClick={() => handleOpenMaterialModal(ticket)} 
+                                                                                                        className="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-[9px] font-black hover:scale-105 active:scale-95 transition-all shadow-md shadow-indigo-600/20 flex items-center gap-1.5"
+                                                                                                    >
+                                                                                                        <Package className="w-3 h-3" /> Registrar Prod.
+                                                                                                    </button>
+                                                                                                ) : ticket.TarifaBase === 0 ? (
                                                                                                     <button 
                                                                                                         onClick={() => handleOpenTarifarioModal(ticket)} 
-                                                                                                        className="px-3 py-1.5 bg-amber-500 text-white rounded-lg text-[9px] font-medium hover:scale-105 active:scale-95 transition-all shadow-md shadow-amber-500/20"
+                                                                                                        className="px-3 py-1.5 bg-amber-500 text-white rounded-lg text-[9px] font-black hover:scale-105 active:scale-95 transition-all shadow-md shadow-amber-500/20"
                                                                                                     >
                                                                                                         Vincular Tarifa
                                                                                                     </button>
                                                                                                 ) : (
-                                                                                                    <span className="font-medium text-sm tracking-tighter text-foreground/80">
+                                                                                                    <span className="font-bold text-sm tracking-tighter text-foreground/80">
                                                                                                         S/ {(ticket.TarifaBase + (ticket.Adicionales || 0)).toLocaleString('es-PE', { minimumFractionDigits: 2 })}
                                                                                                     </span>
                                                                                                 )}
@@ -624,6 +647,15 @@ export default function ValuationsPage() {
                     isOpen={showTarifarioModal}
                     onClose={() => setShowTarifarioModal(false)}
                     initialData={modalData}
+                    onSuccess={handleFetchValuation}
+                />
+            )}
+
+            {showMaterialModal && materialModalData && (
+                <MaterialRegisterModal 
+                    isOpen={showMaterialModal}
+                    onClose={() => setShowMaterialModal(false)}
+                    initialData={materialModalData}
                     onSuccess={handleFetchValuation}
                 />
             )}

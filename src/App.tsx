@@ -10,6 +10,7 @@ const LoginPage = lazy(() => import('./pages/LoginPage'));
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
 const ValuationsPage = lazy(() => import('./pages/ValuationsPage'));
 const TarifarioPage = lazy(() => import('./pages/TarifarioPage'));
+const MaterialsPage = lazy(() => import('./pages/MaterialsPage'));
 
 // Configuration Pages
 const ConfigLayout = lazy(() => import('./pages/config/ConfigLayout'));
@@ -41,6 +42,7 @@ function App() {
                 <Route path="/dashboard" element={<DashboardPage />} />
                 <Route path="/valuations" element={<ValuationsPage />} />
                 <Route path="/tarifario" element={<TarifarioPage />} />
+                <Route path="/materiales" element={<MaterialsPage />} />
                 
                 {/* Configuración */}
                 <Route path="/config" element={<ConfigLayout />}>
