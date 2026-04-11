@@ -448,13 +448,13 @@ export default function ValuationsPage() {
                                     ) : (
                                         <div className="overflow-x-auto">
                                             <table className="w-full border-separate border-spacing-0">
-                                                <thead className="bg-muted/10 sticky top-0 z-20 border-b border-border">
-                                                    <tr className="text-[11px] font-bold text-muted-foreground">
-                                                        <th className="px-5 py-4 text-left border-b border-border/60">Fecha de Proceso</th>
-                                                        <th className="px-5 py-4 text-center border-b border-border/60">Servicios</th>
-                                                        <th className="px-5 py-4 text-center border-b border-border/60">Estado de Auditoría</th>
-                                                        <th className="px-5 py-4 text-right border-b border-border/60">Acumulado Diario</th>
-                                                        <th className="px-5 py-4 text-center border-b border-border/60 w-10"></th>
+                                                <thead className="bg-white sticky top-0 z-20 border-b border-border shadow-sm">
+                                                    <tr className="text-[15px] font-medium text-muted-foreground">
+                                                        <th className="px-5 py-4 text-left">Fecha de Proceso</th>
+                                                        <th className="px-5 py-4 text-center">Servicios</th>
+                                                        <th className="px-5 py-4 text-center">Estado de Auditoría</th>
+                                                        <th className="px-5 py-4 text-right">Acumulado Diario</th>
+                                                        <th className="px-5 py-4 text-center w-10"></th>
                                                     </tr>
                                                 </thead>
                                                 <tbody className="divide-y divide-border/10">
@@ -476,23 +476,23 @@ export default function ValuationsPage() {
                                                                         )}>
                                                                             <Calendar className="w-4 h-4" />
                                                                         </div>
-                                                                        <span className="text-sm font-bold tracking-tight">{date}</span>
+                                                                        <span className="text-sm font-medium tracking-tight">{date}</span>
                                                                     </div>
                                                                 </td>
                                                                 <td className="px-5 py-4 text-center">
-                                                                    <span className="px-3 py-1 bg-muted/60 rounded-full text-[11px] font-bold text-muted-foreground">
+                                                                    <span className="px-3 py-1 bg-muted/60 rounded-full text-[11px] font-medium text-muted-foreground">
                                                                         {groupedTickets[date].count} servicios
                                                                     </span>
                                                                 </td>
                                                                 <td className="px-5 py-4 text-center">
                                                                     <div className="flex justify-center">
                                                                         {groupedTickets[date].zeroPriceCount > 0 ? (
-                                                                            <span className="px-3 py-1 bg-amber-50 text-amber-600 rounded-full text-[10px] font-bold border border-amber-100 flex items-center gap-1.5 animate-pulse">
+                                                                            <span className="px-3 py-1 bg-amber-50 text-amber-600 rounded-full text-[10px] font-medium border border-amber-100 flex items-center gap-1.5 animate-pulse">
                                                                                 <AlertCircle className="w-3.5 h-3.5" />
                                                                                 {groupedTickets[date].zeroPriceCount} por vincular
                                                                             </span>
                                                                         ) : (
-                                                                            <span className="px-3 py-1 bg-emerald-50 text-emerald-600 rounded-full text-[10px] font-bold border border-emerald-100 flex items-center gap-1.5">
+                                                                            <span className="px-3 py-1 bg-emerald-50 text-emerald-600 rounded-full text-[10px] font-medium border border-emerald-100 flex items-center gap-1.5">
                                                                                 <CheckCircle2 className="w-3.5 h-3.5" />
                                                                                 Auditado
                                                                             </span>
@@ -500,7 +500,7 @@ export default function ValuationsPage() {
                                                                     </div>
                                                                 </td>
                                                                 <td className="px-5 py-4 text-right">
-                                                                    <span className="text-sm font-black tracking-tighter">
+                                                                    <span className="text-sm font-medium tracking-tighter">
                                                                         S/ {(groupedTickets[date].totalBase + groupedTickets[date].totalAdicional).toLocaleString('es-PE', { minimumFractionDigits: 2 })}
                                                                     </span>
                                                                 </td>
@@ -516,7 +516,7 @@ export default function ValuationsPage() {
                                                                         <div className="max-h-[480px] overflow-y-auto custom-scrollbar animate-in slide-in-from-top-4 duration-500 shadow-[inset_0_2px_10px_rgba(0,0,0,0.02)]">
                                                                             <table className="w-full border-collapse">
                                                                                 <thead className="sticky top-0 z-10 bg-white/95 backdrop-blur-md shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
-                                                                                    <tr className="text-[10px] font-bold text-muted-foreground border-b border-border/30">
+                                                                                    <tr className="text-sm font-medium text-muted-foreground border-b border-border/30">
                                                                                         <th onClick={() => handleDetailSort('Ticket')} className="px-10 py-3 text-left cursor-pointer hover:text-primary transition-colors">
                                                                                             <div className="flex items-center gap-1">ID Ticket <ArrowUpDown className="w-3 h-3 opacity-40" /></div>
                                                                                         </th>
@@ -535,9 +535,9 @@ export default function ValuationsPage() {
                                                                                 <tbody className="divide-y divide-border/10">
                                                                                     {getSortedTickets(groupedTickets[date].tickets).map((ticket) => (
                                                                                         <tr key={ticket.Ticket} className="hover:bg-primary/[0.01] transition-colors group/row">
-                                                                                            <td className="px-10 py-4 font-black text-primary text-sm tracking-tighter cursor-default">{ticket.Ticket}</td>
+                                                                                            <td className="px-10 py-4 font-medium text-primary text-sm tracking-tighter cursor-default">{ticket.Ticket}</td>
                                                                                             <td className="px-6 py-4">
-                                                                                                <span className="font-bold text-foreground text-sm">
+                                                                                                <span className="font-medium text-foreground text-sm">
                                                                                                     {toTitleCase(ticket.ServicioNombre || 'General')}
                                                                                                 </span>
                                                                                             </td>
@@ -550,12 +550,12 @@ export default function ValuationsPage() {
                                                                                                 {ticket.TarifaBase === 0 ? (
                                                                                                     <button 
                                                                                                         onClick={() => handleOpenTarifarioModal(ticket)} 
-                                                                                                        className="px-3 py-1.5 bg-amber-500 text-white rounded-lg text-[9px] font-black hover:scale-105 active:scale-95 transition-all shadow-md shadow-amber-500/20"
+                                                                                                        className="px-3 py-1.5 bg-amber-500 text-white rounded-lg text-[9px] font-medium hover:scale-105 active:scale-95 transition-all shadow-md shadow-amber-500/20"
                                                                                                     >
                                                                                                         Vincular Tarifa
                                                                                                     </button>
                                                                                                 ) : (
-                                                                                                    <span className="font-black text-sm tracking-tighter text-foreground/80">
+                                                                                                    <span className="font-medium text-sm tracking-tighter text-foreground/80">
                                                                                                         S/ {(ticket.TarifaBase + (ticket.Adicionales || 0)).toLocaleString('es-PE', { minimumFractionDigits: 2 })}
                                                                                                     </span>
                                                                                                 )}
