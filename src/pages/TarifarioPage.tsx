@@ -23,6 +23,8 @@ interface Rate {
     ServicioCode?: string;
     ServicioNombre?: string;
     Importe: number;
+    Fecha_inicio?: string;
+    Fecha_fin?: string;
     Nombre_CAS?: string;
     RUC?: string;
 }
@@ -329,10 +331,11 @@ export default function TarifarioPage() {
 
                                                  {isExpanded && (
                                                      <div className="animate-in slide-in-from-top-2 duration-300">
-                                                         <table className="w-full text-left">
+                                                          <table className="w-full text-left">
                                                              <thead>
                                                                  <tr className="border-b border-border/20">
-                                                                     <th className="px-6 py-3 font-bold text-[9px] uppercase tracking-widest text-muted-foreground/60 w-1/2">Servicio / Descripción</th>
+                                                                     <th className="px-6 py-3 font-bold text-[9px] uppercase tracking-widest text-muted-foreground/60 w-1/3">Servicio / Descripción</th>
+                                                                     <th className="px-6 py-3 font-bold text-[9px] uppercase tracking-widest text-muted-foreground/60 text-center">Vigencia (Inicio - Fin)</th>
                                                                      <th className="px-6 py-3 font-bold text-[9px] uppercase tracking-widest text-muted-foreground/60 text-right">Importe Unitario</th>
                                                                      <th className="px-6 py-3 text-right"></th>
                                                                  </tr>
@@ -354,8 +357,8 @@ export default function TarifarioPage() {
                                                                                                  setEditRates(newRates);
                                                                                                  setIsEditing(true);
                                                                                              }}
-                                                                                             placeholder="CÓDIGO DE SERVICIO"
-                                                                                             className="bg-transparent border-none outline-none font-bold text-[13px] tracking-tight uppercase placeholder:opacity-20 w-32 shrink-0 focus:ring-1 focus:ring-primary/20 rounded"
+                                                                                             placeholder="CÓDIGO"
+                                                                                             className="bg-transparent border-none outline-none font-bold text-[13px] tracking-tight uppercase placeholder:opacity-20 w-24 shrink-0 focus:ring-1 focus:ring-primary/20 rounded"
                                                                                          />
                                                                                          <div className="h-4 w-[1px] bg-border/40" />
                                                                                          <span className="text-[11px] font-bold text-foreground/80 truncate">
@@ -376,6 +379,33 @@ export default function TarifarioPage() {
                                                                                              className="text-[9px] bg-muted/30 px-2 py-0.5 rounded border border-transparent focus:border-primary/20 outline-none w-auto font-black uppercase text-muted-foreground/60 opacity-0 group-hover:opacity-100 transition-opacity"
                                                                                          />
                                                                                      </div>
+                                                                                 </div>
+                                                                             </td>
+                                                                             <td className="px-6 py-4">
+                                                                                 <div className="flex items-center justify-center gap-2">
+                                                                                     <input 
+                                                                                         type="date"
+                                                                                         value={rate.Fecha_inicio ? rate.Fecha_inicio.split('T')[0] : ''}
+                                                                                         onChange={(e) => {
+                                                                                             const newRates = [...editRates];
+                                                                                             newRates[globalIdx].Fecha_inicio = e.target.value;
+                                                                                             setEditRates(newRates);
+                                                                                             setIsEditing(true);
+                                                                                         }}
+                                                                                         className="bg-muted/30 px-2 py-1.5 rounded border border-transparent focus:border-primary/20 text-[10px] font-bold outline-none"
+                                                                                     />
+                                                                                     <span className="text-muted-foreground/30 text-[10px]">—</span>
+                                                                                     <input 
+                                                                                         type="date"
+                                                                                         value={rate.Fecha_fin ? rate.Fecha_fin.split('T')[0] : ''}
+                                                                                         onChange={(e) => {
+                                                                                             const newRates = [...editRates];
+                                                                                             newRates[globalIdx].Fecha_fin = e.target.value;
+                                                                                             setEditRates(newRates);
+                                                                                             setIsEditing(true);
+                                                                                         }}
+                                                                                         className="bg-muted/30 px-2 py-1.5 rounded border border-transparent focus:border-primary/20 text-[10px] font-bold outline-none"
+                                                                                     />
                                                                                  </div>
                                                                              </td>
                                                                              <td className="px-6 py-4 text-right">

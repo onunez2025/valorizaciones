@@ -458,17 +458,20 @@ app.post('/api/tarifarios/batch', verifyToken, async (req: Request, res: Respons
                     .input(`cat_${id}`, rate.Categoria)
                     .input(`serv_${id}`, rate.Servicio)
                     .input(`imp_${id}`, sql.Decimal(18, 2), rate.Importe)
+                    .input(`f_ini_${id}`, rate.Fecha_inicio ? new Date(rate.Fecha_inicio) : new Date())
+                    .input(`f_fin_${id}`, rate.Fecha_fin ? new Date(rate.Fecha_fin) : null)
                     .query(`
                         IF EXISTS (SELECT 1 FROM [dbo].[GAC_APP_TB_TARIFARIO] WHERE ID_Tarifario = @id_${id})
                         BEGIN
                             UPDATE [dbo].[GAC_APP_TB_TARIFARIO] 
-                            SET Importe = @imp_${id}, Categoria = @cat_${id}, Servicio = @serv_${id} 
+                            SET Importe = @imp_${id}, Categoria = @cat_${id}, Servicio = @serv_${id},
+                                Fecha_inicio = @f_ini_${id}, Fecha_fin = @f_fin_${id}
                             WHERE ID_Tarifario = @id_${id}
                         END
                         ELSE
                         BEGIN
-                            INSERT INTO [dbo].[GAC_APP_TB_TARIFARIO] (ID_Tarifario, Empresa, Categoria, Servicio, Importe, Fecha_inicio, Estado)
-                            VALUES (@id_${id}, @casId_${id}, @cat_${id}, @serv_${id}, @imp_${id}, GETDATE(), 'A')
+                            INSERT INTO [dbo].[GAC_APP_TB_TARIFARIO] (ID_Tarifario, Empresa, Categoria, Servicio, Importe, Fecha_inicio, Fecha_fin, Estado)
+                            VALUES (@id_${id}, @casId_${id}, @cat_${id}, @serv_${id}, @imp_${id}, @f_ini_${id}, @f_fin_${id}, 'A')
                         END
                     `);
             }
