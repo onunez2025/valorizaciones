@@ -290,7 +290,7 @@ export default function ValuationsPage() {
                             <Building2 className="w-4 h-4" />
                         </div>
                         <button onClick={() => setIsDropdownOpen(!isDropdownOpen)} className="flex-1 text-left px-1 py-1 overflow-hidden">
-                            <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-0">Centro de Atención (CAS)</p>
+                            <p className="text-[15px] font-medium text-muted-foreground mb-0">Empresa (CAS)</p>
                             <p className={cn("text-sm font-bold tracking-tight truncate", !selectedCas && "text-muted-foreground/30 italic font-medium")}>
                                 {selectedCas ? toTitleCase(selectedCas.Nombre_CAS) : "Seleccionar empresa..."}
                             </p>
