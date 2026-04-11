@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, Filter, Calendar, ChevronRight, Calculator, Download, AlertTriangle, CheckCircle2, FileText, X, ChevronDown, Briefcase, Building2, Check, Activity, AlertCircle, Lock } from 'lucide-react';
+import { Search, Filter, Calendar, ChevronRight, Calculator, Download, AlertTriangle, CheckCircle2, FileText, X, ChevronDown, Briefcase, Building2, Check, Activity, AlertCircle, Lock, ArrowUpDown } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { ApiClient } from '../services/apiClient';
 import type { CAS, ValuationTicket, Penalty } from '../types';
@@ -41,6 +41,38 @@ export default function ValuationsPage() {
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const dropdownRef = useRef<HTMLDivElement>(null);
+    const [detailSort, setDetailSort] = useState<{ key: string; direction: 'asc' | 'desc' | null }>({ key: '', direction: null });
+
+    const handleDetailSort = (key: string) => {
+        setDetailSort(prev => ({
+            key,
+            direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc'
+        }));
+    };
+
+    const getSortedTickets = (tickets: ValuationTicket[]) => {
+        if (!detailSort.key || !detailSort.direction) return tickets;
+
+        return [...tickets].sort((a, b) => {
+            let valA: any = a[detailSort.key as keyof ValuationTicket];
+            let valB: any = b[detailSort.key as keyof ValuationTicket];
+
+            if (detailSort.key === 'Ticket') {
+                valA = Number(valA);
+                valB = Number(valB);
+            } else if (detailSort.key === 'Subtotal') {
+                valA = a.TarifaBase + (a.Adicionales || 0);
+                valB = b.TarifaBase + (b.Adicionales || 0);
+            } else if (detailSort.key === 'ServicioNombre') {
+                valA = a.ServicioNombre || '';
+                valB = b.ServicioNombre || '';
+            }
+
+            if (valA < valB) return detailSort.direction === 'asc' ? -1 : 1;
+            if (valA > valB) return detailSort.direction === 'asc' ? 1 : -1;
+            return 0;
+        });
+    };
 
     useEffect(() => {
         const fetchCas = async () => {
@@ -416,8 +448,8 @@ export default function ValuationsPage() {
                                     ) : (
                                         <div className="overflow-x-auto">
                                             <table className="w-full border-separate border-spacing-0">
-                                                <thead className="bg-muted/10 sticky top-0 z-20">
-                                                    <tr className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
+                                                <thead className="bg-muted/10 sticky top-0 z-20 border-b border-border">
+                                                    <tr className="text-[11px] font-bold text-muted-foreground">
                                                         <th className="px-5 py-4 text-left border-b border-border/60">Fecha de Proceso</th>
                                                         <th className="px-5 py-4 text-center border-b border-border/60">Servicios</th>
                                                         <th className="px-5 py-4 text-center border-b border-border/60">Estado de Auditoría</th>
@@ -484,30 +516,33 @@ export default function ValuationsPage() {
                                                                         <div className="max-h-[480px] overflow-y-auto custom-scrollbar animate-in slide-in-from-top-4 duration-500 shadow-[inset_0_2px_10px_rgba(0,0,0,0.02)]">
                                                                             <table className="w-full border-collapse">
                                                                                 <thead className="sticky top-0 z-10 bg-white/95 backdrop-blur-md shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
-                                                                                    <tr className="text-[10px] font-bold text-muted-foreground/50 uppercase tracking-widest border-b border-border/30">
-                                                                                        <th className="px-10 py-3 text-left">ID Ticket</th>
-                                                                                        <th className="px-6 py-3 text-left">Servicio Realizado</th>
-                                                                                        <th className="px-6 py-3 text-center">Categoría</th>
-                                                                                        <th className="px-6 py-3 text-right">Subtotal</th>
+                                                                                    <tr className="text-[10px] font-bold text-muted-foreground border-b border-border/30">
+                                                                                        <th onClick={() => handleDetailSort('Ticket')} className="px-10 py-3 text-left cursor-pointer hover:text-primary transition-colors">
+                                                                                            <div className="flex items-center gap-1">ID Ticket <ArrowUpDown className="w-3 h-3 opacity-40" /></div>
+                                                                                        </th>
+                                                                                        <th onClick={() => handleDetailSort('ServicioNombre')} className="px-6 py-3 text-left cursor-pointer hover:text-primary transition-colors">
+                                                                                            <div className="flex items-center gap-1">Servicio Realizado <ArrowUpDown className="w-3 h-3 opacity-40" /></div>
+                                                                                        </th>
+                                                                                        <th onClick={() => handleDetailSort('Categoria')} className="px-6 py-3 text-left cursor-pointer hover:text-primary transition-colors">
+                                                                                            <div className="flex items-center gap-1">Categoría <ArrowUpDown className="w-3 h-3 opacity-40" /></div>
+                                                                                        </th>
+                                                                                        <th onClick={() => handleDetailSort('Subtotal')} className="px-6 py-3 text-right cursor-pointer hover:text-primary transition-colors">
+                                                                                            <div className="flex items-center gap-1 justify-end">Subtotal <ArrowUpDown className="w-3 h-3 opacity-40" /></div>
+                                                                                        </th>
                                                                                         <th className="px-6 py-3 text-right">Acciones</th>
                                                                                     </tr>
                                                                                 </thead>
                                                                                 <tbody className="divide-y divide-border/10">
-                                                                                    {groupedTickets[date].tickets.map((ticket) => (
+                                                                                    {getSortedTickets(groupedTickets[date].tickets).map((ticket) => (
                                                                                         <tr key={ticket.Ticket} className="hover:bg-primary/[0.01] transition-colors group/row">
                                                                                             <td className="px-10 py-4 font-black text-primary text-sm tracking-tighter cursor-default">{ticket.Ticket}</td>
                                                                                             <td className="px-6 py-4">
-                                                                                                <div className="flex items-center gap-3">
-                                                                                                    <div className="px-2 py-0.5 bg-primary/10 text-primary text-[10px] font-black rounded border border-primary/20 font-mono uppercase shadow-sm">
-                                                                                                        {ticket.Servicio}
-                                                                                                    </div>
-                                                                                                    <span className="font-bold text-foreground text-sm">
-                                                                                                        {toTitleCase(ticket.ServicioNombre || 'General')}
-                                                                                                    </span>
-                                                                                                </div>
+                                                                                                <span className="font-bold text-foreground text-sm">
+                                                                                                    {toTitleCase(ticket.ServicioNombre || 'General')}
+                                                                                                </span>
                                                                                             </td>
-                                                                                            <td className="px-6 py-4 text-center">
-                                                                                                <span className="px-2.5 py-1 bg-muted/50 rounded-md font-bold text-[9px] border border-border/40 text-muted-foreground">
+                                                                                            <td className="px-6 py-4">
+                                                                                                <span className="font-medium text-muted-foreground text-xs">
                                                                                                     {toTitleCase(ticket.Categoria)}
                                                                                                 </span>
                                                                                             </td>
