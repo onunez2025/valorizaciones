@@ -756,7 +756,7 @@ app.put('/api/users/:id', verifyToken, verifyPermission('val.config.users'), asy
             .input('photo', avatar_url)
             .query(`UPDATE EBM.Users SET FullName = @name, Username = @u, Email = @e, RoleId = @rid, IsActive = @active, Apps = @apps, AvatarUrl = @photo WHERE Id = @id`);
         
-        await logAudit(req, 'UPDATE', 'USERS', id, { apps: appsSave });
+        await logAudit(req, 'UPDATE', 'USERS', id as string, { apps: appsSave });
         res.json({ success: true });
     } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
@@ -766,7 +766,7 @@ app.delete('/api/users/:id', verifyToken, verifyPermission('val.config.users'), 
         const { id } = req.params;
         const db = await getDb();
         await db.request().input('id', id).query("UPDATE EBM.Users SET IsActive = 0 WHERE Id = @id");
-        await logAudit(req, 'DEACTIVATE', 'USERS', id, {});
+        await logAudit(req, 'DEACTIVATE', 'USERS', id as string, {});
         res.status(204).send();
     } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
