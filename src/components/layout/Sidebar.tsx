@@ -3,6 +3,8 @@ import {
     LayoutDashboard,
     Briefcase,
     FileText,
+    CalendarDays,
+    Box,
     LogOut
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
