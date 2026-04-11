@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Search, Filter, Calendar, ChevronRight, Calculator, Download, AlertTriangle, CheckCircle2, FileText, X, ChevronDown, Briefcase, Building2, Check, Activity, AlertCircle, Lock } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { ApiClient } from '../services/apiClient';
@@ -407,40 +407,146 @@ export default function ValuationsPage() {
                                     <p className="text-xs font-bold max-w-[250px] mt-2">Seleccione una empresa y el rango de fechas para visualizar la auditoría.</p>
                                 </div>
                             ) : activeTab === 'services' ? (
-                                <div className="space-y-4">
+                                <div className="h-full">
                                     {tickets.length === 0 ? (
-                                        <div className="py-24 text-center opacity-40"><FileText className="w-12 h-12 mx-auto mb-4" /><p className="text-xs font-bold">No se detectaron servicios en el rango seleccionado</p></div>
+                                        <div className="py-24 text-center opacity-40">
+                                            <FileText className="w-12 h-12 mx-auto mb-4" />
+                                            <p className="text-xs font-bold">No se detectaron servicios en el rango seleccionado</p>
+                                        </div>
                                     ) : (
-                                        sortedDates.map(date => (
-                                            <div key={date} className="bg-background/40 rounded-xl border border-border overflow-hidden group hover:border-primary/20 transition-all">
-                                                <button onClick={() => toggleDate(date)} className="w-full flex items-center justify-between px-5 py-4 hover:bg-muted/10 font-bold text-[11px] text-muted-foreground transition-all">
-                                                    <div className="flex items-center gap-4">
-                                                        <div className="flex items-center gap-2 px-3 py-1.5 bg-muted/60 rounded-lg text-foreground"><Calendar className="w-4 h-4 opacity-40" /><span>{date}</span></div>
-                                                        <span className="opacity-20">|</span>
-                                                        <span>{groupedTickets[date].count} servicios</span>
-                                                        {groupedTickets[date].zeroPriceCount > 0 && <span className="text-amber-600 bg-amber-50 px-2 py-1 rounded-lg flex items-center gap-1 text-[9px] border border-amber-100"><AlertCircle className="w-3.5 h-3.5" />{groupedTickets[date].zeroPriceCount} Sin tarifa</span>}
-                                                    </div>
-                                                    <div className="flex items-center gap-5">
-                                                        <span className="text-foreground text-sm tracking-tight font-black">S/ {(groupedTickets[date].totalBase + groupedTickets[date].totalAdicional).toLocaleString()}</span>
-                                                        <ChevronRight className={cn("w-5 h-5 transition-transform duration-300", expandedDates.includes(date) && "rotate-90 text-primary")} />
-                                                    </div>
-                                                </button>
-                                                {expandedDates.includes(date) && (
-                                                    <div className="border-t border-border/40 animate-in slide-in-from-top-2 duration-300">
-                                                        <table className="w-full text-left text-xs"><thead className="bg-muted/20 border-b border-border/40"><tr><th className="px-6 py-4 font-bold text-[10px] text-muted-foreground">ID Ticket</th><th className="px-6 py-4 font-bold text-[10px] text-muted-foreground">Servicio</th><th className="px-6 py-4 font-bold text-[10px] text-muted-foreground">Categoría</th><th className="px-6 py-4 font-bold text-[10px] text-muted-foreground text-right">Subtotal</th><th className="px-6 py-4"></th></tr></thead>
-                                                        <tbody className="divide-y divide-border/20">{groupedTickets[date].tickets.map((ticket) => (
-                                                            <tr key={ticket.Ticket} className="hover:bg-primary/[0.02] transition-colors group/row">
-                                                                <td className="px-6 py-4 font-black text-primary text-sm tracking-tighter">{ticket.Ticket}</td>
-                                                                <td className="px-6 py-4"><div className="flex flex-col gap-0.5"><span className="font-bold text-foreground text-sm">{toTitleCase(ticket.ServicioNombre || 'General')}</span><span className="text-[10px] font-medium opacity-40">{ticket.Servicio}</span></div></td>
-                                                                <td className="px-6 py-4"><span className="px-2.5 py-1 bg-muted rounded-md font-bold text-[9px] border border-border/40">{toTitleCase(ticket.Categoria)}</span></td>
-                                                                <td className="px-6 py-4 text-right">{ticket.TarifaBase === 0 ? <button onClick={() => handleOpenTarifarioModal(ticket)} className="px-3 py-1.5 bg-amber-500 text-white rounded-lg text-[9px] font-black hover:scale-105 active:scale-95 transition-all shadow-md shadow-amber-500/20">Vincular tarifa</button> : <span className="font-black text-sm tracking-tighter">S/ {(ticket.TarifaBase + (ticket.Adicionales || 0)).toLocaleString()}</span>}</td>
-                                                                <td className="px-6 py-4 text-right"><button onClick={() => setShowPenaltyModal({ show: true, type: 'penalty', ticket: ticket.Ticket, date: ticket.Fecha.split('T')[0] })} className="p-2.5 bg-red-500/10 text-red-600 rounded-lg hover:bg-red-600 hover:text-white transition-all opacity-0 group-hover/row:opacity-100 shadow-sm" title="Aplicar Penalidad"><AlertTriangle className="w-4 h-4" /></button></td>
+                                        <div className="overflow-x-auto">
+                                            <table className="w-full border-separate border-spacing-0">
+                                                <thead className="bg-muted/10 sticky top-0 z-20">
+                                                    <tr className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
+                                                        <th className="px-5 py-4 text-left border-b border-border/60">Fecha de Proceso</th>
+                                                        <th className="px-5 py-4 text-center border-b border-border/60">Servicios</th>
+                                                        <th className="px-5 py-4 text-center border-b border-border/60">Estado de Auditoría</th>
+                                                        <th className="px-5 py-4 text-right border-b border-border/60">Acumulado Diario</th>
+                                                        <th className="px-5 py-4 text-center border-b border-border/60 w-10"></th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-border/10">
+                                                    {sortedDates.map(date => (
+                                                        <React.Fragment key={date}>
+                                                            {/* Fila de Resumen (Parent) */}
+                                                            <tr 
+                                                                onClick={() => toggleDate(date)} 
+                                                                className={cn(
+                                                                    "group cursor-pointer transition-all hover:bg-primary/[0.03] select-none",
+                                                                    expandedDates.includes(date) ? "bg-primary/[0.02]" : ""
+                                                                )}
+                                                            >
+                                                                <td className="px-5 py-4">
+                                                                    <div className="flex items-center gap-3">
+                                                                        <div className={cn(
+                                                                            "p-2 rounded-lg transition-all duration-300", 
+                                                                            expandedDates.includes(date) ? "bg-primary text-white scale-110 shadow-lg shadow-primary/20" : "bg-muted/60 text-muted-foreground group-hover:bg-primary/20"
+                                                                        )}>
+                                                                            <Calendar className="w-4 h-4" />
+                                                                        </div>
+                                                                        <span className="text-sm font-bold tracking-tight">{date}</span>
+                                                                    </div>
+                                                                </td>
+                                                                <td className="px-5 py-4 text-center">
+                                                                    <span className="px-3 py-1 bg-muted/60 rounded-full text-[11px] font-bold text-muted-foreground">
+                                                                        {groupedTickets[date].count} servicios
+                                                                    </span>
+                                                                </td>
+                                                                <td className="px-5 py-4 text-center">
+                                                                    <div className="flex justify-center">
+                                                                        {groupedTickets[date].zeroPriceCount > 0 ? (
+                                                                            <span className="px-3 py-1 bg-amber-50 text-amber-600 rounded-full text-[10px] font-bold border border-amber-100 flex items-center gap-1.5 animate-pulse">
+                                                                                <AlertCircle className="w-3.5 h-3.5" />
+                                                                                {groupedTickets[date].zeroPriceCount} por vincular
+                                                                            </span>
+                                                                        ) : (
+                                                                            <span className="px-3 py-1 bg-emerald-50 text-emerald-600 rounded-full text-[10px] font-bold border border-emerald-100 flex items-center gap-1.5">
+                                                                                <CheckCircle2 className="w-3.5 h-3.5" />
+                                                                                Auditado
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+                                                                </td>
+                                                                <td className="px-5 py-4 text-right">
+                                                                    <span className="text-sm font-black tracking-tighter">
+                                                                        S/ {(groupedTickets[date].totalBase + groupedTickets[date].totalAdicional).toLocaleString('es-PE', { minimumFractionDigits: 2 })}
+                                                                    </span>
+                                                                </td>
+                                                                <td className="px-5 py-4 text-center">
+                                                                    <ChevronRight className={cn("w-5 h-5 transition-transform duration-300", expandedDates.includes(date) && "rotate-90 text-primary")} />
+                                                                </td>
                                                             </tr>
-                                                        ))}</tbody></table>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        ))
+
+                                                            {/* Fila de Detalle (Expandida) */}
+                                                            {expandedDates.includes(date) && (
+                                                                <tr>
+                                                                    <td colSpan={5} className="p-0 border-b border-border/40 bg-muted/[0.03]">
+                                                                        <div className="max-h-[480px] overflow-y-auto custom-scrollbar animate-in slide-in-from-top-4 duration-500 shadow-[inset_0_2px_10px_rgba(0,0,0,0.02)]">
+                                                                            <table className="w-full border-collapse">
+                                                                                <thead className="sticky top-0 z-10 bg-white/95 backdrop-blur-md shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
+                                                                                    <tr className="text-[10px] font-bold text-muted-foreground/50 uppercase tracking-widest border-b border-border/30">
+                                                                                        <th className="px-10 py-3 text-left">ID Ticket</th>
+                                                                                        <th className="px-6 py-3 text-left">Servicio Realizado</th>
+                                                                                        <th className="px-6 py-3 text-center">Categoría</th>
+                                                                                        <th className="px-6 py-3 text-right">Subtotal</th>
+                                                                                        <th className="px-6 py-3 text-right">Acciones</th>
+                                                                                    </tr>
+                                                                                </thead>
+                                                                                <tbody className="divide-y divide-border/10">
+                                                                                    {groupedTickets[date].tickets.map((ticket) => (
+                                                                                        <tr key={ticket.Ticket} className="hover:bg-primary/[0.01] transition-colors group/row">
+                                                                                            <td className="px-10 py-4 font-black text-primary text-sm tracking-tighter cursor-default">{ticket.Ticket}</td>
+                                                                                            <td className="px-6 py-4">
+                                                                                                <div className="flex items-center gap-3">
+                                                                                                    <div className="px-2 py-0.5 bg-primary/10 text-primary text-[10px] font-black rounded border border-primary/20 font-mono uppercase shadow-sm">
+                                                                                                        {ticket.Servicio}
+                                                                                                    </div>
+                                                                                                    <span className="font-bold text-foreground text-sm">
+                                                                                                        {toTitleCase(ticket.ServicioNombre || 'General')}
+                                                                                                    </span>
+                                                                                                </div>
+                                                                                            </td>
+                                                                                            <td className="px-6 py-4 text-center">
+                                                                                                <span className="px-2.5 py-1 bg-muted/50 rounded-md font-bold text-[9px] border border-border/40 text-muted-foreground">
+                                                                                                    {toTitleCase(ticket.Categoria)}
+                                                                                                </span>
+                                                                                            </td>
+                                                                                            <td className="px-6 py-4 text-right">
+                                                                                                {ticket.TarifaBase === 0 ? (
+                                                                                                    <button 
+                                                                                                        onClick={() => handleOpenTarifarioModal(ticket)} 
+                                                                                                        className="px-3 py-1.5 bg-amber-500 text-white rounded-lg text-[9px] font-black hover:scale-105 active:scale-95 transition-all shadow-md shadow-amber-500/20"
+                                                                                                    >
+                                                                                                        Vincular Tarifa
+                                                                                                    </button>
+                                                                                                ) : (
+                                                                                                    <span className="font-black text-sm tracking-tighter text-foreground/80">
+                                                                                                        S/ {(ticket.TarifaBase + (ticket.Adicionales || 0)).toLocaleString('es-PE', { minimumFractionDigits: 2 })}
+                                                                                                    </span>
+                                                                                                )}
+                                                                                            </td>
+                                                                                            <td className="px-6 py-4 text-right">
+                                                                                                <button 
+                                                                                                    onClick={() => setShowPenaltyModal({ show: true, type: 'penalty', ticket: ticket.Ticket, date: ticket.Fecha.split('T')[0] })} 
+                                                                                                    className="p-2 bg-red-500/10 text-red-600 rounded-lg hover:bg-red-600 hover:text-white transition-all opacity-0 group-hover/row:opacity-100 shadow-sm" 
+                                                                                                    title="Aplicar Penalidad"
+                                                                                                >
+                                                                                                    <AlertTriangle className="w-4 h-4" />
+                                                                                                </button>
+                                                                                            </td>
+                                                                                        </tr>
+                                                                                    ))}
+                                                                                </tbody>
+                                                                            </table>
+                                                                        </div>
+                                                                    </td>
+                                                                </tr>
+                                                            )}
+                                                        </React.Fragment>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
                                     )}
                                 </div>
                             ) : (
