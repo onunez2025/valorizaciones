@@ -202,8 +202,19 @@ export default function ValuationsPage() {
             ["TOTAL NETO A PAGAR", "", grandTotal]
         ];
         const servicesData = [
-            ["TICKET", "FECHA CIERRE", "SERVICIO", "CATEGORÍA", "TARIFA BASE", "ADICIONALES", "TOTAL"],
-            ...tickets.map(t => [t.Ticket, new Date(t.Fecha).toLocaleDateString(), t.ServicioNombre || t.Servicio, t.Categoria, t.TarifaBase, (t.Adicionales || 0), (t.TarifaBase + (t.Adicionales || 0))])
+            ["TICKET", "Fecha Visita", "FECHA CIERRE", "Dias Diferencia", "SERVICIO", "Codigo Externo", "CATEGORÍA", "TARIFA BASE", "ADICIONALES", "TOTAL"],
+            ...tickets.map(t => [
+                t.Ticket, 
+                t.FechaVisita ? new Date(t.FechaVisita).toLocaleDateString() : '-', 
+                t.FechaCierre ? new Date(t.FechaCierre).toLocaleDateString() : new Date(t.Fecha).toLocaleDateString(),
+                t.DiasDiferencia ?? '-',
+                t.ServicioNombre || t.Servicio, 
+                t.CodigoEquipo || '-',
+                t.Categoria, 
+                t.TarifaBase, 
+                (t.Adicionales || 0), 
+                (t.TarifaBase + (t.Adicionales || 0))
+            ])
         ];
         const penaltiesData = [
             ["ID", "FECHA", "MOTIVO", "DESCRIPCIÓN", "TICKET REF.", "ESTADO", "IMPORTE"],
@@ -527,9 +538,11 @@ export default function ValuationsPage() {
                                                                             <table className="w-full border-collapse">
                                                                                 <thead className="sticky top-0 z-10 bg-white/95 backdrop-blur-md shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
                                                                                     <tr className="text-sm font-medium text-muted-foreground border-b border-border/30">
-                                                                                        <th onClick={() => handleDetailSort('Ticket')} className="px-10 py-3 text-left cursor-pointer hover:text-primary transition-colors">
-                                                                                            <div className="flex items-center gap-1">ID Ticket <ArrowUpDown className="w-3 h-3 opacity-40" /></div>
+                                                                                        <th onClick={() => handleDetailSort('Ticket')} className="px-5 py-3 text-left cursor-pointer hover:text-primary transition-colors">
+                                                                                            <div className="flex items-center gap-1">Ticket <ArrowUpDown className="w-3 h-3 opacity-40" /></div>
                                                                                         </th>
+                                                                                        <th className="px-2 py-3 text-center text-[10px] uppercase tracking-wider opacity-50">Visita / Cierre</th>
+                                                                                        <th className="px-2 py-3 text-center text-[10px] uppercase tracking-wider opacity-50">Días</th>
                                                                                         <th onClick={() => handleDetailSort('ServicioNombre')} className="px-6 py-3 text-left cursor-pointer hover:text-primary transition-colors">
                                                                                             <div className="flex items-center gap-1">Servicio Realizado <ArrowUpDown className="w-3 h-3 opacity-40" /></div>
                                                                                         </th>
@@ -545,7 +558,21 @@ export default function ValuationsPage() {
                                                                                 <tbody className="divide-y divide-border/10">
                                                                                     {getSortedTickets(groupedTickets[date].tickets).map((ticket) => (
                                                                                         <tr key={ticket.Ticket} className="hover:bg-primary/[0.01] transition-colors group/row">
-                                                                                            <td className="px-10 py-4 font-medium text-primary text-sm tracking-tighter cursor-default">{ticket.Ticket}</td>
+                                                                                            <td className="px-5 py-4 font-medium text-primary text-sm tracking-tighter cursor-default">{ticket.Ticket}</td>
+                                                                                            <td className="px-2 py-4 text-center">
+                                                                                                <div className="flex flex-col items-center">
+                                                                                                    <span className="text-[10px] font-bold text-muted-foreground">{ticket.FechaVisita ? new Date(ticket.FechaVisita).toLocaleDateString('es-PE', {day:'2-digit', month:'2-digit'}) : '-'}</span>
+                                                                                                    <span className="text-[10px] font-bold text-foreground">{ticket.FechaCierre ? new Date(ticket.FechaCierre).toLocaleDateString('es-PE', {day:'2-digit', month:'2-digit'}) : '-'}</span>
+                                                                                                </div>
+                                                                                            </td>
+                                                                                            <td className="px-2 py-4 text-center">
+                                                                                                <span className={cn(
+                                                                                                    "px-2 py-0.5 rounded text-[10px] font-black",
+                                                                                                    (ticket.DiasDiferencia || 0) > 2 ? "bg-red-100 text-red-700" : "bg-blue-100 text-blue-700"
+                                                                                                )}>
+                                                                                                    {ticket.DiasDiferencia ?? '-'}
+                                                                                                </span>
+                                                                                            </td>
                                                                                             <td className="px-6 py-4">
                                                                                                 <span className="font-medium text-foreground text-sm">
                                                                                                     {toTitleCase(ticket.ServicioNombre || 'General')}

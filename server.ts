@@ -170,8 +170,13 @@ app.get('/api/valuations/:ruc', verifyToken, async (req: Request, res: Response)
                     s.IdServicio as Servicio,
                     s.CodigoExternoEquipo as CodigoEquipo,
                     s.NombreEquipo as NombreEquipo,
+                    s.FechaVisita, s.CheckOut as FechaCierre,
+                    DATEDIFF(day, s.FechaVisita, s.CheckOut) as DiasDiferencia,
                     ISNULL(m.Categoria, 'N/A') as Categoria,
-                    ISNULL(rate.Importe, 0) as TarifaBase,
+                    CASE 
+                        WHEN DATEDIFF(day, s.FechaVisita, s.CheckOut) > 2 THEN 0 
+                        ELSE ISNULL(rate.Importe, 0) 
+                    END as TarifaBase,
                     ISNULL((SELECT SUM(CAST(Importe AS FLOAT)) FROM [dbo].[GAC_APP_TB_TICKETS_VALORIZACION_ADICIONAL] WHERE Ticket = s.Ticket), 0) as Adicionales
                 FROM [APPGAC].[ServiciosViewSQL] s
                 JOIN [dbo].[GAC_APP_TB_CAS] cas ON s.IdCAS = cas.ID_CAS
@@ -548,7 +553,7 @@ app.get('/api/dashboard/stats', verifyToken, async (req: Request, res: Response)
                 SELECT s.Ticket, 
                     CASE WHEN LEFT(s.NombreTecnico, 3) IN ('SB2', 'SS ', 'AC ', 'EMS', 'SIL', 'VYA', 'SEY', 'TP ', 'TYG', 'FSI', 'LM ', 'TCP', 'MG ', 'AYD', 'SLR', 'REY', 'VR ', 'LV ', 'MR ', 'AXX', 'COT', 'SNT', 'NUL') 
                     THEN LEFT(s.NombreTecnico, 3) ELSE 'GAC' END as Prefix,
-                    s.IdServicio, s.CodigoExternoEquipo
+                    s.IdServicio, s.CodigoExternoEquipo, s.FechaVisita, s.CheckOut
                 FROM [SIATC].[Dashboard_FSM] s
                 WHERE s.CheckOut >= @start AND s.CheckOut < DATEADD(DAY, 1, @end)
                   AND s.Estado = 'Closed'
@@ -573,7 +578,12 @@ app.get('/api/dashboard/stats', verifyToken, async (req: Request, res: Response)
         query += `
             ),
             ResumenServicios AS (
-                SELECT ID_CAS, IdServicio, Categoria, COUNT(*) as Cnt
+                SELECT 
+                    ID_CAS, 
+                    IdServicio, 
+                    Categoria, 
+                    SUM(CASE WHEN DATEDIFF(day, FechaVisita, CheckOut) > 2 THEN 0 ELSE 1 END) as CntValidos,
+                    SUM(CASE WHEN DATEDIFF(day, FechaVisita, CheckOut) > 2 THEN 0 ELSE 1 END) as Cnt -- Para compatibilidad
                 FROM TicketsCAS
                 GROUP BY ID_CAS, IdServicio, Categoria
             ),
@@ -587,7 +597,7 @@ app.get('/api/dashboard/stats', verifyToken, async (req: Request, res: Response)
             )
             SELECT 
                 (SELECT COUNT(*) FROM TicketsCAS) as TotalTickets,
-                (SELECT SUM(rs.Cnt * ISNULL(t.Importe, 0)) 
+                (SELECT SUM(rs.CntValidos * ISNULL(t.Importe, 0)) 
                  FROM ResumenServicios rs 
                  LEFT JOIN [dbo].[GAC_APP_TB_TARIFARIO] t ON t.Empresa = rs.ID_CAS 
                     AND (t.Servicio = rs.IdServicio)
@@ -621,7 +631,7 @@ app.get('/api/dashboard/trends', verifyToken, async (req: Request, res: Response
 
         let query = `
             WITH TicketsFilt AS (
-                SELECT s.Ticket, s.CheckOut, s.IdServicio, s.CodigoExternoEquipo,
+                SELECT s.Ticket, s.CheckOut, s.IdServicio, s.CodigoExternoEquipo, s.FechaVisita,
                     CASE WHEN LEFT(s.NombreTecnico, 3) IN ('SB2', 'SS ', 'AC ', 'EMS', 'SIL', 'VYA', 'SEY', 'TP ', 'TYG', 'FSI', 'LM ', 'TCP', 'MG ', 'AYD', 'SLR', 'REY', 'VR ', 'LV ', 'MR ', 'AXX', 'COT', 'SNT', 'NUL') 
                     THEN LEFT(s.NombreTecnico, 3) ELSE 'GAC' END as Prefix
                 FROM [SIATC].[Dashboard_FSM] s
@@ -652,7 +662,7 @@ app.get('/api/dashboard/trends', verifyToken, async (req: Request, res: Response
                     twc.ID_CAS, 
                     twc.IdServicio, 
                     twc.Categoria,
-                    COUNT(*) as Cnt
+                    SUM(CASE WHEN DATEDIFF(day, twc.FechaVisita, twc.CheckOut) > 2 THEN 0 ELSE 1 END) as Cnt
                 FROM TicketsCAS twc
                 GROUP BY YEAR(twc.CheckOut), MONTH(twc.CheckOut), twc.ID_CAS, twc.IdServicio, twc.Categoria
             ),
