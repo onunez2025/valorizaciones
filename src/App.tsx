@@ -11,6 +11,12 @@ const DashboardPage = lazy(() => import('./pages/DashboardPage'));
 const ValuationsPage = lazy(() => import('./pages/ValuationsPage'));
 const TarifarioPage = lazy(() => import('./pages/TarifarioPage'));
 
+// Configuration Pages
+const ConfigLayout = lazy(() => import('./pages/config/ConfigLayout'));
+const UsersPage = lazy(() => import('./pages/config/UsersPage'));
+const RolesPage = lazy(() => import('./pages/config/RolesPage'));
+const AuditLogPage = lazy(() => import('./pages/config/AuditLogPage'));
+
 const LoadingFallback = () => (
     <div className="flex h-screen items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-6">
@@ -35,6 +41,15 @@ function App() {
                 <Route path="/dashboard" element={<DashboardPage />} />
                 <Route path="/valuations" element={<ValuationsPage />} />
                 <Route path="/tarifario" element={<TarifarioPage />} />
+                
+                {/* Configuración */}
+                <Route path="/config" element={<ConfigLayout />}>
+                    <Route path="users" element={<UsersPage />} />
+                    <Route path="roles" element={<RolesPage />} />
+                    <Route path="audit" element={<AuditLogPage />} />
+                    <Route index element={<Navigate to="users" replace />} />
+                </Route>
+
                 <Route path="/" element={<Navigate to="/dashboard" replace />} />
               </Route>
               <Route path="*" element={<Navigate to="/dashboard" replace />} />

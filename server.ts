@@ -13,7 +13,30 @@ dotenv.config();
 
 const app = express();
 const port = process.env.PORT || 3000;
+const APP_IDENTIFIER = 'VAL';
 const JWT_SECRET = process.env.JWT_SECRET || 'tablero_control_secret_2026';
+
+const cleanApps = (str: string) => [...new Set((str || '').split(',').map(s => s.trim()).filter(Boolean))].join(', ');
+
+// Helper for Auditing
+async function logAudit(req: Request, action: string, entity: string, entityId: string, details: any) {
+  try {
+    const user = (req as any).user;
+    if (!user) return;
+    const db = await getDb();
+    await db.request()
+      .input('uid', user.id)
+      .input('un', user.full_name || user.username)
+      .input('acc', action)
+      .input('ent', entity)
+      .input('eid', entityId)
+      .input('det', JSON.stringify(details))
+      .query(`INSERT INTO [dbo].[GAC_APP_TB_AUDIT_LOG] (UsuarioID, UsuarioNombre, Accion, Entidad, EntidadID, Detalle, Fecha) 
+              VALUES (@uid, @un, @acc, @ent, @eid, @det, GETDATE())`);
+  } catch (err) {
+    console.error('❌ Falla en Log de Auditoría VAL:', err);
+  }
+}
 
 app.use(cors());
 app.use(express.json());
@@ -53,15 +76,36 @@ const verifyToken = (req: Request, res: Response, next: NextFunction) => {
     } catch (err) { res.status(403).json({ error: 'Token inválido' }); }
 };
 
+const verifyPermission = (permission: string) => {
+    return async (req: Request, res: Response, next: NextFunction) => {
+        const user = (req as any).user;
+        if (!user) return res.status(401).json({ error: 'No autenticado' });
+
+        const roleName = (user.role || '').trim().toLowerCase();
+        if (roleName === 'administrador') return next();
+
+        if (user.perms && user.perms.includes(permission)) return next();
+
+        await logAudit(req, 'ACCESO_DENEGADO', `Endpoint: ${req.method} ${req.path}`, permission, {
+            ip: req.ip,
+            userAgent: req.get('user-agent'),
+            params: req.params,
+            query: req.query
+        });
+
+        res.status(403).json({ error: `Permiso denegado: ${permission}` });
+    };
+};
+
 // --- AUTH ---
 app.post('/api/auth/login', async (req: Request, res: Response) => {
     const { username, password } = req.body;
     try {
         const db = await getDb();
-        const result = await db.request().input('u', username).query(`
+        const result = await db.request().input('u', username).input('app', APP_IDENTIFIER).query(`
             SELECT u.*, r.Name as RoleName FROM EBM.Users u 
             LEFT JOIN EBM.Roles r ON u.RoleId = r.Id 
-            WHERE (u.Username = @u OR u.Email = @u) AND u.IsActive = 1
+            WHERE (u.Username = @u OR u.Email = @u) AND u.IsActive = 1 AND (u.Apps LIKE '%' + @app + '%' OR u.Apps LIKE '%ADMIN%')
         `);
         const user = result.recordset[0];
         if (!user || !(await bcrypt.compare(password, user.PasswordHash))) {
@@ -75,7 +119,7 @@ app.post('/api/auth/login', async (req: Request, res: Response) => {
             return res.status(403).json({ error: 'Sin acceso a la aplicación de Valorizaciones' });
         }
 
-        const perms = (await db.request().input('rid', user.RoleId).query("SELECT Permission FROM EBM.RolePermissions WHERE RoleId = @rid")).recordset.map(p => p.Permission);
+        const perms = (await db.request().input('rid', user.RoleId).input('app', APP_IDENTIFIER).query("SELECT Permission FROM EBM.RolePermissions WHERE RoleId = @rid AND (Permission LIKE @app + '.%' OR Permission LIKE 'ebm.%')")).recordset.map(p => p.Permission);
         
         const token = jwt.sign({ id: user.Id, username: user.Username, role: user.RoleName, perms }, JWT_SECRET, { expiresIn: '12h' });
 
@@ -95,7 +139,7 @@ app.get('/api/auth/me', verifyToken, async (req: Request, res: Response) => {
         const user = result.recordset[0];
         if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
         
-        const perms = (await db.request().input('rid', user.RoleId).query("SELECT Permission FROM EBM.RolePermissions WHERE RoleId = @rid")).recordset.map(p => p.Permission);
+        const perms = (await db.request().input('rid', user.RoleId).input('app', APP_IDENTIFIER).query("SELECT Permission FROM EBM.RolePermissions WHERE RoleId = @rid AND (Permission LIKE @app + '.%' OR Permission LIKE 'ebm.%')")).recordset.map(p => p.Permission);
         res.json({ user: { id: user.Id, username: user.Username, full_name: user.FullName, role_name: user.RoleName, permissions: perms } });
     } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
@@ -636,6 +680,149 @@ app.get('/api/dashboard/top-cas', verifyToken, async (req: Request, res: Respons
 
         const top = await request.query(query);
         res.json(top.recordset);
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+// --- CONFIG & MANAGEMENT (Standardized) ---
+
+// USERS
+app.get('/api/users', verifyToken, verifyPermission('val.config.users'), async (req: Request, res: Response) => {
+    try {
+        const db = await getDb();
+        const result = await db.request().input('app', APP_IDENTIFIER).query(`
+            SELECT u.Id as id, u.FullName as full_name, u.Username as username, u.Email as email,
+                   u.RoleId as role_id, r.Name as role_name, CAST(u.IsActive AS BIT) as is_active, 
+                   u.Apps as apps, u.AvatarUrl as avatar_url
+            FROM EBM.Users u
+            LEFT JOIN EBM.Roles r ON u.RoleId = r.Id
+            WHERE u.Apps LIKE '%' + @app + '%'
+        `);
+        res.json(result.recordset);
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+app.post('/api/users', verifyToken, verifyPermission('val.config.users'), async (req: Request, res: Response) => {
+    try {
+        const { full_name, username, email, password_hash, role_id, apps, avatar_url } = req.body;
+        const db = await getDb();
+
+        const checkResult = await db.request()
+            .input('u', username).input('e', email)
+            .query("SELECT Id, Apps FROM EBM.Users WHERE Username = @u OR Email = @e");
+
+        if (checkResult.recordset.length > 0) {
+            // UPSERT/REACTIVATE
+            const existing = checkResult.recordset[0];
+            const mergedApps = cleanApps(existing.Apps + ', ' + APP_IDENTIFIER);
+            await db.request()
+                .input('id', existing.Id)
+                .input('name', full_name)
+                .input('rid', role_id)
+                .input('apps', mergedApps)
+                .input('photo', avatar_url)
+                .query(`UPDATE EBM.Users SET FullName = @name, RoleId = @rid, Apps = @apps, AvatarUrl = @photo, IsActive = 1 WHERE Id = @id`);
+            await logAudit(req, 'REACTIVATE', 'USERS', username, { apps: mergedApps });
+            return res.json({ id: existing.Id, username });
+        }
+
+        const salt = await bcrypt.genSalt(10);
+        const hashed = await bcrypt.hash(password_hash || 'temp1234', salt);
+        const appsInsert = cleanApps(apps || APP_IDENTIFIER);
+
+        const result = await db.request()
+            .input('name', full_name).input('u', username).input('e', email)
+            .input('pass', hashed).input('rid', role_id).input('apps', appsInsert)
+            .input('photo', avatar_url)
+            .query(`
+                INSERT INTO EBM.Users (FullName, Username, Email, PasswordHash, RoleId, Apps, AvatarUrl, IsActive, RequiresPasswordChange)
+                OUTPUT INSERTED.Id as id
+                VALUES (@name, @u, @e, @pass, @rid, @apps, @photo, 1, 1)
+            `);
+        await logAudit(req, 'CREATE', 'USERS', username, { apps: appsInsert });
+        res.status(201).json(result.recordset[0]);
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+app.put('/api/users/:id', verifyToken, verifyPermission('val.config.users'), async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+        const { full_name, username, email, role_id, is_active, apps, avatar_url } = req.body;
+        const db = await getDb();
+        const appsSave = cleanApps(apps);
+
+        await db.request()
+            .input('id', id).input('name', full_name).input('u', username).input('e', email)
+            .input('rid', role_id).input('active', is_active ? 1 : 0).input('apps', appsSave)
+            .input('photo', avatar_url)
+            .query(`UPDATE EBM.Users SET FullName = @name, Username = @u, Email = @e, RoleId = @rid, IsActive = @active, Apps = @apps, AvatarUrl = @photo WHERE Id = @id`);
+        
+        await logAudit(req, 'UPDATE', 'USERS', id, { apps: appsSave });
+        res.json({ success: true });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+app.delete('/api/users/:id', verifyToken, verifyPermission('val.config.users'), async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+        const db = await getDb();
+        await db.request().input('id', id).query("UPDATE EBM.Users SET IsActive = 0 WHERE Id = @id");
+        await logAudit(req, 'DEACTIVATE', 'USERS', id, {});
+        res.status(204).send();
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+// ROLES
+app.get('/api/roles', verifyToken, verifyPermission('val.config.roles'), async (req: Request, res: Response) => {
+    try {
+        const db = await getDb();
+        const roles = (await db.request().input('app', APP_IDENTIFIER).query("SELECT Id as id, Name as name, Apps as apps FROM EBM.Roles WHERE Apps LIKE '%' + @app + '%'")).recordset;
+        const allPerms = (await db.request().query("SELECT RoleId, Permission FROM EBM.RolePermissions")).recordset;
+        const result = roles.map((r: any) => ({
+            ...r,
+            permissions: allPerms.filter((p: any) => p.RoleId === r.id).map((p: any) => p.Permission)
+        }));
+        res.json(result);
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+app.post('/api/roles', verifyToken, verifyPermission('val.config.roles'), async (req: Request, res: Response) => {
+    try {
+        const { name, permissions, apps } = req.body;
+        const db = await getDb();
+        const appsSave = cleanApps(apps || APP_IDENTIFIER);
+
+        const checkRole = await db.request().input('name', name).query("SELECT Id FROM EBM.Roles WHERE Name = @name");
+        let roleId;
+        if (checkRole.recordset.length > 0) {
+            roleId = checkRole.recordset[0].Id;
+            await db.request().input('id', roleId).input('apps', appsSave).query("UPDATE EBM.Roles SET Apps = @apps WHERE Id = @id");
+        } else {
+            const result = await db.request().input('name', name).input('apps', appsSave).query("INSERT INTO EBM.Roles (Id, Name, Apps) OUTPUT INSERTED.Id VALUES (NEWID(), @name, @apps)");
+            roleId = result.recordset[0].Id;
+        }
+
+        await db.request().input('rid', roleId).query("DELETE FROM EBM.RolePermissions WHERE RoleId = @rid");
+        if (permissions && permissions.length > 0) {
+            for (const p of permissions) {
+                await db.request().input('rid', roleId).input('p', p).query("INSERT INTO EBM.RolePermissions (RoleId, Permission) VALUES (@rid, @p)");
+            }
+        }
+        await logAudit(req, 'CREATE/UPDATE', 'ROLES', name, { apps: appsSave });
+        res.status(201).json({ id: roleId, name, permissions });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+// AUDIT LOGS
+app.get('/api/config/audit-logs', verifyToken, verifyPermission('val.config.audit'), async (req: Request, res: Response) => {
+    try {
+        const db = await getDb();
+        const result = await db.request().input('app', APP_IDENTIFIER).query(`
+            SELECT ID as id, UsuarioID as user_id, UsuarioNombre as user_name, Accion as action, Entidad as entity, Detalle as details, Fecha as created_at
+            FROM [dbo].[GAC_APP_TB_AUDIT_LOG]
+            WHERE Accion LIKE @app + ':%' OR Entidad LIKE @app + ':%' OR Detalle LIKE '%' + @app + '%'
+            ORDER BY Fecha DESC
+        `);
+        res.json(result.recordset);
     } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 

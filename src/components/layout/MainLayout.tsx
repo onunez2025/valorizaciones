@@ -90,7 +90,7 @@ export function MainLayout() {
                         </button>
 
                         {/* Config (Gear Icon) */}
-                        {hasPermission('val.config.view') && (
+                        {(hasPermission('val.config.users') || hasPermission('val.config.roles') || hasPermission('val.config.audit')) && (
                             <NavLink 
                                 to="/config"
                                 className={({ isActive }) => cn(
