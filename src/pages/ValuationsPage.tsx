@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, Filter, Calendar, ChevronRight, Calculator, Download, AlertTriangle, CheckCircle2, FileText, X, ChevronDown, Briefcase, Building2, Check, Activity, AlertCircle, Lock, ArrowUpDown } from 'lucide-react';
+import { Search, Filter, Calendar, ChevronRight, Calculator, Download, AlertTriangle, CheckCircle2, FileText, X, ChevronDown, Briefcase, Building2, Check, Activity, AlertCircle, Lock, ArrowUpDown, Package } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { ApiClient } from '../services/apiClient';
 import type { CAS, ValuationTicket, Penalty } from '../types';
