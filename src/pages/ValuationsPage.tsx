@@ -337,25 +337,25 @@ export default function ValuationsPage() {
                         <div className="bg-card border border-border rounded-2xl p-6 shadow-sm h-full flex flex-col justify-between">
                             <div className="space-y-6">
                                 <div className="flex items-center justify-between">
-                                    <h3 className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Resumen de cuenta</h3>
+                                    <h3 className="text-[11px] font-bold text-muted-foreground">Resumen de Cuenta</h3>
                                     <Calculator className="w-5 h-5 text-primary" />
                                 </div>
                                 
                                 <div className="space-y-3">
                                     <div className="flex justify-between items-center p-4 bg-muted/20 rounded-xl border border-border/30">
-                                        <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Servicios</span>
+                                        <span className="text-[11px] font-bold text-muted-foreground">Servicios</span>
                                         <span className="text-base font-bold tracking-tight">S/ {totalTickets.toLocaleString()}</span>
                                     </div>
                                     <div className="flex justify-between items-center p-4 bg-red-50/50 rounded-xl border border-red-100">
-                                        <span className="text-[11px] font-bold text-red-600 uppercase tracking-wider">Penalidades</span>
+                                        <span className="text-[11px] font-bold text-red-600">Penalidades</span>
                                         <span className="text-base font-bold text-red-600 tracking-tight">- S/ {totalPenalties.toLocaleString()}</span>
                                     </div>                                               
                                     <div className="flex flex-col px-5 py-6 bg-white border-l-[6px] border-[#059669] rounded-xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(5,150,105,0.1)] transition-all duration-500 group/neto">
                                         <div className="flex items-center justify-between mb-3">
-                                            <span className="text-[11px] font-bold text-[#059669] uppercase tracking-wider">Total neto</span>
+                                            <span className="text-[11px] font-bold text-[#059669]">Total Neto</span>
                                             <div className="flex items-center gap-1.5 bg-emerald-50 px-2 py-1 rounded-md">
                                                 <div className="w-1.5 h-1.5 bg-[#059669] rounded-full animate-pulse" />
-                                                <span className="text-[10px] font-bold text-[#059669] uppercase tracking-wider">Siatc Live</span>
+                                                <span className="text-[11px] font-bold text-[#059669]">Siatc Live</span>
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-2 whitespace-nowrap overflow-hidden">
@@ -364,7 +364,7 @@ export default function ValuationsPage() {
                                                 {grandTotal.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                             </span>
                                         </div>
-                                        <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mt-2">Cálculo oficial de auditoría</p>
+                                        <p className="text-[11px] font-bold text-muted-foreground mt-2">Cálculo Oficial de Auditoría</p>
                                     </div>
                                 </div>
                             </div>
