@@ -421,13 +421,38 @@ app.get('/api/penalties/:ruc', verifyToken, async (req: Request, res: Response) 
                 FROM [dbo].[GAC_APP_TB_TICKETS_DESCUENTOS] d
                 JOIN [APPGAC].[ServiciosViewSQL] s ON d.Ticket = s.Ticket
                 JOIN [dbo].[GAC_APP_TB_CAS] cas ON s.IdCAS = cas.ID_CAS
-                LEFT JOIN [dbo].[GAC_APP_TB_TICKETS_DESCUENTOS_MOTIVOS] m ON d.Motivo = m.IdMotivo
+                LEFT JOIN [dbo].[GAC_APP_TB_DESCUENTOS_MOTIVOS] m ON d.Motivo = m.IdMotivo
                 WHERE cas.RUC = @ruc 
                   AND d.Fecha BETWEEN @start AND @end
                   AND NOT EXISTS (
                       SELECT 1 FROM [dbo].[GAC_APP_TB_VALORIZACIONES_DETALLE] det 
                       WHERE det.Ticket = d.Ticket AND det.Tipo = 'PENALIDAD'
                   )
+            `);
+        res.json(result.recordset);
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+app.get('/api/closures', verifyToken, async (req: Request, res: Response) => {
+    try {
+        const db = await getDb();
+        const result = await db.request().query(`
+            SELECT * FROM [dbo].[GAC_APP_TB_VALORIZACIONES_CIERRES] 
+            ORDER BY Cerrado_El DESC
+        `);
+        res.json(result.recordset);
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+app.get('/api/closures/:id/details', verifyToken, async (req: Request, res: Response) => {
+    const { id } = req.params;
+    try {
+        const db = await getDb();
+        const result = await db.request()
+            .input('id', id)
+            .query(`
+                SELECT * FROM [dbo].[GAC_APP_TB_VALORIZACIONES_DETALLE] 
+                WHERE IdCierre = @id
             `);
         res.json(result.recordset);
     } catch (err: any) { res.status(500).json({ error: err.message }); }
