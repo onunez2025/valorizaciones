@@ -49,6 +49,7 @@ export default function ValuationsPage() {
     const [closureDetails, setClosureDetails] = useState<any[]>([]);
     const [loadingDetails, setLoadingDetails] = useState(false);
     const [detailSearchQuery, setDetailSearchQuery] = useState('');
+    const [detailActiveTab, setDetailActiveTab] = useState<'services' | 'penalties'>('services');
 
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
@@ -856,8 +857,30 @@ export default function ValuationsPage() {
                                 )}
                             </div>
 
-                            <button onClick={() => { setSelectedClosure(null); setDetailSearchQuery(''); }} className="p-3 bg-white border border-border rounded-2xl hover:bg-muted transition-all"><X className="w-5 h-5" /></button>
+                            <button onClick={() => { setSelectedClosure(null); setDetailSearchQuery(''); setDetailActiveTab('services'); }} className="p-3 bg-white border border-border rounded-2xl hover:bg-muted transition-all"><X className="w-5 h-5" /></button>
                         </div>
+                        
+                        <div className="px-8 bg-slate-50 border-b border-border/50 flex">
+                            <button 
+                                onClick={() => setDetailActiveTab('services')}
+                                className={cn(
+                                    "px-8 py-4 text-xs font-black transition-all border-b-2",
+                                    detailActiveTab === 'services' ? "border-primary text-primary bg-white shadow-[0_-4px_10px_rgba(0,0,0,0.02)]" : "border-transparent text-muted-foreground hover:text-slate-600"
+                                )}
+                            >
+                                Servicios Realizados ({closureDetails.filter(d => d.Tipo === 'SERVICIO').length})
+                            </button>
+                            <button 
+                                onClick={() => setDetailActiveTab('penalties')}
+                                className={cn(
+                                    "px-8 py-4 text-xs font-black transition-all border-b-2",
+                                    detailActiveTab === 'penalties' ? "border-red-500 text-red-600 bg-white shadow-[0_-4px_10px_rgba(0,0,0,0.02)]" : "border-transparent text-muted-foreground hover:text-slate-600"
+                                )}
+                            >
+                                Penalidades y Descuentos ({closureDetails.filter(d => d.Tipo === 'PENALIDAD').length})
+                            </button>
+                        </div>
+
                         <div className="flex-1 overflow-auto custom-scrollbar">
                             {loadingDetails ? (
                                 <div className="h-64 flex items-center justify-center p-8"><Activity className="w-8 h-8 animate-spin text-primary" /></div>
@@ -886,11 +909,12 @@ export default function ValuationsPage() {
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border/10">
-                                        {closureDetails.filter(d => 
-                                            d.Ticket.toString().includes(detailSearchQuery) || 
-                                            (d.Servicio_Nombre || '').toLowerCase().includes(detailSearchQuery.toLowerCase()) ||
-                                            (d.Tipo || '').toLowerCase().includes(detailSearchQuery.toLowerCase())
-                                        ).map((det) => (
+                                        {closureDetails
+                                            .filter(d => detailActiveTab === 'services' ? d.Tipo === 'SERVICIO' : d.Tipo === 'PENALIDAD')
+                                            .filter(d => 
+                                                d.Ticket.toString().includes(detailSearchQuery) || 
+                                                (d.Servicio_Nombre || '').toLowerCase().includes(detailSearchQuery.toLowerCase())
+                                            ).map((det) => (
                                             <tr key={det.IdDetalle} className="hover:bg-muted/30 transition-all group/det">
                                                 <td className="px-8 py-4 font-bold text-sm text-primary">{det.Ticket}</td>
                                                 <td className="px-4 py-4 text-xs font-medium">{new Date(det.Fecha_Ticket).toLocaleDateString()}</td>
@@ -910,11 +934,13 @@ export default function ValuationsPage() {
                                                 </td>
                                             </tr>
                                         ))}
-                                        {closureDetails.filter(d => d.Ticket.toString().includes(detailSearchQuery) || (d.Servicio_Nombre || '').toLowerCase().includes(detailSearchQuery.toLowerCase())).length === 0 && (
+                                        {closureDetails
+                                            .filter(d => detailActiveTab === 'services' ? d.Tipo === 'SERVICIO' : d.Tipo === 'PENALIDAD')
+                                            .filter(d => d.Ticket.toString().includes(detailSearchQuery) || (d.Servicio_Nombre || '').toLowerCase().includes(detailSearchQuery.toLowerCase())).length === 0 && (
                                             <tr>
                                                 <td colSpan={5} className="py-20 text-center text-muted-foreground opacity-40">
                                                     <Search className="w-10 h-10 mx-auto mb-3" />
-                                                    <p className="text-xs font-bold">No se encontraron resultados para "{detailSearchQuery}"</p>
+                                                    <p className="text-xs font-bold">No hay {detailActiveTab === 'services' ? 'servicios' : 'penalidades'} que coincidan con la búsqueda</p>
                                                 </td>
                                             </tr>
                                         )}
