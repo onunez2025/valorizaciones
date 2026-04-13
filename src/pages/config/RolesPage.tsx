@@ -410,5 +410,3 @@ export default function RolesPage() {
         </div>
     );
 }
-
-import React from 'react';
