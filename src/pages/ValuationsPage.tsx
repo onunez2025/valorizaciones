@@ -446,9 +446,50 @@ export default function ValuationsPage() {
 
                 {/* Rango de Fechas */}
                 <div className="flex items-center gap-2 bg-muted/20 p-1 rounded-lg border border-border/30">
+                    <div className="flex items-center gap-2 px-3 py-2 bg-background rounded-lg border border-border shadow-sm">
+                        <Calendar className="w-4 h-4 text-primary" />
+                        <input 
+                            type="date" 
+                            className="bg-transparent border-none text-xs font-black focus:ring-0 p-0" 
+                            value={startDate} 
+                            onChange={(e) => setStartDate(e.target.value)} 
+                        />
+                        <span className="text-muted-foreground opacity-30 mx-1">/</span>
+                        <input 
+                            type="date" 
+                            className="bg-transparent border-none text-xs font-black focus:ring-0 p-0" 
+                            value={endDate} 
+                            onChange={(e) => setEndDate(e.target.value)} 
+                        />
+                    </div>
+                </div>
+
+                <button 
+                    onClick={handleFetchValuation}
+                    disabled={loadingData}
+                    className="bg-primary text-white p-3 rounded-xl hover:bg-primary/90 transition-all shadow-lg shadow-primary/20 flex items-center justify-center disabled:opacity-50"
+                >
+                    {loadingData ? <Activity className="w-5 h-5 animate-spin" /> : <Search className="w-5 h-5" />}
+                </button>
+
+                <div className="h-8 w-px bg-border mx-1" />
+
+                <div className="flex-1 relative">
                     <div className="relative">
-                    </>
-                )}
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground opacity-40" />
+                        <input 
+                            type="text" 
+                            placeholder="Buscar ticket específico en todo el CAS..." 
+                            className="w-full pl-10 pr-4 py-2.5 bg-muted/20 border border-transparent rounded-xl text-xs font-bold focus:bg-background focus:border-primary/20 focus:ring-4 focus:ring-primary/5 outline-none transition-all h-11"
+                            value={globalSearch}
+                            onChange={(e) => setGlobalSearch(e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && handleSearchTicket()}
+                        />
+                        {isSearchingGlobal && (
+                            <Activity className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-primary" />
+                        )}
+                    </div>
+                </div>
             </div>
 
             {/* Contenido Principal */}
