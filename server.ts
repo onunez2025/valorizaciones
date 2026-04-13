@@ -168,8 +168,15 @@ app.get('/api/valuations/:ruc', verifyToken, async (req: Request, res: Response)
                 SELECT 
                     s.Ticket, s.CheckOut as Fecha, s.Servicio as ServicioNombre, 
                     s.IdServicio as Servicio,
+                    s.CodigoExternoEquipo as CodigoEquipo,
+                    s.NombreEquipo as NombreEquipo,
+                    s.FechaVisita, s.CheckOut as FechaCierre,
+                    DATEDIFF(day, s.FechaVisita, s.CheckOut) as DiasDiferencia,
                     ISNULL(m.Categoria, 'N/A') as Categoria,
-                    ISNULL(rate.Importe, 0) as TarifaBase,
+                    CASE 
+                        WHEN DATEDIFF(day, s.FechaVisita, s.CheckOut) > 2 THEN 0 
+                        ELSE ISNULL(rate.Importe, 0) 
+                    END as TarifaBase,
                     ISNULL((SELECT SUM(CAST(Importe AS FLOAT)) FROM [dbo].[GAC_APP_TB_TICKETS_VALORIZACION_ADICIONAL] WHERE Ticket = s.Ticket), 0) as Adicionales
                 FROM [APPGAC].[ServiciosViewSQL] s
                 JOIN [dbo].[GAC_APP_TB_CAS] cas ON s.IdCAS = cas.ID_CAS
@@ -419,6 +426,52 @@ app.post('/api/tarifarios/create', verifyToken, async (req: Request, res: Respon
     } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
+// --- MATERIALES ---
+app.get('/api/materials', verifyToken, async (req: Request, res: Response) => {
+    try {
+        const db = await getDb();
+        const result = await db.request().query("SELECT ID_Material, ID_Externo, Nombre, Categoria, Estado, Sector FROM [dbo].[GAC_APP_TB_MATERIALES] ORDER BY Categoria, Nombre");
+        res.json(result.recordset);
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+app.get('/api/materials/categories', verifyToken, async (req: Request, res: Response) => {
+    try {
+        const db = await getDb();
+        const result = await db.request().query("SELECT DISTINCT Categoria FROM [dbo].[GAC_APP_TB_MATERIALES] WHERE Categoria IS NOT NULL AND Categoria != '' ORDER BY Categoria");
+        res.json(result.recordset.map(r => r.Categoria));
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+app.post('/api/materials', verifyToken, async (req: Request, res: Response) => {
+    const { idExterno, nombre, categoria, sector } = req.body;
+    try {
+        const db = await getDb();
+        const check = await db.request().input('ext', idExterno).query("SELECT ID_Material FROM [dbo].[GAC_APP_TB_MATERIALES] WHERE ID_Externo = @ext");
+        
+        if (check.recordset.length > 0) {
+            const id = check.recordset[0].ID_Material;
+            await db.request()
+                .input('id', id)
+                .input('nombre', nombre)
+                .input('cat', categoria)
+                .input('sec', sector || 'GAC')
+                .query(`UPDATE [dbo].[GAC_APP_TB_MATERIALES] SET Nombre = @nombre, Categoria = @cat, Sector = @sec WHERE ID_Material = @id`);
+            res.json({ success: true, id, action: 'updated' });
+        } else {
+            const newId = crypto.randomBytes(4).toString('hex');
+            await db.request()
+                .input('id', newId)
+                .input('ext', idExterno)
+                .input('nombre', nombre)
+                .input('cat', categoria)
+                .input('sec', sector || 'GAC')
+                .query(`INSERT INTO [dbo].[GAC_APP_TB_MATERIALES] (ID_Material, ID_Externo, Nombre, Categoria, Sector, Estado, EstadoEnCatalogo) VALUES (@id, @ext, @nombre, @cat, @sec, 'Activo', 'Publicado')`);
+            res.json({ success: true, id: newId, action: 'created' });
+        }
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
 app.post('/api/tarifarios/update', verifyToken, async (req: Request, res: Response) => {
     const { id, importe, estado } = req.body;
     try {
@@ -458,17 +511,20 @@ app.post('/api/tarifarios/batch', verifyToken, async (req: Request, res: Respons
                     .input(`cat_${id}`, rate.Categoria)
                     .input(`serv_${id}`, rate.Servicio)
                     .input(`imp_${id}`, sql.Decimal(18, 2), rate.Importe)
+                    .input(`f_ini_${id}`, rate.Fecha_inicio ? new Date(rate.Fecha_inicio) : new Date())
+                    .input(`f_fin_${id}`, rate.Fecha_fin ? new Date(rate.Fecha_fin) : null)
                     .query(`
                         IF EXISTS (SELECT 1 FROM [dbo].[GAC_APP_TB_TARIFARIO] WHERE ID_Tarifario = @id_${id})
                         BEGIN
                             UPDATE [dbo].[GAC_APP_TB_TARIFARIO] 
-                            SET Importe = @imp_${id}, Categoria = @cat_${id}, Servicio = @serv_${id} 
+                            SET Importe = @imp_${id}, Categoria = @cat_${id}, Servicio = @serv_${id},
+                                Fecha_inicio = @f_ini_${id}, Fecha_fin = @f_fin_${id}
                             WHERE ID_Tarifario = @id_${id}
                         END
                         ELSE
                         BEGIN
-                            INSERT INTO [dbo].[GAC_APP_TB_TARIFARIO] (ID_Tarifario, Empresa, Categoria, Servicio, Importe, Fecha_inicio, Estado)
-                            VALUES (@id_${id}, @casId_${id}, @cat_${id}, @serv_${id}, @imp_${id}, GETDATE(), 'A')
+                            INSERT INTO [dbo].[GAC_APP_TB_TARIFARIO] (ID_Tarifario, Empresa, Categoria, Servicio, Importe, Fecha_inicio, Fecha_fin, Estado)
+                            VALUES (@id_${id}, @casId_${id}, @cat_${id}, @serv_${id}, @imp_${id}, @f_ini_${id}, @f_fin_${id}, 'A')
                         END
                     `);
             }
@@ -497,7 +553,7 @@ app.get('/api/dashboard/stats', verifyToken, async (req: Request, res: Response)
                 SELECT s.Ticket, 
                     CASE WHEN LEFT(s.NombreTecnico, 3) IN ('SB2', 'SS ', 'AC ', 'EMS', 'SIL', 'VYA', 'SEY', 'TP ', 'TYG', 'FSI', 'LM ', 'TCP', 'MG ', 'AYD', 'SLR', 'REY', 'VR ', 'LV ', 'MR ', 'AXX', 'COT', 'SNT', 'NUL') 
                     THEN LEFT(s.NombreTecnico, 3) ELSE 'GAC' END as Prefix,
-                    s.IdServicio, s.CodigoExternoEquipo
+                    s.IdServicio, s.CodigoExternoEquipo, s.FechaVisita, s.CheckOut
                 FROM [SIATC].[Dashboard_FSM] s
                 WHERE s.CheckOut >= @start AND s.CheckOut < DATEADD(DAY, 1, @end)
                   AND s.Estado = 'Closed'
@@ -522,7 +578,12 @@ app.get('/api/dashboard/stats', verifyToken, async (req: Request, res: Response)
         query += `
             ),
             ResumenServicios AS (
-                SELECT ID_CAS, IdServicio, Categoria, COUNT(*) as Cnt
+                SELECT 
+                    ID_CAS, 
+                    IdServicio, 
+                    Categoria, 
+                    SUM(CASE WHEN DATEDIFF(day, FechaVisita, CheckOut) > 2 THEN 0 ELSE 1 END) as CntValidos,
+                    SUM(CASE WHEN DATEDIFF(day, FechaVisita, CheckOut) > 2 THEN 0 ELSE 1 END) as Cnt -- Para compatibilidad
                 FROM TicketsCAS
                 GROUP BY ID_CAS, IdServicio, Categoria
             ),
@@ -536,7 +597,7 @@ app.get('/api/dashboard/stats', verifyToken, async (req: Request, res: Response)
             )
             SELECT 
                 (SELECT COUNT(*) FROM TicketsCAS) as TotalTickets,
-                (SELECT SUM(rs.Cnt * ISNULL(t.Importe, 0)) 
+                (SELECT SUM(rs.CntValidos * ISNULL(t.Importe, 0)) 
                  FROM ResumenServicios rs 
                  LEFT JOIN [dbo].[GAC_APP_TB_TARIFARIO] t ON t.Empresa = rs.ID_CAS 
                     AND (t.Servicio = rs.IdServicio)
@@ -570,7 +631,7 @@ app.get('/api/dashboard/trends', verifyToken, async (req: Request, res: Response
 
         let query = `
             WITH TicketsFilt AS (
-                SELECT s.Ticket, s.CheckOut, s.IdServicio, s.CodigoExternoEquipo,
+                SELECT s.Ticket, s.CheckOut, s.IdServicio, s.CodigoExternoEquipo, s.FechaVisita,
                     CASE WHEN LEFT(s.NombreTecnico, 3) IN ('SB2', 'SS ', 'AC ', 'EMS', 'SIL', 'VYA', 'SEY', 'TP ', 'TYG', 'FSI', 'LM ', 'TCP', 'MG ', 'AYD', 'SLR', 'REY', 'VR ', 'LV ', 'MR ', 'AXX', 'COT', 'SNT', 'NUL') 
                     THEN LEFT(s.NombreTecnico, 3) ELSE 'GAC' END as Prefix
                 FROM [SIATC].[Dashboard_FSM] s
@@ -601,7 +662,7 @@ app.get('/api/dashboard/trends', verifyToken, async (req: Request, res: Response
                     twc.ID_CAS, 
                     twc.IdServicio, 
                     twc.Categoria,
-                    COUNT(*) as Cnt
+                    SUM(CASE WHEN DATEDIFF(day, twc.FechaVisita, twc.CheckOut) > 2 THEN 0 ELSE 1 END) as Cnt
                 FROM TicketsCAS twc
                 GROUP BY YEAR(twc.CheckOut), MONTH(twc.CheckOut), twc.ID_CAS, twc.IdServicio, twc.Categoria
             ),

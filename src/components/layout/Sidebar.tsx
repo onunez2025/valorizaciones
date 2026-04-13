@@ -3,6 +3,8 @@ import {
     LayoutDashboard,
     Briefcase,
     FileText,
+    CalendarDays,
+    Box,
     LogOut
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
@@ -28,8 +30,14 @@ export function Sidebar({ className }: { className?: string }) {
         },
         { 
             to: '/tarifario', 
-            icon: FileText, 
+            icon: CalendarDays, 
             label: 'Tarifario', 
+            permission: 'val.tarifario.view' as const 
+        },
+        { 
+            to: '/materiales', 
+            icon: Box, 
+            label: 'Materiales', 
             permission: 'val.tarifario.view' as const 
         },
     ];

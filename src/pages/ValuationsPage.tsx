@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, Filter, Calendar, ChevronRight, Calculator, Download, AlertTriangle, CheckCircle2, FileText, X, ChevronDown, Briefcase, Building2, Check, Activity, AlertCircle, Lock, ArrowUpDown } from 'lucide-react';
+import { Search, Filter, Calendar, ChevronRight, Calculator, Download, AlertTriangle, CheckCircle2, FileText, X, ChevronDown, Briefcase, Building2, Check, Activity, AlertCircle, Lock, ArrowUpDown, Package } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { ApiClient } from '../services/apiClient';
 import type { CAS, ValuationTicket, Penalty } from '../types';
@@ -8,6 +8,7 @@ import { toTitleCase } from '../utils/formatters';
 import { useDialog } from '../context/DialogContext';
 import PenaltyModal from '../components/penalties/PenaltyModal';
 import TarifarioModal from '../components/tarifario/TarifarioModal';
+import MaterialRegisterModal from '../components/materials/MaterialRegisterModal';
 import { Modal } from '../components/common/Modal';
 
 export default function ValuationsPage() {
@@ -30,9 +31,11 @@ export default function ValuationsPage() {
     const [showPenaltyModal, setShowPenaltyModal] = useState<{show: boolean, type: 'penalty' | 'additional', ticket?: string, date?: string}>({show: false, type: 'penalty'});
     const [expandedDates, setExpandedDates] = useState<string[]>([]);
     const [showTarifarioModal, setShowTarifarioModal] = useState(false);
+    const [showMaterialModal, setShowMaterialModal] = useState(false);
     const [showCloseModal, setShowCloseModal] = useState(false);
     const [isClosing, setIsClosing] = useState(false);
     const [modalData, setModalData] = useState<any>(null);
+    const [materialModalData, setMaterialModalData] = useState<{codigo: string, nombre: string} | null>(null);
     const [activeTab, setActiveTab] = useState<'services' | 'penalties'>('services');
     const [globalSearch, setGlobalSearch] = useState('');
     const [globalSearchResult, setGlobalSearchResult] = useState<any>(null);
@@ -199,8 +202,19 @@ export default function ValuationsPage() {
             ["TOTAL NETO A PAGAR", "", grandTotal]
         ];
         const servicesData = [
-            ["TICKET", "FECHA CIERRE", "SERVICIO", "CATEGORÍA", "TARIFA BASE", "ADICIONALES", "TOTAL"],
-            ...tickets.map(t => [t.Ticket, new Date(t.Fecha).toLocaleDateString(), t.ServicioNombre || t.Servicio, t.Categoria, t.TarifaBase, (t.Adicionales || 0), (t.TarifaBase + (t.Adicionales || 0))])
+            ["TICKET", "Fecha Visita", "FECHA CIERRE", "Dias Diferencia", "SERVICIO", "Codigo Externo", "CATEGORÍA", "TARIFA BASE", "ADICIONALES", "TOTAL"],
+            ...tickets.map(t => [
+                t.Ticket, 
+                t.FechaVisita ? new Date(t.FechaVisita).toLocaleDateString() : '-', 
+                t.FechaCierre ? new Date(t.FechaCierre).toLocaleDateString() : new Date(t.Fecha).toLocaleDateString(),
+                t.DiasDiferencia ?? '-',
+                t.ServicioNombre || t.Servicio, 
+                t.CodigoEquipo || '-',
+                t.Categoria, 
+                t.TarifaBase, 
+                (t.Adicionales || 0), 
+                (t.TarifaBase + (t.Adicionales || 0))
+            ])
         ];
         const penaltiesData = [
             ["ID", "FECHA", "MOTIVO", "DESCRIPCIÓN", "TICKET REF.", "ESTADO", "IMPORTE"],
@@ -222,6 +236,14 @@ export default function ValuationsPage() {
             servicioNombre: ticket.ServicioNombre || 'Servicio General'
         });
         setShowTarifarioModal(true);
+    };
+
+    const handleOpenMaterialModal = (ticket: ValuationTicket) => {
+        setMaterialModalData({
+            codigo: ticket.CodigoEquipo || '',
+            nombre: ticket.NombreEquipo || ''
+        });
+        setShowMaterialModal(true);
     };
 
     return (
@@ -516,9 +538,11 @@ export default function ValuationsPage() {
                                                                             <table className="w-full border-collapse">
                                                                                 <thead className="sticky top-0 z-10 bg-white/95 backdrop-blur-md shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
                                                                                     <tr className="text-sm font-medium text-muted-foreground border-b border-border/30">
-                                                                                        <th onClick={() => handleDetailSort('Ticket')} className="px-10 py-3 text-left cursor-pointer hover:text-primary transition-colors">
-                                                                                            <div className="flex items-center gap-1">ID Ticket <ArrowUpDown className="w-3 h-3 opacity-40" /></div>
+                                                                                        <th onClick={() => handleDetailSort('Ticket')} className="px-5 py-3 text-left cursor-pointer hover:text-primary transition-colors">
+                                                                                            <div className="flex items-center gap-1">Ticket <ArrowUpDown className="w-3 h-3 opacity-40" /></div>
                                                                                         </th>
+                                                                                        <th className="px-2 py-3 text-center text-[10px] uppercase tracking-wider opacity-50">Visita / Cierre</th>
+                                                                                        <th className="px-2 py-3 text-center text-[10px] uppercase tracking-wider opacity-50">Días</th>
                                                                                         <th onClick={() => handleDetailSort('ServicioNombre')} className="px-6 py-3 text-left cursor-pointer hover:text-primary transition-colors">
                                                                                             <div className="flex items-center gap-1">Servicio Realizado <ArrowUpDown className="w-3 h-3 opacity-40" /></div>
                                                                                         </th>
@@ -534,27 +558,53 @@ export default function ValuationsPage() {
                                                                                 <tbody className="divide-y divide-border/10">
                                                                                     {getSortedTickets(groupedTickets[date].tickets).map((ticket) => (
                                                                                         <tr key={ticket.Ticket} className="hover:bg-primary/[0.01] transition-colors group/row">
-                                                                                            <td className="px-10 py-4 font-medium text-primary text-sm tracking-tighter cursor-default">{ticket.Ticket}</td>
+                                                                                            <td className="px-5 py-4 font-medium text-primary text-sm tracking-tighter cursor-default">{ticket.Ticket}</td>
+                                                                                            <td className="px-2 py-4 text-center">
+                                                                                                <div className="flex flex-col items-center">
+                                                                                                    <span className="text-[10px] font-bold text-muted-foreground">{ticket.FechaVisita ? new Date(ticket.FechaVisita).toLocaleDateString('es-PE', {day:'2-digit', month:'2-digit'}) : '-'}</span>
+                                                                                                    <span className="text-[10px] font-bold text-foreground">{ticket.FechaCierre ? new Date(ticket.FechaCierre).toLocaleDateString('es-PE', {day:'2-digit', month:'2-digit'}) : '-'}</span>
+                                                                                                </div>
+                                                                                            </td>
+                                                                                            <td className="px-2 py-4 text-center">
+                                                                                                <span className={cn(
+                                                                                                    "px-2 py-0.5 rounded text-[10px] font-black",
+                                                                                                    (ticket.DiasDiferencia || 0) > 2 ? "bg-red-100 text-red-700" : "bg-blue-100 text-blue-700"
+                                                                                                )}>
+                                                                                                    {ticket.DiasDiferencia ?? '-'}
+                                                                                                </span>
+                                                                                            </td>
                                                                                             <td className="px-6 py-4">
                                                                                                 <span className="font-medium text-foreground text-sm">
                                                                                                     {toTitleCase(ticket.ServicioNombre || 'General')}
                                                                                                 </span>
                                                                                             </td>
                                                                                             <td className="px-6 py-4">
-                                                                                                <span className="font-medium text-muted-foreground text-xs">
-                                                                                                    {toTitleCase(ticket.Categoria)}
-                                                                                                </span>
+                                                                                                <div className="flex flex-col">
+                                                                                                    <span className="font-medium text-muted-foreground text-[10px] uppercase opacity-60">
+                                                                                                        {ticket.CodigoEquipo}
+                                                                                                    </span>
+                                                                                                    <span className="font-bold text-foreground text-xs truncate max-w-[200px]" title={ticket.NombreEquipo}>
+                                                                                                        {toTitleCase(ticket.Categoria)}
+                                                                                                    </span>
+                                                                                                </div>
                                                                                             </td>
                                                                                             <td className="px-6 py-4 text-right">
-                                                                                                {ticket.TarifaBase === 0 ? (
+                                                                                                {ticket.Categoria === 'N/A' ? (
+                                                                                                    <button 
+                                                                                                        onClick={() => handleOpenMaterialModal(ticket)} 
+                                                                                                        className="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-[9px] font-black hover:scale-105 active:scale-95 transition-all shadow-md shadow-indigo-600/20 flex items-center gap-1.5"
+                                                                                                    >
+                                                                                                        <Package className="w-3 h-3" /> Registrar Prod.
+                                                                                                    </button>
+                                                                                                ) : ticket.TarifaBase === 0 ? (
                                                                                                     <button 
                                                                                                         onClick={() => handleOpenTarifarioModal(ticket)} 
-                                                                                                        className="px-3 py-1.5 bg-amber-500 text-white rounded-lg text-[9px] font-medium hover:scale-105 active:scale-95 transition-all shadow-md shadow-amber-500/20"
+                                                                                                        className="px-3 py-1.5 bg-amber-500 text-white rounded-lg text-[9px] font-black hover:scale-105 active:scale-95 transition-all shadow-md shadow-amber-500/20"
                                                                                                     >
                                                                                                         Vincular Tarifa
                                                                                                     </button>
                                                                                                 ) : (
-                                                                                                    <span className="font-medium text-sm tracking-tighter text-foreground/80">
+                                                                                                    <span className="font-bold text-sm tracking-tighter text-foreground/80">
                                                                                                         S/ {(ticket.TarifaBase + (ticket.Adicionales || 0)).toLocaleString('es-PE', { minimumFractionDigits: 2 })}
                                                                                                     </span>
                                                                                                 )}
@@ -624,6 +674,15 @@ export default function ValuationsPage() {
                     isOpen={showTarifarioModal}
                     onClose={() => setShowTarifarioModal(false)}
                     initialData={modalData}
+                    onSuccess={handleFetchValuation}
+                />
+            )}
+
+            {showMaterialModal && materialModalData && (
+                <MaterialRegisterModal 
+                    isOpen={showMaterialModal}
+                    onClose={() => setShowMaterialModal(false)}
+                    initialData={materialModalData}
                     onSuccess={handleFetchValuation}
                 />
             )}

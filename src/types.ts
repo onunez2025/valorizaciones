@@ -39,6 +39,9 @@ export interface CAS {
 export interface ValuationTicket {
   Ticket: string;
   Fecha: string;
+  FechaVisita?: string;
+  FechaCierre?: string;
+  DiasDiferencia?: number;
   Servicio: string;
   Categoria: string;
   TarifaBase: number;
@@ -46,6 +49,17 @@ export interface ValuationTicket {
   Total: number;
   Estado: string;
   ServicioNombre?: string;
+  CodigoEquipo?: string;
+  NombreEquipo?: string;
+}
+
+export interface Material {
+  ID_Material: string;
+  ID_Externo: string;
+  Nombre: string;
+  Categoria: string;
+  Estado: string;
+  Sector?: string;
 }
 
 export interface Penalty {
