@@ -363,6 +363,14 @@ app.post('/api/valuations/close', verifyToken, async (req: Request, res: Respons
                 `);
             
             const idCierre = result.recordset[0].IdCierre;
+            const year = new Date().getFullYear();
+            const businessCode = `VAL-${year}-${idCierre.toString().padStart(5, '0')}`;
+
+            // 1.1 Actualizar con el código de negocio
+            await new sql.Request(transaction)
+                .input('id', idCierre)
+                .input('code', businessCode)
+                .query("UPDATE [dbo].[GAC_APP_TB_VALORIZACIONES_CIERRES] SET Codigo_Valorizacion = @code WHERE IdCierre = @id");
 
             // 2. Insertar Detalles
             if (details && Array.isArray(details)) {
@@ -385,7 +393,7 @@ app.post('/api/valuations/close', verifyToken, async (req: Request, res: Respons
             }
 
             await transaction.commit();
-            res.json({ success: true, message: "Quincena cerrada correctamente con sus detalles.", idCierre });
+            res.json({ success: true, message: "Quincena cerrada correctamente.", idCierre, codigo: businessCode });
         } catch (error) {
             await transaction.rollback();
             throw error;

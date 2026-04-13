@@ -167,7 +167,7 @@ export default function ValuationsPage() {
         }));
 
         try {
-            await ApiClient.request('/valuations/close', {
+            const result = await ApiClient.request('/valuations/close', {
                 method: 'POST',
                 body: JSON.stringify({
                     ruc: selectedCas.RUC,
@@ -184,7 +184,11 @@ export default function ValuationsPage() {
                 })
             });
             setShowCloseModal(false);
-            alert({ title: "¡Cerrado!", message: "La quincena se ha cerrado y registrado correctamente.", type: 'success' });
+            alert({ 
+                title: "¡Cerrado!", 
+                message: `La quincena se ha cerrado correctamente con el código: ${result.codigo}`, 
+                type: 'success' 
+            });
             handleFetchValuation();
         } catch (error) {
             console.error("Error closing fortnight:", error);
