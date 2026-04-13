@@ -187,7 +187,7 @@ export default function ValuationsPage() {
             };
         }
         acc[dateStr].count += 1;
-        if (ticket.TarifaBase === 0 && isValuable(ticket.CodigoEquipo) && (ticket.DiasDiferencia || 0) < 3) {
+        if (ticket.TarifaBase === 0 && isValuable(ticket.CodigoEquipo) && (ticket.DiasDiferencia || 0) < 3 && !(ticket.ServicioNombre || '').toLowerCase().includes('visita')) {
             acc[dateStr].zeroPriceCount += 1;
         }
         acc[dateStr].totalBase += ticket.TarifaBase;
