@@ -48,6 +48,7 @@ export default function ValuationsPage() {
     const [selectedClosure, setSelectedClosure] = useState<any | null>(null);
     const [closureDetails, setClosureDetails] = useState<any[]>([]);
     const [loadingDetails, setLoadingDetails] = useState(false);
+    const [detailSearchQuery, setDetailSearchQuery] = useState('');
 
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
@@ -820,37 +821,54 @@ export default function ValuationsPage() {
             {selectedClosure && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
                     <div className="bg-white w-full max-w-5xl rounded-[32px] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300 flex flex-col max-h-[90vh]">
-                        <div className="p-8 border-b border-border/50 bg-slate-50 flex items-center justify-between">
-                            <div>
+                        <div className="p-8 border-b border-border/50 bg-slate-50 flex items-center justify-between gap-6">
+                            <div className="flex-1">
                                 <h2 className="text-2xl font-black text-slate-800 flex items-center gap-3">
                                     Detalle del Cierre
                                     <span className="text-sm font-black text-primary bg-white border border-primary/20 px-3 py-1 rounded-full">{selectedClosure.Codigo_Valorizacion}</span>
                                 </h2>
                                 <p className="text-xs font-bold text-muted-foreground mt-1">{selectedClosure.Nombre_CAS} • {new Date(selectedClosure.Fecha_Inicio).toLocaleDateString()} al {new Date(selectedClosure.Fecha_Fin).toLocaleDateString()}</p>
                             </div>
-                            <button onClick={() => setSelectedClosure(null)} className="p-3 bg-white border border-border rounded-2xl hover:bg-muted transition-all"><X className="w-5 h-5" /></button>
+                            
+                            <div className="relative w-64 group">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground transition-colors group-focus-within:text-primary" />
+                                <input 
+                                    type="text"
+                                    placeholder="Buscar ticket..."
+                                    className="w-full pl-10 pr-4 py-2 bg-white border border-border rounded-xl text-xs font-bold outline-none ring-primary/5 focus:ring-4 focus:border-primary transition-all"
+                                    value={detailSearchQuery}
+                                    onChange={(e) => setDetailSearchQuery(e.target.value)}
+                                />
+                                {detailSearchQuery && (
+                                    <button onClick={() => setDetailSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-red-500">
+                                        <X className="w-3.5 h-3.5" />
+                                    </button>
+                                )}
+                            </div>
+
+                            <button onClick={() => { setSelectedClosure(null); setDetailSearchQuery(''); }} className="p-3 bg-white border border-border rounded-2xl hover:bg-muted transition-all"><X className="w-5 h-5" /></button>
                         </div>
-                        <div className="flex-1 overflow-auto p-8">
+                        <div className="flex-1 overflow-auto custom-scrollbar">
                             {loadingDetails ? (
-                                <div className="h-64 flex items-center justify-center"><Activity className="w-8 h-8 animate-spin text-primary" /></div>
+                                <div className="h-64 flex items-center justify-center p-8"><Activity className="w-8 h-8 animate-spin text-primary" /></div>
                             ) : (
-                                <table className="w-full">
-                                    <thead className="sticky top-0 bg-white border-b border-border shadow-sm">
+                                <table className="w-full border-separate border-spacing-0">
+                                    <thead className="sticky top-0 z-20 bg-white border-b border-border shadow-sm">
                                         <tr className="text-[11px] font-black text-muted-foreground uppercase tracking-widest text-left">
-                                            <th className="px-4 py-3">Ticket</th>
-                                            <th className="px-4 py-3">Fecha</th>
-                                            <th className="px-4 py-3">Tipo</th>
-                                            <th className="px-4 py-3">Descripción</th>
-                                            <th className="px-4 py-3 text-right">Monto</th>
+                                            <th className="px-8 py-5 bg-white border-b border-border">Ticket</th>
+                                            <th className="px-4 py-5 bg-white border-b border-border">Fecha</th>
+                                            <th className="px-4 py-5 bg-white border-b border-border text-center">Tipo</th>
+                                            <th className="px-4 py-5 bg-white border-b border-border">Descripción</th>
+                                            <th className="px-8 py-5 bg-white border-b border-border text-right">Monto</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border/10">
-                                        {closureDetails.map((det) => (
-                                            <tr key={det.IdDetalle} className="hover:bg-muted/30 transition-all">
-                                                <td className="px-4 py-4 font-bold text-sm text-primary">{det.Ticket}</td>
+                                        {closureDetails.filter(d => d.Ticket.toString().includes(detailSearchQuery) || d.Servicio_Nombre.toLowerCase().includes(detailSearchQuery.toLowerCase())).map((det) => (
+                                            <tr key={det.IdDetalle} className="hover:bg-muted/30 transition-all group/det">
+                                                <td className="px-8 py-4 font-bold text-sm text-primary">{det.Ticket}</td>
                                                 <td className="px-4 py-4 text-xs font-medium">{new Date(det.Fecha_Ticket).toLocaleDateString()}</td>
-                                                <td className="px-4 py-4">
-                                                    <span className={cn("px-2 py-0.5 rounded text-[10px] font-black", det.Tipo === 'SERVICIO' ? "bg-blue-100 text-blue-700" : "bg-red-100 text-red-700")}>
+                                                <td className="px-4 py-4 text-center">
+                                                    <span className={cn("px-2 py-0.5 rounded text-[10px] font-black uppercase", det.Tipo === 'SERVICIO' ? "bg-blue-100 text-blue-700" : "bg-red-100 text-red-700")}>
                                                         {det.Tipo}
                                                     </span>
                                                 </td>
@@ -858,13 +876,21 @@ export default function ValuationsPage() {
                                                     <p className="text-xs font-bold truncate max-w-[400px]" title={det.Servicio_Nombre}>{det.Servicio_Nombre}</p>
                                                     <p className="text-[10px] text-muted-foreground font-medium">{det.Categoria}</p>
                                                 </td>
-                                                <td className="px-4 py-4 text-right">
+                                                <td className="px-8 py-4 text-right">
                                                     <span className={cn("text-sm font-black tracking-tight", det.Monto < 0 ? "text-red-600" : "text-slate-800")}>
-                                                        S/ {det.Monto.toLocaleString('es-PE', { minimumFractionDigits: 2 })}
+                                                        {det.Monto < 0 ? '-' : ''} S/ {Math.abs(det.Monto).toLocaleString('es-PE', { minimumFractionDigits: 2 })}
                                                     </span>
                                                 </td>
                                             </tr>
                                         ))}
+                                        {closureDetails.filter(d => d.Ticket.toString().includes(detailSearchQuery) || (d.Servicio_Nombre || '').toLowerCase().includes(detailSearchQuery.toLowerCase())).length === 0 && (
+                                            <tr>
+                                                <td colSpan={5} className="py-20 text-center text-muted-foreground opacity-40">
+                                                    <Search className="w-10 h-10 mx-auto mb-3" />
+                                                    <p className="text-xs font-bold">No se encontraron resultados para "{detailSearchQuery}"</p>
+                                                </td>
+                                            </tr>
+                                        )}
                                     </tbody>
                                 </table>
                             )}
