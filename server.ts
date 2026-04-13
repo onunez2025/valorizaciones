@@ -380,10 +380,16 @@ app.post('/api/valuations/close', verifyToken, async (req: Request, res: Respons
                         .input('tipo', item.tipo)
                         .input('servicio', item.servicio)
                         .input('categoria', item.categoria)
+                        .input('fv', item.fechaVisita || null)
+                        .input('fc', item.fechaCierre || null)
+                        .input('dd', item.diasDiferencia || null)
+                        .input('ce', item.codigoExterno || null)
+                        .input('tb', item.tarifaBase || 0)
+                        .input('ad', item.adicionales || 0)
                         .query(`
                             INSERT INTO [dbo].[GAC_APP_TB_VALORIZACIONES_DETALLE] 
-                            (IdCierre, Ticket, Monto, Fecha_Ticket, Tipo, Servicio_Nombre, Categoria)
-                            VALUES (@idCierre, @ticket, @monto, @fecha, @tipo, @servicio, @categoria)
+                            (IdCierre, Ticket, Monto, Fecha_Ticket, Tipo, Servicio_Nombre, Categoria, Fecha_Visita, Fecha_Cierre, Dias_Diferencia, Codigo_Externo, Tarifa_Base, Adicionales)
+                            VALUES (@idCierre, @ticket, @monto, @fecha, @tipo, @servicio, @categoria, @fv, @fc, @dd, @ce, @tb, @ad)
                         `);
                 }
             }
@@ -451,8 +457,15 @@ app.get('/api/closures/:id/details', verifyToken, async (req: Request, res: Resp
         const result = await db.request()
             .input('id', id)
             .query(`
-                SELECT * FROM [dbo].[GAC_APP_TB_VALORIZACIONES_DETALLE] 
-                WHERE IdCierre = @id
+                SELECT 
+                    d.*,
+                    ISNULL(d.Fecha_Visita, s.FechaVisita) as FechaVisita,
+                    ISNULL(d.Fecha_Cierre, s.CheckOut) as FechaCierre,
+                    ISNULL(d.Dias_Diferencia, DATEDIFF(day, s.FechaVisita, s.CheckOut)) as DiasDiferencia,
+                    ISNULL(d.Codigo_Externo, s.CodigoExternoEquipo) as CodigoExterno
+                FROM [dbo].[GAC_APP_TB_VALORIZACIONES_DETALLE] d
+                LEFT JOIN [APPGAC].[ServiciosViewSQL] s ON d.Ticket = s.Ticket AND d.Tipo = 'SERVICIO'
+                WHERE d.IdCierre = @id
             `);
         res.json(result.recordset);
     } catch (err: any) { res.status(500).json({ error: err.message }); }

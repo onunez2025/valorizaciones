@@ -195,7 +195,13 @@ export default function ValuationsPage() {
             fecha: t.Fecha,
             tipo: 'SERVICIO',
             servicio: t.ServicioNombre || t.Servicio,
-            categoria: t.Categoria
+            categoria: t.Categoria,
+            fechaVisita: t.FechaVisita,
+            fechaCierre: t.FechaCierre || t.Fecha,
+            diasDiferencia: t.DiasDiferencia,
+            codigoExterno: t.CodigoEquipo,
+            tarifaBase: t.TarifaBase,
+            adicionales: (t.Adicionales || 0)
         }));
 
         const penaltyDetails = penalties.map(p => ({
@@ -334,12 +340,17 @@ export default function ValuationsPage() {
         ];
 
         const servicesData = [
-            ["TICKET", "FECHA TICKET", "DESCRIPCIÓN", "CATEGORÍA", "MONTO"],
+            ["TICKET", "Fecha Visita", "FECHA CIERRE", "Dias Diferencia", "SERVICIO", "Codigo Externo", "CATEGORÍA", "TARIFA BASE", "ADICIONALES", "TOTAL"],
             ...services.map(s => [
                 s.Ticket,
-                new Date(s.Fecha_Ticket).toLocaleDateString(),
+                s.FechaVisita ? new Date(s.FechaVisita).toLocaleDateString() : '-',
+                s.FechaCierre ? new Date(s.FechaCierre).toLocaleDateString() : '-',
+                s.DiasDiferencia ?? '-',
                 s.Servicio_Nombre,
+                s.CodigoExterno || '-',
                 s.Categoria,
+                s.Tarifa_Base ?? s.Monto,
+                s.Adicionales ?? 0,
                 s.Monto
             ])
         ];
