@@ -275,5 +275,3 @@ export default function AuditLogPage() {
         </div>
     );
 }
-
-import React from 'react';
