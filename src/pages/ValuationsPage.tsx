@@ -97,8 +97,25 @@ export default function ValuationsPage() {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
+    const handleSearchTicket = async () => {
+        if (!globalSearch) return;
+        setIsSearchingGlobal(true);
+        try {
+            const result = await ApiClient.request(`/tickets/find/${globalSearch}`);
+            setGlobalSearchResult(result);
+        } catch (err) { 
+            setGlobalSearchResult({ error: 'Ticket no encontrado' }); 
+        } finally { 
+            setIsSearchingGlobal(false); 
+        }
+    };
+
     const handleFetchValuation = async () => {
         if (!selectedCas) {
+            if (globalSearch) {
+                handleSearchTicket();
+                return;
+            }
             alert({ message: "Por favor, seleccione un Centro de Atención (CAS) primero." });
             return;
         }
@@ -363,13 +380,9 @@ export default function ValuationsPage() {
                         className="w-full bg-background border border-border rounded-lg pl-9 pr-3 h-11 text-sm font-medium focus:ring-2 focus:ring-primary/10 focus:border-primary outline-none transition-all" 
                         value={globalSearch} 
                         onChange={(e) => setGlobalSearch(e.target.value)}
-                        onKeyDown={async (e) => {
+                        onKeyDown={(e) => {
                             if (e.key === 'Enter' && globalSearch) {
-                                setIsSearchingGlobal(true);
-                                try {
-                                    const result = await ApiClient.request(`/tickets/find/${globalSearch}`);
-                                    setGlobalSearchResult(result);
-                                } catch (err) { setGlobalSearchResult({ error: 'Ticket no encontrado' }); } finally { setIsSearchingGlobal(false); }
+                                handleSearchTicket();
                             }
                         }}
                     />
