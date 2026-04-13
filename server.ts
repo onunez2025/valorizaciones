@@ -458,12 +458,19 @@ app.get('/api/closures/:id/details', verifyToken, async (req: Request, res: Resp
             .input('id', id)
             .query(`
                 SELECT 
-                    d.*,
+                    d.ID, 
+                    d.Ticket, 
+                    d.Tipo, 
+                    d.Servicio_Nombre, 
+                    d.Categoria, 
+                    d.Monto,
+                    d.Fecha_Ticket,
                     ISNULL(d.Fecha_Visita, s.FechaVisita) as Fecha_Visita,
                     ISNULL(d.Fecha_Cierre, s.CheckOut) as Fecha_Cierre,
                     ISNULL(d.Dias_Diferencia, DATEDIFF(day, s.FechaVisita, s.CheckOut)) as Dias_Diferencia,
                     COALESCE(NULLIF(d.Codigo_Externo, ''), s.CodigoExternoEquipo) as Codigo_Externo,
-                    d.Tarifa_Base, d.Adicionales, d.Monto
+                    ISNULL(d.Tarifa_Base, d.Monto) as Tarifa_Base,
+                    ISNULL(d.Adicionales, 0) as Adicionales
                 FROM [dbo].[GAC_APP_TB_VALORIZACIONES_DETALLE] d
                 LEFT JOIN [APPGAC].[ServiciosViewSQL] s ON d.Ticket = s.Ticket AND d.Tipo = 'SERVICIO'
                 WHERE d.IdCierre = @id
