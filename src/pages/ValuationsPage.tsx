@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Search, Filter, Calendar, ChevronRight, Calculator, Download, AlertTriangle, CheckCircle2, FileText, X, ChevronDown, Briefcase, Building2, Check, Activity, AlertCircle, Lock, ArrowUpDown, Package, History, BarChart2, Eye } from 'lucide-react';
 import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 import { ApiClient } from '../services/apiClient';
 import type { CAS, ValuationTicket, Penalty } from '../types';
 import { cn } from '../utils/cn';
@@ -278,125 +279,200 @@ export default function ValuationsPage() {
         setExpandedDates(prev => prev.includes(date) ? prev.filter(d => d !== date) : [...prev, date]);
     };
 
-    const handleExportExcel = () => {
+    const handleExportExcel = async () => {
         if (!selectedCas || tickets.length === 0) return;
-        const summaryData = [
-            ["REPORTE DE VALORIZACIÓN QUINCENAL"],
-            ["CAS:", selectedCas.Nombre_CAS],
-            ["RUC:", selectedCas.RUC],
-            ["Periodo:", `${startDate} al ${endDate}`],
-            [""],
-            ["CONCEPTO", "CANTIDAD", "SUBTOTAL"],
-            ["Servicios de Instalación/Reparación", tickets.filter(t => isValuable(t.CodigoEquipo)).length, totalTickets],
-            ["Servicios Exentos", tickets.filter(t => !isValuable(t.CodigoEquipo)).length, 0],
-            ["Penalidades y Descuentos", penalties.length, -totalPenalties],
-            [""],
-            ["TOTAL NETO A PAGAR", "", grandTotal]
+        const workbook = new ExcelJS.Workbook();
+        const sheetResumen = workbook.addWorksheet('Resumen');
+        const sheetDetalle = workbook.addWorksheet('Detalle Servicios');
+        const sheetPenalties = workbook.addWorksheet('Detalle Penalidades');
+
+        // --- HOJA RESUMEN ---
+        sheetResumen.columns = [{ width: 40 }, { width: 15 }, { width: 20 }];
+        const titleCell = sheetResumen.getCell('A1');
+        titleCell.value = 'LIQUIDACIÓN PREVIA DE VALORIZACIÓN';
+        titleCell.font = { name: 'Arial Black', size: 14, color: { argb: 'FFFFFFFF' } };
+        titleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E3A8A' } };
+        titleCell.alignment = { horizontal: 'center' };
+        sheetResumen.mergeCells('A1:C1');
+
+        const info = [['CAS:', selectedCas.Nombre_CAS], ['RUC:', selectedCas.RUC], ['Periodo:', `${startDate} al ${endDate}`]];
+        info.forEach((row, i) => {
+            const r = sheetResumen.getRow(i + 3);
+            r.getCell(1).value = row[0]; r.getCell(1).font = { bold: true };
+            r.getCell(2).value = row[1];
+            sheetResumen.mergeCells(`B${i + 3}:C${i + 3}`);
+        });
+
+        const summaryRows = [
+            ['CONCEPTO', 'CANTIDAD', 'SUBTOTAL'],
+            ['Servicios de Instalación/Reparación', tickets.filter(t => isValuable(t.CodigoEquipo)).length, totalTickets],
+            ['Servicios Exentos', tickets.filter(t => !isValuable(t.CodigoEquipo)).length, 0],
+            ['Penalidades y Descuentos', penalties.length, -totalPenalties],
+            ['TOTAL NETO A PAGAR', '', grandTotal]
         ];
-        const servicesData = [
-            ["TICKET", "Fecha Visita", "FECHA CIERRE", "Dias Diferencia", "SERVICIO", "Codigo Externo", "CATEGORÍA", "TARIFA BASE", "ADICIONALES", "TOTAL"],
-            ...tickets.map(t => [
-                t.Ticket, 
-                t.FechaVisita ? new Date(t.FechaVisita).toLocaleDateString('es-PE', { timeZone: 'UTC' }) : '-', 
-                t.FechaCierre ? new Date(t.FechaCierre).toLocaleDateString('es-PE', { timeZone: 'UTC' }) : new Date(t.Fecha).toLocaleDateString('es-PE', { timeZone: 'UTC' }),
+
+        summaryRows.forEach((row, i) => {
+            const r = sheetResumen.getRow(i + 8);
+            r.values = row;
+            if (i === 0) {
+                r.eachCell(c => { c.font = { bold: true, color: { argb: 'FFFFFFFF' } }; c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E3A8A' } }; });
+            }
+            if (i === 4) {
+                r.eachCell(c => { c.font = { bold: true }; c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF3F4F6' } }; });
+            }
+            r.getCell(3).numFmt = '"S/" #,##0.00';
+            r.eachCell(c => { c.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} }; });
+        });
+
+        // --- HOJA DETALLE ---
+        const dHeaders = ["TICKET", "FECHA VISITA", "FECHA CIERRE", "DÍAS DIF.", "SERVICIO", "CÓD. EQUIPO", "CATEGORÍA", "TARIFA BASE", "ADICIONALES", "TOTAL"];
+        sheetDetalle.getRow(1).values = dHeaders;
+        sheetDetalle.getRow(1).eachCell(c => {
+            c.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+            c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E3A8A' } };
+            c.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
+        });
+
+        tickets.forEach(t => {
+            const row = sheetDetalle.addRow([
+                t.Ticket,
+                t.FechaVisita ? new Date(t.FechaVisita) : null,
+                t.FechaCierre ? new Date(t.FechaCierre) : new Date(t.Fecha),
                 t.DiasDiferencia ?? '-',
-                t.ServicioNombre || t.Servicio, 
+                t.ServicioNombre || t.Servicio,
                 t.CodigoEquipo || '-',
-                t.Categoria, 
-                t.TarifaBase, 
-                (t.Adicionales || 0), 
+                t.Categoria,
+                t.TarifaBase,
+                t.Adicionales || 0,
                 (t.TarifaBase + (t.Adicionales || 0))
-            ])
-        ];
-        const penaltiesData = [
-            ["ID", "FECHA", "MOTIVO", "DESCRIPCIÓN", "TICKET REF.", "ESTADO", "IMPORTE"],
-            ...penalties.map(p => [p.Id, new Date(p.Fecha).toLocaleDateString('es-PE', { timeZone: 'UTC' }), p.Motivo, p.Descripcion, p.Ticket || '-', p.Estado, -p.Importe])
-        ];
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(summaryData), "Resumen");
-        XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(servicesData), "Detalle Servicios");
-        XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(penaltiesData), "Detalle Penalidades");
-        XLSX.writeFile(wb, `Valorizacion_${selectedCas.Nombre_CAS.replace(/\s/g, '_')}_${startDate}.xlsx`);
+            ]);
+            row.getCell(2).numFmt = 'dd/mm/yyyy';
+            row.getCell(3).numFmt = 'dd/mm/yyyy';
+            row.getCell(8).numFmt = '"S/" #,##0.00';
+            row.getCell(9).numFmt = '"S/" #,##0.00';
+            row.getCell(10).numFmt = '"S/" #,##0.00';
+            if ((t.DiasDiferencia || 0) > 1) {
+                row.getCell(4).font = { color: { argb: 'FFFF0000' }, bold: true };
+            }
+            row.eachCell(c => { c.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} }; });
+        });
+        sheetDetalle.autoFilter = { from: 'A1', to: 'J1' };
+        sheetDetalle.columns.forEach(col => { col.width = 18; });
+
+        // --- HOJA PENALIDADES ---
+        const pHeaders = ["ID", "FECHA", "MOTIVO", "DESCRIPCIÓN", "TICKET REF.", "ESTADO", "IMPORTE"];
+        sheetPenalties.getRow(1).values = pHeaders;
+        sheetPenalties.getRow(1).eachCell(c => {
+            c.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+            c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E3A8A' } };
+        });
+        penalties.forEach(p => {
+            const row = sheetPenalties.addRow([p.Id, new Date(p.Fecha), p.Motivo, p.Descripcion, p.Ticket || '-', p.Estado, -p.Importe]);
+            row.getCell(2).numFmt = 'dd/mm/yyyy';
+            row.getCell(7).numFmt = '"S/" #,##0.00';
+            row.eachCell(c => { c.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} }; });
+        });
+        sheetPenalties.columns.forEach(col => { col.width = 18; });
+
+        const buffer = await workbook.xlsx.writeBuffer();
+        const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Pre_Valorizacion_${selectedCas.Nombre_CAS.replace(/\s/g, '_')}.xlsx`;
+        a.click();
     };
     
-    const handleExportClosureExcel = () => {
+    const handleExportClosureExcel = async () => {
         if (!selectedClosure || closureDetails.length === 0) return;
         
         const services = closureDetails.filter(d => d.Tipo === 'SERVICIO');
         const penalties = closureDetails.filter(d => d.Tipo === 'PENALIDAD');
 
-        // Calcular desglose diario para la pestaña de resumen
-        const dailyMap: Record<string, { count: number, sum: number }> = {};
-        services.forEach(s => {
-            const dateStr = s.FechaCierre ? new Date(s.FechaCierre).toLocaleDateString('es-PE', { timeZone: 'UTC' }) : new Date(s.Fecha_Ticket).toLocaleDateString('es-PE', { timeZone: 'UTC' });
-            if (!dailyMap[dateStr]) dailyMap[dateStr] = { count: 0, sum: 0 };
-            dailyMap[dateStr].count++;
-            dailyMap[dateStr].sum += s.Monto;
+        const workbook = new ExcelJS.Workbook();
+        const sheetResumen = workbook.addWorksheet('Resumen');
+        const sheetDetalle = workbook.addWorksheet('Historial Servicios');
+        const sheetPenalties = workbook.addWorksheet('Historial Penalidades');
+
+        // --- HOJA RESUMEN ---
+        sheetResumen.columns = [{ width: 40 }, { width: 15 }, { width: 25 }];
+        const titleCell = sheetResumen.getCell('A1');
+        titleCell.value = 'CIERRE FINAL DE VALORIZACIÓN';
+        titleCell.font = { name: 'Arial Black', size: 16, color: { argb: 'FFFFFFFF' } };
+        titleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E3A8A' } };
+        titleCell.alignment = { horizontal: 'center' };
+        sheetResumen.mergeCells('A1:C1');
+
+        const info = [
+            ['CÓDIGO:', selectedClosure.Codigo_Valorizacion],
+            ['CAS:', selectedClosure.Nombre_CAS],
+            ['Periodo:', `${new Date(selectedClosure.Fecha_Inicio).toLocaleDateString()} al ${new Date(selectedClosure.Fecha_Fin).toLocaleDateString()}`],
+            ['Total Liquidado:', selectedClosure.Total_Final]
+        ];
+
+        info.forEach((row, i) => {
+            const r = sheetResumen.getRow(i + 3);
+            r.getCell(1).value = row[0];
+            r.getCell(1).font = { bold: true };
+            r.getCell(2).value = row[1];
+            if (i === 3) r.getCell(2).numFmt = '"S/" #,##0.00';
+            sheetResumen.mergeCells(`B${i + 3}:C${i+3}`);
         });
 
-        const breakdownRows = Object.entries(dailyMap)
-            .sort((a, b) => {
-                const [d1, m1, y1] = a[0].split('/').map(Number);
-                const [d2, m2, y2] = b[0].split('/').map(Number);
-                return new Date(y1, m1 - 1, d1).getTime() - new Date(y2, m2 - 1, d2).getTime();
-            })
-            .map(([date, data]) => [
-                date, 
-                data.count, 
-                `S/ ${data.sum.toLocaleString('en-US', { minimumFractionDigits: 2 })}`
-            ]);
+        const tableHeader = sheetResumen.getRow(9);
+        tableHeader.values = ['CONCEPTO', 'CANTIDAD', 'TOTAL'];
+        tableHeader.eachCell(c => { c.font = { bold: true, color: { argb: 'FFFFFFFF' } }; c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E3A8A' } }; });
 
-        const summaryData = [
-            ["REPORTE DE CIERRE DE VALORIZACIÓN", ""],
-            ["CÓDIGO:", selectedClosure.Codigo_Valorizacion],
-            ["CAS:", selectedClosure.Nombre_CAS],
-            ["Periodo:", `${new Date(selectedClosure.Fecha_Inicio).toLocaleDateString()} al ${new Date(selectedClosure.Fecha_Fin).toLocaleDateString()}`],
-            ["Cerrado Por:", selectedClosure.Cerrado_Por],
-            ["Fecha de Cierre:", new Date(selectedClosure.Cerrado_El).toLocaleString()],
-            [],
-            ["CONCEPTO", "CANTIDAD", "TOTAL"],
-            ["Servicios Realizados", services.length, `S/ ${selectedClosure.Subtotal_Servicios.toLocaleString('en-US', { minimumFractionDigits: 2 })}`],
-            ["Penalidades y Descuentos", penalties.length, `-S/ ${selectedClosure.Subtotal_Penalidades.toLocaleString('en-US', { minimumFractionDigits: 2 })}`],
-            ["TOTAL LIQUIDADO", "", `S/ ${selectedClosure.Total_Final.toLocaleString('en-US', { minimumFractionDigits: 2 })}`],
-            [],
-            [],
-            ["Etiquetas de fila", "Cuenta de TICKET", "Suma de MONTO"],
-            ...breakdownRows,
-            ["Total general", services.length, `S/ ${selectedClosure.Subtotal_Servicios.toLocaleString('en-US', { minimumFractionDigits: 2 })}`]
+        const rows = [
+            ['Servicios Realizados', services.length, selectedClosure.Subtotal_Servicios],
+            ['Penalidades Aplicadas', penalties.length, -selectedClosure.Subtotal_Penalidades],
+            ['TOTAL NETO', '', selectedClosure.Total_Final]
         ];
 
-        const servicesData = [
-            ["TICKET", "Fecha Visita", "FECHA CIERRE", "Dias Diferencia", "SERVICIO", "Codigo Externo", "CATEGORÍA", "TARIFA BASE", "ADICIONALES", "TOTAL"],
-            ...services.map(s => [
-                s.Ticket,
-                s.FechaVisita ? new Date(s.FechaVisita).toLocaleDateString('es-PE', { timeZone: 'UTC' }) : '-',
-                s.FechaCierre ? new Date(s.FechaCierre).toLocaleDateString('es-PE', { timeZone: 'UTC' }) : '-',
-                s.DiasDiferencia ?? '-',
-                s.Servicio_Nombre,
-                s.CodigoExterno || '-',
-                s.Categoria,
-                s.Tarifa_Base ?? s.Monto,
-                s.Adicionales ?? 0,
-                s.Monto
-            ])
-        ];
+        rows.forEach((row, i) => {
+            const r = sheetResumen.getRow(10 + i);
+            r.values = row;
+            r.getCell(3).numFmt = '"S/" #,##0.00';
+            r.eachCell(c => { c.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} }; });
+        });
 
-        const penaltiesData = [
-            ["TICKET", "FECHA TICKET", "MOTIVO / DESCRIPCIÓN", "CATEGORÍA", "IMPORTE"],
-            ...penalties.map(p => [
-                p.Ticket,
-                new Date(p.Fecha_Ticket).toLocaleDateString('es-PE', { timeZone: 'UTC' }),
-                p.Servicio_Nombre,
-                p.Categoria,
-                p.Monto
-            ])
-        ];
+        // --- HOJA SERVICIOS ---
+        const sHeaders = ["TICKET", "FECHA VISITA", "FECHA CIERRE", "DÍAS DIF.", "SERVICIO", "CÓD. EQUIPO", "CATEGORÍA", "TARIFA BASE", "ADICIONALES", "TOTAL"];
+        sheetDetalle.getRow(1).values = sHeaders;
+        sheetDetalle.getRow(1).eachCell(c => { c.font = { bold: true, color: { argb: 'FFFFFFFF' } }; c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E3A8A' } }; });
+        
+        services.forEach(s => {
+            const row = sheetDetalle.addRow([s.Ticket, s.Fecha_Visita ? new Date(s.Fecha_Visita) : null, s.Fecha_Cierre ? new Date(s.Fecha_Cierre) : null, s.Dias_Diferencia, s.Servicio_Nombre, s.Codigo_Externo, s.Categoria, s.Tarifa_Base, s.Adicionales, s.Monto]);
+            row.getCell(2).numFmt = 'dd/mm/yyyy';
+            row.getCell(3).numFmt = 'dd/mm/yyyy';
+            row.getCell(8).numFmt = '"S/" #,##0.00';
+            row.getCell(9).numFmt = '"S/" #,##0.00';
+            row.getCell(10).numFmt = '"S/" #,##0.00';
+            row.eachCell(c => { c.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} }; });
+        });
+        sheetDetalle.autoFilter = { from: 'A1', to: 'J1' };
+        sheetDetalle.columns.forEach(col => { col.width = 15; });
 
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(summaryData), "Resumen");
-        XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(servicesData), "Servicios");
-        XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(penaltiesData), "Penalidades");
-        XLSX.writeFile(wb, `Cierre_${selectedClosure.Codigo_Valorizacion}_${selectedClosure.Nombre_CAS.replace(/\s/g, '_')}.xlsx`);
+        // --- HOJA PENALIDADES ---
+        const pHeaders = ["TICKET", "FECHA", "MOTIVO", "CATEGORÍA", "IMPORTE"];
+        sheetPenalties.getRow(1).values = pHeaders;
+        sheetPenalties.getRow(1).eachCell(c => { c.font = { bold: true, color: { argb: 'FFFFFFFF' } }; c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E3A8A' } }; });
+        
+        penalties.forEach(p => {
+            const row = sheetPenalties.addRow([p.Ticket, new Date(p.Fecha_Ticket), p.Servicio_Nombre, p.Categoria, -p.Monto]);
+            row.getCell(2).numFmt = 'dd/mm/yyyy';
+            row.getCell(5).numFmt = '"S/" #,##0.00';
+            row.eachCell(c => { c.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} }; });
+        });
+        sheetPenalties.columns.forEach(col => { col.width = 20; });
+
+        const buffer = await workbook.xlsx.writeBuffer();
+        const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Cierre_${selectedClosure.Codigo_Valorizacion}.xlsx`;
+        a.click();
     };
 
 
