@@ -607,6 +607,8 @@ export default function ValuationsPage() {
                                                                                             <td className="px-6 py-4 text-right">
                                                                                                 {!isValuable(ticket.CodigoEquipo) ? (
                                                                                                     <span className="text-[10px] font-bold text-muted-foreground/40 italic">Exento</span>
+                                                                                                ) : (ticket.ServicioNombre || '').toLowerCase().includes('visita') ? (
+                                                                                                    <span className="text-[10px] font-bold text-muted-foreground/40 italic">Visita (S/ 0.00)</span>
                                                                                                 ) : ticket.Categoria === 'N/A' ? (
                                                                                                     (ticket.DiasDiferencia || 0) >= 3 ? (
                                                                                                         <span className="text-[10px] font-bold text-red-500 italic">Fuera de tiempo</span>
