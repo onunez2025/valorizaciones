@@ -259,7 +259,7 @@ export default function ValuationsPage() {
             };
         }
         acc[dateStr].count += 1;
-        if (ticket.TarifaBase === 0 && isValuable(ticket.CodigoEquipo) && (ticket.DiasDiferencia || 0) < 3 && !(ticket.ServicioNombre || '').toLowerCase().includes('visita')) {
+        if (ticket.TarifaBase === 0 && isValuable(ticket.CodigoEquipo) && (ticket.DiasDiferencia || 0) < 2 && !(ticket.ServicioNombre || '').toLowerCase().includes('visita')) {
             acc[dateStr].zeroPriceCount += 1;
         }
         acc[dateStr].totalBase += ticket.TarifaBase;
@@ -772,7 +772,7 @@ export default function ValuationsPage() {
                                                                                                 <td className="px-2 py-4 text-center">
                                                                                                     <span className={cn(
                                                                                                         "px-2 py-0.5 rounded text-[10px] font-black",
-                                                                                                        (ticket.DiasDiferencia || 0) > 2 ? "bg-red-100 text-red-700" : "bg-blue-100 text-blue-700"
+                                                                                                        (ticket.DiasDiferencia || 0) > 1 ? "bg-red-100 text-red-700" : "bg-blue-100 text-blue-700"
                                                                                                     )}>
                                                                                                         {ticket.DiasDiferencia ?? '-'}
                                                                                                     </span>
@@ -798,7 +798,7 @@ export default function ValuationsPage() {
                                                                                                     ) : (ticket.ServicioNombre || '').toLowerCase().includes('visita') ? (
                                                                                                         <span className="text-[10px] font-bold text-muted-foreground/40 italic">Visita (S/ 0.00)</span>
                                                                                                     ) : ticket.Categoria === 'N/A' ? (
-                                                                                                        (ticket.DiasDiferencia || 0) >= 3 ? (
+                                                                                                        (ticket.DiasDiferencia || 0) >= 2 ? (
                                                                                                             <span className="text-[10px] font-bold text-red-500 italic">Fuera de tiempo</span>
                                                                                                         ) : (
                                                                                                             <button 

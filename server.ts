@@ -176,7 +176,7 @@ app.get('/api/valuations/:ruc', verifyToken, async (req: Request, res: Response)
                     ISNULL(m.Categoria, 'N/A') as Categoria,
                     CASE 
                         WHEN UPPER(TRIM(s.Servicio)) = 'VISITA' THEN 0
-                        WHEN DATEDIFF(day, s.FechaVisita, s.CheckOut) > 2 THEN 0 
+                        WHEN DATEDIFF(day, s.FechaVisita, s.CheckOut) > 1 THEN 0 
                         WHEN LEFT(s.CodigoExternoEquipo, 4) NOT IN ('3120', '3121', '5120', '5121') THEN 0
                         ELSE ISNULL(rate.Importe, 0) 
                     END as TarifaBase,
@@ -681,12 +681,12 @@ app.get('/api/dashboard/stats', verifyToken, async (req: Request, res: Response)
                     Categoria, 
                     SUM(CASE 
                         WHEN s.IdServicio = 'Visita' OR s.Servicio = 'Visita' THEN 0
-                        WHEN DATEDIFF(day, FechaVisita, CheckOut) > 2 THEN 0 
+                        WHEN DATEDIFF(day, FechaVisita, CheckOut) > 1 THEN 0 
                         WHEN LEFT(CodigoExternoEquipo, 4) NOT IN ('3120', '3121', '5120', '5121') THEN 0
                         ELSE 1 
                     END) as CntValidos,
                     SUM(CASE 
-                        WHEN DATEDIFF(day, FechaVisita, CheckOut) > 2 THEN 0 
+                        WHEN DATEDIFF(day, FechaVisita, CheckOut) > 1 THEN 0 
                         WHEN LEFT(CodigoExternoEquipo, 4) NOT IN ('3120', '3121', '5120', '5121') THEN 0
                         ELSE 1 
                     END) as Cnt -- Para compatibilidad
@@ -770,7 +770,7 @@ app.get('/api/dashboard/trends', verifyToken, async (req: Request, res: Response
                     twc.Categoria,
                     SUM(CASE 
                         WHEN twc.IdServicio = 'Visita' OR twc.ServicioNombre = 'Visita' THEN 0
-                        WHEN DATEDIFF(day, twc.FechaVisita, twc.CheckOut) > 2 THEN 0 
+                        WHEN DATEDIFF(day, twc.FechaVisita, twc.CheckOut) > 1 THEN 0 
                         WHEN LEFT(twc.CodigoExternoEquipo, 4) NOT IN ('3120', '3121', '5120', '5121') THEN 0
                         ELSE 1 
                     END) as Cnt
