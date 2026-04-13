@@ -419,19 +419,62 @@ export default function ValuationsPage() {
             sheetResumen.mergeCells(`B${i + 3}:C${i+3}`);
         });
 
-        const tableHeader = sheetResumen.getRow(9);
-        tableHeader.values = ['CONCEPTO', 'CANTIDAD', 'TOTAL'];
-        tableHeader.eachCell(c => { c.font = { bold: true, color: { argb: 'FFFFFFFF' } }; c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E3A8A' } }; });
+        // --- Tabla de Totales ---
+        const tableStartRow = 10;
+        const totalHeader = sheetResumen.getRow(tableStartRow);
+        totalHeader.values = ['CONCEPTO', 'CANTIDAD', 'TOTAL'];
+        totalHeader.eachCell(c => {
+            c.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+            c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E3A8A' } };
+            c.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
+        });
 
-        const rows = [
+        const dataRows = [
             ['Servicios Realizados', services.length, selectedClosure.Subtotal_Servicios],
             ['Penalidades Aplicadas', penalties.length, -selectedClosure.Subtotal_Penalidades],
             ['TOTAL NETO', '', selectedClosure.Total_Final]
         ];
 
-        rows.forEach((row, i) => {
-            const r = sheetResumen.getRow(10 + i);
+        dataRows.forEach((row, i) => {
+            const r = sheetResumen.getRow(tableStartRow + 1 + i);
             r.values = row;
+            r.getCell(3).numFmt = '"S/" #,##0.00';
+            if (i === 2) {
+                r.eachCell(c => { c.font = { bold: true }; c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF3F4F6' } }; });
+            }
+            r.eachCell(c => { c.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} }; });
+        });
+
+        // --- EXCLUSIVO: DESGLOSE DIARIO ---
+        const dailyMap: Record<string, { count: number, sum: number }> = {};
+        services.forEach(s => {
+            const dateStr = s.Fecha_Cierre ? new Date(s.Fecha_Cierre).toLocaleDateString('es-PE', { timeZone: 'UTC' }) : 'Sin Fecha';
+            if (!dailyMap[dateStr]) dailyMap[dateStr] = { count: 0, sum: 0 };
+            dailyMap[dateStr].count++;
+            dailyMap[dateStr].sum += s.Monto;
+        });
+
+        const sortedDays = Object.entries(dailyMap).sort((a,b) => {
+            if (a[0] === 'Sin Fecha') return 1;
+            const [d1, m1, y1] = a[0].split('/').map(Number);
+            const [d2, m2, y2] = b[0].split('/').map(Number);
+            return new Date(y1, m1-1, d1).getTime() - new Date(y2, m2-1, d2).getTime();
+        });
+
+        const dailyStartRow = tableStartRow + 6;
+        const dailyHeader = sheetResumen.getRow(dailyStartRow);
+        dailyHeader.getCell(1).value = 'DESGLOSE DIARIO';
+        dailyHeader.getCell(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+        dailyHeader.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E3A8A' } };
+        sheetResumen.mergeCells(`A${dailyStartRow}:C${dailyStartRow}`);
+
+        const dailyColumns = sheetResumen.getRow(dailyStartRow + 1);
+        dailyColumns.values = ['FECHA', 'TICKETS', 'SUBTOTAL'];
+        dailyColumns.eachCell(c => { c.font = { bold: true }; c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF3F4F6' } }; c.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} }; });
+
+        sortedDays.forEach(([date, data], i) => {
+            const r = sheetResumen.getRow(dailyStartRow + 2 + i);
+            r.values = [date, data.count, data.sum];
             r.getCell(3).numFmt = '"S/" #,##0.00';
             r.eachCell(c => { c.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} }; });
         });
