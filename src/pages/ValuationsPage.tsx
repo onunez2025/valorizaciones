@@ -11,7 +11,7 @@ import TarifarioModal from '../components/tarifario/TarifarioModal';
 import MaterialRegisterModal from '../components/materials/MaterialRegisterModal';
 import { Modal } from '../components/common/Modal';
 
-const isValuable = (code?: string) => code?.startsWith('3120') || code?.startsWith('3121');
+const isValuable = (code?: string) => ['3120', '3121', '5120', '5121'].some(prefix => code?.startsWith(prefix));
 
 export default function ValuationsPage() {
     const { alert } = useDialog();
