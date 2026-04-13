@@ -328,7 +328,7 @@ export default function ValuationsPage() {
         // Calcular desglose diario para la pestaña de resumen
         const dailyMap: Record<string, { count: number, sum: number }> = {};
         services.forEach(s => {
-            const dateStr = s.FechaVisita ? new Date(s.FechaVisita).toLocaleDateString('es-PE', { timeZone: 'UTC' }) : new Date(s.Fecha_Ticket).toLocaleDateString('es-PE', { timeZone: 'UTC' });
+            const dateStr = s.FechaCierre ? new Date(s.FechaCierre).toLocaleDateString('es-PE', { timeZone: 'UTC' }) : new Date(s.Fecha_Ticket).toLocaleDateString('es-PE', { timeZone: 'UTC' });
             if (!dailyMap[dateStr]) dailyMap[dateStr] = { count: 0, sum: 0 };
             dailyMap[dateStr].count++;
             dailyMap[dateStr].sum += s.Monto;
