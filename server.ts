@@ -458,7 +458,7 @@ app.get('/api/closures/:id/details', verifyToken, async (req: Request, res: Resp
             .input('id', id)
             .query(`
                 SELECT 
-                    d.ID, 
+                    d.IdDetalle, 
                     d.Ticket, 
                     d.Tipo, 
                     d.Servicio_Nombre, 
