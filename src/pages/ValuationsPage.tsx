@@ -13,6 +13,7 @@ import { Modal } from '../components/common/Modal';
 
 const isValuable = (code?: string) => ['3120', '3121', '5120', '5121'].some(prefix => code?.startsWith(prefix));
 
+// Version 1.0.1 - Fix Timezone UTC
 export default function ValuationsPage() {
     const { alert } = useDialog();
     const [casList, setCasList] = useState<CAS[]>([]);
