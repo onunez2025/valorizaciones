@@ -608,19 +608,27 @@ export default function ValuationsPage() {
                                                                                                 {!isValuable(ticket.CodigoEquipo) ? (
                                                                                                     <span className="text-[10px] font-bold text-muted-foreground/40 italic">Exento</span>
                                                                                                 ) : ticket.Categoria === 'N/A' ? (
-                                                                                                    <button 
-                                                                                                        onClick={() => handleOpenMaterialModal(ticket)} 
-                                                                                                        className="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-[9px] font-black hover:scale-105 active:scale-95 transition-all shadow-md shadow-indigo-600/20 flex items-center gap-1.5"
-                                                                                                    >
-                                                                                                        <Package className="w-3 h-3" /> Registrar Prod.
-                                                                                                    </button>
+                                                                                                    (ticket.DiasDiferencia || 0) >= 3 ? (
+                                                                                                        <span className="text-[10px] font-bold text-red-500 italic">Fuera de tiempo</span>
+                                                                                                    ) : (
+                                                                                                        <button 
+                                                                                                            onClick={() => handleOpenMaterialModal(ticket)} 
+                                                                                                            className="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-[9px] font-black hover:scale-105 active:scale-95 transition-all shadow-md shadow-indigo-600/20 flex items-center gap-1.5"
+                                                                                                        >
+                                                                                                            <Package className="w-3 h-3" /> Registrar Prod.
+                                                                                                        </button>
+                                                                                                    )
                                                                                                 ) : ticket.TarifaBase === 0 ? (
-                                                                                                    <button 
-                                                                                                        onClick={() => handleOpenTarifarioModal(ticket)} 
-                                                                                                        className="px-3 py-1.5 bg-amber-500 text-white rounded-lg text-[9px] font-black hover:scale-105 active:scale-95 transition-all shadow-md shadow-amber-500/20"
-                                                                                                    >
-                                                                                                        Vincular Tarifa
-                                                                                                    </button>
+                                                                                                    (ticket.DiasDiferencia || 0) >= 3 ? (
+                                                                                                        <span className="font-bold text-sm tracking-tighter text-red-500">S/ 0.00</span>
+                                                                                                    ) : (
+                                                                                                        <button 
+                                                                                                            onClick={() => handleOpenTarifarioModal(ticket)} 
+                                                                                                            className="px-3 py-1.5 bg-amber-500 text-white rounded-lg text-[9px] font-black hover:scale-105 active:scale-95 transition-all shadow-md shadow-amber-500/20"
+                                                                                                        >
+                                                                                                            Vincular Tarifa
+                                                                                                        </button>
+                                                                                                    )
                                                                                                 ) : (
                                                                                                     <span className="font-bold text-sm tracking-tighter text-foreground/80">
                                                                                                         S/ {(ticket.TarifaBase + (ticket.Adicionales || 0)).toLocaleString('es-PE', { minimumFractionDigits: 2 })}
