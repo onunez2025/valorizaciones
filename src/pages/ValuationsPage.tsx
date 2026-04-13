@@ -311,6 +311,57 @@ export default function ValuationsPage() {
         XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(penaltiesData), "Detalle Penalidades");
         XLSX.writeFile(wb, `Valorizacion_${selectedCas.Nombre_CAS.replace(/\s/g, '_')}_${startDate}.xlsx`);
     };
+    
+    const handleExportClosureExcel = () => {
+        if (!selectedClosure || closureDetails.length === 0) return;
+        
+        const services = closureDetails.filter(d => d.Tipo === 'SERVICIO');
+        const penalties = closureDetails.filter(d => d.Tipo === 'PENALIDAD');
+
+        const summaryData = [
+            ["REPORTE DE CIERRE DE VALORIZACIÓN"],
+            ["CÓDIGO:", selectedClosure.Codigo_Valorizacion],
+            ["CAS:", selectedClosure.Nombre_CAS],
+            ["Periodo:", `${new Date(selectedClosure.Fecha_Inicio).toLocaleDateString()} al ${new Date(selectedClosure.Fecha_Fin).toLocaleDateString()}`],
+            ["Cerrado Por:", selectedClosure.Cerrado_Por],
+            ["Fecha de Cierre:", new Date(selectedClosure.Cerrado_El).toLocaleString()],
+            [""],
+            ["CONCEPTO", "CANTIDAD", "TOTAL"],
+            ["Servicios Realizados", services.length, selectedClosure.Subtotal_Servicios],
+            ["Penalidades y Descuentos", penalties.length, -selectedClosure.Subtotal_Penalidades],
+            [""],
+            ["TOTAL LIQUIDADO", "", selectedClosure.Total_Final]
+        ];
+
+        const servicesData = [
+            ["TICKET", "FECHA TICKET", "DESCRIPCIÓN", "CATEGORÍA", "MONTO"],
+            ...services.map(s => [
+                s.Ticket,
+                new Date(s.Fecha_Ticket).toLocaleDateString(),
+                s.Servicio_Nombre,
+                s.Categoria,
+                s.Monto
+            ])
+        ];
+
+        const penaltiesData = [
+            ["TICKET", "FECHA TICKET", "MOTIVO / DESCRIPCIÓN", "CATEGORÍA", "IMPORTE"],
+            ...penalties.map(p => [
+                p.Ticket,
+                new Date(p.Fecha_Ticket).toLocaleDateString(),
+                p.Servicio_Nombre,
+                p.Categoria,
+                p.Monto
+            ])
+        ];
+
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(summaryData), "Resumen");
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(servicesData), "Servicios");
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(penaltiesData), "Penalidades");
+        XLSX.writeFile(wb, `Cierre_${selectedClosure.Codigo_Valorizacion}_${selectedClosure.Nombre_CAS.replace(/\s/g, '_')}.xlsx`);
+    };
+
 
     const handleOpenTarifarioModal = (ticket: ValuationTicket) => {
         setShowTarifarioModal({
@@ -862,8 +913,18 @@ export default function ValuationsPage() {
                                     </button>
                                 )}
                             </div>
-
-                            <button onClick={() => { setSelectedClosure(null); setDetailSearchQuery(''); setDetailActiveTab('services'); }} className="p-3 bg-white border border-border rounded-2xl hover:bg-muted transition-all"><X className="w-5 h-5" /></button>
+                            <div className="flex items-center gap-3">
+                                <button 
+                                    onClick={handleExportClosureExcel}
+                                    className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 text-white rounded-xl text-xs font-black hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-600/20"
+                                >
+                                    <Download className="w-4 h-4" /> Exportar Excel
+                                </button>
+                                
+                                <button onClick={() => { setSelectedClosure(null); setDetailSearchQuery(''); setDetailActiveTab('services'); }} className="p-3 bg-white border border-border rounded-2xl hover:bg-muted transition-all">
+                                    <X className="w-5 h-5" />
+                                </button>
+                            </div>
                         </div>
                         
                         <div className="px-8 bg-slate-50 border-b border-border/50 flex">
