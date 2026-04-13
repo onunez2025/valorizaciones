@@ -11,6 +11,8 @@ import TarifarioModal from '../components/tarifario/TarifarioModal';
 import MaterialRegisterModal from '../components/materials/MaterialRegisterModal';
 import { Modal } from '../components/common/Modal';
 
+const isValuable = (code?: string) => code?.startsWith('3120') || code?.startsWith('3121');
+
 export default function ValuationsPage() {
     const { alert } = useDialog();
     const [casList, setCasList] = useState<CAS[]>([]);
@@ -138,7 +140,7 @@ export default function ValuationsPage() {
         cas.RUC.includes(searchQuery)
     );
 
-    const totalTickets = tickets.reduce((sum, t) => sum + (t.TarifaBase + (t.Adicionales || 0)), 0);
+    const totalTickets = tickets.reduce((sum, t) => sum + (isValuable(t.CodigoEquipo) ? (t.TarifaBase + (t.Adicionales || 0)) : 0), 0);
     const totalPenalties = penalties.reduce((sum, p) => sum + p.Importe, 0);
     const grandTotal = totalTickets - totalPenalties;
 
@@ -185,7 +187,7 @@ export default function ValuationsPage() {
             };
         }
         acc[dateStr].count += 1;
-        if (ticket.TarifaBase === 0) {
+        if (ticket.TarifaBase === 0 && isValuable(ticket.CodigoEquipo)) {
             acc[dateStr].zeroPriceCount += 1;
         }
         acc[dateStr].totalBase += ticket.TarifaBase;
@@ -213,7 +215,8 @@ export default function ValuationsPage() {
             ["Periodo:", `${startDate} al ${endDate}`],
             [""],
             ["CONCEPTO", "CANTIDAD", "SUBTOTAL"],
-            ["Servicios de Instalación/Reparación", tickets.length, totalTickets],
+            ["Servicios de Instalación/Reparación", tickets.filter(t => isValuable(t.CodigoEquipo)).length, totalTickets],
+            ["Servicios Exentos", tickets.filter(t => !isValuable(t.CodigoEquipo)).length, 0],
             ["Penalidades y Descuentos", penalties.length, -totalPenalties],
             [""],
             ["TOTAL NETO A PAGAR", "", grandTotal]
@@ -602,7 +605,9 @@ export default function ValuationsPage() {
                                                                                                 </div>
                                                                                             </td>
                                                                                             <td className="px-6 py-4 text-right">
-                                                                                                {ticket.Categoria === 'N/A' ? (
+                                                                                                {!isValuable(ticket.CodigoEquipo) ? (
+                                                                                                    <span className="text-[10px] font-bold text-muted-foreground/40 italic">Exento</span>
+                                                                                                ) : ticket.Categoria === 'N/A' ? (
                                                                                                     <button 
                                                                                                         onClick={() => handleOpenMaterialModal(ticket)} 
                                                                                                         className="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-[9px] font-black hover:scale-105 active:scale-95 transition-all shadow-md shadow-indigo-600/20 flex items-center gap-1.5"

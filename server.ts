@@ -175,9 +175,13 @@ app.get('/api/valuations/:ruc', verifyToken, async (req: Request, res: Response)
                     ISNULL(m.Categoria, 'N/A') as Categoria,
                     CASE 
                         WHEN DATEDIFF(day, s.FechaVisita, s.CheckOut) > 2 THEN 0 
+                        WHEN LEFT(s.CodigoExternoEquipo, 4) NOT IN ('3120', '3121') THEN 0
                         ELSE ISNULL(rate.Importe, 0) 
                     END as TarifaBase,
-                    ISNULL((SELECT SUM(CAST(Importe AS FLOAT)) FROM [dbo].[GAC_APP_TB_TICKETS_VALORIZACION_ADICIONAL] WHERE Ticket = s.Ticket), 0) as Adicionales
+                    CASE 
+                        WHEN LEFT(s.CodigoExternoEquipo, 4) NOT IN ('3120', '3121') THEN 0
+                        ELSE ISNULL((SELECT SUM(CAST(Importe AS FLOAT)) FROM [dbo].[GAC_APP_TB_TICKETS_VALORIZACION_ADICIONAL] WHERE Ticket = s.Ticket), 0)
+                    END as Adicionales
                 FROM [APPGAC].[ServiciosViewSQL] s
                 JOIN [dbo].[GAC_APP_TB_CAS] cas ON s.IdCAS = cas.ID_CAS
                 OUTER APPLY (
@@ -582,8 +586,16 @@ app.get('/api/dashboard/stats', verifyToken, async (req: Request, res: Response)
                     ID_CAS, 
                     IdServicio, 
                     Categoria, 
-                    SUM(CASE WHEN DATEDIFF(day, FechaVisita, CheckOut) > 2 THEN 0 ELSE 1 END) as CntValidos,
-                    SUM(CASE WHEN DATEDIFF(day, FechaVisita, CheckOut) > 2 THEN 0 ELSE 1 END) as Cnt -- Para compatibilidad
+                    SUM(CASE 
+                        WHEN DATEDIFF(day, FechaVisita, CheckOut) > 2 THEN 0 
+                        WHEN LEFT(CodigoExternoEquipo, 4) NOT IN ('3120', '3121') THEN 0
+                        ELSE 1 
+                    END) as CntValidos,
+                    SUM(CASE 
+                        WHEN DATEDIFF(day, FechaVisita, CheckOut) > 2 THEN 0 
+                        WHEN LEFT(CodigoExternoEquipo, 4) NOT IN ('3120', '3121') THEN 0
+                        ELSE 1 
+                    END) as Cnt -- Para compatibilidad
                 FROM TicketsCAS
                 GROUP BY ID_CAS, IdServicio, Categoria
             ),
@@ -662,7 +674,11 @@ app.get('/api/dashboard/trends', verifyToken, async (req: Request, res: Response
                     twc.ID_CAS, 
                     twc.IdServicio, 
                     twc.Categoria,
-                    SUM(CASE WHEN DATEDIFF(day, twc.FechaVisita, twc.CheckOut) > 2 THEN 0 ELSE 1 END) as Cnt
+                    SUM(CASE 
+                        WHEN DATEDIFF(day, twc.FechaVisita, twc.CheckOut) > 2 THEN 0 
+                        WHEN LEFT(twc.CodigoExternoEquipo, 4) NOT IN ('3120', '3121') THEN 0
+                        ELSE 1 
+                    END) as Cnt
                 FROM TicketsCAS twc
                 GROUP BY YEAR(twc.CheckOut), MONTH(twc.CheckOut), twc.ID_CAS, twc.IdServicio, twc.Categoria
             ),
