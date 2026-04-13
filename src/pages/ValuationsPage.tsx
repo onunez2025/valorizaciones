@@ -107,6 +107,12 @@ export default function ValuationsPage() {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
+    useEffect(() => {
+        if (viewMode === 'history' && selectedCas) {
+            handleFetchClosures();
+        }
+    }, [viewMode, selectedCas]);
+
     const handleSearchTicket = async () => {
         if (!globalSearch) return;
         setIsSearchingGlobal(true);
@@ -131,10 +137,10 @@ export default function ValuationsPage() {
         }
         setLoadingData(true);
         try {
-            const data = await ApiClient.request(`/valuations/${selectedCas.RUC}?start=${startDate}&end=${endDate}`);
-            setTickets(data);
-            const penaltiesData = await ApiClient.request(`/penalties/${selectedCas.RUC}?start=${startDate}&end=${endDate}`);
-            setPenalties(penaltiesData);
+            await Promise.all([
+                ApiClient.request(`/valuations/${selectedCas.RUC}?start=${startDate}&end=${endDate}`).then(setTickets),
+                ApiClient.request(`/penalties/${selectedCas.RUC}?start=${startDate}&end=${endDate}`).then(setPenalties)
+            ]);
         } catch (error) {
             console.error("Error fetching valuation:", error);
             alert({ message: "No se pudo cargar la información de la valorización." });
