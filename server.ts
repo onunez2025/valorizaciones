@@ -274,13 +274,7 @@ app.post('/api/penalties/:id/status', verifyToken, async (req: Request, res: Res
     } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
-app.post('/api/valuations/close', verifyToken, async (req: Request, res: Response) => {
-    const { ruc, start, end } = req.body;
-    try {
-        // Simulación de cierre
-        res.json({ message: 'Valorización cerrada y reporte enviado satisfactoriamente.' });
-    } catch (err: any) { res.status(500).json({ error: err.message }); }
-});
+
 
 app.get('/api/tickets/find/:ticket', verifyToken, async (req: Request, res: Response) => {
     const { ticket } = req.params;
