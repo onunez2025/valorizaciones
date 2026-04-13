@@ -793,9 +793,19 @@ export default function ValuationsPage() {
                                             <span className="text-sm font-black text-primary bg-primary/5 px-2.5 py-1 rounded-lg">{closure.Codigo_Valorizacion || `ID-${closure.IdCierre}`}</span>
                                             <span className="text-[10px] font-black text-muted-foreground bg-muted px-2 py-0.5 rounded uppercase">Cerrado</span>
                                         </div>
-                                        <div className="space-y-1 mb-6">
+                                        <div className="space-y-1 mb-4">
                                             <h4 className="font-black text-slate-800 text-lg">{closure.Nombre_CAS}</h4>
                                             <p className="text-xs font-bold text-muted-foreground opacity-60">Periodo: {new Date(closure.Fecha_Inicio).toLocaleDateString()} al {new Date(closure.Fecha_Fin).toLocaleDateString()}</p>
+                                        </div>
+                                        <div className="flex gap-6 mb-6 border-t border-border/30 pt-4">
+                                            <div className="flex flex-col">
+                                                <span className="text-[9px] font-black text-muted-foreground opacity-40 uppercase tracking-widest">Servicios</span>
+                                                <span className="text-xs font-black">{closure.Total_Servicios || 0} items</span>
+                                            </div>
+                                            <div className="flex flex-col">
+                                                <span className="text-[9px] font-black text-muted-foreground opacity-40 uppercase tracking-widest">Penalidades</span>
+                                                <span className="text-xs font-black text-red-500">{closure.Total_Penalidades || 0} aplicadas</span>
+                                            </div>
                                         </div>
                                         <div className="flex justify-between items-end">
                                             <div>
@@ -852,6 +862,19 @@ export default function ValuationsPage() {
                             {loadingDetails ? (
                                 <div className="h-64 flex items-center justify-center p-8"><Activity className="w-8 h-8 animate-spin text-primary" /></div>
                             ) : (
+                                <>
+                                <div className="px-8 py-4 bg-muted/5 border-b border-border/30 flex gap-8">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-2 h-2 rounded-full bg-blue-500" />
+                                        <span className="text-[10px] font-black uppercase text-muted-foreground opacity-60">Subtotal Servicios:</span>
+                                        <span className="text-xs font-black">S/ {(selectedClosure.Subtotal_Servicios || 0).toLocaleString()}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-2 h-2 rounded-full bg-red-500" />
+                                        <span className="text-[10px] font-black uppercase text-muted-foreground opacity-60">Total Penalidades:</span>
+                                        <span className="text-xs font-black text-red-600">- S/ {(selectedClosure.Subtotal_Penalidades || 0).toLocaleString()}</span>
+                                    </div>
+                                </div>
                                 <table className="w-full border-separate border-spacing-0">
                                     <thead className="sticky top-0 z-20 bg-white border-b border-border shadow-sm">
                                         <tr className="text-[11px] font-black text-muted-foreground uppercase tracking-widest text-left">
@@ -863,12 +886,16 @@ export default function ValuationsPage() {
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border/10">
-                                        {closureDetails.filter(d => d.Ticket.toString().includes(detailSearchQuery) || d.Servicio_Nombre.toLowerCase().includes(detailSearchQuery.toLowerCase())).map((det) => (
+                                        {closureDetails.filter(d => 
+                                            d.Ticket.toString().includes(detailSearchQuery) || 
+                                            (d.Servicio_Nombre || '').toLowerCase().includes(detailSearchQuery.toLowerCase()) ||
+                                            (d.Tipo || '').toLowerCase().includes(detailSearchQuery.toLowerCase())
+                                        ).map((det) => (
                                             <tr key={det.IdDetalle} className="hover:bg-muted/30 transition-all group/det">
                                                 <td className="px-8 py-4 font-bold text-sm text-primary">{det.Ticket}</td>
                                                 <td className="px-4 py-4 text-xs font-medium">{new Date(det.Fecha_Ticket).toLocaleDateString()}</td>
                                                 <td className="px-4 py-4 text-center">
-                                                    <span className={cn("px-2 py-0.5 rounded text-[10px] font-black uppercase", det.Tipo === 'SERVICIO' ? "bg-blue-100 text-blue-700" : "bg-red-100 text-red-700")}>
+                                                    <span className={cn("px-2 py-0.5 rounded text-[10px] font-black uppercase", det.Tipo === 'SERVICIO' ? "bg-blue-100 text-blue-700" : "bg-red-500 text-white shadow-sm")}>
                                                         {det.Tipo}
                                                     </span>
                                                 </td>
@@ -893,6 +920,7 @@ export default function ValuationsPage() {
                                         )}
                                     </tbody>
                                 </table>
+                                </>
                             )}
                         </div>
                         <div className="p-8 border-t border-border/50 bg-slate-50 flex items-center justify-between">
