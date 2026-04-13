@@ -83,10 +83,10 @@ export default function UsersPage() {
 
     const handleDelete = (id: string) => {
         confirm({
-            title: 'Eliminar Identidad de Acceso',
+            title: 'Eliminar Usuario',
             message: '¿Estás seguro de que deseas eliminar este usuario? El ID de usuario será revocado permanentemente en el sistema de Valorizaciones.',
             type: 'danger',
-            confirmText: 'Revocar Acceso',
+            confirmText: 'Eliminar Usuario',
             onConfirm: async () => {
                 try {
                     await UsersService.deleteUser(id);
@@ -162,7 +162,7 @@ export default function UsersPage() {
                         <ChevronRight className="w-3 h-3 opacity-50" />
                         <span className="text-foreground">Gestión de Usuarios</span>
                     </div>
-                    <h1 className="text-2xl font-bold tracking-tight text-foreground">Identidades de Usuario</h1>
+                    <h1 className="text-2xl font-bold tracking-tight text-foreground">Gestión de Usuarios</h1>
                     <p className="text-sm text-muted-foreground">Administra los permisos y accesos al ecosistema de Valorizaciones</p>
                 </div>
                 {hasPermission('val.config.users') && (
