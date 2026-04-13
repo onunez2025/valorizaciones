@@ -342,7 +342,7 @@ export default function ValuationsPage() {
                 t.ServicioNombre || t.Servicio,
                 t.CodigoEquipo || '-',
                 t.Categoria,
-                t.TarifaBase,
+                t.TarifaBase ?? (t.TarifaBase + (t.Adicionales || 0)), // Si TarifaBase es null, usar el total
                 t.Adicionales || 0,
                 (t.TarifaBase + (t.Adicionales || 0))
             ]);
@@ -485,7 +485,18 @@ export default function ValuationsPage() {
         sheetDetalle.getRow(1).eachCell(c => { c.font = { bold: true, color: { argb: 'FFFFFFFF' } }; c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E3A8A' } }; });
         
         services.forEach(s => {
-            const row = sheetDetalle.addRow([s.Ticket, s.Fecha_Visita ? new Date(s.Fecha_Visita) : null, s.Fecha_Cierre ? new Date(s.Fecha_Cierre) : null, s.Dias_Diferencia, s.Servicio_Nombre, s.Codigo_Externo, s.Categoria, s.Tarifa_Base, s.Adicionales, s.Monto]);
+            const row = sheetDetalle.addRow([
+                s.Ticket, 
+                s.Fecha_Visita ? new Date(s.Fecha_Visita) : null, 
+                s.Fecha_Cierre ? new Date(s.Fecha_Cierre) : null, 
+                s.Dias_Diferencia ?? '-', 
+                s.Servicio_Nombre, 
+                s.Codigo_Externo || '-', 
+                s.Categoria, 
+                s.Tarifa_Base ?? s.Monto, // Fallback para cierres antiguos
+                s.Adicionales ?? 0, 
+                s.Monto
+            ]);
             row.getCell(2).numFmt = 'dd/mm/yyyy';
             row.getCell(3).numFmt = 'dd/mm/yyyy';
             row.getCell(8).numFmt = '"S/" #,##0.00';
