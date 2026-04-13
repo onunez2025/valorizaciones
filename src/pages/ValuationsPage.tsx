@@ -41,6 +41,12 @@ export default function ValuationsPage() {
     const [globalSearchResult, setGlobalSearchResult] = useState<any>(null);
     const [isSearchingGlobal, setIsSearchingGlobal] = useState(false);
     
+    // Paginación
+    const [page, setPage] = useState(1);
+    const [hasMore, setHasMore] = useState(true);
+    const [isLoadingMore, setIsLoadingMore] = useState(false);
+    const ITEMS_PER_PAGE = 2000;
+    
     // Historial de Cierres
     const [viewMode, setViewMode] = useState<'current' | 'history'>('current');
     const [closures, setClosures] = useState<any[]>([]);
@@ -126,7 +132,7 @@ export default function ValuationsPage() {
         }
     };
 
-    const handleFetchValuation = async () => {
+    const handleFetchValuation = async (isLoadMore = false) => {
         if (!selectedCas) {
             if (globalSearch) {
                 handleSearchTicket();
@@ -135,17 +141,34 @@ export default function ValuationsPage() {
             alert({ message: "Por favor, seleccione un Centro de Atención (CAS) primero." });
             return;
         }
-        setLoadingData(true);
+
+        const currentPage = isLoadMore ? page + 1 : 1;
+        if (isLoadMore) setIsLoadingMore(true);
+        else setLoadingData(true);
+
         try {
-            await Promise.all([
-                ApiClient.request(`/valuations/${selectedCas.RUC}?start=${startDate}&end=${endDate}`).then(setTickets),
-                ApiClient.request(`/penalties/${selectedCas.RUC}?start=${startDate}&end=${endDate}`).then(setPenalties)
+            const [newTickets, newPenalties] = await Promise.all([
+                ApiClient.request(`/valuations/${selectedCas.RUC}?start=${startDate}&end=${endDate}&page=${currentPage}&limit=${ITEMS_PER_PAGE}`),
+                isLoadMore ? Promise.resolve([]) : ApiClient.request(`/penalties/${selectedCas.RUC}?start=${startDate}&end=${endDate}`)
             ]);
+
+            if (isLoadMore) {
+                setTickets(prev => [...prev, ...newTickets]);
+                setPage(currentPage);
+            } else {
+                setTickets(newTickets);
+                setPenalties(newPenalties);
+                setPage(1);
+            }
+
+            setHasMore(newTickets.length === ITEMS_PER_PAGE);
+
         } catch (error) {
             console.error("Error fetching valuation:", error);
             alert({ message: "No se pudo cargar la información de la valorización." });
         } finally {
             setLoadingData(false);
+            setIsLoadingMore(false);
         }
     };
 
@@ -758,6 +781,28 @@ export default function ValuationsPage() {
                                                         ))}
                                                     </tbody>
                                                 </table>
+                                        )}
+
+                                        {hasMore && tickets.length > 0 && (
+                                            <div className="mt-8 flex justify-center pb-10">
+                                                <button 
+                                                    onClick={() => handleFetchValuation(true)}
+                                                    disabled={isLoadingMore}
+                                                    className="px-8 py-3 bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground rounded-2xl text-xs font-black transition-all flex items-center gap-2 border border-border/50 shadow-sm"
+                                                >
+                                                    {isLoadingMore ? (
+                                                        <>
+                                                            <Activity className="w-4 h-4 animate-spin" />
+                                                            Cargando bloque...
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <ChevronDown className="w-4 h-4" />
+                                                            Cargar más servicios
+                                                        </>
+                                                    )}
+                                                </button>
+                                            </div>
                                         )}
                                     </div>
                                 ) : (
