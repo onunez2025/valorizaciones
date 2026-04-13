@@ -167,8 +167,8 @@ app.get('/api/valuations/:ruc', verifyToken, async (req: Request, res: Response)
         const db = await getDb();
         const tickets = await db.request()
             .input('ruc', ruc)
-            .input('start', sql.VarChar, `${start} 00:00:00`)
-            .input('end', sql.VarChar, `${end} 23:59:59`)
+            .input('start', sql.DateTime, new Date(`${start}T00:00:00`))
+            .input('end', sql.DateTime, new Date(`${end}T23:59:59`))
             .input('offset', sql.Int, offset)
             .input('limit', sql.Int, limit)
             .query(`
@@ -655,7 +655,7 @@ app.get('/api/dashboard/stats', verifyToken, async (req: Request, res: Response)
             TicketsCAS AS (
                 SELECT tf.*, cas.ID_CAS, cas.RUC, ISNULL(m.Categoria, 'N/A') as Categoria
                 FROM TicketsFilt tf
-                LEFT JOIN [dbo].[GAC_APP_TB_CAS] cas ON tf.Prefix = cas.Abrev_nombre_colaboradores
+                LEFT JOIN [dbo].[GAC_APP_TB_CAS] cas ON TRIM(tf.Prefix) = TRIM(cas.Abrev_nombre_colaboradores)
                 OUTER APPLY (
                     SELECT TOP 1 Categoria FROM [dbo].[GAC_APP_TB_MATERIALES] WHERE ID_Externo = tf.CodigoExternoEquipo
                 ) m
@@ -742,7 +742,7 @@ app.get('/api/dashboard/trends', verifyToken, async (req: Request, res: Response
             TicketsCAS AS (
                 SELECT tf.*, cas.ID_CAS, cas.RUC, ISNULL(m.Categoria, 'N/A') as Categoria
                 FROM TicketsFilt tf
-                LEFT JOIN [dbo].[GAC_APP_TB_CAS] cas ON tf.Prefix = cas.Abrev_nombre_colaboradores
+                LEFT JOIN [dbo].[GAC_APP_TB_CAS] cas ON TRIM(tf.Prefix) = TRIM(cas.Abrev_nombre_colaboradores)
                 OUTER APPLY (
                     SELECT TOP 1 Categoria FROM [dbo].[GAC_APP_TB_MATERIALES] WHERE ID_Externo = tf.CodigoExternoEquipo
                 ) m
