@@ -246,7 +246,7 @@ export default function ValuationsPage() {
     };
 
     const groupedTickets = tickets.reduce((acc, ticket) => {
-        const dateStr = new Date(ticket.Fecha).toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        const dateStr = new Date(ticket.Fecha).toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' });
         if (!acc[dateStr]) {
             acc[dateStr] = { 
                 dateStr, 
@@ -296,8 +296,8 @@ export default function ValuationsPage() {
             ["TICKET", "Fecha Visita", "FECHA CIERRE", "Dias Diferencia", "SERVICIO", "Codigo Externo", "CATEGORÍA", "TARIFA BASE", "ADICIONALES", "TOTAL"],
             ...tickets.map(t => [
                 t.Ticket, 
-                t.FechaVisita ? new Date(t.FechaVisita).toLocaleDateString() : '-', 
-                t.FechaCierre ? new Date(t.FechaCierre).toLocaleDateString() : new Date(t.Fecha).toLocaleDateString(),
+                t.FechaVisita ? new Date(t.FechaVisita).toLocaleDateString('es-PE', { timeZone: 'UTC' }) : '-', 
+                t.FechaCierre ? new Date(t.FechaCierre).toLocaleDateString('es-PE', { timeZone: 'UTC' }) : new Date(t.Fecha).toLocaleDateString('es-PE', { timeZone: 'UTC' }),
                 t.DiasDiferencia ?? '-',
                 t.ServicioNombre || t.Servicio, 
                 t.CodigoEquipo || '-',
@@ -309,7 +309,7 @@ export default function ValuationsPage() {
         ];
         const penaltiesData = [
             ["ID", "FECHA", "MOTIVO", "DESCRIPCIÓN", "TICKET REF.", "ESTADO", "IMPORTE"],
-            ...penalties.map(p => [p.Id, new Date(p.Fecha).toLocaleDateString(), p.Motivo, p.Descripcion, p.Ticket || '-', p.Estado, -p.Importe])
+            ...penalties.map(p => [p.Id, new Date(p.Fecha).toLocaleDateString('es-PE', { timeZone: 'UTC' }), p.Motivo, p.Descripcion, p.Ticket || '-', p.Estado, -p.Importe])
         ];
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(summaryData), "Resumen");
@@ -327,7 +327,7 @@ export default function ValuationsPage() {
         // Calcular desglose diario para la pestaña de resumen
         const dailyMap: Record<string, { count: number, sum: number }> = {};
         services.forEach(s => {
-            const dateStr = s.FechaVisita ? new Date(s.FechaVisita).toLocaleDateString('es-PE') : new Date(s.Fecha_Ticket).toLocaleDateString('es-PE');
+            const dateStr = s.FechaVisita ? new Date(s.FechaVisita).toLocaleDateString('es-PE', { timeZone: 'UTC' }) : new Date(s.Fecha_Ticket).toLocaleDateString('es-PE', { timeZone: 'UTC' });
             if (!dailyMap[dateStr]) dailyMap[dateStr] = { count: 0, sum: 0 };
             dailyMap[dateStr].count++;
             dailyMap[dateStr].sum += s.Monto;
@@ -368,8 +368,8 @@ export default function ValuationsPage() {
             ["TICKET", "Fecha Visita", "FECHA CIERRE", "Dias Diferencia", "SERVICIO", "Codigo Externo", "CATEGORÍA", "TARIFA BASE", "ADICIONALES", "TOTAL"],
             ...services.map(s => [
                 s.Ticket,
-                s.FechaVisita ? new Date(s.FechaVisita).toLocaleDateString() : '-',
-                s.FechaCierre ? new Date(s.FechaCierre).toLocaleDateString() : '-',
+                s.FechaVisita ? new Date(s.FechaVisita).toLocaleDateString('es-PE', { timeZone: 'UTC' }) : '-',
+                s.FechaCierre ? new Date(s.FechaCierre).toLocaleDateString('es-PE', { timeZone: 'UTC' }) : '-',
                 s.DiasDiferencia ?? '-',
                 s.Servicio_Nombre,
                 s.CodigoExterno || '-',
@@ -384,7 +384,7 @@ export default function ValuationsPage() {
             ["TICKET", "FECHA TICKET", "MOTIVO / DESCRIPCIÓN", "CATEGORÍA", "IMPORTE"],
             ...penalties.map(p => [
                 p.Ticket,
-                new Date(p.Fecha_Ticket).toLocaleDateString(),
+                new Date(p.Fecha_Ticket).toLocaleDateString('es-PE', { timeZone: 'UTC' }),
                 p.Servicio_Nombre,
                 p.Categoria,
                 p.Monto
@@ -475,7 +475,7 @@ export default function ValuationsPage() {
                             <div className="h-8 w-px bg-primary/10" />
                             <div className="flex flex-col">
                                 <span className="text-[10px] font-bold opacity-40">Fecha</span>
-                                <span className="text-sm font-bold">{new Date(globalSearchResult.Fecha).toLocaleDateString()}</span>
+                                <span className="text-sm font-bold">{new Date(globalSearchResult.Fecha).toLocaleDateString('es-PE', { timeZone: 'UTC' })}</span>
                             </div>
                             <button 
                                 onClick={() => {
@@ -855,7 +855,7 @@ export default function ValuationsPage() {
                                                     <div key={penalty.Id} className="bg-red-50/20 border border-red-100 rounded-2xl p-6 flex items-center justify-between hover:border-red-500/30 transition-all group">
                                                         <div className="flex items-center gap-6"><div className="p-4 bg-red-500 text-white rounded-xl shadow-lg shadow-red-500/20 group-hover:scale-110 transition-transform"><AlertTriangle className="w-6 h-6" /></div>
                                                         <div className="space-y-1"><div className="flex items-center gap-3"><span className="text-base font-black tracking-tight">{toTitleCase(penalty.Motivo)}</span><span className="px-2.5 py-1 bg-red-100 text-red-700 rounded-lg text-[10px] font-black">{penalty.Ticket || 'Descuento general'}</span></div>
-                                                        <p className="text-xs text-muted-foreground font-medium opacity-70 leading-relaxed font-sans">{penalty.Descripcion}</p><p className="text-[10px] font-black text-muted-foreground opacity-40">{new Date(penalty.Fecha).toLocaleDateString()} • Auditado</p></div></div>
+                                                        <p className="text-xs text-muted-foreground font-medium opacity-70 leading-relaxed font-sans">{penalty.Descripcion}</p><p className="text-[10px] font-black text-muted-foreground opacity-40">{new Date(penalty.Fecha).toLocaleDateString('es-PE', { timeZone: 'UTC' })} • Auditado</p></div></div>
                                                         <div className="text-right"><p className="text-2xl font-black text-red-600 tracking-tighter">- S/ {penalty.Importe.toLocaleString()}</p><span className="text-[9px] font-black text-muted-foreground opacity-30 italic">Débito CAS</span></div>
                                                     </div>
                                                 ))}
@@ -889,7 +889,7 @@ export default function ValuationsPage() {
                                         </div>
                                         <div className="space-y-1 mb-4">
                                             <h4 className="font-black text-slate-800 text-lg">{closure.Nombre_CAS}</h4>
-                                            <p className="text-xs font-bold text-muted-foreground opacity-60">Periodo: {new Date(closure.Fecha_Inicio).toLocaleDateString()} al {new Date(closure.Fecha_Fin).toLocaleDateString()}</p>
+                                            <p className="text-xs font-bold text-muted-foreground opacity-60">Periodo: {new Date(closure.Fecha_Inicio).toLocaleDateString('es-PE', { timeZone: 'UTC' })} al {new Date(closure.Fecha_Fin).toLocaleDateString('es-PE', { timeZone: 'UTC' })}</p>
                                         </div>
                                         <div className="flex gap-6 mb-6 border-t border-border/30 pt-4">
                                             <div className="flex flex-col">
@@ -931,7 +931,7 @@ export default function ValuationsPage() {
                                     Detalle del Cierre
                                     <span className="text-sm font-black text-primary bg-white border border-primary/20 px-3 py-1 rounded-full">{selectedClosure.Codigo_Valorizacion}</span>
                                 </h2>
-                                <p className="text-xs font-bold text-muted-foreground mt-1">{selectedClosure.Nombre_CAS} • {new Date(selectedClosure.Fecha_Inicio).toLocaleDateString()} al {new Date(selectedClosure.Fecha_Fin).toLocaleDateString()}</p>
+                                <p className="text-xs font-bold text-muted-foreground mt-1">{selectedClosure.Nombre_CAS} • {new Date(selectedClosure.Fecha_Inicio).toLocaleDateString('es-PE', { timeZone: 'UTC' })} al {new Date(selectedClosure.Fecha_Fin).toLocaleDateString('es-PE', { timeZone: 'UTC' })}</p>
                             </div>
                             
                             <div className="relative w-64 group">
@@ -1020,7 +1020,7 @@ export default function ValuationsPage() {
                                             ).map((det) => (
                                             <tr key={det.IdDetalle} className="hover:bg-muted/30 transition-all group/det">
                                                 <td className="px-8 py-4 font-bold text-sm text-primary">{det.Ticket}</td>
-                                                <td className="px-4 py-4 text-xs font-medium">{new Date(det.Fecha_Ticket).toLocaleDateString()}</td>
+                                                <td className="px-4 py-4 text-xs font-medium">{new Date(det.Fecha_Ticket).toLocaleDateString('es-PE', { timeZone: 'UTC' })}</td>
                                                 <td className="px-4 py-4 text-center">
                                                     <span className={cn("px-2 py-0.5 rounded text-[10px] font-black uppercase", det.Tipo === 'SERVICIO' ? "bg-blue-100 text-blue-700" : "bg-red-500 text-white shadow-sm")}>
                                                         {det.Tipo}
