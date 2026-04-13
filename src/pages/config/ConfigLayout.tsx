@@ -25,7 +25,7 @@ export default function ConfigLayout() {
     }
 
     return (
-        <div className="flex-1 h-full overflow-hidden flex flex-col p-4 lg:p-8 bg-slate-50 dark:bg-slate-950">
+        <div className="flex-1 h-full overflow-hidden flex flex-col p-4 lg:p-8 bg-slate-50">
             <div className="grid grid-cols-1 lg:grid-cols-[18rem_1fr] gap-8 h-full min-h-0 w-full">
                 {/* SIATC Premium Sidebar */}
                 <aside className="shrink-0 flex flex-col min-h-0 h-fit lg:h-full group">
