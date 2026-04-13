@@ -204,6 +204,7 @@ app.get('/api/valuations/:ruc', verifyToken, async (req: Request, res: Response)
                   AND s.Estado = 'Closed'
                   AND s.VisitaRealizada = 'true'
                   AND s.TrabajoRealizado = 'true'
+                  AND s.Ticket NOT IN (SELECT Ticket FROM [dbo].[GAC_APP_TB_VALORIZACIONES_DETALLE] WHERE Tipo = 'SERVICIO')
             `);
         res.json(tickets.recordset);
     } catch (err: any) { res.status(500).json({ error: err.message }); }
@@ -423,6 +424,10 @@ app.get('/api/penalties/:ruc', verifyToken, async (req: Request, res: Response) 
                 LEFT JOIN [dbo].[GAC_APP_TB_TICKETS_DESCUENTOS_MOTIVOS] m ON d.Motivo = m.IdMotivo
                 WHERE cas.RUC = @ruc 
                   AND d.Fecha BETWEEN @start AND @end
+                  AND NOT EXISTS (
+                      SELECT 1 FROM [dbo].[GAC_APP_TB_VALORIZACIONES_DETALLE] det 
+                      WHERE det.Ticket = d.Ticket AND det.Tipo = 'PENALIDAD'
+                  )
             `);
         res.json(result.recordset);
     } catch (err: any) { res.status(500).json({ error: err.message }); }
