@@ -147,6 +147,25 @@ export default function ValuationsPage() {
     const handleCloseFortnightCurrent = async () => {
         if (!selectedCas) return;
         setIsClosing(true);
+
+        const ticketDetails = tickets.map(t => ({
+            ticket: t.Ticket,
+            monto: t.TarifaBase + (t.Adicionales || 0),
+            fecha: t.Fecha,
+            tipo: 'SERVICIO',
+            servicio: t.ServicioNombre || t.Servicio,
+            categoria: t.Categoria
+        }));
+
+        const penaltyDetails = penalties.map(p => ({
+            ticket: p.Ticket || 'G-DESCUENTO',
+            monto: -p.Importe,
+            fecha: p.Fecha,
+            tipo: 'PENALIDAD',
+            servicio: p.Motivo,
+            categoria: 'DESCUENTO'
+        }));
+
         try {
             await ApiClient.request('/valuations/close', {
                 method: 'POST',
@@ -160,7 +179,8 @@ export default function ValuationsPage() {
                     subtotalServicios: totalTickets,
                     subtotalPenalidades: totalPenalties,
                     totalFinal: grandTotal,
-                    cerradoPor: "Auditor CAS"
+                    cerradoPor: "Auditor CAS",
+                    details: [...ticketDetails, ...penaltyDetails]
                 })
             });
             setShowCloseModal(false);

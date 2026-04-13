@@ -327,27 +327,73 @@ app.get('/api/tickets/search/:ruc', verifyToken, async (req: Request, res: Respo
 });
 
 app.post('/api/valuations/close', verifyToken, async (req: Request, res: Response) => {
-    const { ruc, nombreCas, start, end, totalServicios, totalPenalidades, subtotalServicios, subtotalPenalidades, totalFinal, cerradoPor } = req.body;
+    const { 
+        ruc, nombreCas, start, end, 
+        totalServicios, totalPenalidades, 
+        subtotalServicios, subtotalPenalidades, 
+        totalFinal, cerradoPor,
+        details // Esperamos un array de objetos { ticket, monto, fecha, tipo, servicio, categoria }
+    } = req.body;
+
     try {
         const db = await getDb();
-        await db.request()
-            .input('ruc', ruc)
-            .input('nombreCas', nombreCas)
-            .input('start', start)
-            .input('end', end)
-            .input('totalServicios', totalServicios)
-            .input('totalPenalidades', totalPenalidades)
-            .input('subtotalServicios', subtotalServicios)
-            .input('subtotalPenalidades', subtotalPenalidades)
-            .input('totalFinal', totalFinal)
-            .input('cerradoPor', cerradoPor)
-            .query(`
-                INSERT INTO [dbo].[GAC_APP_TB_VALORIZACIONES_CIERRES] 
-                (RUC, Nombre_CAS, Fecha_Inicio, Fecha_Fin, Total_Servicios, Total_Penalidades, Subtotal_Servicios, Subtotal_Penalidades, Total_Final, Cerrado_Por)
-                VALUES (@ruc, @nombreCas, @start, @end, @totalServicios, @totalPenalidades, @subtotalServicios, @subtotalPenalidades, @totalFinal, @cerradoPor)
-            `);
-        res.json({ success: true, message: "Quincena cerrada correctamente" });
-    } catch (err: any) { res.status(500).json({ error: err.message }); }
+        const transaction = new sql.Transaction(db);
+        await transaction.begin();
+
+        try {
+            const request = new sql.Request(transaction);
+            
+            // 1. Insertar Cabecera
+            const result = await request
+                .input('ruc', ruc)
+                .input('nombreCas', nombreCas)
+                .input('start', start)
+                .input('end', end)
+                .input('totalServicios', totalServicios)
+                .input('totalPenalidades', totalPenalidades)
+                .input('subtotalServicios', subtotalServicios)
+                .input('subtotalPenalidades', subtotalPenalidades)
+                .input('totalFinal', totalFinal)
+                .input('cerradoPor', cerradoPor)
+                .query(`
+                    INSERT INTO [dbo].[GAC_APP_TB_VALORIZACIONES_CIERRES] 
+                    (RUC, Nombre_CAS, Fecha_Inicio, Fecha_Fin, Total_Servicios, Total_Penalidades, Subtotal_Servicios, Subtotal_Penalidades, Total_Final, Cerrado_Por, Cerrado_El, Estado)
+                    VALUES (@ruc, @nombreCas, @start, @end, @totalServicios, @totalPenalidades, @subtotalServicios, @subtotalPenalidades, @totalFinal, @cerradoPor, GETDATE(), 'CERRADO')
+                    SELECT SCOPE_IDENTITY() as IdCierre
+                `);
+            
+            const idCierre = result.recordset[0].IdCierre;
+
+            // 2. Insertar Detalles
+            if (details && Array.isArray(details)) {
+                for (const item of details) {
+                    const detailRequest = new sql.Request(transaction);
+                    await detailRequest
+                        .input('idCierre', idCierre)
+                        .input('ticket', item.ticket)
+                        .input('monto', item.monto)
+                        .input('fecha', item.fecha)
+                        .input('tipo', item.tipo)
+                        .input('servicio', item.servicio)
+                        .input('categoria', item.categoria)
+                        .query(`
+                            INSERT INTO [dbo].[GAC_APP_TB_VALORIZACIONES_DETALLE] 
+                            (IdCierre, Ticket, Monto, Fecha_Ticket, Tipo, Servicio_Nombre, Categoria)
+                            VALUES (@idCierre, @ticket, @monto, @fecha, @tipo, @servicio, @categoria)
+                        `);
+                }
+            }
+
+            await transaction.commit();
+            res.json({ success: true, message: "Quincena cerrada correctamente con sus detalles.", idCierre });
+        } catch (error) {
+            await transaction.rollback();
+            throw error;
+        }
+    } catch (err: any) { 
+        console.error("Error en cierre:", err);
+        res.status(500).json({ error: err.message }); 
+    }
 });
 
 app.get('/api/penalties/:ruc', verifyToken, async (req: Request, res: Response) => {
