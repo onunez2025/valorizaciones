@@ -217,7 +217,7 @@ export default function UsersPage() {
                                     </ResizableHeader>
                                     <ResizableHeader columnId="rol" width={widths.rol} onResizeStart={onResizeStart} className="px-6 py-4">
                                         <div className="flex items-center justify-between gap-2 group/header cursor-pointer" onClick={() => handleSort('rol')}>
-                                            <span className="font-bold text-xs uppercase tracking-wider text-muted-foreground">Perfil Escupido</span>
+                                            <span className="font-bold text-xs uppercase tracking-wider text-muted-foreground">Perfil de Seguridad</span>
                                             <SortIcon column="rol" />
                                         </div>
                                     </ResizableHeader>
