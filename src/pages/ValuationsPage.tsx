@@ -324,19 +324,44 @@ export default function ValuationsPage() {
         const services = closureDetails.filter(d => d.Tipo === 'SERVICIO');
         const penalties = closureDetails.filter(d => d.Tipo === 'PENALIDAD');
 
+        // Calcular desglose diario para la pestaña de resumen
+        const dailyMap: Record<string, { count: number, sum: number }> = {};
+        services.forEach(s => {
+            const dateStr = s.FechaVisita ? new Date(s.FechaVisita).toLocaleDateString('es-PE') : new Date(s.Fecha_Ticket).toLocaleDateString('es-PE');
+            if (!dailyMap[dateStr]) dailyMap[dateStr] = { count: 0, sum: 0 };
+            dailyMap[dateStr].count++;
+            dailyMap[dateStr].sum += s.Monto;
+        });
+
+        const breakdownRows = Object.entries(dailyMap)
+            .sort((a, b) => {
+                const [d1, m1, y1] = a[0].split('/').map(Number);
+                const [d2, m2, y2] = b[0].split('/').map(Number);
+                return new Date(y1, m1 - 1, d1).getTime() - new Date(y2, m2 - 1, d2).getTime();
+            })
+            .map(([date, data]) => [
+                date, 
+                data.count, 
+                `S/ ${data.sum.toLocaleString('en-US', { minimumFractionDigits: 2 })}`
+            ]);
+
         const summaryData = [
-            ["REPORTE DE CIERRE DE VALORIZACIÓN"],
+            ["REPORTE DE CIERRE DE VALORIZACIÓN", ""],
             ["CÓDIGO:", selectedClosure.Codigo_Valorizacion],
             ["CAS:", selectedClosure.Nombre_CAS],
             ["Periodo:", `${new Date(selectedClosure.Fecha_Inicio).toLocaleDateString()} al ${new Date(selectedClosure.Fecha_Fin).toLocaleDateString()}`],
             ["Cerrado Por:", selectedClosure.Cerrado_Por],
             ["Fecha de Cierre:", new Date(selectedClosure.Cerrado_El).toLocaleString()],
-            [""],
+            [],
             ["CONCEPTO", "CANTIDAD", "TOTAL"],
-            ["Servicios Realizados", services.length, selectedClosure.Subtotal_Servicios],
-            ["Penalidades y Descuentos", penalties.length, -selectedClosure.Subtotal_Penalidades],
-            [""],
-            ["TOTAL LIQUIDADO", "", selectedClosure.Total_Final]
+            ["Servicios Realizados", services.length, `S/ ${selectedClosure.Subtotal_Servicios.toLocaleString('en-US', { minimumFractionDigits: 2 })}`],
+            ["Penalidades y Descuentos", penalties.length, `-S/ ${selectedClosure.Subtotal_Penalidades.toLocaleString('en-US', { minimumFractionDigits: 2 })}`],
+            ["TOTAL LIQUIDADO", "", `S/ ${selectedClosure.Total_Final.toLocaleString('en-US', { minimumFractionDigits: 2 })}`],
+            [],
+            [],
+            ["Etiquetas de fila", "Cuenta de TICKET", "Suma de MONTO"],
+            ...breakdownRows,
+            ["Total general", services.length, `S/ ${selectedClosure.Subtotal_Servicios.toLocaleString('en-US', { minimumFractionDigits: 2 })}`]
         ];
 
         const servicesData = [
