@@ -48,7 +48,7 @@ const dbConfig: sql.config = {
     database: process.env.DB_DATABASE,
     server: process.env.DB_SERVER || '',
     port: 1433,
-    pool: { max: 100, min: 0, idleTimeoutMillis: 30000 },
+    pool: { max: 30, min: 0, idleTimeoutMillis: 30000 },
     options: { encrypt: true, trustServerCertificate: true, requestTimeout: 60000 }
 };
 
@@ -159,18 +159,12 @@ app.get('/api/valuations/:ruc', verifyToken, async (req: Request, res: Response)
     const { ruc } = req.params;
     const { start, end } = req.query; 
 
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 10000;
-    const offset = (page - 1) * limit;
-
     try {
         const db = await getDb();
         const tickets = await db.request()
             .input('ruc', ruc)
-            .input('start', sql.DateTime, new Date(`${start}T00:00:00`))
-            .input('end', sql.DateTime, new Date(`${end}T23:59:59`))
-            .input('offset', sql.Int, offset)
-            .input('limit', sql.Int, limit)
+            .input('start', sql.VarChar, `${start} 00:00:00`)
+            .input('end', sql.VarChar, `${end} 23:59:59`)
             .query(`
                 SELECT 
                     s.Ticket, s.CheckOut as Fecha, s.Servicio as ServicioNombre, 
@@ -181,7 +175,7 @@ app.get('/api/valuations/:ruc', verifyToken, async (req: Request, res: Response)
                     DATEDIFF(day, s.FechaVisita, s.CheckOut) as DiasDiferencia,
                     ISNULL(m.Categoria, 'N/A') as Categoria,
                     CASE 
-                        WHEN UPPER(s.Servicio) = 'VISITA' THEN 0
+                        WHEN UPPER(TRIM(s.Servicio)) = 'VISITA' THEN 0
                         WHEN DATEDIFF(day, s.FechaVisita, s.CheckOut) > 2 THEN 0 
                         WHEN LEFT(s.CodigoExternoEquipo, 4) NOT IN ('3120', '3121', '5120', '5121') THEN 0
                         ELSE ISNULL(rate.Importe, 0) 
@@ -200,7 +194,7 @@ app.get('/api/valuations/:ruc', verifyToken, async (req: Request, res: Response)
                     FROM [dbo].[GAC_APP_TB_TARIFARIO] t 
                     WHERE t.Empresa = cas.ID_CAS 
                       AND (t.Servicio = s.IdServicio OR t.Servicio = s.Servicio)
-                      AND t.Categoria = m.Categoria
+                      AND TRIM(t.Categoria) = TRIM(m.Categoria)
                       AND s.CheckOut >= t.Fecha_inicio 
                       AND (t.Fecha_fin IS NULL OR s.CheckOut <= t.Fecha_fin)
                     ORDER BY t.Estado DESC, t.Fecha_inicio DESC
@@ -211,8 +205,6 @@ app.get('/api/valuations/:ruc', verifyToken, async (req: Request, res: Response)
                   AND s.VisitaRealizada = 'true'
                   AND s.TrabajoRealizado = 'true'
                   AND s.Ticket NOT IN (SELECT Ticket FROM [dbo].[GAC_APP_TB_VALORIZACIONES_DETALLE] WHERE Tipo = 'SERVICIO')
-                ORDER BY s.CheckOut DESC
-                OFFSET @offset ROWS FETCH NEXT @limit ROWS ONLY
             `);
         res.json(tickets.recordset);
     } catch (err: any) { res.status(500).json({ error: err.message }); }
@@ -702,7 +694,7 @@ app.get('/api/dashboard/stats', verifyToken, async (req: Request, res: Response)
                  FROM ResumenServicios rs 
                  LEFT JOIN [dbo].[GAC_APP_TB_TARIFARIO] t ON t.Empresa = rs.ID_CAS 
                     AND (t.Servicio = rs.IdServicio)
-                    AND t.Categoria = rs.Categoria
+                    AND TRIM(t.Categoria) = TRIM(rs.Categoria)
                     AND t.Estado = 'A'
                 ) as BaseImporte,
                 ISNULL((SELECT Total FROM ValAdicionales), 0) as Adicionales,
@@ -789,7 +781,7 @@ app.get('/api/dashboard/trends', verifyToken, async (req: Request, res: Response
             FROM ResumenMensual rm
             LEFT JOIN [dbo].[GAC_APP_TB_TARIFARIO] t ON t.Empresa = rm.ID_CAS 
                 AND (t.Servicio = rm.IdServicio)
-                AND t.Categoria = rm.Categoria 
+                AND TRIM(t.Categoria) = TRIM(rm.Categoria) 
                 AND t.Estado = 'A'
             LEFT JOIN SancionesMensuales sm ON rm.Anio = sm.Anio AND rm.MesNum = sm.MesNum
             GROUP BY rm.Anio, rm.MesNum
