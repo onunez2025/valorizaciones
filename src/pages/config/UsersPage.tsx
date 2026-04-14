@@ -240,6 +240,7 @@ export default function UsersPage() {
                                         </td>
                                     </tr>
                                 ) : (
+                                    filtered.map((user) => (
                                         <tr key={user.id} className="group hover:bg-muted/30 transition-colors">
                                             <td className="px-6 py-4">
                                                 <div className="flex items-center gap-3">
