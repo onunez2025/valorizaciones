@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Shield, Plus, Edit2, Trash2, Check, ChevronDown, Activity, Settings, CalendarDays, Users, BarChart3, Mail, Terminal, Lock, ChevronRight, Layout, Database, AppWindow, ShieldAlert, Save } from 'lucide-react';
 import { cn } from '../../utils/cn';
+import { toTitleCase } from '../../utils/formatters';
 import { Modal } from '../../components/common/Modal';
 import { useDialog } from '../../context/DialogContext';
 import { useAuth } from '../../hooks/useAuth';
@@ -160,7 +161,9 @@ export default function RolesPage() {
                                             <Shield className="w-5.5 h-5.5 stroke-[2]" />
                                         </div>
                                         <div>
-                                            <h3 className="font-bold text-foreground text-sm tracking-tight leading-none mb-1.5">{role.name}</h3>
+                                            <h3 className="font-bold text-foreground text-sm tracking-tight leading-none mb-1.5">
+                                                {toTitleCase(role.name)}
+                                            </h3>
                                             <div className="flex items-center gap-2">
                                                 <span className="inline-flex px-2 py-0.5 rounded-lg bg-emerald-50 text-emerald-700 text-[10px] font-bold border border-emerald-100">Activo</span>
                                                 <span className="text-[10px] text-muted-foreground font-bold tracking-tight">
