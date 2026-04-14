@@ -143,7 +143,8 @@ export default function ValuationsPage() {
                 ApiClient.request(`/valuations/${selectedCas.RUC}?start=${startDate}&end=${endDate}`).then(setTickets),
                 ApiClient.request(`/penalties/${selectedCas.RUC}?start=${startDate}&end=${endDate}`).then(setPenalties)
             ]);
-        } catch (error) {
+        } catch (error: any) {
+            if (error.message === 'AUTH_EXPIRED') return;
             console.error("Error fetching valuation:", error);
             alert({ message: "No se pudo cargar la información de la valorización." });
         } finally {
@@ -1056,90 +1057,112 @@ export default function ValuationsPage() {
             {selectedClosure && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
                     <div className="bg-white w-full max-w-5xl rounded-[32px] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300 flex flex-col max-h-[90vh]">
-                        <div className="p-8 border-b border-border/50 bg-slate-50 flex items-center justify-between gap-6">
-                            <div className="flex-1">
-                                <h2 className="text-2xl font-black text-slate-800 flex items-center gap-3">
-                                    Detalle del Cierre
-                                    <span className="text-sm font-black text-primary bg-white border border-primary/20 px-3 py-1 rounded-full">{selectedClosure.Codigo_Valorizacion}</span>
-                                </h2>
-                                <p className="text-xs font-bold text-muted-foreground mt-1">{selectedClosure.Nombre_CAS} • {new Date(selectedClosure.Fecha_Inicio).toLocaleDateString('es-PE', { timeZone: 'UTC' })} al {new Date(selectedClosure.Fecha_Fin).toLocaleDateString('es-PE', { timeZone: 'UTC' })}</p>
+                        <div className="p-6 border-b border-border/50 bg-white flex items-center justify-between gap-6 relative">
+                            <div className="flex-1 flex items-center gap-4">
+                                <div className="p-3 bg-primary/10 rounded-2xl">
+                                    <FileText className="w-6 h-6 text-primary" />
+                                </div>
+                                <div>
+                                    <h2 className="text-xl font-black text-slate-800 flex items-center gap-3">
+                                        Detalle del Cierre
+                                        <span className="text-xs font-black text-primary bg-primary/5 border border-primary/20 px-3 py-1 rounded-full">{selectedClosure.Codigo_Valorizacion}</span>
+                                    </h2>
+                                    <p className="text-xs font-bold text-muted-foreground mt-0.5">{selectedClosure.Nombre_CAS} • {new Date(selectedClosure.Fecha_Inicio).toLocaleDateString('es-PE', { timeZone: 'UTC' })} al {new Date(selectedClosure.Fecha_Fin).toLocaleDateString('es-PE', { timeZone: 'UTC' })}</p>
+                                </div>
                             </div>
                             
-                            <div className="relative w-64 group">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground transition-colors group-focus-within:text-primary" />
-                                <input 
-                                    type="text"
-                                    placeholder="Buscar ticket..."
-                                    className="w-full pl-10 pr-4 py-2 bg-white border border-border rounded-xl text-xs font-bold outline-none ring-primary/5 focus:ring-4 focus:border-primary transition-all"
-                                    value={detailSearchQuery}
-                                    onChange={(e) => setDetailSearchQuery(e.target.value)}
-                                />
-                                {detailSearchQuery && (
-                                    <button onClick={() => setDetailSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-red-500">
-                                        <X className="w-3.5 h-3.5" />
-                                    </button>
-                                )}
-                            </div>
-                            <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-4">
+                                <div className="relative w-64 group">
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground transition-colors group-focus-within:text-primary" />
+                                    <input 
+                                        type="text"
+                                        placeholder="Buscar ticket..."
+                                        className="w-full pl-10 pr-4 py-2.5 bg-muted/30 border border-transparent rounded-xl text-xs font-bold outline-none ring-primary/5 focus:ring-4 focus:bg-white focus:border-primary transition-all"
+                                        value={detailSearchQuery}
+                                        onChange={(e) => setDetailSearchQuery(e.target.value)}
+                                    />
+                                    {detailSearchQuery && (
+                                        <button onClick={() => setDetailSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-red-500">
+                                            <X className="w-3.5 h-3.5" />
+                                        </button>
+                                    )}
+                                </div>
+                                
                                 <button 
                                     onClick={handleExportClosureExcel}
-                                    className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 text-white rounded-xl text-xs font-black hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-600/20"
+                                    className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 text-white rounded-xl text-xs font-black hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-600/20 active:scale-95"
                                 >
                                     <Download className="w-4 h-4" /> Exportar Excel
                                 </button>
                                 
-                                <button onClick={() => { setSelectedClosure(null); setDetailSearchQuery(''); setDetailActiveTab('services'); }} className="p-3 bg-white border border-border rounded-2xl hover:bg-muted transition-all">
+                                <button onClick={() => { setSelectedClosure(null); setDetailSearchQuery(''); setDetailActiveTab('services'); }} className="p-2.5 hover:bg-red-50 hover:text-red-500 rounded-xl transition-all border border-transparent hover:border-red-100">
                                     <X className="w-5 h-5" />
                                 </button>
                             </div>
                         </div>
                         
-                        <div className="px-8 bg-slate-50 border-b border-border/50 flex">
+                        <div className="px-6 bg-white border-b border-border/50 flex gap-2 pt-2">
                             <button 
                                 onClick={() => setDetailActiveTab('services')}
                                 className={cn(
-                                    "px-8 py-4 text-xs font-black transition-all border-b-2",
-                                    detailActiveTab === 'services' ? "border-primary text-primary bg-white shadow-[0_-4px_10px_rgba(0,0,0,0.02)]" : "border-transparent text-muted-foreground hover:text-slate-600"
+                                    "px-6 py-3 text-xs font-extrabold transition-all border-b-2 rounded-t-xl",
+                                    detailActiveTab === 'services' ? "border-primary text-primary bg-primary/5" : "border-transparent text-muted-foreground hover:text-slate-600 hover:bg-muted/50"
                                 )}
                             >
-                                Servicios Realizados ({closureDetails.filter(d => d.Tipo === 'SERVICIO').length})
+                                <div className="flex items-center gap-2">
+                                    <Briefcase className="w-3.5 h-3.5" />
+                                    Servicios ({closureDetails.filter(d => d.Tipo === 'SERVICIO').length})
+                                </div>
                             </button>
                             <button 
                                 onClick={() => setDetailActiveTab('penalties')}
                                 className={cn(
-                                    "px-8 py-4 text-xs font-black transition-all border-b-2",
-                                    detailActiveTab === 'penalties' ? "border-red-500 text-red-600 bg-white shadow-[0_-4px_10px_rgba(0,0,0,0.02)]" : "border-transparent text-muted-foreground hover:text-slate-600"
+                                    "px-6 py-3 text-xs font-extrabold transition-all border-b-2 rounded-t-xl",
+                                    detailActiveTab === 'penalties' ? "border-red-500 text-red-600 bg-red-50/50" : "border-transparent text-muted-foreground hover:text-slate-600 hover:bg-muted/50"
                                 )}
                             >
-                                Penalidades y Descuentos ({closureDetails.filter(d => d.Tipo === 'PENALIDAD').length})
+                                <div className="flex items-center gap-2">
+                                    <AlertTriangle className="w-3.5 h-3.5" />
+                                    Penalidades ({closureDetails.filter(d => d.Tipo === 'PENALIDAD').length})
+                                </div>
                             </button>
                         </div>
+
 
                         <div className="flex-1 overflow-auto custom-scrollbar">
                             {loadingDetails ? (
                                 <div className="h-64 flex items-center justify-center p-8"><Activity className="w-8 h-8 animate-spin text-primary" /></div>
                             ) : (
                                 <>
-                                <div className="px-8 py-4 bg-muted/5 border-b border-border/30 flex gap-8">
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-2 h-2 rounded-full bg-blue-500" />
-                                        <span className="text-[10px] font-black uppercase text-muted-foreground opacity-60">Subtotal Servicios:</span>
-                                        <span className="text-xs font-black">S/ {(selectedClosure.Subtotal_Servicios || 0).toLocaleString()}</span>
+                                <div className="px-6 py-4 bg-slate-50 border-b border-border/30 flex items-center justify-between">
+                                    <div className="flex gap-6">
+                                        <div className="flex items-center gap-3 px-4 py-2 bg-white rounded-xl border border-border/50 shadow-sm">
+                                            <div className="w-2 h-2 rounded-full bg-blue-500" />
+                                            <div className="flex flex-col">
+                                                <span className="text-[9px] font-black uppercase text-muted-foreground opacity-60 leading-none">Subtotal Servicios</span>
+                                                <span className="text-sm font-black text-slate-800">S/ {(selectedClosure.Subtotal_Servicios || 0).toLocaleString()}</span>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-3 px-4 py-2 bg-white rounded-xl border border-border/50 shadow-sm">
+                                            <div className="w-2 h-2 rounded-full bg-red-500" />
+                                            <div className="flex flex-col">
+                                                <span className="text-[9px] font-black uppercase text-muted-foreground opacity-60 leading-none">Total Penalidades</span>
+                                                <span className="text-sm font-black text-red-600">- S/ {(selectedClosure.Subtotal_Penalidades || 0).toLocaleString()}</span>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-2 h-2 rounded-full bg-red-500" />
-                                        <span className="text-[10px] font-black uppercase text-muted-foreground opacity-60">Total Penalidades:</span>
-                                        <span className="text-xs font-black text-red-600">- S/ {(selectedClosure.Subtotal_Penalidades || 0).toLocaleString()}</span>
+                                    <div className="text-[10px] font-bold text-muted-foreground opacity-50 italic">
+                                        Mostrando {closureDetails.filter(d => detailActiveTab === 'services' ? d.Tipo === 'SERVICIO' : d.Tipo === 'PENALIDAD').length} registros auditados
                                     </div>
                                 </div>
                                 <table className="w-full border-separate border-spacing-0">
-                                    <thead className="sticky top-0 z-20 bg-white border-b border-border shadow-sm">
-                                        <tr className="text-[11px] font-black text-muted-foreground uppercase tracking-widest text-left">
-                                            <th className="px-8 py-5 bg-white border-b border-border">Ticket</th>
-                                            <th className="px-4 py-5 bg-white border-b border-border">Fecha</th>
-                                            <th className="px-4 py-5 bg-white border-b border-border text-center">Tipo</th>
-                                            <th className="px-4 py-5 bg-white border-b border-border">Descripción</th>
-                                            <th className="px-8 py-5 bg-white border-b border-border text-right">Monto</th>
+                                    <thead className="sticky top-0 z-20 bg-white/95 backdrop-blur-md">
+                                        <tr className="text-[14px] font-semibold text-muted-foreground text-left">
+                                            <th className="px-6 py-4 border-b border-border shadow-[0_1px_2px_rgba(0,0,0,0.05)]">Ticket</th>
+                                            <th className="px-4 py-4 border-b border-border shadow-[0_1px_2px_rgba(0,0,0,0.05)]">Fecha</th>
+                                            <th className="px-4 py-4 border-b border-border shadow-[0_1px_2px_rgba(0,0,0,0.05)] text-center">Tipo</th>
+                                            <th className="px-4 py-4 border-b border-border shadow-[0_1px_2px_rgba(0,0,0,0.05)]">Descripción</th>
+                                            <th className="px-6 py-4 border-b border-border shadow-[0_1px_2px_rgba(0,0,0,0.05)] text-right">Monto</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border/10">
@@ -1183,16 +1206,36 @@ export default function ValuationsPage() {
                                 </>
                             )}
                         </div>
-                        <div className="p-8 border-t border-border/50 bg-slate-50 flex items-center justify-between">
-                            <div className="flex gap-8">
-                                <div><p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1 opacity-40">Cerrado por</p><p className="text-sm font-black text-slate-800">{selectedClosure.Cerrado_Por}</p></div>
-                                <div><p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1 opacity-40">Fecha de Cierre</p><p className="text-sm font-black text-slate-800">{new Date(selectedClosure.Cerrado_El).toLocaleString()}</p></div>
+                        <div className="p-6 border-t border-border/50 bg-slate-50/50 flex items-center justify-between">
+                            <div className="flex gap-10">
+                                <div className="flex flex-col">
+                                    <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1 opacity-40">Cerrado por</p>
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-600">
+                                            {selectedClosure.Cerrado_Por?.split(' ').map((n: any) => n[0]).join('')}
+                                        </div>
+                                        <p className="text-sm font-extrabold text-slate-800">{selectedClosure.Cerrado_Por}</p>
+                                    </div>
+                                </div>
+                                <div className="flex flex-col">
+                                    <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1 opacity-40">Fecha de Registro</p>
+                                    <div className="flex items-center gap-2 text-slate-600">
+                                        <Calendar className="w-3.5 h-3.5" />
+                                        <p className="text-sm font-bold">{new Date(selectedClosure.Cerrado_El).toLocaleString()}</p>
+                                    </div>
+                                </div>
                             </div>
-                            <div className="text-right">
-                                <p className="text-xs font-black text-muted-foreground opacity-30 uppercase tracking-widest mb-1">Total Liquidado</p>
-                                <p className="text-4xl font-black text-emerald-600 tracking-tighter">S/ {selectedClosure.Total_Final.toLocaleString()}</p>
+                            <div className="flex flex-col items-end">
+                                <p className="text-[11px] font-black text-emerald-600/50 uppercase tracking-widest mb-0.5">Total Liquidado Final</p>
+                                <div className="flex items-center gap-3">
+                                    <span className="text-xl font-bold text-emerald-600/40">S/</span>
+                                    <p className="text-4xl font-black text-emerald-600 tracking-tighter drop-shadow-sm">
+                                        {selectedClosure.Total_Final.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    </p>
+                                </div>
                             </div>
                         </div>
+
                     </div>
                 </div>
             )}

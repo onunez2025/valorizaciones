@@ -30,7 +30,8 @@ export default function MaterialsPage() {
         try {
             const data = await ApiClient.request('/materials');
             setMaterials(data);
-        } catch (error) {
+        } catch (error: any) {
+            if (error.message === 'AUTH_EXPIRED') return;
             console.error("Error fetching materials:", error);
             alert({ message: "No se pudo cargar el maestro de materiales." });
         } finally {
@@ -65,7 +66,8 @@ export default function MaterialsPage() {
             alert({ title: "¡Éxito!", message: "Material actualizado correctamente.", type: 'success' });
             setIsEditModalOpen(false);
             fetchMaterials();
-        } catch (error) {
+        } catch (error: any) {
+            if (error.message === 'AUTH_EXPIRED') return;
             alert({ message: "No se pudo actualizar el material." });
         }
     };

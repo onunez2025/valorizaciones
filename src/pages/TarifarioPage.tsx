@@ -91,7 +91,8 @@ export default function TarifarioPage() {
             
             // Expandir todas al cargar por defecto si el usuario lo prefiere, o dejarlas contraídas.
             // Por el requerimiento "ver todas las categorías primero", las dejaremos contraídas.
-        } catch (err) {
+        } catch (err: any) {
+            if (err.message === 'AUTH_EXPIRED') return;
             console.error("Error fetching rates:", err);
             alert({ message: "No se pudieron cargar las tarifas del CAS seleccionado. Verifique la conexión." });
         } finally {
@@ -132,7 +133,8 @@ export default function TarifarioPage() {
             alert({ title: "¡Tarifario Guardado!", message: "Los precios se han actualizado correctamente.", type: 'success' });
             setIsEditing(false);
             fetchRates(selectedCas);
-        } catch (err) {
+        } catch (err: any) {
+            if (err.message === 'AUTH_EXPIRED') return;
             console.error("Error saving rates:", err);
             alert({ message: "Hubo un error al guardar los cambios en el servidor." });
         } finally {

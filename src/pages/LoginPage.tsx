@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../context/ThemeContext';
 import { User, Lock, Eye, EyeOff, Moon, Sun } from 'lucide-react';
@@ -9,6 +9,8 @@ import { API_BASE_URL } from '../services/apiClient';
 export default function LoginPage() {
     const { login } = useAuth();
     const { theme, setTheme } = useTheme();
+    const [searchParams] = useSearchParams();
+    const isExpired = searchParams.get('expired') === 'true';
     const navigate = useNavigate();
 
     const [username, setUsername] = useState('');
@@ -115,6 +117,16 @@ export default function LoginPage() {
                             Ingresa tus credenciales para acceder al sistema
                         </p>
                     </div>
+
+                    {isExpired && (
+                        <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-500 text-sm flex items-start gap-3 animate-in fade-in slide-in-from-top-2">
+                            <Lock className="w-5 h-5 shrink-0 mt-0.5" />
+                            <div>
+                                <p className="font-bold">Sesión expirada</p>
+                                <p className="opacity-90">Por seguridad, tu sesión ha finalizado. Por favor ingresa tus credenciales de nuevo.</p>
+                            </div>
+                        </div>
+                    )}
 
                     <form onSubmit={handleLogin} className="space-y-6 mt-8">
                         <div className="space-y-4">

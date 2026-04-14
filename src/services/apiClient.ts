@@ -18,6 +18,12 @@ export class ApiClient {
     });
 
     if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+             StorageService.clear();
+             // Redirigir al inicio para forzar re-autenticación
+             window.location.href = '/login?expired=true';
+             throw new Error('AUTH_EXPIRED');
+        }
         const error = await response.json().catch(() => ({ error: 'Error desconocido' }));
         throw new Error(error.error || 'Error en la petición');
     }
