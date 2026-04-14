@@ -17,6 +17,7 @@ export const toTitleCase = (text: string | null | undefined): string => {
   return text
     .toLowerCase()
     .split(' ')
+    .filter(word => word.length > 0)
     .map((word, index) => {
       // Siempre capitalizar la primera palabra
       if (index === 0) {

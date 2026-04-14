@@ -141,11 +141,11 @@ export default function AuditLogPage() {
                         <table className="w-full text-sm text-left border-collapse table-fixed min-w-[1000px]">
                             <thead className="sticky top-0 z-20 bg-muted/95 backdrop-blur-lg">
                                 <tr className="border-b border-border/50">
-                                    <th className="px-6 py-5 w-48 font-bold text-[11px] tracking-wider text-muted-foreground/70">Marca de tiempo</th>
-                                    <th className="px-6 py-5 w-60 font-bold text-[11px] tracking-wider text-muted-foreground/70">Identidad digital</th>
-                                    <th className="px-6 py-5 w-52 font-bold text-[11px] tracking-wider text-muted-foreground/70">Operación Exec</th>
-                                    <th className="px-6 py-5 w-64 font-bold text-[11px] tracking-wider text-muted-foreground/70">Recurso afectado</th>
-                                    <th className="px-6 py-5 font-bold text-[11px] tracking-wider text-muted-foreground/70">Detalles técnicos</th>
+                                    <th className="px-6 py-5 w-48 font-bold text-sm text-foreground tracking-tight">Fecha y Hora</th>
+                                    <th className="px-6 py-5 w-60 font-bold text-sm text-foreground tracking-tight">Usuario Responsable</th>
+                                    <th className="px-6 py-5 w-52 font-bold text-sm text-foreground tracking-tight">Operación</th>
+                                    <th className="px-6 py-5 w-64 font-bold text-sm text-foreground tracking-tight">Ref. Entidad</th>
+                                    <th className="px-6 py-5 font-bold text-sm text-foreground tracking-tight">Payload / Detalle Técnico</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-border/30">
@@ -181,11 +181,11 @@ export default function AuditLogPage() {
                                                 </td>
                                                 <td className="px-6 py-5">
                                                     <div className="flex items-center gap-4">
-                                                        <div className="w-10 h-10 rounded-2xl bg-primary/10 flex items-center justify-center text-primary shrink-0 border border-primary/10 shadow-inner group-hover:scale-110 transition-transform">
+                                                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary shrink-0 border border-primary/10 shadow-inner group-hover:scale-110 transition-transform">
                                                             <User className="w-5 h-5 stroke-[2]" />
                                                         </div>
                                                         <div className="min-w-0">
-                                                            <div className="font-bold text-foreground text-[13px] truncate tracking-tight">{log.user_name}</div>
+                                                            <div className="font-bold text-foreground text-[13px] truncate tracking-tight">{toTitleCase(log.user_name)}</div>
                                                             <div className="text-[9px] text-muted-foreground font-bold tracking-tighter opacity-60 flex items-center gap-1.5 mt-0.5 font-mono">
                                                                 <Database className="w-2.5 h-2.5" /> ID: {log.user_id}
                                                             </div>
@@ -259,16 +259,14 @@ export default function AuditLogPage() {
                     )}
                 </div>
                 
-                {/* Footer Insight */}
+                {/* Footer Stats: SIATC Standard */}
                 <div className="px-8 py-4 border-t border-border/50 bg-muted/40 flex items-center justify-between shrink-0">
-                    <div className="flex items-center gap-3">
-                        <AlertCircle className="w-4 h-4 text-primary" />
-                        <p className="text-[10px] font-bold text-muted-foreground tracking-wider">
-                            Total de incidencias trazadas en la sesión actual: <span className="text-foreground ml-1">{filteredLogs.length}</span>
-                        </p>
-                    </div>
-                    <div className="text-[9px] font-bold text-muted-foreground italic opacity-50">
-                        Políticas de retención: 90 días naturales
+                    <p className="text-[10px] font-black text-muted-foreground tracking-[0.2em] uppercase opacity-60">
+                        Total de registros: <span className="text-foreground ml-1">{filteredLogs.length}</span>
+                    </p>
+                    <div className="hidden sm:flex items-center gap-2 px-3 py-1 bg-background rounded-lg border border-border shadow-inner">
+                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                        <span className="text-[9px] font-black text-muted-foreground tracking-widest uppercase">Sincronizado</span>
                     </div>
                 </div>
             </div>

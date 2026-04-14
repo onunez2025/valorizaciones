@@ -26,44 +26,44 @@ export default function ConfigLayout() {
 
     return (
         <div className="flex-1 h-full overflow-hidden flex flex-col p-1 lg:p-2 bg-slate-50">
-            <div className="grid grid-cols-1 lg:grid-cols-[16rem_1fr] gap-1 lg:gap-2 h-full min-h-0 w-full">
+            <div className="grid grid-cols-1 lg:grid-cols-[18rem_1fr] gap-2 h-full min-h-0 w-full">
                 {/* SIATC Premium Sidebar */}
                 <aside className="shrink-0 flex flex-col min-h-0 h-fit lg:h-full group">
-                    <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden flex flex-col h-full">
-                        <div className="p-4 border-b border-border bg-muted/20">
+                    <div className="bg-card rounded-[2rem] border border-border/50 shadow-xl shadow-slate-200/20 dark:shadow-none overflow-hidden flex flex-col h-full backdrop-blur-sm">
+                        <div className="p-6 border-b border-border/50 bg-gradient-to-br from-primary/5 to-transparent">
                             <div className="flex items-center gap-3">
-                                <div className="p-2 bg-primary text-white rounded-xl shadow-sm">
-                                    <Settings2 className="w-4 h-4 stroke-[2.5]" />
+                                <div className="p-2.5 bg-primary text-white rounded-2xl shadow-lg shadow-primary/20 ring-4 ring-primary/5">
+                                    <Settings2 className="w-5 h-5 stroke-[2.5]" />
                                 </div>
                                 <div className="flex flex-col">
-                                    <span className="text-[9px] font-black text-primary tracking-widest leading-none uppercase">Módulo</span>
-                                    <span className="text-sm font-bold text-foreground tracking-tight">Configuración</span>
+                                    <span className="text-[10px] font-black text-primary tracking-[0.2em] leading-none">Módulo de</span>
+                                    <span className="text-lg font-bold text-foreground tracking-tight">Configuración</span>
                                 </div>
                             </div>
                         </div>
 
-                        <nav className="flex-1 p-2 space-y-0.5 overflow-y-auto custom-scrollbar">
-                            <p className="text-[9px] font-bold text-muted-foreground tracking-widest px-3 py-2 uppercase opacity-60">Administración</p>
+                        <nav className="flex-1 p-3 space-y-1 overflow-y-auto custom-scrollbar">
+                            <p className="text-[10px] font-black text-muted-foreground tracking-[0.2em] px-4 py-3 opacity-60">Control Administrativo</p>
                             {filteredItems.map((item) => (
                                 <NavLink
                                     key={item.to}
                                     to={item.to}
                                     className={({ isActive }) => cn(
-                                        "group/item flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold transition-all duration-300",
+                                        "group/item flex items-center justify-between px-4 py-3 rounded-2xl text-sm font-bold transition-all duration-300 relative overflow-hidden",
                                         isActive
-                                            ? "bg-primary text-primary-foreground shadow-sm"
-                                            : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                                            ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25 translate-x-1"
+                                            : "text-muted-foreground hover:bg-muted hover:text-foreground hover:translate-x-1"
                                     )}
                                 >
-                                    <div className="flex items-center gap-2.5 relative z-10">
+                                    <div className="flex items-center gap-3 relative z-10">
                                         <item.icon className={cn(
-                                            "w-4 h-4 transition-transform duration-500",
+                                            "w-5 h-5 transition-transform duration-500",
                                             "group-hover/item:scale-110"
                                         )} />
                                         <span className="tracking-tight">{item.label}</span>
                                     </div>
                                     <ChevronRight className={cn(
-                                        "w-3.5 h-3.5 transition-all duration-300 opacity-0 -translate-x-2 relative z-10",
+                                        "w-4 h-4 transition-all duration-300 opacity-0 -translate-x-2 relative z-10",
                                         "group-hover/item:opacity-100 group-hover/item:translate-x-0"
                                     )} />
                                 </NavLink>
@@ -71,13 +71,13 @@ export default function ConfigLayout() {
                         </nav>
 
                         {/* Sidebar Footer Info */}
-                        <div className="p-3 bg-muted/30 border-t border-border">
-                            <div className="p-3 bg-background rounded-xl border border-border shadow-sm">
-                                <div className="flex items-center gap-2 mb-1 font-bold text-[9px] text-primary tracking-widest uppercase">
+                        <div className="p-4 bg-muted/30 border-t border-border/50">
+                            <div className="p-4 bg-background rounded-2xl border border-border/50 shadow-sm">
+                                <div className="flex items-center gap-2 mb-1.5 font-bold text-[10px] text-primary tracking-widest">
                                     <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-                                    SIATC v2.1
+                                    Sistema SIATC
                                 </div>
-                                <p className="text-[9px] text-muted-foreground font-medium tracking-tight leading-relaxed">
+                                <p className="text-[10px] text-muted-foreground font-medium tracking-tighter leading-relaxed">
                                     Valorizaciones CAS
                                 </p>
                             </div>
@@ -86,7 +86,7 @@ export default function ConfigLayout() {
                 </aside>
 
                 {/* Main Content Area */}
-                <main className="flex-1 min-w-0 h-full flex flex-col min-h-0">
+                <main className="flex-1 min-w-0 h-full flex flex-col min-h-0 bg-transparent">
                     <div className="flex-1 flex flex-col min-h-0">
                         <Outlet />
                     </div>
