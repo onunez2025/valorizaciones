@@ -1,204 +1,158 @@
 import React, { useState } from 'react';
-import { Menu, X, Sun, Moon, Settings, User as UserIcon, LogOut } from 'lucide-react';
-import { NavLink, Navigate, Outlet, useNavigate } from 'react-router-dom';
+import { Menu, X, Sun, Moon, Settings } from 'lucide-react';
+import { NavLink, Outlet } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { AppSwitcher } from './AppSwitcher';
-import { useAuth } from '../../hooks/useAuth';
-import { useTheme } from '../../context/ThemeContext';
 import { cn } from '../../utils/cn';
+import { useTheme } from '../../context/ThemeContext';
+import { useAuth } from '../../hooks/useAuth';
+
+// SIATC PREMIUM MASTER — MainLayout v2.0 (Platinum)
 import { SIATC_THEME } from '../../utils/siatc-theme';
 
 /**
  * MAIN LAYOUT PLATINUM - Valorizaciones
- * Sincronizado con el estándar SIATC Ecosistema.
+ * Sincronizado para PARIDAD ABSOLUTA con el estándar EBM.
  */
 export function MainLayout() {
-    const { isAuthenticated, isLoading, user, logout, hasPermission } = useAuth();
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const { theme, setTheme } = useTheme();
-    const navigate = useNavigate();
+    const { user, hasPermission } = useAuth();
 
     const toggleTheme = () => {
         setTheme(theme === 'dark' ? 'light' : 'dark');
     };
 
-    if (isLoading) {
-        return (
-            <div className="flex h-screen items-center justify-center bg-background">
-                <div className="flex flex-col items-center gap-6">
-                    <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-                    <p className="text-muted-foreground font-black uppercase tracking-widest text-[10px] animate-pulse">
-                        Cargando Valorizaciones CAS...
-                    </p>
-                </div>
-            </div>
-        );
-    }
-
-    if (!isAuthenticated) {
-        return <Navigate to="/login" replace />;
-    }
-
     return (
-        <div className="h-screen bg-background text-foreground flex overflow-hidden font-sans">
+        <div className="h-screen bg-[#F8FAFC] dark:bg-[#020617] text-foreground flex overflow-hidden font-sans">
             {/* Mobile Sidebar Overlay */}
             <div
                 className={cn(
-                    "fixed inset-0 z-40 bg-slate-900/60 backdrop-blur-sm lg:hidden transition-opacity duration-300",
+                    "fixed inset-0 z-[60] bg-slate-900/60 backdrop-blur-md lg:hidden transition-all duration-500",
                     sidebarOpen ? "opacity-100" : "opacity-0 pointer-events-none"
                 )}
                 onClick={() => setSidebarOpen(false)}
             />
 
-            {/* Sidebar Container with Master Glassmorphism */}
+            {/* Sidebar Container: SIATC Platinum 288px (w-72), Glassmorphism */}
             <aside
                 className={cn(
-                    "fixed inset-y-0 left-0 z-50 w-72 lg:static lg:translate-x-0 transition-transform duration-300 ease-in-out",
-                    SIATC_THEME.TOKENS.SIDEBAR_BG,
-                    "border-r border-white/10 dark:border-white/5 shadow-2xl lg:shadow-none",
+                    "fixed inset-y-0 left-0 z-[70] w-72 transition-transform duration-500 ease-in-out lg:static lg:translate-x-0",
                     sidebarOpen ? "translate-x-0" : "-translate-x-full"
                 )}
             >
-                <div className="h-full flex flex-col">
-                    <div className="flex items-center justify-end p-4 lg:hidden">
-                        <button 
-                            onClick={() => setSidebarOpen(false)}
-                            className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500"
-                        >
-                            <X className="w-6 h-6" />
-                        </button>
-                    </div>
-                    
-                    {/* Sidebar Content */}
-                    <div className="flex-1 overflow-y-auto custom-scrollbar px-4 pb-4">
-                        <Sidebar />
-                    </div>
-
-                    {/* Footer / Version */}
-                    <div className="p-6 border-t border-border/50">
-                        <div className="flex items-center justify-between">
-                            <span className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] opacity-40">
-                                v2.1 Platinum
-                            </span>
-                            <div className="flex gap-1">
-                                <div className="w-1.5 h-1.5 rounded-full bg-primary/20" />
-                                <div className="w-1.5 h-1.5 rounded-full bg-primary/40" />
-                                <div className="w-1.5 h-1.5 rounded-full bg-primary/60" />
-                            </div>
+                <div className="h-full flex flex-col p-4 bg-transparent">
+                    <div className={cn(
+                        "flex-1 flex flex-col overflow-hidden relative rounded-[2.5rem] border border-white dark:border-white/5 shadow-2xl shadow-slate-200/50 dark:shadow-none",
+                        SIATC_THEME.TOKENS.SIDEBAR_BG
+                    )}>
+                        <div className="flex items-center justify-end p-6 lg:hidden">
+                            <button
+                                onClick={() => setSidebarOpen(false)}
+                                className="p-2 hover:bg-rose-500/10 hover:text-rose-500 rounded-2xl transition-all"
+                            >
+                                <X className="w-6 h-6" />
+                            </button>
                         </div>
+                        <Sidebar className="flex-1" />
                     </div>
                 </div>
             </aside>
 
-            {/* Main Content Area */}
+            {/* Main Content Viewport */}
             <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
-                {/* 
-                  HEADER PLATINUM - Altura h-20 obligatoria.
-                  Glassmorphism focalizado y botones de acción unificados.
-                */}
-                <header className="h-20 shrink-0 flex items-center justify-between px-8 border-b border-border bg-white/50 dark:bg-slate-900/50 backdrop-blur-md sticky top-0 z-30">
+                {/* SIATC PREMIUM HEADER — h-20 estandarizado */}
+                <header className="h-20 shrink-0 px-8 flex items-center justify-between sticky top-0 z-40">
                     <div className="flex items-center gap-6">
                         <button
                             onClick={() => setSidebarOpen(true)}
-                            className="p-2.5 -ml-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl lg:hidden transition-colors"
+                            className="p-3 -ml-3 text-muted-foreground hover:bg-white dark:hover:bg-white/5 rounded-2xl lg:hidden shadow-sm transition-all border border-transparent hover:border-border/50"
                         >
                             <Menu className="w-6 h-6" />
                         </button>
-                        
-                        {/* Logo & Brand */}
-                        <div className="flex items-center gap-4">
-                            <div className="w-10 h-10 rounded-xl bg-primary shadow-lg shadow-primary/20 flex items-center justify-center overflow-hidden">
-                                <img src="/Logo.png" alt="Logo" className="h-full w-full object-contain p-1.5" />
+
+                        <div className="flex items-center gap-4 group cursor-default">
+                            <div className="w-12 h-12 rounded-[1.25rem] bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-white/10 shadow-lg shadow-slate-200/40 dark:shadow-none flex items-center justify-center group-hover:scale-110 transition-all duration-500">
+                                <img src="/logo.png" alt="Valorizaciones" className="w-7 h-7 object-contain" />
                             </div>
-                            <div className="hidden sm:flex flex-col">
-                                <span className="font-black text-lg tracking-tight leading-none uppercase">Valorizaciones</span>
-                                <span className="text-[10px] font-bold text-primary tracking-widest uppercase mt-1">CAS Ecosystem</span>
+                            <div className="flex flex-col">
+                                <span className="font-black text-sm tracking-tight text-foreground uppercase pt-1">VALORIZACIONES — SIATC</span>
+                                <div className="flex items-center gap-2">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                    <span className="text-[10px] font-black text-muted-foreground tracking-widest uppercase opacity-60">Sincronizado / Live</span>
+                                </div>
                             </div>
                         </div>
                     </div>
-                    
-                    {/* User & Actions Group */}
-                    <div className="flex items-center gap-3 sm:gap-4 lg:gap-6">
-                        {/* Action Buttons Group */}
-                        <div className="hidden md:flex items-center gap-2 p-1.5 bg-slate-100 dark:bg-slate-800/50 rounded-2xl border border-border/50">
-                            {/* Theme Toggle */}
-                            <button 
-                                onClick={toggleTheme}
-                                className="p-2 rounded-xl text-slate-500 hover:bg-white dark:hover:bg-slate-800 dark:text-slate-400 hover:text-primary transition-all duration-300 shadow-sm hover:shadow-md active:scale-95"
-                                title={theme === 'dark' ? "Modo Claro" : "Modo Oscuro"}
-                            >
-                                {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-                            </button>
 
-                            {/* Config Toggle */}
-                            {(hasPermission('val.config.users') || hasPermission('val.config.roles') || hasPermission('val.config.audit')) && (
-                                <NavLink 
-                                    to="/config"
-                                    className={({ isActive }) => cn(
-                                        "p-2 rounded-xl transition-all duration-300 shadow-sm active:scale-95",
-                                        isActive 
-                                            ? "text-primary bg-white dark:bg-slate-800 shadow-md ring-1 ring-primary/20" 
-                                            : "text-slate-500 hover:text-primary hover:bg-white dark:hover:bg-slate-800 dark:text-slate-400"
-                                    )}
-                                    title="Configuración"
-                                >
-                                    <Settings className="w-5 h-5" />
-                                </NavLink>
-                            )}
+                    {/* Header Actions: Glassmorphism Group — SIATC Platinum Standard */}
+                    <div className={cn(
+                        "flex items-center p-1.5 gap-2 rounded-[2rem] border",
+                        SIATC_THEME.EFFECTS.GLASS_PANEL
+                    )}>
+                        {/* Theme Toggle */}
+                        <button
+                            onClick={toggleTheme}
+                            className="w-11 h-11 flex items-center justify-center text-slate-400 hover:text-primary hover:bg-primary/10 rounded-full transition-all duration-300"
+                            title="Alternar Tema"
+                        >
+                            {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+                        </button>
 
-                            {/* User Profile */}
-                            <NavLink 
-                                to="/profile"
+                        {/* Config (Gear Icon) */}
+                        {hasPermission('val.config.users' as any) && (
+                            <NavLink
+                                to="/config"
                                 className={({ isActive }) => cn(
-                                    "p-2 rounded-xl transition-all duration-300 shadow-sm active:scale-95",
-                                    isActive 
-                                        ? "text-primary bg-white dark:bg-slate-800 shadow-md ring-1 ring-primary/20" 
-                                        : "text-slate-500 hover:text-primary hover:bg-white dark:hover:bg-slate-800 dark:text-slate-400"
+                                    "w-11 h-11 flex items-center justify-center rounded-full transition-all duration-300 group",
+                                    isActive
+                                        ? "text-primary bg-primary/20 shadow-inner"
+                                        : "text-slate-400 hover:text-primary hover:bg-primary/10"
                                 )}
-                                title="Mi Perfil"
+                                title="Configuración del Sistema"
                             >
-                                <UserIcon className="w-5 h-5" />
+                                <Settings className="w-5 h-5 group-hover:rotate-45 transition-transform duration-500" />
                             </NavLink>
-                        </div>
+                        )}
 
-                        <div className="w-px h-8 bg-border/60 mx-1 hidden md:block" />
+                        <AppSwitcher currentAppId="valorizaciones" />
 
-                        {/* App Switcher */}
-                        <AppSwitcher />
+                        <div className="w-px h-6 bg-border/50 mx-1" />
 
-                        <div className="w-px h-8 bg-border/60 mx-1 hidden md:block" />
-
-                        {/* Logout & User Info */}
-                        <div className="flex items-center gap-4">
-                            <div className="hidden lg:flex flex-col text-right">
-                                <span className="text-sm font-black text-slate-900 dark:text-white truncate max-w-[150px]">
-                                    {user?.full_name}
-                                </span>
-                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">
-                                    {user?.username}
-                                </span>
+                        {/* User Profile Avatar */}
+                        <NavLink
+                            to="/profile"
+                            className={({ isActive }) => cn(
+                                "flex items-center gap-3 pl-1 pr-4 py-1 rounded-full group transition-all duration-300 border border-transparent",
+                                isActive ? "bg-primary/10 border-primary/20" : "hover:bg-white dark:hover:bg-white/5"
+                            )}
+                            title="Mi Perfil"
+                        >
+                            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center text-white font-black text-xs shadow-lg shadow-primary/20 ring-2 ring-white dark:ring-slate-900 overflow-hidden shrink-0">
+                                {user?.avatar_url ? (
+                                    <img src={user.avatar_url} alt="Profile" className="w-full h-full object-cover" />
+                                ) : (
+                                    user?.username?.substring(0, 2).toUpperCase() || 'VA'
+                                )}
                             </div>
-                            
-                            <button
-                                onClick={() => logout()}
-                                className="w-12 h-12 flex items-center justify-center rounded-2xl bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white transition-all duration-300 border border-rose-500/20 active:scale-90"
-                                title="Cerrar Sesión"
-                            >
-                                <LogOut className="w-5 h-5" />
-                            </button>
-                        </div>
+                            <div className="flex flex-col min-w-0 hidden md:flex">
+                                <span className="text-[11px] font-black text-foreground truncate uppercase tracking-tight">{user?.username || 'Usuario'}</span>
+                                <span className="text-[9px] font-black text-primary/70 uppercase tracking-widest">{user?.role_name || 'Administrador'}</span>
+                            </div>
+                        </NavLink>
                     </div>
                 </header>
 
-                {/* 
-                  MASTER CONTENT AREA 
-                  Usa padding unificado y custom scrollbar.
-                */}
-                <main className="flex-1 overflow-y-auto p-6 md:p-8 flex flex-col custom-scrollbar bg-slate-50/50 dark:bg-slate-950/20">
-                    <div className="flex-1 w-full mx-auto max-w-[1600px] flex flex-col min-h-0">
+                {/* Content Viewport */}
+                <main className="flex-1 overflow-y-auto px-8 pb-8 flex flex-col custom-scrollbar relative">
+                    <div className="flex-1 w-full max-w-[1600px] mx-auto flex flex-col min-h-0 animate-in fade-in duration-700">
                         <Outlet />
                     </div>
                 </main>
+
+                {/* Background ambient decoration */}
+                <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/5 blur-[120px] rounded-full -translate-y-1/2 translate-x-1/2 -z-10 pointer-events-none" />
+                <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-blue-500/5 blur-[100px] rounded-full translate-y-1/2 -translate-x-1/2 -z-10 pointer-events-none" />
             </div>
         </div>
     );

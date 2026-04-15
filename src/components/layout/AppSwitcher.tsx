@@ -1,158 +1,102 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { LayoutGrid, ExternalLink, ChevronRight, Sparkles } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { Grid, ChevronRight, Info } from 'lucide-react';
 import { cn } from '../../utils/cn';
 
-// PLATINUM MASTER APPSWITCHER v2.0
-// Este componente es IDENTICO en todas las apps del ecosistema.
+// SIATC PREMIUM MASTER — AppSwitcher v2.0 (Platinum)
+// Idéntico en todos los proyectos del ecosistema. Solo cambia currentAppId.
 
-interface AppSystem {
-  id: string;
-  name: string;
-  description: string;
-  url: string;
-  color: string;
-  active?: boolean;
-}
-
-const APPS: AppSystem[] = [
-  {
-    id: 'valorizaciones',
-    name: 'Valorizaciones',
-    description: 'Gestión de servicios y penalidades',
-    url: 'http://localhost:5173',
-    color: 'from-blue-500 to-indigo-600',
-    active: true
-  },
-  {
-    id: 'ebm',
-    name: 'EBM',
-    description: 'Presupuesto y tracking financiero',
-    url: 'http://localhost:5174',
-    color: 'from-emerald-500 to-teal-600'
-  },
-  {
-    id: 'liquidaciones',
-    name: 'Liquidaciones',
-    description: 'Cierre y pago de servicios',
-    url: 'http://localhost:5176',
-    color: 'from-amber-500 to-orange-600'
-  },
-  {
-    id: 'fsm',
-    name: 'Gestor FSM',
-    description: 'Gestión de tickets y campo',
-    url: 'http://localhost:5175',
-    color: 'from-purple-500 to-violet-600'
-  },
-  {
-    id: 'tablero',
-    name: 'Tablero Control',
-    description: 'KPIs y analítica avanzada',
-    url: 'http://localhost:5177',
-    color: 'from-rose-500 to-pink-600'
-  }
+const apps = [
+    { id: 's-project',       name: 'S-Project',       url: 'https://gac-sole-sproject.jppsfv.easypanel.host/',                logo: '/ecosystem-logos/s-project.png' },
+    { id: 'gestor-fsm',      name: 'Gestor FSM',       url: 'https://gac-sole-gestor-de-tickets-fsm.jppsfv.easypanel.host/', logo: '/ecosystem-logos/gestor-fsm.png' },
+    { id: 'liquidaciones',   name: 'Liquidaciones',    url: 'https://gac-sole-liquidaciones.jppsfv.easypanel.host/',          logo: '/ecosystem-logos/liquidaciones.png' },
+    { id: 'tablero-control', name: 'Tablero Control',  url: 'https://gac-sole-tablero-control.jppsfv.easypanel.host/',       logo: '/ecosystem-logos/tablero-control.png' },
+    { id: 'ebm',             name: 'EBM',              url: 'https://gac-sole-ebm.jppsfv.easypanel.host/',                   logo: '/ecosystem-logos/ebm.png' },
+    { id: 'valorizaciones',  name: 'Valorizaciones',   url: 'https://gac-sole-valorizaciones.jppsfv.easypanel.host/',        logo: '/logo.png' },
 ];
 
-export const AppSwitcher: React.FC = () => {
-  const [isOpen, setIsOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
+interface AppSwitcherProps {
+    currentAppId: string;
+}
 
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+export function AppSwitcher({ currentAppId }: AppSwitcherProps) {
+    const [isOpen, setIsOpen] = useState(false);
+    const dropdownRef = useRef<HTMLDivElement>(null);
 
-  return (
-    <div className="relative" ref={menuRef}>
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className={cn(
-          "relative group flex items-center justify-center w-12 h-12 rounded-2xl transition-all duration-300",
-          isOpen 
-            ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20 scale-95" 
-            : "bg-white/10 hover:bg-white/20 text-white/70 hover:text-white"
-        )}
-      >
-        <LayoutGrid className={cn("w-6 h-6 transition-transform duration-500", isOpen && "rotate-180")} />
-        
-        {/* Glow effect on hover */}
-        <div className="absolute inset-0 rounded-2xl bg-white/20 opacity-0 group-hover:opacity-100 blur-md transition-opacity" />
-      </button>
+    const otherApps = apps.filter(app => app.id !== currentAppId);
 
-      {isOpen && (
-        <div className="absolute top-full left-0 mt-4 w-[320px] bg-white dark:bg-slate-900 rounded-[2rem] shadow-2xl border border-slate-200 dark:border-slate-800 p-4 animate-in fade-in slide-in-from-top-4 duration-300 z-[100] overflow-hidden">
-          {/* Header */}
-          <div className="flex items-center gap-3 px-3 py-2 mb-4">
-            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-              <Sparkles className="w-5 h-5 text-primary" />
-            </div>
-            <div>
-              <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider">Ecosistema SIATC</h3>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">Switcher Platinum Master</p>
-            </div>
-          </div>
+    useEffect(() => {
+        function handleClickOutside(event: MouseEvent) {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+                setIsOpen(false);
+            }
+        }
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
 
-          <div className="space-y-2">
-            {APPS.map((app) => (
-              <a
-                key={app.id}
-                href={app.url}
+    return (
+        <div className="relative inline-block" ref={dropdownRef}>
+            <button
+                onClick={() => setIsOpen(!isOpen)}
                 className={cn(
-                  "group relative flex items-center gap-4 p-3 rounded-2xl transition-all duration-300",
-                  app.active 
-                    ? "bg-primary/5 border border-primary/20 ring-1 ring-primary/10" 
-                    : "hover:bg-slate-50 dark:hover:bg-slate-800 border border-transparent hover:border-slate-200 dark:hover:border-slate-700"
+                    'w-11 h-11 flex items-center justify-center rounded-full transition-all duration-300 active:scale-95',
+                    isOpen
+                        ? 'bg-primary text-white shadow-lg shadow-primary/20 scale-110'
+                        : 'text-slate-400 hover:text-primary hover:bg-primary/10'
                 )}
-              >
-                {/* Icon/Color Indicator */}
-                <div className={cn(
-                  "flex-shrink-0 w-12 h-12 rounded-xl bg-gradient-to-br flex items-center justify-center text-white font-black shadow-lg shadow-current/10 transition-transform duration-500 group-hover:scale-110 group-hover:rotate-3",
-                  app.color
-                )}>
-                  {app.name.charAt(0)}
+                title="Ecosistema de Aplicaciones SIATC"
+                type="button"
+            >
+                <Grid className={cn('w-5 h-5 transition-transform duration-500', isOpen && 'rotate-90')} />
+            </button>
+
+            {isOpen && (
+                <div className="absolute right-0 mt-6 w-[480px] bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl border border-white dark:border-white/10 rounded-[2.5rem] shadow-[0_32px_128px_rgba(0,0,0,0.18)] dark:shadow-none z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-300 origin-top-right">
+                    {/* Switcher Header */}
+                    <div className="px-10 pt-8 pb-4 flex items-center justify-between">
+                        <div className="flex flex-col gap-1">
+                            <h3 className="text-sm font-black text-foreground tracking-[0.2em] uppercase">Ecosistema SIATC</h3>
+                            <span className="text-[10px] font-black text-primary tracking-[0.3em] uppercase opacity-60">Nube Corporativa</span>
+                        </div>
+                        <div className="flex items-center gap-2 px-3 py-1.5 bg-primary/5 rounded-full border border-primary/20">
+                            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-sm shadow-emerald-500/50" />
+                            <span className="text-[9px] font-black text-primary uppercase tracking-widest">Global Sync</span>
+                        </div>
+                    </div>
+
+                    {/* Apps Grid */}
+                    <div className="p-8 grid grid-cols-2 gap-4">
+                        {otherApps.map(app => (
+                            <a
+                                key={app.id}
+                                href={app.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="group relative flex items-center gap-4 p-5 rounded-[1.5rem] bg-slate-50 dark:bg-white/5 hover:bg-white dark:hover:bg-white/10 transition-all duration-500 border border-transparent hover:border-primary/20 hover:shadow-xl hover:shadow-primary/5 active:scale-95"
+                            >
+                                <div className="w-12 h-12 bg-white dark:bg-slate-950 rounded-2xl flex items-center justify-center p-2 shadow-lg shadow-slate-200/50 dark:shadow-none group-hover:scale-110 group-hover:-rotate-3 transition-all duration-500 border border-slate-100/50 dark:border-white/5 shrink-0">
+                                    <img src={app.logo} alt={app.name} className="w-full h-full object-contain" />
+                                </div>
+                                <div className="flex flex-col min-w-0">
+                                    <span className="text-[11px] font-black text-foreground group-hover:text-primary transition-colors tracking-tight uppercase truncate">
+                                        {app.name}
+                                    </span>
+                                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all duration-300 -translate-x-2 group-hover:translate-x-0">
+                                        <span className="text-[9px] font-black text-primary/60 uppercase tracking-widest">Lanzar</span>
+                                        <ChevronRight className="w-2.5 h-2.5 text-primary" />
+                                    </div>
+                                </div>
+                            </a>
+                        ))}
+                    </div>
+
+                    {/* Footer */}
+                    <div className="px-10 py-5 bg-muted/30 border-t border-border/50 flex items-center gap-3">
+                        <Info className="w-4 h-4 text-muted-foreground opacity-30 shrink-0" />
+                        <p className="text-[10px] font-black text-muted-foreground tracking-[0.15em] uppercase opacity-60">Plataforma Unificada SIATC v3.5</p>
+                    </div>
                 </div>
-
-                {/* Info */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between">
-                    <span className={cn(
-                      "text-sm font-black transition-colors",
-                      app.active ? "text-primary" : "text-slate-700 dark:text-slate-300 group-hover:text-primary"
-                    )}>
-                      {app.name}
-                    </span>
-                    <ChevronRight className={cn(
-                      "w-4 h-4 transition-all duration-300",
-                      app.active ? "text-primary opacity-100" : "text-slate-300 opacity-0 group-hover:opacity-100 group-hover:translate-x-1"
-                    )} />
-                  </div>
-                  <p className="text-[10px] font-medium text-slate-400 group-hover:text-slate-500 truncate mt-0.5 uppercase tracking-tight">
-                    {app.description}
-                  </p>
-                </div>
-
-                {/* Active Indicator */}
-                {app.active && (
-                  <div className="absolute top-2 right-2 w-2 h-2 rounded-full bg-primary animate-pulse" />
-                )}
-              </a>
-            ))}
-          </div>
-
-          {/* Footer stats */}
-          <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center px-2">
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">v2.0 Platinum</span>
-            <div className="flex gap-1">
-              {[1,2,3].map(i => <div key={i} className="w-1.5 h-1.5 rounded-full bg-primary/20" />)}
-            </div>
-          </div>
+            )}
         </div>
-      )}
-    </div>
-  );
-};
+    );
+}
