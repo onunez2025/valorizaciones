@@ -2099,6 +2099,16 @@ export default function ValuationsPage() {
                     </div>
                 </div>
             )}
+
+            {/* Modal de Envío de Correo */}
+            <EmailModal 
+                isOpen={showEmailModal}
+                onClose={() => setShowEmailModal(false)}
+                onSend={handleSendEmail}
+                emailTo={emailTo}
+                setEmailTo={setEmailTo}
+                isSending={isSendingEmail}
+            />
         </div>
     );
 }
@@ -2112,6 +2122,65 @@ function StatCard({ title, value, subtitle, icon, color }: any) {
                 <div className="flex items-center justify-between"><div className={`p-3 rounded-xl ${colorClasses[color]}/10 text-${color}-600 shadow-sm border border-${color}-500/10`}>{icon}</div></div>
                 <div className="space-y-1"><p className="text-[10px] font-bold text-muted-foreground/60">{title}</p><p className="text-2xl font-black tracking-tight text-foreground">{value}</p></div>
                 <p className="text-[10px] font-bold text-muted-foreground opacity-60 flex items-center gap-2"><AlertCircle className="w-3.5 h-3.5" />{subtitle}</p>
+            </div>
+        </div>
+    );
+}
+
+function EmailModal({ isOpen, onClose, onSend, emailTo, setEmailTo, isSending }: any) {
+    if (!isOpen) return null;
+    return (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
+            <div className="bg-white w-full max-w-md rounded-[32px] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
+                <div className="p-8 border-b border-border/50 bg-slate-50 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2.5 bg-indigo-500 rounded-xl text-white shadow-lg shadow-indigo-500/20">
+                            <Mail className="w-5 h-5" />
+                        </div>
+                        <h2 className="text-xl font-black text-slate-800 tracking-tight">Enviar Reporte</h2>
+                    </div>
+                    <button onClick={onClose} className="p-2 hover:bg-muted rounded-xl transition-all"><X className="w-5 h-5" /></button>
+                </div>
+                <div className="p-8 space-y-6">
+                    <div className="space-y-2">
+                        <label className="text-[11px] font-black text-muted-foreground uppercase tracking-wider ml-1">Destinatarios</label>
+                        <div className="relative group">
+                            <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-indigo-500 transition-colors" />
+                            <input 
+                                type="text" 
+                                placeholder="ejemplo@correo.com; otro@correo.com"
+                                className="w-full pl-12 pr-4 py-4 bg-muted/20 border border-transparent rounded-2xl text-sm font-bold focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/5 outline-none transition-all"
+                                value={emailTo}
+                                onChange={(e) => setEmailTo(e.target.value)}
+                                autoFocus
+                            />
+                        </div>
+                        <p className="text-[10px] font-medium text-muted-foreground ml-1 opacity-60">Separe múltiples correos con punto y coma (;)</p>
+                    </div>
+
+                    <div className="p-5 bg-indigo-50 border border-indigo-100 rounded-2xl flex items-start gap-4">
+                        <div className="p-2 bg-indigo-100 text-indigo-600 rounded-lg"><FileText className="w-4 h-4" /></div>
+                        <div>
+                            <p className="text-xs font-black text-indigo-900">Se adjuntará el reporte Excel</p>
+                            <p className="text-[10px] text-indigo-800/60 font-medium">El archivo se genera automáticamente con los datos actuales de la vista.</p>
+                        </div>
+                    </div>
+
+                    <div className="flex gap-4 pt-2">
+                        <button onClick={onClose} className="flex-1 py-4 text-xs font-black text-muted-foreground hover:bg-muted rounded-2xl transition-all">Cancelar</button>
+                        <button 
+                            onClick={onSend}
+                            disabled={isSending || !emailTo.trim()}
+                            className="flex-[2] py-4 bg-indigo-600 text-white text-xs font-black rounded-2xl hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-600/20 disabled:opacity-50 flex items-center justify-center gap-2"
+                        >
+                            {isSending ? (
+                                <><Activity className="w-4 h-4 animate-spin" /> Enviando...</>
+                            ) : (
+                                <><Mail className="w-4 h-4" /> Enviar Reporte Ahora</>
+                            )}
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
     );
