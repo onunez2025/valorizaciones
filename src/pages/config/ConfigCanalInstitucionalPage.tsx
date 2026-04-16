@@ -23,6 +23,21 @@ interface ConfigInstitucional {
     Creado_El: string;
 }
 
+const formatDateUTC = (dateStr: string) => {
+    if (!dateStr) return '';
+    try {
+        const date = new Date(dateStr);
+        return date.toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit', year: '2-digit', timeZone: 'UTC' });
+    } catch (e) {
+        return dateStr;
+    }
+};
+
+const formatToInputDate = (dateStr: string) => {
+    if (!dateStr) return '';
+    return dateStr.split('T')[0];
+};
+
 export default function ConfigCanalInstitucionalPage() {
     const [configs, setConfigs] = useState<ConfigInstitucional[]>([]);
     const [creators, setCreators] = useState<string[]>([]);
@@ -180,27 +195,32 @@ export default function ConfigCanalInstitucionalPage() {
                                         </td>
                                         <td className="px-6 py-4 text-center">
                                             <div className="text-[10px] font-black whitespace-nowrap">
-                                                {format(new Date(c.Fecha_Inicio), 'dd/MM/yy')} - {format(new Date(c.Fecha_Fin), 'dd/MM/yy')}
+                                                {formatDateUTC(c.Fecha_Inicio)} - {formatDateUTC(c.Fecha_Fin)}
                                             </div>
                                         </td>
                                         <td className="px-6 py-4 text-right">
-                                            <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-all">
+                                            <div className="flex justify-end gap-2 group-hover:opacity-100 transition-all">
                                                 <button 
                                                     onClick={() => {
                                                         setEditingConfig({
                                                             ...c,
-                                                            fecha_inicio: format(new Date(c.Fecha_Inicio), 'yyyy-MM-dd'),
-                                                            fecha_fin: format(new Date(c.Fecha_Fin), 'yyyy-MM-dd')
+                                                            usuario_creador: c.Usuario_Creador,
+                                                            fecha_inicio: formatToInputDate(c.Fecha_Inicio),
+                                                            fecha_fin: formatToInputDate(c.Fecha_Fin),
+                                                            importe: c.Importe,
+                                                            activo: c.Activo
                                                         });
                                                         setIsModalOpen(true);
                                                     }}
-                                                    className="p-2 bg-primary/10 text-primary rounded-lg hover:bg-primary hover:text-white transition-all"
+                                                    className="p-2 bg-primary/10 text-primary rounded-lg hover:bg-primary hover:text-white transition-all shadow-sm"
+                                                    title="Editar"
                                                 >
                                                     <Edit2 className="w-3.5 h-3.5" />
                                                 </button>
                                                 <button 
                                                     onClick={() => handleDelete(c.Id)}
-                                                    className="p-2 bg-red-50 text-red-500 rounded-lg hover:bg-red-500 hover:text-white transition-all"
+                                                    className="p-2 bg-red-50 text-red-500 rounded-lg hover:bg-red-500 hover:text-white transition-all shadow-sm"
+                                                    title="Eliminar"
                                                 >
                                                     <Trash2 className="w-3.5 h-3.5" />
                                                 </button>

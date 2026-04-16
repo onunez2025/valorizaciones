@@ -263,13 +263,15 @@ app.post('/api/config-canal-institucional', verifyToken, async (req: Request, re
             .input('fi', fecha_inicio)
             .input('ff', fecha_fin)
             .input('imp', sql.Decimal(18, 2), importe)
-            .input('key', keywords)
+            .input('key', keywords || '')
             .input('type', validacion_tipo || 'CONTIENE')
             .input('act', activo ? 1 : 0)
             .input('usr', user);
 
+        console.log(`[CONFIG] Saving rule for ${usuario_creador}, ID: ${id || 'NEW'}`);
+
         if (id) {
-            await request.input('id', id).query(`
+            await request.input('id', sql.Int, id).query(`
                 UPDATE [dbo].[GAC_APP_TB_CONFIG_CANAL_INSTITUCIONAL]
                 SET Usuario_Creador = @uc, Fecha_Inicio = @fi, Fecha_Fin = @ff, Importe = @imp, 
                     Keywords = @key, Validacion_Tipo = @type, Activo = @act
@@ -283,16 +285,23 @@ app.post('/api/config-canal-institucional', verifyToken, async (req: Request, re
             `);
         }
         res.json({ success: true });
-    } catch (err: any) { res.status(500).json({ error: err.message }); }
+    } catch (err: any) { 
+        console.error('[CONFIG] Error saving rule:', err);
+        res.status(500).json({ error: err.message }); 
+    }
 });
 
 app.delete('/api/config-canal-institucional/:id', verifyToken, async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
         const db = await getDb();
-        await db.request().input('id', id).query("DELETE FROM [dbo].[GAC_APP_TB_CONFIG_CANAL_INSTITUCIONAL] WHERE Id = @id");
+        console.log(`[CONFIG] Deleting rule ID: ${id}`);
+        await db.request().input('id', sql.Int, parseInt(id)).query("DELETE FROM [dbo].[GAC_APP_TB_CONFIG_CANAL_INSTITUCIONAL] WHERE Id = @id");
         res.json({ success: true });
-    } catch (err: any) { res.status(500).json({ error: err.message }); }
+    } catch (err: any) { 
+        console.error('[CONFIG] Error deleting rule:', err);
+        res.status(500).json({ error: err.message }); 
+    }
 });
 
 
