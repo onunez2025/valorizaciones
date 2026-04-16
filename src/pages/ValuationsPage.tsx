@@ -342,42 +342,102 @@ export default function ValuationsPage() {
         const sheetPenalties = workbook.addWorksheet('Detalle Penalidades');
 
         // --- HOJA RESUMEN ---
-        sheetResumen.columns = [{ width: 40 }, { width: 15 }, { width: 20 }];
+        sheetResumen.columns = [{ width: 35 }, { width: 15 }, { width: 20 }];
         const titleCell = sheetResumen.getCell('A1');
-        titleCell.value = 'LIQUIDACIÓN PREVIA DE VALORIZACIÓN';
-        titleCell.font = { name: 'Arial Black', size: 14, color: { argb: 'FFFFFFFF' } };
-        titleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E3A8A' } };
+        titleCell.value = 'REPORTE DE CIERRE DE VALORIZACIÓN';
+        titleCell.font = { name: 'Arial', size: 12, bold: true };
         titleCell.alignment = { horizontal: 'center' };
         sheetResumen.mergeCells('A1:C1');
+        sheetResumen.getCell('A1').border = { bottom: { style: 'thin' } };
 
-        const info = [['CAS:', selectedCas.Nombre_CAS], ['RUC:', selectedCas.RUC], ['Periodo:', `${startDate} al ${endDate}`]];
+        const info = [
+            ['CÓDIGO:', 'PRE-VALORIZACION'],
+            ['CAS:', selectedCas.Nombre_CAS],
+            ['Periodo:', `${startDate} al ${endDate}`],
+            ['Cerrado Por:', StorageService.getUser()?.full_name || 'N/D'],
+            ['Fecha de Cierre:', new Date().toLocaleString()]
+        ];
+
         info.forEach((row, i) => {
-            const r = sheetResumen.getRow(i + 3);
+            const r = sheetResumen.getRow(i + 2);
             r.getCell(1).value = row[0]; r.getCell(1).font = { bold: true };
             r.getCell(2).value = row[1];
-            sheetResumen.mergeCells(`B${i + 3}:C${i + 3}`);
+            sheetResumen.mergeCells(`B${i + 2}:C${i + 2}`);
+            [1, 2, 3].forEach(col => {
+                r.getCell(col).border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+            });
         });
 
+        // Summary Table
+        const summaryStartRow = 9;
         const summaryRows = [
-            ['CONCEPTO', 'CANTIDAD', 'SUBTOTAL'],
-            ['Servicios de Instalación/Reparación', tickets.filter(t => isValuable(t.CodigoEquipo)).length, totalTickets],
-            ['Servicios Exentos', tickets.filter(t => !isValuable(t.CodigoEquipo)).length, 0],
+            ['CONCEPTO', 'CANTIDAD', 'TOTAL'],
+            ['Servicios Realizados', tickets.length, totalTickets],
             ['Penalidades y Descuentos', penalties.length, -totalPenalties],
-            ['TOTAL NETO A PAGAR', '', grandTotal]
+            ['', '', ''],
+            ['TOTAL LIQUIDADO', '', grandTotal]
         ];
 
         summaryRows.forEach((row, i) => {
-            const r = sheetResumen.getRow(i + 8);
+            const r = sheetResumen.getRow(i + summaryStartRow);
             r.values = row;
             if (i === 0) {
-                r.eachCell(c => { c.font = { bold: true, color: { argb: 'FFFFFFFF' } }; c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E3A8A' } }; });
+                r.eachCell(c => { c.font = { bold: true }; c.alignment = { horizontal: 'center' }; });
             }
             if (i === 4) {
-                r.eachCell(c => { c.font = { bold: true }; c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF3F4F6' } }; });
+                r.getCell(1).font = { bold: true };
+                r.getCell(3).font = { bold: true };
             }
             r.getCell(3).numFmt = '"S/" #,##0.00';
-            r.eachCell(c => { c.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} }; });
+            r.eachCell((c, colIdx) => {
+                if (row[0] || row[2] || i === 3) {
+                    c.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+                }
+            });
         });
+
+        // Group by Date Table
+        const dateBreakdownStartRow = 16;
+        const dateHeaderRow = sheetResumen.getRow(dateBreakdownStartRow);
+        dateHeaderRow.values = ['Etiquetas de fila', 'Cuenta de TICKET', 'Suma de MONTO'];
+        dateHeaderRow.eachCell(c => {
+            c.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+            c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF6B8E23' } }; 
+            c.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+        });
+
+        const breakdownMap = new Map<string, { count: number, total: number }>();
+        tickets.forEach(t => {
+            const d = t.FechaCierre ? new Date(t.FechaCierre) : new Date(t.Fecha);
+            const dateStr = d.toLocaleDateString();
+            const current = breakdownMap.get(dateStr) || { count: 0, total: 0 };
+            breakdownMap.set(dateStr, {
+                count: current.count + 1,
+                total: current.total + (t.TarifaBase + (t.Adicionales || 0))
+            });
+        });
+
+        const sortedDates = Array.from(breakdownMap.keys()).sort((a, b) => {
+            const [da, ma, ya] = a.split('/').map(Number);
+            const [db, mb, yb] = b.split('/').map(Number);
+            return new Date(ya, ma - 1, da).getTime() - new Date(yb, mb - 1, db).getTime();
+        });
+
+        sortedDates.forEach((dateStr, i) => {
+            const data = breakdownMap.get(dateStr)!;
+            const r = sheetResumen.getRow(dateBreakdownStartRow + 1 + i);
+            r.values = [dateStr, data.count, data.total];
+            r.getCell(3).numFmt = '"S/" #,##0.00';
+            r.eachCell(c => { c.border = { bottom: { style: 'thin', color: { argb: 'FFE5E7EB' } } }; });
+        });
+
+        const footerRow = sheetResumen.getRow(dateBreakdownStartRow + 1 + sortedDates.length);
+        footerRow.values = ['Total general', tickets.length, totalTickets];
+        footerRow.eachCell(c => {
+            c.font = { bold: true };
+            c.border = { top: { style: 'thin' }, bottom: { style: 'double' } };
+        });
+        footerRow.getCell(3).numFmt = '"S/" #,##0.00';
 
         // --- HOJA DETALLE ---
         const dHeaders = ["TICKET", "FECHA VISITA", "FECHA CIERRE", "DÍAS DIF.", "SERVICIO", "TECNICO", "COMENTARIO TECNICO", "CÓD. EQUIPO", "CATEGORÍA", "TARIFA BASE", "ADICIONALES", "TOTAL"];
@@ -452,89 +512,102 @@ export default function ValuationsPage() {
         const sheetPenalties = workbook.addWorksheet('Historial Penalidades');
 
         // --- HOJA RESUMEN ---
-        sheetResumen.columns = [{ width: 40 }, { width: 15 }, { width: 25 }];
+        sheetResumen.columns = [{ width: 35 }, { width: 15 }, { width: 20 }];
         const titleCell = sheetResumen.getCell('A1');
-        titleCell.value = 'CIERRE FINAL DE VALORIZACIÓN';
-        titleCell.font = { name: 'Arial Black', size: 16, color: { argb: 'FFFFFFFF' } };
-        titleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E3A8A' } };
+        titleCell.value = 'REPORTE DE CIERRE DE VALORIZACIÓN';
+        titleCell.font = { name: 'Arial', size: 12, bold: true };
         titleCell.alignment = { horizontal: 'center' };
         sheetResumen.mergeCells('A1:C1');
+        sheetResumen.getCell('A1').border = { bottom: { style: 'thin' } };
 
         const info = [
             ['CÓDIGO:', selectedClosure.Codigo_Valorizacion],
             ['CAS:', selectedClosure.Nombre_CAS],
             ['Periodo:', `${new Date(selectedClosure.Fecha_Inicio).toLocaleDateString()} al ${new Date(selectedClosure.Fecha_Fin).toLocaleDateString()}`],
-            ['Total Liquidado:', selectedClosure.Total_Final]
+            ['Cerrado Por:', selectedClosure.Cerrado_Por],
+            ['Fecha de Cierre:', new Date(selectedClosure.Cerrado_El).toLocaleString()]
         ];
 
         info.forEach((row, i) => {
-            const r = sheetResumen.getRow(i + 3);
-            r.getCell(1).value = row[0];
-            r.getCell(1).font = { bold: true };
+            const r = sheetResumen.getRow(i + 2);
+            r.getCell(1).value = row[0]; r.getCell(1).font = { bold: true };
             r.getCell(2).value = row[1];
-            if (i === 3) r.getCell(2).numFmt = '"S/" #,##0.00';
-            sheetResumen.mergeCells(`B${i + 3}:C${i+3}`);
+            sheetResumen.mergeCells(`B${i + 2}:C${i + 2}`);
+            [1, 2, 3].forEach(col => {
+                r.getCell(col).border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+            });
         });
 
-        // --- Tabla de Totales ---
-        const tableStartRow = 10;
-        const totalHeader = sheetResumen.getRow(tableStartRow);
-        totalHeader.values = ['CONCEPTO', 'CANTIDAD', 'TOTAL'];
-        totalHeader.eachCell(c => {
-            c.font = { bold: true, color: { argb: 'FFFFFFFF' } };
-            c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E3A8A' } };
-            c.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
-        });
-
-        const dataRows = [
+        // Summary Table
+        const summaryStartRow = 9;
+        const summaryRows = [
+            ['CONCEPTO', 'CANTIDAD', 'TOTAL'],
             ['Servicios Realizados', services.length, selectedClosure.Subtotal_Servicios],
-            ['Penalidades Aplicadas', penalties.length, -selectedClosure.Subtotal_Penalidades],
-            ['TOTAL NETO', '', selectedClosure.Total_Final]
+            ['Penalidades y Descuentos', penalties.length, -selectedClosure.Subtotal_Penalidades],
+            ['', '', ''],
+            ['TOTAL LIQUIDADO', '', selectedClosure.Total_Final]
         ];
 
-        dataRows.forEach((row, i) => {
-            const r = sheetResumen.getRow(tableStartRow + 1 + i);
+        summaryRows.forEach((row, i) => {
+            const r = sheetResumen.getRow(i + summaryStartRow);
             r.values = row;
-            r.getCell(3).numFmt = '"S/" #,##0.00';
-            if (i === 2) {
-                r.eachCell(c => { c.font = { bold: true }; c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF3F4F6' } }; });
+            if (i === 0) {
+                r.eachCell(c => { c.font = { bold: true }; c.alignment = { horizontal: 'center' }; });
             }
-            r.eachCell(c => { c.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} }; });
-        });
-
-        // --- EXCLUSIVO: DESGLOSE DIARIO ---
-        const dailyMap: Record<string, { count: number, sum: number }> = {};
-        services.forEach(s => {
-            const dateStr = s.Fecha_Cierre ? new Date(s.Fecha_Cierre).toLocaleDateString('es-PE', { timeZone: 'UTC' }) : 'Sin Fecha';
-            if (!dailyMap[dateStr]) dailyMap[dateStr] = { count: 0, sum: 0 };
-            dailyMap[dateStr].count++;
-            dailyMap[dateStr].sum += s.Monto;
-        });
-
-        const sortedDays = Object.entries(dailyMap).sort((a,b) => {
-            if (a[0] === 'Sin Fecha') return 1;
-            const [d1, m1, y1] = a[0].split('/').map(Number);
-            const [d2, m2, y2] = b[0].split('/').map(Number);
-            return new Date(y1, m1-1, d1).getTime() - new Date(y2, m2-1, d2).getTime();
-        });
-
-        const dailyStartRow = tableStartRow + 6;
-        const dailyHeader = sheetResumen.getRow(dailyStartRow);
-        dailyHeader.getCell(1).value = 'DESGLOSE DIARIO';
-        dailyHeader.getCell(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
-        dailyHeader.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E3A8A' } };
-        sheetResumen.mergeCells(`A${dailyStartRow}:C${dailyStartRow}`);
-
-        const dailyColumns = sheetResumen.getRow(dailyStartRow + 1);
-        dailyColumns.values = ['FECHA', 'TICKETS', 'SUBTOTAL'];
-        dailyColumns.eachCell(c => { c.font = { bold: true }; c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF3F4F6' } }; c.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} }; });
-
-        sortedDays.forEach(([date, data], i) => {
-            const r = sheetResumen.getRow(dailyStartRow + 2 + i);
-            r.values = [date, data.count, data.sum];
+            if (i === 4) {
+                r.getCell(1).font = { bold: true };
+                r.getCell(3).font = { bold: true };
+            }
             r.getCell(3).numFmt = '"S/" #,##0.00';
-            r.eachCell(c => { c.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} }; });
+            r.eachCell((c, colIdx) => {
+                if (row[0] || row[2] || i === 3) {
+                    c.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+                }
+            });
         });
+
+        // Group by Date Table
+        const dateBreakdownStartRow = 16;
+        const dateHeaderRow = sheetResumen.getRow(dateBreakdownStartRow);
+        dateHeaderRow.values = ['Etiquetas de fila', 'Cuenta de TICKET', 'Suma de MONTO'];
+        dateHeaderRow.eachCell(c => {
+            c.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+            c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF6B8E23' } }; 
+            c.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+        });
+
+        const breakdownMap = new Map<string, { count: number, total: number }>();
+        services.forEach(s => {
+            const d = s.Fecha_Cierre ? new Date(s.Fecha_Cierre) : new Date(s.Fecha_Ticket);
+            const dateStr = d.toLocaleDateString();
+            const current = breakdownMap.get(dateStr) || { count: 0, total: 0 };
+            breakdownMap.set(dateStr, {
+                count: current.count + 1,
+                total: current.total + s.Monto
+            });
+        });
+
+        const sortedDates = Array.from(breakdownMap.keys()).sort((a, b) => {
+            const [da, ma, ya] = a.split('/').map(Number);
+            const [db, mb, yb] = b.split('/').map(Number);
+            return new Date(ya, ma - 1, da).getTime() - new Date(yb, mb - 1, db).getTime();
+        });
+
+        sortedDates.forEach((dateStr, i) => {
+            const data = breakdownMap.get(dateStr)!;
+            const r = sheetResumen.getRow(dateBreakdownStartRow + 1 + i);
+            r.values = [dateStr, data.count, data.total];
+            r.getCell(3).numFmt = '"S/" #,##0.00';
+            r.eachCell(c => { c.border = { bottom: { style: 'thin', color: { argb: 'FFE5E7EB' } } }; });
+        });
+
+        const footerRow = sheetResumen.getRow(dateBreakdownStartRow + 1 + sortedDates.length);
+        footerRow.values = ['Total general', services.length, selectedClosure.Subtotal_Servicios];
+        footerRow.eachCell(c => {
+            c.font = { bold: true };
+            c.border = { top: { style: 'thin' }, bottom: { style: 'double' } };
+        });
+        footerRow.getCell(3).numFmt = '"S/" #,##0.00';
 
         // --- HOJA SERVICIOS ---
         const sHeaders = ["TICKET", "FECHA VISITA", "FECHA CIERRE", "DÍAS DIF.", "SERVICIO", "TECNICO", "COMENTARIO TECNICO", "CÓD. EQUIPO", "CATEGORÍA", "TARIFA BASE", "ADICIONALES", "TOTAL"];
