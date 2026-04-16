@@ -20,6 +20,7 @@ export default function ValuationsPage() {
     const { alert } = useDialog();
     const [casList, setCasList] = useState<CAS[]>([]);
     const [selectedCas, setSelectedCas] = useState<CAS | null>(null);
+    const [diasMaxCierre, setDiasMaxCierre] = useState<number>(1);
 
     const [startDate, setStartDate] = useState(() => {
         const now = new Date();
@@ -100,7 +101,19 @@ export default function ValuationsPage() {
                 console.error("Error fetching CAS:", error);
             }
         };
+        const fetchConfig = async () => {
+            try {
+                const config = await ApiClient.request('/config');
+                const diasMax = config.find((c: any) => c.Clave === 'DIAS_MAX_CIERRE');
+                if (diasMax && !isNaN(Number(diasMax.Valor))) {
+                    setDiasMaxCierre(Number(diasMax.Valor));
+                }
+            } catch (err) {
+                console.error("Error fetching config:", err);
+            }
+        };
         fetchCas();
+        fetchConfig();
 
         const handleClickOutside = (event: MouseEvent) => {
             if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -938,7 +951,7 @@ export default function ValuationsPage() {
                                                                                                 <td className="px-2 py-4 text-center">
                                                                                                     <span className={cn(
                                                                                                         "px-2 py-0.5 rounded text-[10px] font-black",
-                                                                                                        (ticket.DiasDiferencia || 0) > 1 ? "bg-red-100 text-red-700" : "bg-blue-100 text-blue-700"
+                                                                                                        (ticket.DiasDiferencia || 0) > diasMaxCierre ? "bg-red-100 text-red-700" : "bg-blue-100 text-blue-700"
                                                                                                     )}>
                                                                                                         {ticket.DiasDiferencia ?? '-'}
                                                                                                     </span>
@@ -964,7 +977,7 @@ export default function ValuationsPage() {
                                                                                                     ) : (ticket.ServicioNombre || '').toLowerCase().includes('visita') ? (
                                                                                                         <span className="text-[10px] font-bold text-muted-foreground/40 italic">Visita (S/ 0.00)</span>
                                                                                                     ) : ticket.Categoria === 'N/A' ? (
-                                                                                                        (ticket.DiasDiferencia || 0) >= 2 ? (
+                                                                                                        (ticket.DiasDiferencia || 0) > diasMaxCierre ? (
                                                                                                             <span className="text-[10px] font-bold text-red-500 italic">Fuera de tiempo</span>
                                                                                                         ) : (
                                                                                                             <button 
@@ -975,8 +988,8 @@ export default function ValuationsPage() {
                                                                                                             </button>
                                                                                                         )
                                                                                                     ) : ticket.TarifaBase === 0 ? (
-                                                                                                        (ticket.DiasDiferencia || 0) >= 3 ? (
-                                                                                                            <span className="font-bold text-sm tracking-tighter text-red-500">S/ 0.00</span>
+                                                                                                        (ticket.DiasDiferencia || 0) > diasMaxCierre ? (
+                                                                                                            <span className="text-[10px] font-bold text-red-500 italic">Fuera de tiempo (S/ 0.00)</span>
                                                                                                         ) : (
                                                                                                             <button 
                                                                                                                 onClick={() => handleOpenTarifarioModal(ticket)} 

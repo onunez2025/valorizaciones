@@ -8,6 +8,7 @@ export default function ConfigLayout() {
     const location = useLocation();
 
     const configItems = [
+        { to: '/config/settings', icon: Settings2, label: 'Ajustes Generales', permission: 'val.config.users' as const },
         { to: '/config/users', icon: Users, label: 'Gestión de Usuarios', permission: 'val.config.users' as const },
         { to: '/config/roles', icon: Shield, label: 'Perfiles y Permisos', permission: 'val.config.roles' as const },
         { to: '/config/audit', icon: Terminal, label: 'Logs de Auditoría', permission: 'val.config.audit' as const },

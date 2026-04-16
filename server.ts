@@ -157,6 +157,37 @@ app.get('/api/cas', verifyToken, async (req: Request, res: Response) => {
     } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
+// --- CONFIGURATION ---
+app.get('/api/config', verifyToken, async (req: Request, res: Response) => {
+    try {
+        const db = await getDb();
+        const result = await db.request().query("SELECT * FROM [dbo].[GAC_APP_TB_VALORIZACIONES_CONFIG]");
+        res.json(result.recordset);
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+app.post('/api/config', verifyToken, async (req: Request, res: Response) => {
+    try {
+        const { clave, valor, descripcion } = req.body;
+        const db = await getDb();
+        await db.request()
+            .input('clave', clave)
+            .input('valor', valor)
+            .input('descripcion', descripcion)
+            .query(`
+                IF EXISTS (SELECT 1 FROM [dbo].[GAC_APP_TB_VALORIZACIONES_CONFIG] WHERE Clave = @clave)
+                BEGIN
+                    UPDATE [dbo].[GAC_APP_TB_VALORIZACIONES_CONFIG] SET Valor = @valor, Descripcion = @descripcion WHERE Clave = @clave
+                END
+                ELSE
+                BEGIN
+                    INSERT INTO [dbo].[GAC_APP_TB_VALORIZACIONES_CONFIG] (Clave, Valor, Descripcion) VALUES (@clave, @valor, @descripcion)
+                END
+            `);
+        res.json({ message: 'Config updated' });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
 // --- VALORIZACIONES ---
 app.get('/api/valuations/:ruc', verifyToken, async (req: Request, res: Response) => {
     const { ruc } = req.params;
@@ -169,6 +200,10 @@ app.get('/api/valuations/:ruc', verifyToken, async (req: Request, res: Response)
             .input('start', sql.VarChar, `${start} 00:00:00`)
             .input('end', sql.VarChar, `${end} 23:59:59`)
             .query(`
+                DECLARE @diasMax INT;
+                SELECT @diasMax = CAST(Valor AS INT) FROM [dbo].[GAC_APP_TB_VALORIZACIONES_CONFIG] WHERE Clave = 'DIAS_MAX_CIERRE';
+                IF @diasMax IS NULL SET @diasMax = 1;
+
                 SELECT 
                     s.Ticket, s.CheckOut as Fecha, s.Servicio as ServicioNombre, 
                     s.IdServicio as Servicio,
@@ -179,7 +214,7 @@ app.get('/api/valuations/:ruc', verifyToken, async (req: Request, res: Response)
                     ISNULL(m.Categoria, 'N/A') as Categoria,
                     CASE 
                         WHEN UPPER(TRIM(s.Servicio)) = 'VISITA' THEN 0
-                        WHEN DATEDIFF(day, s.FechaVisita, s.CheckOut) > 1 THEN 0 
+                        WHEN DATEDIFF(day, s.FechaVisita, s.CheckOut) > @diasMax THEN 0 
                         WHEN LEFT(s.CodigoExternoEquipo, 4) NOT IN ('3120', '3121', '5120', '5121') THEN 0
                         ELSE ISNULL(rate.Importe, 0) 
                     END as TarifaBase,
