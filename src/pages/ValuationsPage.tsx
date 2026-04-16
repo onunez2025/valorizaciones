@@ -354,7 +354,7 @@ export default function ValuationsPage() {
             ['CÓDIGO:', 'PRE-VALORIZACION'],
             ['CAS:', selectedCas.Nombre_CAS],
             ['Periodo:', `${startDate} al ${endDate}`],
-            ['Cerrado Por:', StorageService.getUser()?.full_name || 'N/D'],
+            ['Cerrado Por:', StorageService.getCurrentUser()?.full_name || 'N/D'],
             ['Fecha de Cierre:', new Date().toLocaleString()]
         ];
 
