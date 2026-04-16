@@ -396,7 +396,7 @@ app.get('/api/valuations/:ruc', verifyToken, async (req: Request, res: Response)
               AND s.Ticket NOT IN (SELECT Ticket FROM [dbo].[GAC_APP_TB_VALORIZACIONES_DETALLE] WHERE Tipo = 'SERVICIO')
         `);
 
-        let tickets = sqlResult.recordset;
+        let tickets: any[] = sqlResult.recordset;
 
         // Fetch Institutional Rules
         const rules = (await db.request().query("SELECT * FROM [dbo].[GAC_APP_TB_CONFIG_CANAL_INSTITUCIONAL] WHERE Activo = 1")).recordset;
