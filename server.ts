@@ -301,26 +301,31 @@ app.delete('/api/config-canal-institucional/:id', verifyToken, async (req: Reque
 async function getC4CDetails(ticketIds: string[]) {
     if (ticketIds.length === 0) return {};
     const results: Record<string, { creator: string; subject: string }> = {};
-    const chunkSize = 20;
+    const chunkSize = 40; 
+    const promises = [];
 
     for (let i = 0; i < ticketIds.length; i += chunkSize) {
         const chunk = ticketIds.slice(i, i + chunkSize);
         const filter = chunk.map(id => `ID eq '${id}'`).join(' or ');
         const url = `${C4C_BASE_URL}/ServiceRequestCollection?$filter=${encodeURIComponent(filter)}&$select=ID,CreatedBy,Name`;
         
-        try {
-            const resp = await axios.get(url, { headers: { 'Authorization': `Basic ${C4C_AUTH}` } });
-            const items = resp.data.d.results;
-            items.forEach((item: any) => {
-                results[item.ID] = { 
-                    creator: item.CreatedBy, 
-                    subject: item.Name 
-                };
-            });
-        } catch (err: any) {
-            console.error('C4C OData Detail Error:', err.message);
-        }
+        // Add auth headers and prepare parallel execution
+        promises.push(
+            axios.get(url, { headers: { 'Authorization': `Basic ${C4C_AUTH}` } })
+                .then(resp => {
+                    const items = resp.data.d.results;
+                    items.forEach((item: any) => {
+                        results[item.ID] = { 
+                            creator: item.CreatedBy, 
+                            subject: item.Name 
+                        };
+                    });
+                })
+                .catch(err => console.error('C4C OData Partial Error:', err.message))
+        );
     }
+
+    await Promise.all(promises);
     return results;
 }
 app.get('/api/c4c-creators', verifyToken, async (req: Request, res: Response) => {
