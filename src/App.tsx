@@ -18,6 +18,7 @@ const UsersPage = lazy(() => import('./pages/config/UsersPage'));
 const RolesPage = lazy(() => import('./pages/config/RolesPage'));
 const AuditLogPage = lazy(() => import('./pages/config/AuditLogPage'));
 const SettingsPage = lazy(() => import('./pages/config/SettingsPage'));
+const ConfigDistritosPage = lazy(() => import('./pages/config/ConfigDistritosPage'));
 
 const LoadingFallback = () => (
     <div className="flex h-screen items-center justify-center bg-background">
@@ -51,6 +52,7 @@ function App() {
                     <Route path="users" element={<UsersPage />} />
                     <Route path="roles" element={<RolesPage />} />
                     <Route path="audit" element={<AuditLogPage />} />
+                    <Route path="distritos" element={<ConfigDistritosPage />} />
                     <Route index element={<Navigate to="settings" replace />} />
                 </Route>
 

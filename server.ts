@@ -188,6 +188,62 @@ app.post('/api/config', verifyToken, async (req: Request, res: Response) => {
     } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
+// --- CONFIG ADICIONAL POR DISTRITO ---
+app.get('/api/config-distritos', verifyToken, async (req: Request, res: Response) => {
+    try {
+        const db = await getDb();
+        const result = await db.request().query("SELECT * FROM [dbo].[GAC_APP_TB_CONFIG_VALORIZACION_DISTRITO] ORDER BY Creado_El DESC");
+        res.json(result.recordset);
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+app.post('/api/config-distritos', verifyToken, async (req: Request, res: Response) => {
+    try {
+        const { id, cas_ids, distritos, importe, fecha_inicio, fecha_fin, activo } = req.body;
+        const user = (req as any).user.username;
+        const db = await getDb();
+        const request = db.request()
+            .input('cas', sql.NVarChar, JSON.stringify(cas_ids))
+            .input('dist', sql.NVarChar, JSON.stringify(distritos))
+            .input('imp', sql.Decimal(18, 2), importe)
+            .input('fi', fecha_inicio)
+            .input('ff', fecha_fin)
+            .input('act', activo ? 1 : 0)
+            .input('usr', user);
+
+        if (id) {
+            await request.input('id', id).query(`
+                UPDATE [dbo].[GAC_APP_TB_CONFIG_VALORIZACION_DISTRITO]
+                SET CAS_Ids = @cas, Distritos = @dist, Importe = @imp, Fecha_Inicio = @fi, Fecha_Fin = @ff, Activo = @act
+                WHERE Id = @id
+            `);
+        } else {
+            await request.query(`
+                INSERT INTO [dbo].[GAC_APP_TB_CONFIG_VALORIZACION_DISTRITO] (CAS_Ids, Distritos, Importe, Fecha_Inicio, Fecha_Fin, Activo, Creado_Por)
+                VALUES (@cas, @dist, @imp, @fi, @ff, @act, @usr)
+            `);
+        }
+        res.json({ success: true });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+app.delete('/api/config-distritos/:id', verifyToken, async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+        const db = await getDb();
+        await db.request().input('id', id).query("DELETE FROM [dbo].[GAC_APP_TB_CONFIG_VALORIZACION_DISTRITO] WHERE Id = @id");
+        res.json({ success: true });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+app.get('/api/distritos', verifyToken, async (req: Request, res: Response) => {
+    try {
+        const db = await getDb();
+        const result = await db.request().query("SELECT DISTINCT Distrito FROM [dbo].[GACP_APP_TB_DISTRITO] ORDER BY Distrito");
+        res.json(result.recordset.map(r => r.Distrito));
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
 // --- VALORIZACIONES ---
 app.get('/api/valuations/:ruc', verifyToken, async (req: Request, res: Response) => {
     const { ruc } = req.params;
@@ -220,7 +276,18 @@ app.get('/api/valuations/:ruc', verifyToken, async (req: Request, res: Response)
                     END as TarifaBase,
                     CASE 
                         WHEN LEFT(s.CodigoExternoEquipo, 4) NOT IN ('3120', '3121', '5120', '5121') THEN 0
-                        ELSE ISNULL((SELECT SUM(CAST(Importe AS FLOAT)) FROM [dbo].[GAC_APP_TB_TICKETS_VALORIZACION_ADICIONAL] WHERE Ticket = s.Ticket), 0)
+                        ELSE (
+                            ISNULL((SELECT SUM(CAST(Importe AS FLOAT)) FROM [dbo].[GAC_APP_TB_TICKETS_VALORIZACION_ADICIONAL] WHERE Ticket = s.Ticket), 0) +
+                            ISNULL((
+                                SELECT SUM(Importe) 
+                                FROM [dbo].[GAC_APP_TB_CONFIG_VALORIZACION_DISTRITO] cfg
+                                WHERE cfg.Activo = 1
+                                  AND EXISTS (SELECT 1 FROM OPENJSON(cfg.CAS_Ids) WHERE value = s.IdCAS)
+                                  AND EXISTS (SELECT 1 FROM OPENJSON(cfg.Distritos) WHERE value = s.Distrito)
+                                  AND s.CheckOut >= cfg.Fecha_Inicio 
+                                  AND (cfg.Fecha_Fin IS NULL OR s.CheckOut <= cfg.Fecha_Fin)
+                            ), 0)
+                        )
                     END as Adicionales
                 FROM [APPGAC].[ServiciosViewSQL] s
                 JOIN [dbo].[GAC_APP_TB_CAS] cas ON s.IdCAS = cas.ID_CAS
@@ -774,8 +841,18 @@ app.get('/api/dashboard/stats', verifyToken, async (req: Request, res: Response)
                 WHERE d.Ticket IN (SELECT Ticket FROM TicketsCAS)
             ),
             ValAdicionales AS (
-                SELECT SUM(a.Importe) as Total FROM [dbo].[GAC_APP_TB_TICKETS_VALORIZACION_ADICIONAL] a
-                WHERE a.Ticket IN (SELECT Ticket FROM TicketsCAS)
+                SELECT (
+                    ISNULL((SELECT SUM(a.Importe) FROM [dbo].[GAC_APP_TB_TICKETS_VALORIZACION_ADICIONAL] a WHERE a.Ticket IN (SELECT Ticket FROM TicketsCAS)), 0) +
+                    ISNULL((
+                        SELECT SUM(cfg.Importe)
+                        FROM TicketsCAS tc
+                        JOIN [dbo].[GAC_APP_TB_CONFIG_VALORIZACION_DISTRITO] cfg ON cfg.Activo = 1
+                          AND tc.CheckOut >= cfg.Fecha_Inicio 
+                          AND (cfg.Fecha_Fin IS NULL OR tc.CheckOut <= cfg.Fecha_Fin)
+                        WHERE EXISTS (SELECT 1 FROM OPENJSON(cfg.CAS_Ids) WHERE value = tc.ID_CAS)
+                          AND EXISTS (SELECT 1 FROM OPENJSON(cfg.Distritos) WHERE value = tc.Distrito)
+                    ), 0)
+                ) as Total
             )
             SELECT 
                 (SELECT COUNT(*) FROM TicketsCAS) as TotalTickets,
