@@ -301,7 +301,7 @@ app.delete('/api/config-canal-institucional/:id', verifyToken, async (req: Reque
 async function getC4CDetails(ticketIds: string[]) {
     if (ticketIds.length === 0) return {};
     const results: Record<string, { creator: string; subject: string }> = {};
-    const chunkSize = 40; 
+    const chunkSize = 60; // Increased chunk size for better performance
     const promises = [];
 
     for (let i = 0; i < ticketIds.length; i += chunkSize) {
@@ -309,19 +309,24 @@ async function getC4CDetails(ticketIds: string[]) {
         const filter = chunk.map(id => `ID eq '${id}'`).join(' or ');
         const url = `${C4C_BASE_URL}/ServiceRequestCollection?$filter=${encodeURIComponent(filter)}&$select=ID,CreatedBy,Name`;
         
-        // Add auth headers and prepare parallel execution
         promises.push(
-            axios.get(url, { headers: { 'Authorization': `Basic ${C4C_AUTH}` } })
-                .then(resp => {
-                    const items = resp.data.d.results;
-                    items.forEach((item: any) => {
-                        results[item.ID] = { 
-                            creator: item.CreatedBy, 
-                            subject: item.Name 
-                        };
-                    });
-                })
-                .catch(err => console.error('C4C OData Partial Error:', err.message))
+            axios.get(url, { 
+                headers: { 'Authorization': `Basic ${C4C_AUTH}` },
+                timeout: 15000 // 15s timeout per chunk
+            })
+            .then(resp => {
+                const items = resp.data.d.results;
+                items.forEach((item: any) => {
+                    results[item.ID] = { 
+                        creator: item.CreatedBy, 
+                        subject: item.Name 
+                    };
+                });
+            })
+            .catch(err => {
+                console.error(`C4C OData Chunk Error (Tickets ${i} to ${i + chunkSize}):`, err.message);
+                // We don't throw here to allow partial results
+            })
         );
     }
 
@@ -345,6 +350,8 @@ app.get('/api/c4c-creators', verifyToken, async (req: Request, res: Response) =>
 app.get('/api/valuations/:ruc', verifyToken, async (req: Request, res: Response) => {
     const { ruc } = req.params;
     const { start, end } = req.query; 
+
+    console.log(`[VALUATION] Starting request - RUC: ${ruc}, Range: ${start} to ${end}`);
 
     try {
         const db = await getDb();
@@ -405,7 +412,7 @@ app.get('/api/valuations/:ruc', verifyToken, async (req: Request, res: Response)
                   AND (t.Fecha_fin IS NULL OR s.CheckOut <= t.Fecha_fin)
                 ORDER BY t.Estado DESC, t.Fecha_inicio DESC
             ) rate
-            WHERE cas.RUC = @ruc 
+            WHERE TRIM(cas.RUC) = TRIM(@ruc) 
               AND s.CheckOut BETWEEN @start AND @end
               AND s.Estado = 'Closed'
               AND s.VisitaRealizada = 'true'
@@ -414,13 +421,17 @@ app.get('/api/valuations/:ruc', verifyToken, async (req: Request, res: Response)
         `);
 
         let tickets: any[] = sqlResult.recordset;
+        console.log(`[VALUATION] SQL query returned ${tickets.length} tickets`);
 
         // Fetch Institutional Rules
         const rules = (await db.request().query("SELECT * FROM [dbo].[GAC_APP_TB_CONFIG_CANAL_INSTITUCIONAL] WHERE Activo = 1")).recordset;
 
         if (tickets.length > 0 && rules.length > 0) {
+            console.log(`[VALUATION] Fetching OData for ${tickets.length} tickets (Rules active: ${rules.length})`);
             const ticketIds = tickets.map(t => t.Ticket);
             const c4cDetails = await getC4CDetails(ticketIds);
+            const detailCount = Object.keys(c4cDetails).length;
+            console.log(`[VALUATION] OData results: ${detailCount}/${tickets.length} found`);
 
             tickets = tickets.map(t => {
                 const details = c4cDetails[t.Ticket];
@@ -428,7 +439,11 @@ app.get('/api/valuations/:ruc', verifyToken, async (req: Request, res: Response)
 
                 if (details) {
                     const matchingRule = rules.find(r => {
-                        const dateMatch = t.FechaCierre >= r.Fecha_Inicio && t.FechaCierre <= r.Fecha_Fin;
+                        const tDate = new Date(t.FechaCierre).getTime();
+                        const rStart = new Date(r.Fecha_Inicio).getTime();
+                        const rEnd = new Date(r.Fecha_Fin).getTime();
+                        
+                        const dateMatch = tDate >= rStart && tDate <= rEnd;
                         const userMatch = details.creator === r.Usuario_Creador;
                         return dateMatch && userMatch;
                     });
@@ -446,11 +461,17 @@ app.get('/api/valuations/:ruc', verifyToken, async (req: Request, res: Response)
                 };
             });
         } else {
-            tickets = tickets.map(t => ({ ...t, TarifaBase: t.TarifaBaseCalculada }));
+            if (tickets.length > 0) {
+                console.log(`[VALUATION] Returning ${tickets.length} tickets (No institutional rules apply)`);
+                tickets = tickets.map(t => ({ ...t, TarifaBase: t.TarifaBaseCalculada }));
+            }
         }
 
         res.json(tickets);
-    } catch (err: any) { res.status(500).json({ error: err.message }); }
+    } catch (err: any) { 
+        console.error('[VALUATION] Server Error:', err.message);
+        res.status(500).json({ error: err.message }); 
+    }
 });
 
 app.get('/api/penalty-motives', verifyToken, async (req: Request, res: Response) => {
