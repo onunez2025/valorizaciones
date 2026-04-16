@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useLocation, Navigate } from 'react-router-dom';
-import { Users, Shield, Terminal, ChevronRight, Settings2, MapPin } from 'lucide-react';
+import { Users, Shield, Terminal, ChevronRight, Settings2, MapPin, Briefcase } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { useAuth } from '../../hooks/useAuth';
 
@@ -9,6 +9,7 @@ export default function ConfigLayout() {
 
     const configItems = [
         { to: '/config/settings', icon: Settings2, label: 'Ajustes Generales', permission: 'val.config.users' as const },
+        { to: '/config/institucional', icon: Briefcase, label: 'Canal Institucional', permission: 'val.config.users' as const },
         { to: '/config/distritos', icon: MapPin, label: 'Adicionales por Distrito', permission: 'val.config.users' as const },
         { to: '/config/users', icon: Users, label: 'Gestión de Usuarios', permission: 'val.config.users' as const },
         { to: '/config/roles', icon: Shield, label: 'Perfiles y Permisos', permission: 'val.config.roles' as const },

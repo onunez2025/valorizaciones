@@ -244,6 +244,63 @@ app.get('/api/distritos', verifyToken, async (req: Request, res: Response) => {
     } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
+// --- CONFIG TECNICOS INSTITUCIONAL ---
+app.get('/api/config-tecnicos-institucional', verifyToken, async (req: Request, res: Response) => {
+    try {
+        const db = await getDb();
+        const result = await db.request().query("SELECT * FROM [dbo].[GAC_APP_TB_CONFIG_TECNICO_INSTITUCIONAL] ORDER BY Creado_El DESC");
+        res.json(result.recordset);
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+app.post('/api/config-tecnicos-institucional', verifyToken, async (req: Request, res: Response) => {
+    try {
+        const { id, tecnico_id, nombre_tecnico, fecha_inicio, fecha_fin, importe, activo } = req.body;
+        const user = (req as any).user.username;
+        const db = await getDb();
+        const request = db.request()
+            .input('tid', tecnico_id)
+            .input('nom', nombre_tecnico)
+            .input('fi', fecha_inicio)
+            .input('ff', fecha_fin)
+            .input('imp', sql.Decimal(18, 2), importe)
+            .input('act', activo ? 1 : 0)
+            .input('usr', user);
+
+        if (id) {
+            await request.input('id', id).query(`
+                UPDATE [dbo].[GAC_APP_TB_CONFIG_TECNICO_INSTITUCIONAL]
+                SET Tecnico_Id = @tid, Nombre_Tecnico = @nom, Fecha_Inicio = @fi, Fecha_Fin = @ff, Importe = @imp, Activo = @act
+                WHERE Id = @id
+            `);
+        } else {
+            await request.query(`
+                INSERT INTO [dbo].[GAC_APP_TB_CONFIG_TECNICO_INSTITUCIONAL] (Tecnico_Id, Nombre_Tecnico, Fecha_Inicio, Fecha_Fin, Importe, Activo, Creado_Por)
+                VALUES (@tid, @nom, @fi, @ff, @imp, @act, @usr)
+            `);
+        }
+        res.json({ success: true });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+app.delete('/api/config-tecnicos-institucional/:id', verifyToken, async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+        const db = await getDb();
+        await db.request().input('id', id).query("DELETE FROM [dbo].[GAC_APP_TB_CONFIG_TECNICO_INSTITUCIONAL] WHERE Id = @id");
+        res.json({ success: true });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+app.get('/api/tecnicos-list', verifyToken, async (req: Request, res: Response) => {
+    try {
+        const db = await getDb();
+        const result = await db.request().query('SELECT DISTINCT CodigoTecnico, (NombreTecnico + \' \' + ApellidoTecnico) as NombreCompleto FROM [APPGAC].[ServiciosViewSQL] WHERE CodigoTecnico IS NOT NULL ORDER BY NombreCompleto');
+        res.json(result.recordset);
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+
 // --- VALORIZACIONES ---
 app.get('/api/valuations/:ruc', verifyToken, async (req: Request, res: Response) => {
     const { ruc } = req.params;
@@ -260,56 +317,76 @@ app.get('/api/valuations/:ruc', verifyToken, async (req: Request, res: Response)
                 SELECT @diasMax = CAST(Valor AS INT) FROM [dbo].[GAC_APP_TB_VALORIZACIONES_CONFIG] WHERE Clave = 'DIAS_MAX_CIERRE';
                 IF @diasMax IS NULL SET @diasMax = 1;
 
+                    s.Ticket NOT IN (SELECT Ticket FROM [dbo].[GAC_APP_TB_VALORIZACIONES_DETALLE] WHERE Tipo = 'SERVICIO')
+                )
                 SELECT 
-                    s.Ticket, s.CheckOut as Fecha, s.Servicio as ServicioNombre, 
-                    s.IdServicio as Servicio,
-                    s.CodigoExternoEquipo as CodigoEquipo,
-                    s.NombreEquipo as NombreEquipo,
-                    s.FechaVisita, s.CheckOut as FechaCierre,
-                    DATEDIFF(day, s.FechaVisita, s.CheckOut) as DiasDiferencia,
-                    ISNULL(m.Categoria, 'N/A') as Categoria,
+                    base.*,
                     CASE 
-                        WHEN UPPER(TRIM(s.Servicio)) = 'VISITA' THEN 0
-                        WHEN DATEDIFF(day, s.FechaVisita, s.CheckOut) > @diasMax THEN 0 
-                        WHEN LEFT(s.CodigoExternoEquipo, 4) NOT IN ('3120', '3121', '5120', '5121') THEN 0
-                        ELSE ISNULL(rate.Importe, 0) 
-                    END as TarifaBase,
-                    CASE 
-                        WHEN LEFT(s.CodigoExternoEquipo, 4) NOT IN ('3120', '3121', '5120', '5121') THEN 0
-                        ELSE (
-                            ISNULL((SELECT SUM(CAST(Importe AS FLOAT)) FROM [dbo].[GAC_APP_TB_TICKETS_VALORIZACION_ADICIONAL] WHERE Ticket = s.Ticket), 0) +
-                            ISNULL((
-                                SELECT SUM(Importe) 
-                                FROM [dbo].[GAC_APP_TB_CONFIG_VALORIZACION_DISTRITO] cfg
-                                WHERE cfg.Activo = 1
-                                  AND EXISTS (SELECT 1 FROM OPENJSON(cfg.CAS_Ids) WHERE value = s.IdCAS)
-                                  AND EXISTS (SELECT 1 FROM OPENJSON(cfg.Distritos) WHERE value = s.Distrito)
-                                  AND s.CheckOut >= cfg.Fecha_Inicio 
-                                  AND (cfg.Fecha_Fin IS NULL OR s.CheckOut <= cfg.Fecha_Fin)
-                            ), 0)
-                        )
-                    END as Adicionales
-                FROM [APPGAC].[ServiciosViewSQL] s
-                JOIN [dbo].[GAC_APP_TB_CAS] cas ON s.IdCAS = cas.ID_CAS
+                        WHEN inst.Importe IS NOT NULL THEN inst.Importe
+                        ELSE base.TarifaBaseCalculada
+                    END as TarifaBase
+                FROM (
+                    SELECT 
+                        s.Ticket, s.CheckOut as Fecha, s.Servicio as ServicioNombre, 
+                        s.IdServicio as Servicio,
+                        s.CodigoExternoEquipo as CodigoEquipo,
+                        s.NombreEquipo as NombreEquipo,
+                        s.FechaVisita, s.CheckOut as FechaCierre,
+                        s.CodigoTecnico,
+                        DATEDIFF(day, s.FechaVisita, s.CheckOut) as DiasDiferencia,
+                        ISNULL(m.Categoria, 'N/A') as Categoria,
+                        CASE 
+                            WHEN UPPER(TRIM(s.Servicio)) = 'VISITA' THEN 0
+                            WHEN DATEDIFF(day, s.FechaVisita, s.CheckOut) > @diasMax THEN 0 
+                            WHEN LEFT(s.CodigoExternoEquipo, 4) NOT IN ('3120', '3121', '5120', '5121') THEN 0
+                            ELSE ISNULL(rate.Importe, 0) 
+                        END as TarifaBaseCalculada,
+                        CASE 
+                            WHEN LEFT(s.CodigoExternoEquipo, 4) NOT IN ('3120', '3121', '5120', '5121') THEN 0
+                            ELSE (
+                                ISNULL((SELECT SUM(CAST(Importe AS FLOAT)) FROM [dbo].[GAC_APP_TB_TICKETS_VALORIZACION_ADICIONAL] WHERE Ticket = s.Ticket), 0) +
+                                ISNULL((
+                                    SELECT SUM(Importe) 
+                                    FROM [dbo].[GAC_APP_TB_CONFIG_VALORIZACION_DISTRITO] cfg
+                                    WHERE cfg.Activo = 1
+                                      AND EXISTS (SELECT 1 FROM OPENJSON(cfg.CAS_Ids) WHERE value = s.IdCAS)
+                                      AND EXISTS (SELECT 1 FROM OPENJSON(cfg.Distritos) WHERE value = s.Distrito)
+                                      AND s.CheckOut >= cfg.Fecha_Inicio 
+                                      AND (cfg.Fecha_Fin IS NULL OR s.CheckOut <= cfg.Fecha_Fin)
+                                ), 0)
+                            )
+                        END as Adicionales
+                    FROM [APPGAC].[ServiciosViewSQL] s
+                    JOIN [dbo].[GAC_APP_TB_CAS] cas ON s.IdCAS = cas.ID_CAS
+                    OUTER APPLY (
+                        SELECT TOP 1 Categoria FROM [dbo].[GAC_APP_TB_MATERIALES] WHERE ID_Externo = s.CodigoExternoEquipo
+                    ) m
+                    OUTER APPLY (
+                        SELECT TOP 1 CAST(Importe AS FLOAT) as Importe 
+                        FROM [dbo].[GAC_APP_TB_TARIFARIO] t 
+                        WHERE t.Empresa = cas.ID_CAS 
+                          AND (t.Servicio = s.IdServicio OR t.Servicio = s.Servicio)
+                          AND TRIM(t.Categoria) = TRIM(m.Categoria)
+                          AND s.CheckOut >= t.Fecha_inicio 
+                          AND (t.Fecha_fin IS NULL OR s.CheckOut <= t.Fecha_fin)
+                        ORDER BY t.Estado DESC, t.Fecha_inicio DESC
+                    ) rate
+                    WHERE cas.RUC = @ruc 
+                      AND s.CheckOut BETWEEN @start AND @end
+                      AND s.Estado = 'Closed'
+                      AND s.VisitaRealizada = 'true'
+                      AND s.TrabajoRealizado = 'true'
+                      AND s.Ticket NOT IN (SELECT Ticket FROM [dbo].[GAC_APP_TB_VALORIZACIONES_DETALLE] WHERE Tipo = 'SERVICIO')
+                ) base
                 OUTER APPLY (
-                    SELECT TOP 1 Categoria FROM [dbo].[GAC_APP_TB_MATERIALES] WHERE ID_Externo = s.CodigoExternoEquipo
-                ) m
-                OUTER APPLY (
-                    SELECT TOP 1 CAST(Importe AS FLOAT) as Importe 
-                    FROM [dbo].[GAC_APP_TB_TARIFARIO] t 
-                    WHERE t.Empresa = cas.ID_CAS 
-                      AND (t.Servicio = s.IdServicio OR t.Servicio = s.Servicio)
-                      AND TRIM(t.Categoria) = TRIM(m.Categoria)
-                      AND s.CheckOut >= t.Fecha_inicio 
-                      AND (t.Fecha_fin IS NULL OR s.CheckOut <= t.Fecha_fin)
-                    ORDER BY t.Estado DESC, t.Fecha_inicio DESC
-                ) rate
-                WHERE cas.RUC = @ruc 
-                  AND s.CheckOut BETWEEN @start AND @end
-                  AND s.Estado = 'Closed'
-                  AND s.VisitaRealizada = 'true'
-                  AND s.TrabajoRealizado = 'true'
-                  AND s.Ticket NOT IN (SELECT Ticket FROM [dbo].[GAC_APP_TB_VALORIZACIONES_DETALLE] WHERE Tipo = 'SERVICIO')
+                    SELECT TOP 1 Importe 
+                    FROM [dbo].[GAC_APP_TB_CONFIG_TECNICO_INSTITUCIONAL] 
+                    WHERE Tecnico_Id = base.CodigoTecnico 
+                      AND Activo = 1
+                      AND base.FechaCierre >= Fecha_Inicio 
+                      AND base.FechaCierre <= Fecha_Fin
+                ) inst
+
             `);
         res.json(tickets.recordset);
     } catch (err: any) { res.status(500).json({ error: err.message }); }
