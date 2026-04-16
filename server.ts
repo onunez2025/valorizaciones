@@ -384,6 +384,9 @@ app.get('/api/valuations/:ruc', verifyToken, async (req: Request, res: Response)
                 s.CodigoTecnico,
                 s.IdCAS,
                 s.Distrito,
+                s.NombreTecnico,
+                s.ApellidoTecnico,
+                s.ComentarioTecnico,
                 DATEDIFF(day, s.FechaVisita, s.CheckOut) as DiasDiferencia,
                 ISNULL(m.Categoria, 'N/A') as Categoria,
                 CASE 
@@ -774,7 +777,10 @@ app.get('/api/closures/:id/details', verifyToken, async (req: Request, res: Resp
                     ISNULL(d.Dias_Diferencia, DATEDIFF(day, s.FechaVisita, s.CheckOut)) as Dias_Diferencia,
                     COALESCE(NULLIF(d.Codigo_Externo, ''), s.CodigoExternoEquipo) as Codigo_Externo,
                     ISNULL(d.Tarifa_Base, d.Monto) as Tarifa_Base,
-                    ISNULL(d.Adicionales, 0) as Adicionales
+                    ISNULL(d.Adicionales, 0) as Adicionales,
+                    s.NombreTecnico,
+                    s.ApellidoTecnico,
+                    s.ComentarioTecnico
                 FROM [dbo].[GAC_APP_TB_VALORIZACIONES_DETALLE] d
                 LEFT JOIN [APPGAC].[ServiciosViewSQL] s ON d.Ticket = s.Ticket AND d.Tipo = 'SERVICIO'
                 WHERE d.IdCierre = @id

@@ -51,6 +51,9 @@ export interface ValuationTicket {
   ServicioNombre?: string;
   CodigoEquipo?: string;
   NombreEquipo?: string;
+  NombreTecnico?: string;
+  ApellidoTecnico?: string;
+  ComentarioTecnico?: string;
 }
 
 export interface Material {

@@ -222,7 +222,10 @@ export default function ValuationsPage() {
             diasDiferencia: t.DiasDiferencia,
             codigoExterno: t.CodigoEquipo,
             tarifaBase: t.TarifaBase,
-            adicionales: (t.Adicionales || 0)
+            adicionales: (t.Adicionales || 0),
+            nombreTecnico: t.NombreTecnico,
+            apellidoTecnico: t.ApellidoTecnico,
+            comentarioTecnico: t.ComentarioTecnico
         }));
 
         const penaltyDetails = penalties.map(p => ({
@@ -377,7 +380,7 @@ export default function ValuationsPage() {
         });
 
         // --- HOJA DETALLE ---
-        const dHeaders = ["TICKET", "FECHA VISITA", "FECHA CIERRE", "DÍAS DIF.", "SERVICIO", "CÓD. EQUIPO", "CATEGORÍA", "TARIFA BASE", "ADICIONALES", "TOTAL"];
+        const dHeaders = ["TICKET", "FECHA VISITA", "FECHA CIERRE", "DÍAS DIF.", "SERVICIO", "TECNICO", "COMENTARIO TECNICO", "CÓD. EQUIPO", "CATEGORÍA", "TARIFA BASE", "ADICIONALES", "TOTAL"];
         sheetDetalle.getRow(1).values = dHeaders;
         sheetDetalle.getRow(1).eachCell(c => {
             c.font = { bold: true, color: { argb: 'FFFFFFFF' } };
@@ -392,6 +395,8 @@ export default function ValuationsPage() {
                 t.FechaCierre ? new Date(t.FechaCierre) : new Date(t.Fecha),
                 t.DiasDiferencia ?? '-',
                 t.ServicioNombre || t.Servicio,
+                `${t.NombreTecnico || ''} ${t.ApellidoTecnico || ''}`.trim() || '-',
+                t.ComentarioTecnico || '-',
                 t.CodigoEquipo || '-',
                 t.Categoria,
                 t.TarifaBase ?? (t.TarifaBase + (t.Adicionales || 0)), // Si TarifaBase es null, usar el total
@@ -400,15 +405,15 @@ export default function ValuationsPage() {
             ]);
             row.getCell(2).numFmt = 'dd/mm/yyyy';
             row.getCell(3).numFmt = 'dd/mm/yyyy';
-            row.getCell(8).numFmt = '"S/" #,##0.00';
-            row.getCell(9).numFmt = '"S/" #,##0.00';
             row.getCell(10).numFmt = '"S/" #,##0.00';
+            row.getCell(11).numFmt = '"S/" #,##0.00';
+            row.getCell(12).numFmt = '"S/" #,##0.00';
             if ((t.DiasDiferencia || 0) > 1) {
                 row.getCell(4).font = { color: { argb: 'FFFF0000' }, bold: true };
             }
             row.eachCell(c => { c.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} }; });
         });
-        sheetDetalle.autoFilter = { from: 'A1', to: 'J1' };
+        sheetDetalle.autoFilter = { from: 'A1', to: 'L1' };
         sheetDetalle.columns.forEach(col => { col.width = 18; });
 
         // --- HOJA PENALIDADES ---
@@ -532,7 +537,7 @@ export default function ValuationsPage() {
         });
 
         // --- HOJA SERVICIOS ---
-        const sHeaders = ["TICKET", "FECHA VISITA", "FECHA CIERRE", "DÍAS DIF.", "SERVICIO", "CÓD. EQUIPO", "CATEGORÍA", "TARIFA BASE", "ADICIONALES", "TOTAL"];
+        const sHeaders = ["TICKET", "FECHA VISITA", "FECHA CIERRE", "DÍAS DIF.", "SERVICIO", "TECNICO", "COMENTARIO TECNICO", "CÓD. EQUIPO", "CATEGORÍA", "TARIFA BASE", "ADICIONALES", "TOTAL"];
         sheetDetalle.getRow(1).values = sHeaders;
         sheetDetalle.getRow(1).eachCell(c => { c.font = { bold: true, color: { argb: 'FFFFFFFF' } }; c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E3A8A' } }; });
         
@@ -543,6 +548,8 @@ export default function ValuationsPage() {
                 s.Fecha_Cierre ? new Date(s.Fecha_Cierre) : null, 
                 s.Dias_Diferencia ?? '-', 
                 s.Servicio_Nombre, 
+                `${s.NombreTecnico || ''} ${s.ApellidoTecnico || ''}`.trim() || '-',
+                s.ComentarioTecnico || '-',
                 s.Codigo_Externo || '-', 
                 s.Categoria, 
                 s.Tarifa_Base ?? s.Monto, // Fallback para cierres antiguos
@@ -551,12 +558,12 @@ export default function ValuationsPage() {
             ]);
             row.getCell(2).numFmt = 'dd/mm/yyyy';
             row.getCell(3).numFmt = 'dd/mm/yyyy';
-            row.getCell(8).numFmt = '"S/" #,##0.00';
-            row.getCell(9).numFmt = '"S/" #,##0.00';
             row.getCell(10).numFmt = '"S/" #,##0.00';
+            row.getCell(11).numFmt = '"S/" #,##0.00';
+            row.getCell(12).numFmt = '"S/" #,##0.00';
             row.eachCell(c => { c.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} }; });
         });
-        sheetDetalle.autoFilter = { from: 'A1', to: 'J1' };
+        sheetDetalle.autoFilter = { from: 'A1', to: 'L1' };
         sheetDetalle.columns.forEach(col => { col.width = 15; });
 
         // --- HOJA PENALIDADES ---
