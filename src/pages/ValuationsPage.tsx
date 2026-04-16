@@ -408,8 +408,10 @@ export default function ValuationsPage() {
 
         const breakdownMap = new Map<string, { count: number, total: number }>();
         tickets.forEach(t => {
-            const d = t.FechaCierre ? new Date(t.FechaCierre) : new Date(t.Fecha);
-            const dateStr = d.toLocaleDateString();
+            const dateVal = t.FechaCierre || t.Fecha;
+            if (!dateVal) return;
+            const d = new Date(dateVal);
+            const dateStr = d.toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric' });
             const current = breakdownMap.get(dateStr) || { count: 0, total: 0 };
             breakdownMap.set(dateStr, {
                 count: current.count + 1,
@@ -578,8 +580,10 @@ export default function ValuationsPage() {
 
         const breakdownMap = new Map<string, { count: number, total: number }>();
         services.forEach(s => {
-            const d = s.Fecha_Cierre ? new Date(s.Fecha_Cierre) : new Date(s.Fecha_Ticket);
-            const dateStr = d.toLocaleDateString();
+            const dateVal = s.FechaCierre || s.Fecha;
+            if (!dateVal) return;
+            const d = new Date(dateVal);
+            const dateStr = d.toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric' });
             const current = breakdownMap.get(dateStr) || { count: 0, total: 0 };
             breakdownMap.set(dateStr, {
                 count: current.count + 1,
