@@ -48,6 +48,7 @@ export default function ValuationsPage() {
     const [closures, setClosures] = useState<any[]>([]);
     const [loadingHistory, setLoadingHistory] = useState(false);
     const [selectedClosure, setSelectedClosure] = useState<any | null>(null);
+    const [loadingPdf, setLoadingPdf] = useState<string | null>(null);
     const [closureDetails, setClosureDetails] = useState<any[]>([]);
     const [loadingDetails, setLoadingDetails] = useState(false);
     const [detailSearchQuery, setDetailSearchQuery] = useState('');
@@ -245,6 +246,39 @@ export default function ValuationsPage() {
             alert({ message: "No se pudo cerrar la quincena. Intente nuevamente." });
         } finally {
             setIsClosing(false);
+        }
+    };
+
+    const handleViewC4CReport = async (ticketId: string) => {
+        try {
+            setLoadingPdf(ticketId);
+            const token = localStorage.getItem('token');
+            const response = await fetch(`/api/c4c/report/${ticketId}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.details || error.error || 'No se pudo obtener el informe técnico');
+            }
+
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const win = window.open(url, '_blank');
+            if (!win) {
+                throw new Error('El navegador bloqueó la ventana emergente. Por favor, permite las ventanas emergentes para este sitio.');
+            }
+            
+            // Cleanup after some time
+            setTimeout(() => window.URL.revokeObjectURL(url), 60000);
+        } catch (err: any) {
+            alert({ 
+                title: 'Error de Reporte', 
+                message: err.message, 
+                type: 'error' 
+            });
+        } finally {
+            setLoadingPdf(null);
         }
     };
 
@@ -957,13 +991,26 @@ export default function ValuationsPage() {
                                                                                                     )}
                                                                                                 </td>
                                                                                                 <td className="px-6 py-4 text-right">
-                                                                                                    <button 
-                                                                                                        onClick={() => setShowPenaltyModal({ show: true, type: 'penalty', ticket: ticket.Ticket, date: ticket.Fecha.split('T')[0] })} 
-                                                                                                        className="p-2 bg-red-500/10 text-red-600 rounded-lg hover:bg-red-600 hover:text-white transition-all opacity-0 group-hover/row:opacity-100 shadow-sm" 
-                                                                                                        title="Aplicar Penalidad"
-                                                                                                    >
-                                                                                                        <AlertTriangle className="w-4 h-4" />
-                                                                                                    </button>
+                                                                                                    <div className="flex items-center justify-end gap-2">
+                                                                                                        <button 
+                                                                                                            onClick={() => handleViewC4CReport(ticket.Ticket)}
+                                                                                                            disabled={loadingPdf === ticket.Ticket}
+                                                                                                            className={cn(
+                                                                                                                "p-2 bg-blue-500/5 text-blue-600 rounded-lg transition-all shadow-sm flex items-center justify-center",
+                                                                                                                loadingPdf === ticket.Ticket ? "animate-pulse opacity-50 cursor-wait bg-blue-500/10" : "hover:bg-blue-600 hover:text-white"
+                                                                                                            )}
+                                                                                                            title="Ver Informe Técnico C4C"
+                                                                                                        >
+                                                                                                            {loadingPdf === ticket.Ticket ? <Activity className="w-3.5 h-3.5 animate-spin" /> : <FileText className="w-3.5 h-3.5" />}
+                                                                                                        </button>
+                                                                                                        <button 
+                                                                                                            onClick={() => setShowPenaltyModal({ show: true, type: 'penalty', ticket: ticket.Ticket, date: ticket.Fecha.split('T')[0] })} 
+                                                                                                            className="p-2 bg-red-500/10 text-red-600 rounded-lg hover:bg-red-600 hover:text-white transition-all opacity-0 group-hover/row:opacity-100 shadow-sm flex items-center justify-center" 
+                                                                                                            title="Aplicar Penalidad"
+                                                                                                        >
+                                                                                                            <AlertTriangle className="w-3.5 h-3.5" />
+                                                                                                        </button>
+                                                                                                    </div>
                                                                                                 </td>
                                                                                             </tr>
                                                                                         ))}

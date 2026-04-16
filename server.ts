@@ -8,12 +8,15 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 import path from 'path';
 import crypto from 'crypto';
+import axios from 'axios';
 
 dotenv.config();
 
 const app = express();
 const port = process.env.PORT || 3000;
 const APP_IDENTIFIER = 'VAL';
+const C4C_BASE_URL = process.env.C4C_BASE_URL;
+const C4C_AUTH = Buffer.from(`${process.env.C4C_USER}:${process.env.C4C_PASSWORD}`).toString('base64');
 const JWT_SECRET = process.env.JWT_SECRET || 'tablero_control_secret_2026';
 
 const cleanApps = (str: string) => [...new Set((str || '').split(',').map(s => s.trim()).filter(Boolean))].join(', ');
@@ -861,6 +864,65 @@ app.get('/api/dashboard/top-cas', verifyToken, async (req: Request, res: Respons
         const top = await request.query(query);
         res.json(top.recordset);
     } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+// --- C4C INTEGRATION ---
+app.get('/api/c4c/report/:ticketId', verifyToken, async (req: Request, res: Response) => {
+    try {
+        const { ticketId } = req.params;
+        
+        // 1. Find the Service Request to get the Attachment Folder
+        const searchUrl = `${C4C_BASE_URL}/ServiceRequestCollection?$filter=ID eq '${ticketId}'&$expand=ServiceRequestAttachmentFolder`;
+        
+        const searchResponse = await axios.get(searchUrl, {
+            headers: { 'Authorization': `Basic ${C4C_AUTH}` }
+        });
+
+        const ticket = searchResponse.data.d.results[0];
+        if (!ticket) {
+            return res.status(404).json({ error: `Ticket ${ticketId} not found in C4C` });
+        }
+
+        const attachments = ticket.ServiceRequestAttachmentFolder;
+        if (!attachments || !attachments.results || attachments.results.length === 0) {
+            return res.status(404).json({ error: `No attachments found for ticket ${ticketId}` });
+        }
+
+        // 2. Look for the technical report PDF
+        // We filter for PDFs, prioritizing those with "Informe" or "Report" in the name
+        let report = attachments.results.find((a: any) => 
+            a.MimeType === 'application/pdf' && 
+            (a.Name.toLowerCase().includes('informe') || a.Name.toLowerCase().includes('report'))
+        );
+
+        // Fallback: take the first PDF if no "report" name match
+        if (!report) {
+            report = attachments.results.find((a: any) => a.MimeType === 'application/pdf');
+        }
+
+        if (!report) {
+            return res.status(404).json({ error: `No PDF report found for ticket ${ticketId}` });
+        }
+
+        // 3. Fetch the actual PDF binary content
+        const downloadUrl = report.__metadata.media_src || `${C4C_BASE_URL}/ServiceRequestAttachmentFolderCollection('${report.ObjectID}')/Binary/$value`;
+        
+        const pdfResponse = await axios.get(downloadUrl, {
+            headers: { 'Authorization': `Basic ${C4C_AUTH}` },
+            responseType: 'arraybuffer'
+        });
+
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `inline; filename="${report.Name}"`);
+        res.send(pdfResponse.data);
+
+    } catch (err: any) {
+        console.error('C4C Proxy Error:', err.response?.data || err.message);
+        res.status(err.response?.status || 500).json({ 
+            error: 'Failed to retrieve report from C4C',
+            details: err.response?.data?.error?.message?.value || err.message
+        });
+    }
 });
 
 // --- CONFIG & MANAGEMENT (Standardized) ---
