@@ -878,41 +878,59 @@ app.get('/api/c4c/report/:ticketId', verifyToken, async (req: Request, res: Resp
             });
         }
         
-        // 1. Find the Service Request to get the Attachment Folder
-        const searchUrl = `${C4C_BASE_URL}/ServiceRequestCollection?$filter=ID eq '${ticketId}'&$expand=ServiceRequestAttachmentFolder`;
-        
+        // 1. Find the Service Request
+        const searchUrl = `${C4C_BASE_URL}/ServiceRequestCollection?$filter=ID eq '${ticketId}'`;
         const searchResponse = await axios.get(searchUrl, {
             headers: { 'Authorization': `Basic ${C4C_AUTH}` }
         });
 
         const ticket = searchResponse.data.d.results[0];
         if (!ticket) {
-            return res.status(404).json({ error: `Ticket ${ticketId} not found in C4C` });
+            return res.status(404).json({ error: `Ticket ${ticketId} no encontrado en C4C` });
         }
 
-        const attachments = ticket.ServiceRequestAttachmentFolder;
-        if (!attachments || !attachments.results || attachments.results.length === 0) {
-            return res.status(404).json({ error: `No attachments found for ticket ${ticketId}` });
+        // 2. Fetch Attachments using the ObjectID
+        // We try to get from the expanded folder or fetch it directly
+        let attachments = ticket.ServiceRequestAttachmentFolder?.results;
+        
+        if (!attachments || attachments.length === 0) {
+            const attachmentUrl = `${C4C_BASE_URL}/ServiceRequestCollection('${ticket.ObjectID}')/ServiceRequestAttachmentFolder`;
+            try {
+                const attachResponse = await axios.get(attachmentUrl, {
+                    headers: { 'Authorization': `Basic ${C4C_AUTH}` }
+                });
+                attachments = attachResponse.data.d.results;
+            } catch (attachErr) {
+                console.warn('Could not fetch attachments directly:', attachErr);
+            }
         }
 
-        // 2. Look for the technical report PDF
-        // We filter for PDFs, prioritizing those with "Informe" or "Report" in the name
-        let report = attachments.results.find((a: any) => 
+        if (!attachments || attachments.length === 0) {
+            return res.status(404).json({ 
+                error: `No se encontraron adjuntos para el ticket ${ticketId}`,
+                details: 'El ticket existe pero no tiene archivos asociados en la pestaña de Adjuntos de C4C.'
+            });
+        }
+
+        // 3. Look for the technical report PDF
+        // We prioritize PDFs with "Informe" or "Report" in the name
+        let report = attachments.find((a: any) => 
             a.MimeType === 'application/pdf' && 
             (a.Name.toLowerCase().includes('informe') || a.Name.toLowerCase().includes('report'))
         );
 
-        // Fallback: take the first PDF if no "report" name match
+        // Fallback: take any PDF if no specific name match
         if (!report) {
-            report = attachments.results.find((a: any) => a.MimeType === 'application/pdf');
+            report = attachments.find((a: any) => a.MimeType === 'application/pdf');
         }
 
         if (!report) {
-            return res.status(404).json({ error: `No PDF report found for ticket ${ticketId}` });
+            return res.status(404).json({ error: `No se encontró un informe en PDF para el ticket ${ticketId}` });
         }
 
-        // 3. Fetch the actual PDF binary content
-        const downloadUrl = report.__metadata.media_src || `${C4C_BASE_URL}/ServiceRequestAttachmentFolderCollection('${report.ObjectID}')/Binary/$value`;
+        // 4. Fetch the actual PDF binary content
+        // In C4C OData, the content is in the /Binary/$value endpoint of the attachment
+        const downloadUrl = `${C4C_BASE_URL}/ServiceRequestAttachmentFolderCollection('${report.ObjectID}')/Binary/$value`;
         
         const pdfResponse = await axios.get(downloadUrl, {
             headers: { 'Authorization': `Basic ${C4C_AUTH}` },
