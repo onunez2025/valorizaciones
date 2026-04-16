@@ -12,8 +12,8 @@ export default function SettingsPage() {
     useEffect(() => {
         const fetchConfig = async () => {
             try {
-                const response = await ApiClient.get('/config');
-                const diasConfig = response.data.find((c: any) => c.Clave === 'DIAS_MAX_CIERRE');
+                const data = await ApiClient.request('/config');
+                const diasConfig = data.find((c: any) => c.Clave === 'DIAS_MAX_CIERRE');
                 if (diasConfig) {
                     setDiasMax(diasConfig.Valor);
                 }
@@ -37,10 +37,13 @@ export default function SettingsPage() {
 
         setSaving(true);
         try {
-            await ApiClient.post('/config', {
-                clave: 'DIAS_MAX_CIERRE',
-                valor: valueStr,
-                descripcion: 'Máximo de días permitidos entre la visita y el cierre (CheckOut) para considerar tarifa.'
+            await ApiClient.request('/config', {
+                method: 'POST',
+                body: JSON.stringify({
+                    clave: 'DIAS_MAX_CIERRE',
+                    valor: valueStr,
+                    descripcion: 'Máximo de días permitidos entre la visita y el cierre (CheckOut) para considerar tarifa.'
+                })
             });
             alert({ title: 'Éxito', message: 'Configuración guardada correctamente', type: 'success' });
         } catch (err) {
