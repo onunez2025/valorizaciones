@@ -870,6 +870,13 @@ app.get('/api/dashboard/top-cas', verifyToken, async (req: Request, res: Respons
 app.get('/api/c4c/report/:ticketId', verifyToken, async (req: Request, res: Response) => {
     try {
         const { ticketId } = req.params;
+
+        if (!C4C_BASE_URL || !process.env.C4C_USER || !process.env.C4C_PASSWORD) {
+            return res.status(500).json({ 
+                error: 'C4C Integration not configured', 
+                details: 'Missing C4C_BASE_URL or credentials in environment variables' 
+            });
+        }
         
         // 1. Find the Service Request to get the Attachment Folder
         const searchUrl = `${C4C_BASE_URL}/ServiceRequestCollection?$filter=ID eq '${ticketId}'&$expand=ServiceRequestAttachmentFolder`;
