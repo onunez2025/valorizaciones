@@ -316,9 +316,6 @@ app.get('/api/valuations/:ruc', verifyToken, async (req: Request, res: Response)
                 DECLARE @diasMax INT;
                 SELECT @diasMax = CAST(Valor AS INT) FROM [dbo].[GAC_APP_TB_VALORIZACIONES_CONFIG] WHERE Clave = 'DIAS_MAX_CIERRE';
                 IF @diasMax IS NULL SET @diasMax = 1;
-
-                    s.Ticket NOT IN (SELECT Ticket FROM [dbo].[GAC_APP_TB_VALORIZACIONES_DETALLE] WHERE Tipo = 'SERVICIO')
-                )
                 SELECT 
                     base.*,
                     CASE 
