@@ -244,62 +244,85 @@ app.get('/api/distritos', verifyToken, async (req: Request, res: Response) => {
     } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
-// --- CONFIG TECNICOS INSTITUCIONAL ---
-app.get('/api/config-tecnicos-institucional', verifyToken, async (req: Request, res: Response) => {
+// --- CONFIG CANAL INSTITUCIONAL ---
+app.get('/api/config-canal-institucional', verifyToken, async (req: Request, res: Response) => {
     try {
         const db = await getDb();
-        const result = await db.request().query("SELECT * FROM [dbo].[GAC_APP_TB_CONFIG_TECNICO_INSTITUCIONAL] ORDER BY Creado_El DESC");
+        const result = await db.request().query("SELECT * FROM [dbo].[GAC_APP_TB_CONFIG_CANAL_INSTITUCIONAL] ORDER BY Creado_El DESC");
         res.json(result.recordset);
     } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
-app.post('/api/config-tecnicos-institucional', verifyToken, async (req: Request, res: Response) => {
+app.post('/api/config-canal-institucional', verifyToken, async (req: Request, res: Response) => {
     try {
-        const { id, tecnico_id, nombre_tecnico, fecha_inicio, fecha_fin, importe, activo } = req.body;
+        const { id, usuario_creador, fecha_inicio, fecha_fin, importe, keywords, validacion_tipo, activo } = req.body;
         const user = (req as any).user.username;
         const db = await getDb();
         const request = db.request()
-            .input('tid', tecnico_id)
-            .input('nom', nombre_tecnico)
+            .input('uc', usuario_creador)
             .input('fi', fecha_inicio)
             .input('ff', fecha_fin)
             .input('imp', sql.Decimal(18, 2), importe)
+            .input('key', keywords)
+            .input('type', validacion_tipo || 'CONTIENE')
             .input('act', activo ? 1 : 0)
             .input('usr', user);
 
         if (id) {
             await request.input('id', id).query(`
-                UPDATE [dbo].[GAC_APP_TB_CONFIG_TECNICO_INSTITUCIONAL]
-                SET Tecnico_Id = @tid, Nombre_Tecnico = @nom, Fecha_Inicio = @fi, Fecha_Fin = @ff, Importe = @imp, Activo = @act
+                UPDATE [dbo].[GAC_APP_TB_CONFIG_CANAL_INSTITUCIONAL]
+                SET Usuario_Creador = @uc, Fecha_Inicio = @fi, Fecha_Fin = @ff, Importe = @imp, 
+                    Keywords = @key, Validacion_Tipo = @type, Activo = @act
                 WHERE Id = @id
             `);
         } else {
             await request.query(`
-                INSERT INTO [dbo].[GAC_APP_TB_CONFIG_TECNICO_INSTITUCIONAL] (Tecnico_Id, Nombre_Tecnico, Fecha_Inicio, Fecha_Fin, Importe, Activo, Creado_Por)
-                VALUES (@tid, @nom, @fi, @ff, @imp, @act, @usr)
+                INSERT INTO [dbo].[GAC_APP_TB_CONFIG_CANAL_INSTITUCIONAL] 
+                (Usuario_Creador, Fecha_Inicio, Fecha_Fin, Importe, Keywords, Validacion_Tipo, Activo, Creado_Por)
+                VALUES (@uc, @fi, @ff, @imp, @key, @type, @act, @usr)
             `);
         }
         res.json({ success: true });
     } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
-app.delete('/api/config-tecnicos-institucional/:id', verifyToken, async (req: Request, res: Response) => {
+app.delete('/api/config-canal-institucional/:id', verifyToken, async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
         const db = await getDb();
-        await db.request().input('id', id).query("DELETE FROM [dbo].[GAC_APP_TB_CONFIG_TECNICO_INSTITUCIONAL] WHERE Id = @id");
+        await db.request().input('id', id).query("DELETE FROM [dbo].[GAC_APP_TB_CONFIG_CANAL_INSTITUCIONAL] WHERE Id = @id");
         res.json({ success: true });
     } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
-app.get('/api/tecnicos-list', verifyToken, async (req: Request, res: Response) => {
-    try {
-        const db = await getDb();
-        const result = await db.request().query('SELECT DISTINCT CodigoTecnico, (NombreTecnico + \' \' + ApellidoTecnico) as NombreCompleto FROM [APPGAC].[ServiciosViewSQL] WHERE CodigoTecnico IS NOT NULL ORDER BY NombreCompleto');
-        res.json(result.recordset);
-    } catch (err: any) { res.status(500).json({ error: err.message }); }
-});
 
+// --- VALORIZACIONES ---
+// --- VALORIZACIONES HELPERS ---
+async function getC4CDetails(ticketIds: string[]) {
+    if (ticketIds.length === 0) return {};
+    const results: Record<string, { creator: string; subject: string }> = {};
+    const chunkSize = 20;
+
+    for (let i = 0; i < ticketIds.length; i += chunkSize) {
+        const chunk = ticketIds.slice(i, i + chunkSize);
+        const filter = chunk.map(id => `ID eq '${id}'`).join(' or ');
+        const url = `${C4C_BASE_URL}/ServiceRequestCollection?$filter=${encodeURIComponent(filter)}&$select=ID,CreatedBy,Name`;
+        
+        try {
+            const resp = await axios.get(url, { headers: { 'Authorization': `Basic ${C4C_AUTH}` } });
+            const items = resp.data.d.results;
+            items.forEach((item: any) => {
+                results[item.ID] = { 
+                    creator: item.CreatedBy, 
+                    subject: item.Name 
+                };
+            });
+        } catch (err: any) {
+            console.error('C4C OData Detail Error:', err.message);
+        }
+    }
+    return results;
+}
 
 // --- VALORIZACIONES ---
 app.get('/api/valuations/:ruc', verifyToken, async (req: Request, res: Response) => {
@@ -308,84 +331,122 @@ app.get('/api/valuations/:ruc', verifyToken, async (req: Request, res: Response)
 
     try {
         const db = await getDb();
-        const tickets = await db.request()
+        const request = db.request()
             .input('ruc', ruc)
             .input('start', sql.VarChar, `${start} 00:00:00`)
-            .input('end', sql.VarChar, `${end} 23:59:59`)
-            .query(`
-                DECLARE @diasMax INT;
-                SELECT @diasMax = CAST(Valor AS INT) FROM [dbo].[GAC_APP_TB_VALORIZACIONES_CONFIG] WHERE Clave = 'DIAS_MAX_CIERRE';
-                IF @diasMax IS NULL SET @diasMax = 1;
-                SELECT 
-                    base.*,
-                    CASE 
-                        WHEN inst.Importe IS NOT NULL THEN inst.Importe
-                        ELSE base.TarifaBaseCalculada
-                    END as TarifaBase
-                FROM (
-                    SELECT 
-                        s.Ticket, s.CheckOut as Fecha, s.Servicio as ServicioNombre, 
-                        s.IdServicio as Servicio,
-                        s.CodigoExternoEquipo as CodigoEquipo,
-                        s.NombreEquipo as NombreEquipo,
-                        s.FechaVisita, s.CheckOut as FechaCierre,
-                        s.CodigoTecnico,
-                        DATEDIFF(day, s.FechaVisita, s.CheckOut) as DiasDiferencia,
-                        ISNULL(m.Categoria, 'N/A') as Categoria,
-                        CASE 
-                            WHEN UPPER(TRIM(s.Servicio)) = 'VISITA' THEN 0
-                            WHEN DATEDIFF(day, s.FechaVisita, s.CheckOut) > @diasMax THEN 0 
-                            WHEN LEFT(s.CodigoExternoEquipo, 4) NOT IN ('3120', '3121', '5120', '5121') THEN 0
-                            ELSE ISNULL(rate.Importe, 0) 
-                        END as TarifaBaseCalculada,
-                        CASE 
-                            WHEN LEFT(s.CodigoExternoEquipo, 4) NOT IN ('3120', '3121', '5120', '5121') THEN 0
-                            ELSE (
-                                ISNULL((SELECT SUM(CAST(Importe AS FLOAT)) FROM [dbo].[GAC_APP_TB_TICKETS_VALORIZACION_ADICIONAL] WHERE Ticket = s.Ticket), 0) +
-                                ISNULL((
-                                    SELECT SUM(Importe) 
-                                    FROM [dbo].[GAC_APP_TB_CONFIG_VALORIZACION_DISTRITO] cfg
-                                    WHERE cfg.Activo = 1
-                                      AND EXISTS (SELECT 1 FROM OPENJSON(cfg.CAS_Ids) WHERE value = s.IdCAS)
-                                      AND EXISTS (SELECT 1 FROM OPENJSON(cfg.Distritos) WHERE value = s.Distrito)
-                                      AND s.CheckOut >= cfg.Fecha_Inicio 
-                                      AND (cfg.Fecha_Fin IS NULL OR s.CheckOut <= cfg.Fecha_Fin)
-                                ), 0)
-                            )
-                        END as Adicionales
-                    FROM [APPGAC].[ServiciosViewSQL] s
-                    JOIN [dbo].[GAC_APP_TB_CAS] cas ON s.IdCAS = cas.ID_CAS
-                    OUTER APPLY (
-                        SELECT TOP 1 Categoria FROM [dbo].[GAC_APP_TB_MATERIALES] WHERE ID_Externo = s.CodigoExternoEquipo
-                    ) m
-                    OUTER APPLY (
-                        SELECT TOP 1 CAST(Importe AS FLOAT) as Importe 
-                        FROM [dbo].[GAC_APP_TB_TARIFARIO] t 
-                        WHERE t.Empresa = cas.ID_CAS 
-                          AND (t.Servicio = s.IdServicio OR t.Servicio = s.Servicio)
-                          AND TRIM(t.Categoria) = TRIM(m.Categoria)
-                          AND s.CheckOut >= t.Fecha_inicio 
-                          AND (t.Fecha_fin IS NULL OR s.CheckOut <= t.Fecha_fin)
-                        ORDER BY t.Estado DESC, t.Fecha_inicio DESC
-                    ) rate
-                    WHERE cas.RUC = @ruc 
-                      AND s.CheckOut BETWEEN @start AND @end
-                      AND s.Estado = 'Closed'
-                      AND s.VisitaRealizada = 'true'
-                      AND s.TrabajoRealizado = 'true'
-                      AND s.Ticket NOT IN (SELECT Ticket FROM [dbo].[GAC_APP_TB_VALORIZACIONES_DETALLE] WHERE Tipo = 'SERVICIO')
-                ) base
-                OUTER APPLY (
-                    SELECT TOP 1 Importe 
-                    FROM [dbo].[GAC_APP_TB_CONFIG_TECNICO_INSTITUCIONAL] 
-                    WHERE Tecnico_Id = base.CodigoTecnico 
-                      AND Activo = 1
-                      AND base.FechaCierre >= Fecha_Inicio 
-                      AND base.FechaCierre <= Fecha_Fin
-                ) inst
+            .input('end', sql.VarChar, `${end} 23:59:59`);
 
-            `);
-        res.json(tickets.recordset);
+        const sqlResult = await request.query(`
+            DECLARE @diasMax INT;
+            SELECT @diasMax = CAST(Valor AS INT) FROM [dbo].[GAC_APP_TB_VALORIZACIONES_CONFIG] WHERE Clave = 'DIAS_MAX_CIERRE';
+            IF @diasMax IS NULL SET @diasMax = 1;
+
+            SELECT 
+                s.Ticket, s.CheckOut as Fecha, s.Servicio as ServicioNombre, 
+                s.IdServicio as Servicio,
+                s.CodigoExternoEquipo as CodigoEquipo,
+                s.NombreEquipo as NombreEquipo,
+                s.FechaVisita, s.CheckOut as FechaCierre,
+                s.CodigoTecnico,
+                s.IdCAS,
+                s.Distrito,
+                DATEDIFF(day, s.FechaVisita, s.CheckOut) as DiasDiferencia,
+                ISNULL(m.Categoria, 'N/A') as Categoria,
+                CASE 
+                    WHEN UPPER(TRIM(s.Servicio)) = 'VISITA' THEN 0
+                    WHEN DATEDIFF(day, s.FechaVisita, s.CheckOut) > @diasMax THEN 0 
+                    WHEN LEFT(s.CodigoExternoEquipo, 4) NOT IN ('3120', '3121', '5120', '5121') THEN 0
+                    ELSE ISNULL(rate.Importe, 0) 
+                END as TarifaBaseCalculada,
+                CASE 
+                    WHEN LEFT(s.CodigoExternoEquipo, 4) NOT IN ('3120', '3121', '5120', '5121') THEN 0
+                    ELSE (
+                        ISNULL((SELECT SUM(CAST(Importe AS FLOAT)) FROM [dbo].[GAC_APP_TB_TICKETS_VALORIZACION_ADICIONAL] WHERE Ticket = s.Ticket), 0) +
+                        ISNULL((
+                            SELECT SUM(Importe) 
+                            FROM [dbo].[GAC_APP_TB_CONFIG_VALORIZACION_DISTRITO] cfg
+                            WHERE cfg.Activo = 1
+                              AND EXISTS (SELECT 1 FROM OPENJSON(cfg.CAS_Ids) WHERE value = s.IdCAS)
+                              AND EXISTS (SELECT 1 FROM OPENJSON(cfg.Distritos) WHERE value = s.Distrito)
+                              AND s.CheckOut >= cfg.Fecha_Inicio 
+                              AND (cfg.Fecha_Fin IS NULL OR s.CheckOut <= cfg.Fecha_Fin)
+                        ), 0)
+                    )
+                END as Adicionales
+            FROM [APPGAC].[ServiciosViewSQL] s
+            JOIN [dbo].[GAC_APP_TB_CAS] cas ON s.IdCAS = cas.ID_CAS
+            OUTER APPLY (
+                SELECT TOP 1 Categoria FROM [dbo].[GAC_APP_TB_MATERIALES] WHERE ID_Externo = s.CodigoExternoEquipo
+            ) m
+            OUTER APPLY (
+                SELECT TOP 1 CAST(Importe AS FLOAT) as Importe 
+                FROM [dbo].[GAC_APP_TB_TARIFARIO] t 
+                WHERE t.Empresa = cas.ID_CAS 
+                  AND (t.Servicio = s.IdServicio OR t.Servicio = s.Servicio)
+                  AND TRIM(t.Categoria) = TRIM(m.Categoria)
+                  AND s.CheckOut >= t.Fecha_inicio 
+                  AND (t.Fecha_fin IS NULL OR s.CheckOut <= t.Fecha_fin)
+                ORDER BY t.Estado DESC, t.Fecha_inicio DESC
+            ) rate
+            WHERE cas.RUC = @ruc 
+              AND s.CheckOut BETWEEN @start AND @end
+              AND s.Estado = 'Closed'
+              AND s.VisitaRealizada = 'true'
+              AND s.TrabajoRealizado = 'true'
+              AND s.Ticket NOT IN (SELECT Ticket FROM [dbo].[GAC_APP_TB_VALORIZACIONES_DETALLE] WHERE Tipo = 'SERVICIO')
+        `);
+
+        let tickets = sqlResult.recordset;
+
+        // Fetch Institutional Rules
+        const rules = (await db.request().query("SELECT * FROM [dbo].[GAC_APP_TB_CONFIG_CANAL_INSTITUCIONAL] WHERE Activo = 1")).recordset;
+
+        if (tickets.length > 0 && rules.length > 0) {
+            const ticketIds = tickets.map(t => t.Ticket);
+            const c4cDetails = await getC4CDetails(ticketIds);
+
+            tickets = tickets.map(t => {
+                const details = c4cDetails[t.Ticket];
+                let finalTarifaBase = t.TarifaBaseCalculada;
+
+                if (details) {
+                    const matchingRule = rules.find(r => {
+                        const dateMatch = t.FechaCierre >= r.Fecha_Inicio && t.FechaCierre <= r.Fecha_Fin;
+                        const userMatch = details.creator === r.Usuario_Creador;
+                        
+                        let keywordMatch = true;
+                        if (r.Keywords) {
+                            const keys = r.Keywords.split(',').map((k: string) => k.trim().toLowerCase());
+                            const subject = details.subject.toLowerCase();
+                            const contains = keys.some((k: string) => subject.includes(k));
+                            
+                            if (r.Validacion_Tipo === 'CONTIENE') {
+                                keywordMatch = contains;
+                            } else {
+                                keywordMatch = !contains;
+                            }
+                        }
+
+                        return dateMatch && userMatch && keywordMatch;
+                    });
+
+                    if (matchingRule) {
+                        finalTarifaBase = matchingRule.Importe;
+                    }
+                }
+
+                return {
+                    ...t,
+                    TarifaBase: finalTarifaBase,
+                    UsuarioCreador: details?.creator || 'N/D',
+                    C4CSubject: details?.subject || ''
+                };
+            });
+        } else {
+            tickets = tickets.map(t => ({ ...t, TarifaBase: t.TarifaBaseCalculada }));
+        }
+
+        res.json(tickets);
     } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
