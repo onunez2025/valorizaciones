@@ -3,6 +3,7 @@ import { Search, Filter, Calendar, ChevronRight, Calculator, Download, AlertTria
 import * as XLSX from 'xlsx';
 import ExcelJS from 'exceljs';
 import { ApiClient } from '../services/apiClient';
+import { StorageService } from '../services/storageService';
 import type { CAS, ValuationTicket, Penalty } from '../types';
 import { cn } from '../utils/cn';
 import { toTitleCase } from '../utils/formatters';
@@ -252,7 +253,7 @@ export default function ValuationsPage() {
     const handleViewC4CReport = async (ticketId: string) => {
         try {
             setLoadingPdf(ticketId);
-            const token = localStorage.getItem('token');
+            const token = StorageService.getToken();
             const response = await fetch(`/api/c4c/report/${ticketId}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
