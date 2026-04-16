@@ -271,7 +271,7 @@ app.post('/api/config-canal-institucional', verifyToken, async (req: Request, re
         console.log(`[CONFIG] Saving rule for ${usuario_creador}, ID: ${id || 'NEW'}`);
 
         if (id) {
-            await request.input('id', sql.Int, id).query(`
+            await request.input('id', sql.Int, Number(id)).query(`
                 UPDATE [dbo].[GAC_APP_TB_CONFIG_CANAL_INSTITUCIONAL]
                 SET Usuario_Creador = @uc, Fecha_Inicio = @fi, Fecha_Fin = @ff, Importe = @imp, 
                     Keywords = @key, Validacion_Tipo = @type, Activo = @act
@@ -295,8 +295,9 @@ app.delete('/api/config-canal-institucional/:id', verifyToken, async (req: Reque
     try {
         const { id } = req.params;
         const db = await getDb();
-        console.log(`[CONFIG] Deleting rule ID: ${id}`);
-        await db.request().input('id', sql.Int, parseInt(id)).query("DELETE FROM [dbo].[GAC_APP_TB_CONFIG_CANAL_INSTITUCIONAL] WHERE Id = @id");
+        const idNum = parseInt(id as string);
+        console.log(`[CONFIG] Deleting rule ID: ${idNum}`);
+        await db.request().input('id', sql.Int, idNum).query("DELETE FROM [dbo].[GAC_APP_TB_CONFIG_CANAL_INSTITUCIONAL] WHERE Id = @id");
         res.json({ success: true });
     } catch (err: any) { 
         console.error('[CONFIG] Error deleting rule:', err);
