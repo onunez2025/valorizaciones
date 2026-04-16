@@ -294,7 +294,37 @@ app.post('/api/adicionales', verifyToken, async (req: Request, res: Response) =>
                 (ID_valorizacion_adicional, Ticket, Motivo, Importe)
                 VALUES (@id, @ticket, @motivo, @importe)
             `);
+        await logAudit(req, 'CREATE', 'ADICIONAL', ticket, { id, motivo, importe });
         res.status(201).json({ id });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+app.get('/api/adicionales/:ticket', verifyToken, async (req: Request, res: Response) => {
+    const { ticket } = req.params;
+    try {
+        const db = await getDb();
+        const result = await db.request()
+            .input('ticket', ticket)
+            .query(`
+                SELECT ID_valorizacion_adicional as Id, Ticket, Motivo, CAST(Importe AS FLOAT) as Importe
+                FROM [dbo].[GAC_APP_TB_TICKETS_VALORIZACION_ADICIONAL]
+                WHERE Ticket = @ticket
+                ORDER BY ID_valorizacion_adicional
+            `);
+        res.json(result.recordset);
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+app.delete('/api/adicionales/:id', verifyToken, async (req: Request, res: Response) => {
+    const { id } = req.params;
+    try {
+        const db = await getDb();
+        const existing = await db.request().input('id', id)
+            .query("SELECT Ticket, Motivo, Importe FROM [dbo].[GAC_APP_TB_TICKETS_VALORIZACION_ADICIONAL] WHERE ID_valorizacion_adicional = @id");
+        await db.request().input('id', id)
+            .query("DELETE FROM [dbo].[GAC_APP_TB_TICKETS_VALORIZACION_ADICIONAL] WHERE ID_valorizacion_adicional = @id");
+        await logAudit(req, 'DELETE', 'ADICIONAL', id, existing.recordset[0] || {});
+        res.json({ success: true });
     } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 

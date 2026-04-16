@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, Filter, Calendar, ChevronRight, Calculator, Download, AlertTriangle, CheckCircle2, FileText, X, ChevronDown, Briefcase, Building2, Check, Activity, AlertCircle, Lock, ArrowUpDown, Package, History, BarChart2, Eye } from 'lucide-react';
+import { Search, Filter, Calendar, ChevronRight, Calculator, Download, AlertTriangle, CheckCircle2, FileText, X, ChevronDown, Briefcase, Building2, Check, Activity, AlertCircle, Lock, ArrowUpDown, Package, History, BarChart2, Eye, PlusCircle, Trash2, DollarSign } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import ExcelJS from 'exceljs';
 import { ApiClient } from '../services/apiClient';
@@ -55,6 +55,9 @@ export default function ValuationsPage() {
     const [loadingDetails, setLoadingDetails] = useState(false);
     const [detailSearchQuery, setDetailSearchQuery] = useState('');
     const [detailActiveTab, setDetailActiveTab] = useState<'services' | 'penalties'>('services');
+
+    // Adicionales popover
+    const [adicionalesPopover, setAdicionalesPopover] = useState<{ticket: string, items: any[], loading: boolean} | null>(null);
 
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
@@ -999,13 +1002,20 @@ export default function ValuationsPage() {
                                                                                                             </button>
                                                                                                         )
                                                                                                     ) : (
-                                                                                                        <span className="font-bold text-sm tracking-tighter text-foreground/80">
-                                                                                                            S/ {(ticket.TarifaBase + (ticket.Adicionales || 0)).toLocaleString('es-PE', { minimumFractionDigits: 2 })}
-                                                                                                        </span>
+                                                                                                        <div className="flex flex-col items-end">
+                                                                                                            <span className="font-bold text-sm tracking-tighter text-foreground/80">
+                                                                                                                S/ {(ticket.TarifaBase + (ticket.Adicionales || 0)).toLocaleString('es-PE', { minimumFractionDigits: 2 })}
+                                                                                                            </span>
+                                                                                                            {(ticket.Adicionales || 0) > 0 && (
+                                                                                                                <span className="text-[9px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded mt-0.5 border border-emerald-100">
+                                                                                                                    +S/ {ticket.Adicionales.toLocaleString('es-PE', { minimumFractionDigits: 2 })} adic.
+                                                                                                                </span>
+                                                                                                            )}
+                                                                                                        </div>
                                                                                                     )}
                                                                                                 </td>
                                                                                                 <td className="px-6 py-4 text-right">
-                                                                                                    <div className="flex items-center justify-end gap-2">
+                                                                                                    <div className="flex items-center justify-end gap-1.5 relative">
                                                                                                         <button 
                                                                                                             onClick={() => handleViewC4CReport(ticket.Ticket)}
                                                                                                             disabled={loadingPdf === ticket.Ticket}
@@ -1017,6 +1027,89 @@ export default function ValuationsPage() {
                                                                                                         >
                                                                                                             {loadingPdf === ticket.Ticket ? <Activity className="w-3.5 h-3.5 animate-spin" /> : <FileText className="w-3.5 h-3.5" />}
                                                                                                         </button>
+                                                                                                        {/* Botón Pago Adicional */}
+                                                                                                        <div className="relative">
+                                                                                                            <button 
+                                                                                                                onClick={(e) => {
+                                                                                                                    e.stopPropagation();
+                                                                                                                    if (adicionalesPopover?.ticket === ticket.Ticket) {
+                                                                                                                        setAdicionalesPopover(null);
+                                                                                                                    } else {
+                                                                                                                        setAdicionalesPopover({ ticket: ticket.Ticket, items: [], loading: true });
+                                                                                                                        ApiClient.request(`/adicionales/${ticket.Ticket}`)
+                                                                                                                            .then(items => setAdicionalesPopover(prev => prev ? { ...prev, items, loading: false } : null))
+                                                                                                                            .catch(() => setAdicionalesPopover(prev => prev ? { ...prev, loading: false } : null));
+                                                                                                                    }
+                                                                                                                }}
+                                                                                                                className={cn(
+                                                                                                                    "p-2 rounded-lg transition-all shadow-sm flex items-center justify-center",
+                                                                                                                    (ticket.Adicionales || 0) > 0 
+                                                                                                                        ? "bg-emerald-500/10 text-emerald-600 hover:bg-emerald-600 hover:text-white" 
+                                                                                                                        : "bg-emerald-500/5 text-emerald-500 hover:bg-emerald-600 hover:text-white opacity-0 group-hover/row:opacity-100"
+                                                                                                                )}
+                                                                                                                title="Pagos Adicionales"
+                                                                                                            >
+                                                                                                                <DollarSign className="w-3.5 h-3.5" />
+                                                                                                                {(ticket.Adicionales || 0) > 0 && (
+                                                                                                                    <span className="absolute -top-1 -right-1 w-2 h-2 bg-emerald-500 rounded-full ring-2 ring-white" />
+                                                                                                                )}
+                                                                                                            </button>
+                                                                                                            {/* Popover de Adicionales */}
+                                                                                                            {adicionalesPopover?.ticket === ticket.Ticket && (
+                                                                                                                <div className="absolute right-0 top-full mt-2 w-[320px] bg-white border border-border rounded-2xl shadow-2xl z-50 animate-in fade-in zoom-in-95 duration-200 overflow-hidden" onClick={e => e.stopPropagation()}>
+                                                                                                                    <div className="px-4 py-3 bg-gradient-to-r from-emerald-50 to-emerald-100/50 border-b border-emerald-100 flex items-center justify-between">
+                                                                                                                        <div className="flex items-center gap-2">
+                                                                                                                            <DollarSign className="w-4 h-4 text-emerald-600" />
+                                                                                                                            <span className="text-xs font-black text-emerald-800">Pagos Adicionales</span>
+                                                                                                                        </div>
+                                                                                                                        <span className="text-[10px] font-bold text-emerald-600/60">Ticket {ticket.Ticket}</span>
+                                                                                                                    </div>
+                                                                                                                    <div className="p-3 max-h-[200px] overflow-y-auto custom-scrollbar">
+                                                                                                                        {adicionalesPopover.loading ? (
+                                                                                                                            <div className="py-4 flex justify-center"><Activity className="w-5 h-5 animate-spin text-emerald-500" /></div>
+                                                                                                                        ) : adicionalesPopover.items.length === 0 ? (
+                                                                                                                            <p className="text-xs text-muted-foreground text-center py-3 opacity-50 font-bold">Sin pagos adicionales registrados</p>
+                                                                                                                        ) : (
+                                                                                                                            <div className="space-y-2">
+                                                                                                                                {adicionalesPopover.items.map((item: any) => (
+                                                                                                                                    <div key={item.Id} className="flex items-center justify-between p-2.5 bg-muted/20 rounded-xl border border-border/30 group/item hover:border-red-200 transition-all">
+                                                                                                                                        <div className="flex flex-col min-w-0 flex-1">
+                                                                                                                                            <span className="text-xs font-bold text-foreground truncate">{item.Motivo}</span>
+                                                                                                                                            <span className="text-[10px] font-bold text-emerald-600">S/ {Number(item.Importe).toLocaleString('es-PE', { minimumFractionDigits: 2 })}</span>
+                                                                                                                                        </div>
+                                                                                                                                        <button
+                                                                                                                                            onClick={async (e) => {
+                                                                                                                                                e.stopPropagation();
+                                                                                                                                                try {
+                                                                                                                                                    await ApiClient.request(`/adicionales/${item.Id}`, { method: 'DELETE' });
+                                                                                                                                                    setAdicionalesPopover(prev => prev ? { ...prev, items: prev.items.filter(i => i.Id !== item.Id) } : null);
+                                                                                                                                                    handleFetchValuation();
+                                                                                                                                                } catch (err) { console.error(err); }
+                                                                                                                                            }}
+                                                                                                                                            className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover/item:opacity-100 ml-2 flex-shrink-0"
+                                                                                                                                            title="Eliminar adicional"
+                                                                                                                                        >
+                                                                                                                                            <Trash2 className="w-3.5 h-3.5" />
+                                                                                                                                        </button>
+                                                                                                                                    </div>
+                                                                                                                                ))}
+                                                                                                                            </div>
+                                                                                                                        )}
+                                                                                                                    </div>
+                                                                                                                    <div className="p-2 border-t border-border/30">
+                                                                                                                        <button
+                                                                                                                            onClick={() => {
+                                                                                                                                setAdicionalesPopover(null);
+                                                                                                                                setShowPenaltyModal({ show: true, type: 'additional', ticket: ticket.Ticket, date: ticket.Fecha.split('T')[0] });
+                                                                                                                            }}
+                                                                                                                            className="w-full flex items-center justify-center gap-2 py-2.5 bg-emerald-600 text-white rounded-xl text-[11px] font-black hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-600/20"
+                                                                                                                        >
+                                                                                                                            <PlusCircle className="w-4 h-4" /> Agregar pago adicional
+                                                                                                                        </button>
+                                                                                                                    </div>
+                                                                                                                </div>
+                                                                                                            )}
+                                                                                                        </div>
                                                                                                         <button 
                                                                                                             onClick={() => setShowPenaltyModal({ show: true, type: 'penalty', ticket: ticket.Ticket, date: ticket.Fecha.split('T')[0] })} 
                                                                                                             className="p-2 bg-red-500/10 text-red-600 rounded-lg hover:bg-red-600 hover:text-white transition-all opacity-0 group-hover/row:opacity-100 shadow-sm flex items-center justify-center" 
