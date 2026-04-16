@@ -425,21 +425,7 @@ app.get('/api/valuations/:ruc', verifyToken, async (req: Request, res: Response)
                     const matchingRule = rules.find(r => {
                         const dateMatch = t.FechaCierre >= r.Fecha_Inicio && t.FechaCierre <= r.Fecha_Fin;
                         const userMatch = details.creator === r.Usuario_Creador;
-                        
-                        let keywordMatch = true;
-                        if (r.Keywords) {
-                            const keys = r.Keywords.split(',').map((k: string) => k.trim().toLowerCase());
-                            const subject = details.subject.toLowerCase();
-                            const contains = keys.some((k: string) => subject.includes(k));
-                            
-                            if (r.Validacion_Tipo === 'CONTIENE') {
-                                keywordMatch = contains;
-                            } else {
-                                keywordMatch = !contains;
-                            }
-                        }
-
-                        return dateMatch && userMatch && keywordMatch;
+                        return dateMatch && userMatch;
                     });
 
                     if (matchingRule) {

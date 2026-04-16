@@ -159,7 +159,6 @@ export default function ConfigCanalInstitucionalPage() {
                             <thead className="bg-slate-50 sticky top-0 z-10">
                                 <tr className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">
                                     <th className="px-6 py-4 text-left">Usuario Creador (C4C)</th>
-                                    <th className="px-6 py-4 text-left">Criterios de Texto</th>
                                     <th className="px-6 py-4 text-center">Importe Único</th>
                                     <th className="px-6 py-4 text-center">Vigencia</th>
                                     <th className="px-6 py-4 text-right">Acciones</th>
@@ -174,21 +173,6 @@ export default function ConfigCanalInstitucionalPage() {
                                                     <Users className="w-4 h-4" />
                                                 </div>
                                                 <span className="text-sm font-black text-foreground">{c.Usuario_Creador}</span>
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <div className="flex flex-col gap-1">
-                                                <div className="flex items-center gap-2">
-                                                    <span className={cn(
-                                                        "px-2 py-0.5 rounded text-[9px] font-black tracking-tighter",
-                                                        c.Validacion_Tipo === 'CONTIENE' ? "bg-blue-50 text-blue-600" : "bg-orange-50 text-orange-600"
-                                                    )}>
-                                                        {c.Validacion_Tipo}
-                                                    </span>
-                                                    <span className="text-[10px] font-bold text-muted-foreground truncate max-w-[200px]">
-                                                        {c.Keywords || 'Cualquier asunto'}
-                                                    </span>
-                                                </div>
                                             </div>
                                         </td>
                                         <td className="px-6 py-4 text-center">
@@ -293,33 +277,6 @@ export default function ConfigCanalInstitucionalPage() {
                                     required
                                 />
                             </div>
-                        </div>
-
-                        <div className="flex flex-col gap-2">
-                            <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-1">Tipo de Validación</label>
-                            <select 
-                                className="w-full bg-slate-50 border border-border rounded-2xl px-4 py-3 text-sm font-black focus:ring-4 focus:ring-primary/5 focus:border-primary outline-none transition-all"
-                                value={editingConfig?.validacion_tipo || 'CONTIENE'}
-                                onChange={(e) => setEditingConfig({...editingConfig, validacion_tipo: e.target.value})}
-                            >
-                                <option value="CONTIENE">Asunto CONTIENE palabras clave</option>
-                                <option value="NO_CONTIENE">Asunto NO CONTIENE palabras clave</option>
-                            </select>
-                        </div>
-
-                        <div className="flex flex-col gap-2 md:col-span-2">
-                            <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-1">Palabras Clave (Separadas por comas)</label>
-                            <div className="relative">
-                                <Tag className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-primary opacity-50" />
-                                <input 
-                                    type="text" 
-                                    className="w-full bg-slate-50 border border-border rounded-2xl pl-11 pr-4 py-3 text-sm font-black focus:ring-4 focus:ring-primary/5 focus:border-primary outline-none transition-all"
-                                    placeholder="Ej: Lider, Sodimac, Proyecto..."
-                                    value={editingConfig?.keywords || ''}
-                                    onChange={(e) => setEditingConfig({...editingConfig, keywords: e.target.value})}
-                                />
-                            </div>
-                            <p className="text-[9px] font-bold text-muted-foreground italic ml-1">* El sistema buscará estas palabras en el asunto del ticket en C4C.</p>
                         </div>
                     </div>
 
