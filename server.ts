@@ -323,7 +323,7 @@ app.delete('/api/adicionales/:id', verifyToken, async (req: Request, res: Respon
             .query("SELECT Ticket, Motivo, Importe FROM [dbo].[GAC_APP_TB_TICKETS_VALORIZACION_ADICIONAL] WHERE ID_valorizacion_adicional = @id");
         await db.request().input('id', id)
             .query("DELETE FROM [dbo].[GAC_APP_TB_TICKETS_VALORIZACION_ADICIONAL] WHERE ID_valorizacion_adicional = @id");
-        await logAudit(req, 'DELETE', 'ADICIONAL', id, existing.recordset[0] || {});
+        await logAudit(req, 'DELETE', 'ADICIONAL', id as string, existing.recordset[0] || {});
         res.json({ success: true });
     } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
