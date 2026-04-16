@@ -239,8 +239,8 @@ app.delete('/api/config-distritos/:id', verifyToken, async (req: Request, res: R
 app.get('/api/distritos', verifyToken, async (req: Request, res: Response) => {
     try {
         const db = await getDb();
-        const result = await db.request().query("SELECT DISTINCT Distrito FROM [dbo].[GACP_APP_TB_DISTRITO] ORDER BY Distrito");
-        res.json(result.recordset.map(r => r.Distrito));
+        const result = await db.request().query('SELECT DISTINCT Ciudad, Distrito FROM APPGAC.ServiciosViewSQL WHERE Ciudad IS NOT NULL AND Distrito IS NOT NULL ORDER BY Ciudad, Distrito');
+        res.json(result.recordset);
     } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 

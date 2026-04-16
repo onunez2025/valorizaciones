@@ -11,6 +11,11 @@ import { useDialog } from '../../context/DialogContext';
 import { cn } from '../../utils/cn';
 import { format } from 'date-fns';
 
+interface DistritoInfo {
+    Distrito: string;
+    Ciudad: string;
+}
+
 interface ConfigDistrito {
     Id: number;
     CAS_Ids: string; // JSON string in DB
@@ -31,13 +36,19 @@ interface CAS {
 
 export default function ConfigDistritosPage() {
     const [configs, setConfigs] = useState<ConfigDistrito[]>([]);
-    const [distritos, setDistritos] = useState<string[]>([]);
+    const [distritosRepo, setDistritosRepo] = useState<DistritoInfo[]>([]);
     const [casList, setCasList] = useState<CAS[]>([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
+    const [selectedCity, setSelectedCity] = useState('');
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [editingConfig, setEditingConfig] = useState<any>(null);
     const { alert, confirm } = useDialog();
+
+    const cities = Array.from(new Set(distritosRepo.map(d => d.Ciudad))).sort();
+    const availableDistrictsForCity = selectedCity 
+        ? distritosRepo.filter(d => d.Ciudad === selectedCity).map(d => d.Distrito)
+        : Array.from(new Set(distritosRepo.map(d => d.Distrito))).sort();
 
     useEffect(() => {
         fetchData();
@@ -52,8 +63,9 @@ export default function ConfigDistritosPage() {
                 ApiClient.request('/cas')
             ]);
             setConfigs(configsData);
-            setDistritos(distritosData);
+            setDistritosRepo(distritosData);
             setCasList(casData);
+            if (distritosData.length > 0) setSelectedCity(distritosData[0].Ciudad);
         } catch (error: any) {
             console.error("Error fetching data:", error);
             alert({ message: "No se pudo cargar la configuración." });
@@ -325,15 +337,28 @@ export default function ConfigDistritosPage() {
                                 />
                             </div>
 
-                            {/* Distrito MultiSelect */}
-                            <div className="flex flex-col gap-2">
-                                <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-1">Seleccionar Distritos</label>
-                                <MultiSelect 
-                                    options={distritos.map(d => ({ value: d, label: d }))}
-                                    selected={editingConfig.distritos}
-                                    onChange={(vals) => setEditingConfig({...editingConfig, distritos: vals})}
-                                    placeholder="Buscar distritos..."
-                                />
+                            {/* Ciudad y Distrito MultiSelect */}
+                            <div className="flex flex-col gap-4">
+                                <div className="flex flex-col gap-2">
+                                    <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-1">Filtrar por Ciudad</label>
+                                    <select 
+                                        className="w-full bg-slate-50 border border-border rounded-xl px-4 py-2.5 text-xs font-bold focus:ring-4 focus:ring-primary/5 focus:border-primary outline-none transition-all"
+                                        value={selectedCity}
+                                        onChange={(e) => setSelectedCity(e.target.value)}
+                                    >
+                                        <option value="">Todas las ciudades</option>
+                                        {cities.map(c => <option key={c} value={c}>{c}</option>)}
+                                    </select>
+                                </div>
+                                <div className="flex flex-col gap-2">
+                                    <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-1">Seleccionar Distritos ({selectedCity || 'Todos'})</label>
+                                    <MultiSelect 
+                                        options={availableDistrictsForCity.map(d => ({ value: d, label: d }))}
+                                        selected={editingConfig.distritos}
+                                        onChange={(vals) => setEditingConfig({...editingConfig, distritos: vals})}
+                                        placeholder="Buscar distritos..."
+                                    />
+                                </div>
                             </div>
 
                             {/* Importe y Fechas */}
@@ -449,6 +474,17 @@ function MultiSelect({ options, selected, onChange, placeholder }: {
         }
     };
 
+    const selectAll = () => {
+        const newVals = Array.from(new Set([...selected, ...options.map(o => o.value)]));
+        onChange(newVals);
+    };
+
+    const clearAllInView = () => {
+        const optionValues = options.map(o => o.value);
+        onChange(selected.filter(s => !optionValues.includes(s)));
+    };
+
+
     const filteredOptions = options.filter(o => 
         o.label.toLowerCase().includes(search.toLowerCase()) || 
         (o.badge && o.badge.toLowerCase().includes(search.toLowerCase()))
@@ -467,7 +503,7 @@ function MultiSelect({ options, selected, onChange, placeholder }: {
                         const opt = options.find(o => o.value === val);
                         return (
                             <div key={val} className="flex items-center gap-1.5 px-2.5 py-1.5 bg-primary text-white rounded-xl text-[10px] font-black shadow-sm group">
-                                {opt?.badge || opt?.label}
+                                {opt?.badge || opt?.label || val}
                                 <X 
                                     className="w-3 h-3 cursor-pointer opacity-60 hover:opacity-100" 
                                     onClick={(e) => { e.stopPropagation(); toggle(val); }} 
