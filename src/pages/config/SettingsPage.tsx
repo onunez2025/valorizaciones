@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Save, AlertCircle, Loader2 } from 'lucide-react';
-import { api } from '../../services/api';
-import toast from 'react-hot-toast';
+import { Save, AlertCircle, Loader2, Settings2 } from 'lucide-react';
+import { ApiClient } from '../../services/apiClient';
+import { useDialog } from '../../context/DialogContext';
 
 export default function SettingsPage() {
+    const { alert } = useDialog();
     const [diasMax, setDiasMax] = useState<string>('');
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -11,14 +12,14 @@ export default function SettingsPage() {
     useEffect(() => {
         const fetchConfig = async () => {
             try {
-                const response = await api.get('/config');
+                const response = await ApiClient.get('/config');
                 const diasConfig = response.data.find((c: any) => c.Clave === 'DIAS_MAX_CIERRE');
                 if (diasConfig) {
                     setDiasMax(diasConfig.Valor);
                 }
             } catch (err) {
                 console.error("Error fetching config:", err);
-                toast.error('Error al cargar la configuración');
+                alert({ title: 'Error', message: 'Error al cargar la configuración', type: 'error' });
             } finally {
                 setLoading(false);
             }
@@ -28,7 +29,7 @@ export default function SettingsPage() {
 
     const handleSave = async () => {
         if (!diasMax || isNaN(Number(diasMax))) {
-            toast.error('Ingrese un número válido mayor a 0');
+            alert({ title: 'Error', message: 'Ingrese un número válido mayor a 0', type: 'error' });
             return;
         }
 
@@ -36,15 +37,15 @@ export default function SettingsPage() {
 
         setSaving(true);
         try {
-            await api.post('/config', {
+            await ApiClient.post('/config', {
                 clave: 'DIAS_MAX_CIERRE',
                 valor: valueStr,
                 descripcion: 'Máximo de días permitidos entre la visita y el cierre (CheckOut) para considerar tarifa.'
             });
-            toast.success('Configuración guardada correctamente');
+            alert({ title: 'Éxito', message: 'Configuración guardada correctamente', type: 'success' });
         } catch (err) {
             console.error("Error saving config:", err);
-            toast.error('No se pudo guardar la configuración');
+            alert({ title: 'Error', message: 'No se pudo guardar la configuración', type: 'error' });
         } finally {
             setSaving(false);
         }
@@ -129,6 +130,3 @@ export default function SettingsPage() {
         </div>
     );
 }
-
-// Need to import Settings2 correctly, let's fix that below if needed
-import { Settings2 } from 'lucide-react';

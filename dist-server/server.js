@@ -7,10 +7,13 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 import path from 'path';
 import crypto from 'crypto';
+import axios from 'axios';
 dotenv.config();
 const app = express();
 const port = process.env.PORT || 3000;
 const APP_IDENTIFIER = 'VAL';
+const C4C_BASE_URL = process.env.C4C_BASE_URL;
+const C4C_AUTH = Buffer.from(`${process.env.C4C_USER}:${process.env.C4C_PASSWORD}`).toString('base64');
 const JWT_SECRET = process.env.JWT_SECRET || 'tablero_control_secret_2026';
 const cleanApps = (str) => [...new Set((str || '').split(',').map(s => s.trim()).filter(Boolean))].join(', ');
 // Helper for Auditing
@@ -35,7 +38,8 @@ async function logAudit(req, action, entity, entityId, details) {
     }
 }
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ limit: '10mb', extended: true }));
 const dbConfig = {
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
@@ -149,6 +153,41 @@ app.get('/api/cas', verifyToken, async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 });
+// --- CONFIGURATION ---
+app.get('/api/config', verifyToken, async (req, res) => {
+    try {
+        const db = await getDb();
+        const result = await db.request().query("SELECT * FROM [dbo].[GAC_APP_TB_VALORIZACIONES_CONFIG]");
+        res.json(result.recordset);
+    }
+    catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+app.post('/api/config', verifyToken, async (req, res) => {
+    try {
+        const { clave, valor, descripcion } = req.body;
+        const db = await getDb();
+        await db.request()
+            .input('clave', clave)
+            .input('valor', valor)
+            .input('descripcion', descripcion)
+            .query(`
+                IF EXISTS (SELECT 1 FROM [dbo].[GAC_APP_TB_VALORIZACIONES_CONFIG] WHERE Clave = @clave)
+                BEGIN
+                    UPDATE [dbo].[GAC_APP_TB_VALORIZACIONES_CONFIG] SET Valor = @valor, Descripcion = @descripcion WHERE Clave = @clave
+                END
+                ELSE
+                BEGIN
+                    INSERT INTO [dbo].[GAC_APP_TB_VALORIZACIONES_CONFIG] (Clave, Valor, Descripcion) VALUES (@clave, @valor, @descripcion)
+                END
+            `);
+        res.json({ message: 'Config updated' });
+    }
+    catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
 // --- VALORIZACIONES ---
 app.get('/api/valuations/:ruc', verifyToken, async (req, res) => {
     const { ruc } = req.params;
@@ -160,12 +199,28 @@ app.get('/api/valuations/:ruc', verifyToken, async (req, res) => {
             .input('start', sql.VarChar, `${start} 00:00:00`)
             .input('end', sql.VarChar, `${end} 23:59:59`)
             .query(`
+                DECLARE @diasMax INT;
+                SELECT @diasMax = CAST(Valor AS INT) FROM [dbo].[GAC_APP_TB_VALORIZACIONES_CONFIG] WHERE Clave = 'DIAS_MAX_CIERRE';
+                IF @diasMax IS NULL SET @diasMax = 1;
+
                 SELECT 
                     s.Ticket, s.CheckOut as Fecha, s.Servicio as ServicioNombre, 
                     s.IdServicio as Servicio,
+                    s.CodigoExternoEquipo as CodigoEquipo,
+                    s.NombreEquipo as NombreEquipo,
+                    s.FechaVisita, s.CheckOut as FechaCierre,
+                    DATEDIFF(day, s.FechaVisita, s.CheckOut) as DiasDiferencia,
                     ISNULL(m.Categoria, 'N/A') as Categoria,
-                    ISNULL(rate.Importe, 0) as TarifaBase,
-                    ISNULL((SELECT SUM(CAST(Importe AS FLOAT)) FROM [dbo].[GAC_APP_TB_TICKETS_VALORIZACION_ADICIONAL] WHERE Ticket = s.Ticket), 0) as Adicionales
+                    CASE 
+                        WHEN UPPER(TRIM(s.Servicio)) = 'VISITA' THEN 0
+                        WHEN DATEDIFF(day, s.FechaVisita, s.CheckOut) > @diasMax THEN 0 
+                        WHEN LEFT(s.CodigoExternoEquipo, 4) NOT IN ('3120', '3121', '5120', '5121') THEN 0
+                        ELSE ISNULL(rate.Importe, 0) 
+                    END as TarifaBase,
+                    CASE 
+                        WHEN LEFT(s.CodigoExternoEquipo, 4) NOT IN ('3120', '3121', '5120', '5121') THEN 0
+                        ELSE ISNULL((SELECT SUM(CAST(Importe AS FLOAT)) FROM [dbo].[GAC_APP_TB_TICKETS_VALORIZACION_ADICIONAL] WHERE Ticket = s.Ticket), 0)
+                    END as Adicionales
                 FROM [APPGAC].[ServiciosViewSQL] s
                 JOIN [dbo].[GAC_APP_TB_CAS] cas ON s.IdCAS = cas.ID_CAS
                 OUTER APPLY (
@@ -186,6 +241,7 @@ app.get('/api/valuations/:ruc', verifyToken, async (req, res) => {
                   AND s.Estado = 'Closed'
                   AND s.VisitaRealizada = 'true'
                   AND s.TrabajoRealizado = 'true'
+                  AND s.Ticket NOT IN (SELECT Ticket FROM [dbo].[GAC_APP_TB_VALORIZACIONES_DETALLE] WHERE Tipo = 'SERVICIO')
             `);
         res.json(tickets.recordset);
     }
@@ -266,16 +322,6 @@ app.post('/api/penalties/:id/status', verifyToken, async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 });
-app.post('/api/valuations/close', verifyToken, async (req, res) => {
-    const { ruc, start, end } = req.body;
-    try {
-        // Simulación de cierre
-        res.json({ message: 'Valorización cerrada y reporte enviado satisfactoriamente.' });
-    }
-    catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
 app.get('/api/tickets/find/:ticket', verifyToken, async (req, res) => {
     const { ticket } = req.params;
     try {
@@ -325,28 +371,75 @@ app.get('/api/tickets/search/:ruc', verifyToken, async (req, res) => {
     }
 });
 app.post('/api/valuations/close', verifyToken, async (req, res) => {
-    const { ruc, nombreCas, start, end, totalServicios, totalPenalidades, subtotalServicios, subtotalPenalidades, totalFinal, cerradoPor } = req.body;
+    const { ruc, nombreCas, start, end, totalServicios, totalPenalidades, subtotalServicios, subtotalPenalidades, totalFinal, cerradoPor, details // Esperamos un array de objetos { ticket, monto, fecha, tipo, servicio, categoria }
+     } = req.body;
     try {
         const db = await getDb();
-        await db.request()
-            .input('ruc', ruc)
-            .input('nombreCas', nombreCas)
-            .input('start', start)
-            .input('end', end)
-            .input('totalServicios', totalServicios)
-            .input('totalPenalidades', totalPenalidades)
-            .input('subtotalServicios', subtotalServicios)
-            .input('subtotalPenalidades', subtotalPenalidades)
-            .input('totalFinal', totalFinal)
-            .input('cerradoPor', cerradoPor)
-            .query(`
-                INSERT INTO [dbo].[GAC_APP_TB_VALORIZACIONES_CIERRES] 
-                (RUC, Nombre_CAS, Fecha_Inicio, Fecha_Fin, Total_Servicios, Total_Penalidades, Subtotal_Servicios, Subtotal_Penalidades, Total_Final, Cerrado_Por)
-                VALUES (@ruc, @nombreCas, @start, @end, @totalServicios, @totalPenalidades, @subtotalServicios, @subtotalPenalidades, @totalFinal, @cerradoPor)
-            `);
-        res.json({ success: true, message: "Quincena cerrada correctamente" });
+        const transaction = new sql.Transaction(db);
+        await transaction.begin();
+        try {
+            const request = new sql.Request(transaction);
+            // 1. Insertar Cabecera
+            const result = await request
+                .input('ruc', ruc)
+                .input('nombreCas', nombreCas)
+                .input('start', start)
+                .input('end', end)
+                .input('totalServicios', totalServicios)
+                .input('totalPenalidades', totalPenalidades)
+                .input('subtotalServicios', subtotalServicios)
+                .input('subtotalPenalidades', subtotalPenalidades)
+                .input('totalFinal', totalFinal)
+                .input('cerradoPor', cerradoPor)
+                .query(`
+                    INSERT INTO [dbo].[GAC_APP_TB_VALORIZACIONES_CIERRES] 
+                    (RUC, Nombre_CAS, Fecha_Inicio, Fecha_Fin, Total_Servicios, Total_Penalidades, Subtotal_Servicios, Subtotal_Penalidades, Total_Final, Cerrado_Por, Cerrado_El, Estado)
+                    VALUES (@ruc, @nombreCas, @start, @end, @totalServicios, @totalPenalidades, @subtotalServicios, @subtotalPenalidades, @totalFinal, @cerradoPor, GETDATE(), 'CERRADO')
+                    SELECT SCOPE_IDENTITY() as IdCierre
+                `);
+            const idCierre = result.recordset[0].IdCierre;
+            const year = new Date().getFullYear();
+            const businessCode = `VAL-${year}-${idCierre.toString().padStart(5, '0')}`;
+            // 1.1 Actualizar con el código de negocio
+            await new sql.Request(transaction)
+                .input('id', idCierre)
+                .input('code', businessCode)
+                .query("UPDATE [dbo].[GAC_APP_TB_VALORIZACIONES_CIERRES] SET Codigo_Valorizacion = @code WHERE IdCierre = @id");
+            // 2. Insertar Detalles
+            if (details && Array.isArray(details)) {
+                for (const item of details) {
+                    const detailRequest = new sql.Request(transaction);
+                    await detailRequest
+                        .input('idCierre', idCierre)
+                        .input('ticket', item.ticket)
+                        .input('monto', item.monto)
+                        .input('fecha', item.fecha)
+                        .input('tipo', item.tipo)
+                        .input('servicio', item.servicio)
+                        .input('categoria', item.categoria)
+                        .input('fv', item.fechaVisita || null)
+                        .input('fc', item.fechaCierre || null)
+                        .input('dd', item.diasDiferencia || null)
+                        .input('ce', item.codigoExterno || null)
+                        .input('tb', item.tarifaBase || 0)
+                        .input('ad', item.adicionales || 0)
+                        .query(`
+                            INSERT INTO [dbo].[GAC_APP_TB_VALORIZACIONES_DETALLE] 
+                            (IdCierre, Ticket, Monto, Fecha_Ticket, Tipo, Servicio_Nombre, Categoria, Fecha_Visita, Fecha_Cierre, Dias_Diferencia, Codigo_Externo, Tarifa_Base, Adicionales)
+                            VALUES (@idCierre, @ticket, @monto, @fecha, @tipo, @servicio, @categoria, @fv, @fc, @dd, @ce, @tb, @ad)
+                        `);
+                }
+            }
+            await transaction.commit();
+            res.json({ success: true, message: "Quincena cerrada correctamente.", idCierre, codigo: businessCode });
+        }
+        catch (error) {
+            await transaction.rollback();
+            throw error;
+        }
     }
     catch (err) {
+        console.error("Error en cierre:", err);
         res.status(500).json({ error: err.message });
     }
 });
@@ -371,9 +464,57 @@ app.get('/api/penalties/:ruc', verifyToken, async (req, res) => {
                 FROM [dbo].[GAC_APP_TB_TICKETS_DESCUENTOS] d
                 JOIN [APPGAC].[ServiciosViewSQL] s ON d.Ticket = s.Ticket
                 JOIN [dbo].[GAC_APP_TB_CAS] cas ON s.IdCAS = cas.ID_CAS
-                LEFT JOIN [dbo].[GAC_APP_TB_TICKETS_DESCUENTOS_MOTIVOS] m ON d.Motivo = m.IdMotivo
+                LEFT JOIN [dbo].[GAC_APP_TB_DESCUENTOS_MOTIVOS] m ON d.Motivo = m.IdMotivo
                 WHERE cas.RUC = @ruc 
                   AND d.Fecha BETWEEN @start AND @end
+                  AND NOT EXISTS (
+                      SELECT 1 FROM [dbo].[GAC_APP_TB_VALORIZACIONES_DETALLE] det 
+                      WHERE det.Ticket = d.Ticket AND det.Tipo = 'PENALIDAD'
+                  )
+            `);
+        res.json(result.recordset);
+    }
+    catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+app.get('/api/closures', verifyToken, async (req, res) => {
+    try {
+        const db = await getDb();
+        const result = await db.request().query(`
+            SELECT * FROM [dbo].[GAC_APP_TB_VALORIZACIONES_CIERRES] 
+            ORDER BY Cerrado_El DESC
+        `);
+        res.json(result.recordset);
+    }
+    catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+app.get('/api/closures/:id/details', verifyToken, async (req, res) => {
+    const { id } = req.params;
+    try {
+        const db = await getDb();
+        const result = await db.request()
+            .input('id', id)
+            .query(`
+                SELECT 
+                    d.IdDetalle, 
+                    d.Ticket, 
+                    d.Tipo, 
+                    d.Servicio_Nombre, 
+                    d.Categoria, 
+                    d.Monto,
+                    d.Fecha_Ticket,
+                    ISNULL(d.Fecha_Visita, s.FechaVisita) as Fecha_Visita,
+                    ISNULL(d.Fecha_Cierre, s.CheckOut) as Fecha_Cierre,
+                    ISNULL(d.Dias_Diferencia, DATEDIFF(day, s.FechaVisita, s.CheckOut)) as Dias_Diferencia,
+                    COALESCE(NULLIF(d.Codigo_Externo, ''), s.CodigoExternoEquipo) as Codigo_Externo,
+                    ISNULL(d.Tarifa_Base, d.Monto) as Tarifa_Base,
+                    ISNULL(d.Adicionales, 0) as Adicionales
+                FROM [dbo].[GAC_APP_TB_VALORIZACIONES_DETALLE] d
+                LEFT JOIN [APPGAC].[ServiciosViewSQL] s ON d.Ticket = s.Ticket AND d.Tipo = 'SERVICIO'
+                WHERE d.IdCierre = @id
             `);
         res.json(result.recordset);
     }
@@ -437,6 +578,58 @@ app.post('/api/tarifarios/create', verifyToken, async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 });
+// --- MATERIALES ---
+app.get('/api/materials', verifyToken, async (req, res) => {
+    try {
+        const db = await getDb();
+        const result = await db.request().query("SELECT ID_Material, ID_Externo, Nombre, Categoria, Estado, Sector FROM [dbo].[GAC_APP_TB_MATERIALES] ORDER BY Categoria, Nombre");
+        res.json(result.recordset);
+    }
+    catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+app.get('/api/materials/categories', verifyToken, async (req, res) => {
+    try {
+        const db = await getDb();
+        const result = await db.request().query("SELECT DISTINCT Categoria FROM [dbo].[GAC_APP_TB_MATERIALES] WHERE Categoria IS NOT NULL AND Categoria != '' ORDER BY Categoria");
+        res.json(result.recordset.map(r => r.Categoria));
+    }
+    catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+app.post('/api/materials', verifyToken, async (req, res) => {
+    const { idExterno, nombre, categoria, sector } = req.body;
+    try {
+        const db = await getDb();
+        const check = await db.request().input('ext', idExterno).query("SELECT ID_Material FROM [dbo].[GAC_APP_TB_MATERIALES] WHERE ID_Externo = @ext");
+        if (check.recordset.length > 0) {
+            const id = check.recordset[0].ID_Material;
+            await db.request()
+                .input('id', id)
+                .input('nombre', nombre)
+                .input('cat', categoria)
+                .input('sec', sector || 'GAC')
+                .query(`UPDATE [dbo].[GAC_APP_TB_MATERIALES] SET Nombre = @nombre, Categoria = @cat, Sector = @sec WHERE ID_Material = @id`);
+            res.json({ success: true, id, action: 'updated' });
+        }
+        else {
+            const newId = crypto.randomBytes(4).toString('hex');
+            await db.request()
+                .input('id', newId)
+                .input('ext', idExterno)
+                .input('nombre', nombre)
+                .input('cat', categoria)
+                .input('sec', sector || 'GAC')
+                .query(`INSERT INTO [dbo].[GAC_APP_TB_MATERIALES] (ID_Material, ID_Externo, Nombre, Categoria, Sector, Estado, EstadoEnCatalogo) VALUES (@id, @ext, @nombre, @cat, @sec, 'Activo', 'Publicado')`);
+            res.json({ success: true, id: newId, action: 'created' });
+        }
+    }
+    catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
 app.post('/api/tarifarios/update', verifyToken, async (req, res) => {
     const { id, importe, estado } = req.body;
     try {
@@ -475,17 +668,20 @@ app.post('/api/tarifarios/batch', verifyToken, async (req, res) => {
                     .input(`cat_${id}`, rate.Categoria)
                     .input(`serv_${id}`, rate.Servicio)
                     .input(`imp_${id}`, sql.Decimal(18, 2), rate.Importe)
+                    .input(`f_ini_${id}`, rate.Fecha_inicio ? new Date(rate.Fecha_inicio) : new Date())
+                    .input(`f_fin_${id}`, rate.Fecha_fin ? new Date(rate.Fecha_fin) : null)
                     .query(`
                         IF EXISTS (SELECT 1 FROM [dbo].[GAC_APP_TB_TARIFARIO] WHERE ID_Tarifario = @id_${id})
                         BEGIN
                             UPDATE [dbo].[GAC_APP_TB_TARIFARIO] 
-                            SET Importe = @imp_${id}, Categoria = @cat_${id}, Servicio = @serv_${id} 
+                            SET Importe = @imp_${id}, Categoria = @cat_${id}, Servicio = @serv_${id},
+                                Fecha_inicio = @f_ini_${id}, Fecha_fin = @f_fin_${id}
                             WHERE ID_Tarifario = @id_${id}
                         END
                         ELSE
                         BEGIN
-                            INSERT INTO [dbo].[GAC_APP_TB_TARIFARIO] (ID_Tarifario, Empresa, Categoria, Servicio, Importe, Fecha_inicio, Estado)
-                            VALUES (@id_${id}, @casId_${id}, @cat_${id}, @serv_${id}, @imp_${id}, GETDATE(), 'A')
+                            INSERT INTO [dbo].[GAC_APP_TB_TARIFARIO] (ID_Tarifario, Empresa, Categoria, Servicio, Importe, Fecha_inicio, Fecha_fin, Estado)
+                            VALUES (@id_${id}, @casId_${id}, @cat_${id}, @serv_${id}, @imp_${id}, @f_ini_${id}, @f_fin_${id}, 'A')
                         END
                     `);
             }
@@ -514,7 +710,7 @@ app.get('/api/dashboard/stats', verifyToken, async (req, res) => {
                 SELECT s.Ticket, 
                     CASE WHEN LEFT(s.NombreTecnico, 3) IN ('SB2', 'SS ', 'AC ', 'EMS', 'SIL', 'VYA', 'SEY', 'TP ', 'TYG', 'FSI', 'LM ', 'TCP', 'MG ', 'AYD', 'SLR', 'REY', 'VR ', 'LV ', 'MR ', 'AXX', 'COT', 'SNT', 'NUL') 
                     THEN LEFT(s.NombreTecnico, 3) ELSE 'GAC' END as Prefix,
-                    s.IdServicio, s.CodigoExternoEquipo
+                    s.IdServicio, s.CodigoExternoEquipo, s.FechaVisita, s.CheckOut
                 FROM [SIATC].[Dashboard_FSM] s
                 WHERE s.CheckOut >= @start AND s.CheckOut < DATEADD(DAY, 1, @end)
                   AND s.Estado = 'Closed'
@@ -537,7 +733,21 @@ app.get('/api/dashboard/stats', verifyToken, async (req, res) => {
         query += `
             ),
             ResumenServicios AS (
-                SELECT ID_CAS, IdServicio, Categoria, COUNT(*) as Cnt
+                SELECT 
+                    ID_CAS, 
+                    IdServicio, 
+                    Categoria, 
+                    SUM(CASE 
+                        WHEN s.IdServicio = 'Visita' OR s.Servicio = 'Visita' THEN 0
+                        WHEN DATEDIFF(day, FechaVisita, CheckOut) > 1 THEN 0 
+                        WHEN LEFT(CodigoExternoEquipo, 4) NOT IN ('3120', '3121', '5120', '5121') THEN 0
+                        ELSE 1 
+                    END) as CntValidos,
+                    SUM(CASE 
+                        WHEN DATEDIFF(day, FechaVisita, CheckOut) > 1 THEN 0 
+                        WHEN LEFT(CodigoExternoEquipo, 4) NOT IN ('3120', '3121', '5120', '5121') THEN 0
+                        ELSE 1 
+                    END) as Cnt -- Para compatibilidad
                 FROM TicketsCAS
                 GROUP BY ID_CAS, IdServicio, Categoria
             ),
@@ -551,7 +761,7 @@ app.get('/api/dashboard/stats', verifyToken, async (req, res) => {
             )
             SELECT 
                 (SELECT COUNT(*) FROM TicketsCAS) as TotalTickets,
-                (SELECT SUM(rs.Cnt * ISNULL(t.Importe, 0)) 
+                (SELECT SUM(rs.CntValidos * ISNULL(t.Importe, 0)) 
                  FROM ResumenServicios rs 
                  LEFT JOIN [dbo].[GAC_APP_TB_TARIFARIO] t ON t.Empresa = rs.ID_CAS 
                     AND (t.Servicio = rs.IdServicio)
@@ -583,7 +793,7 @@ app.get('/api/dashboard/trends', verifyToken, async (req, res) => {
         request.input('m', sql.Int, -Number(months));
         let query = `
             WITH TicketsFilt AS (
-                SELECT s.Ticket, s.CheckOut, s.IdServicio, s.CodigoExternoEquipo,
+                SELECT s.Ticket, s.CheckOut, s.IdServicio, s.CodigoExternoEquipo, s.FechaVisita,
                     CASE WHEN LEFT(s.NombreTecnico, 3) IN ('SB2', 'SS ', 'AC ', 'EMS', 'SIL', 'VYA', 'SEY', 'TP ', 'TYG', 'FSI', 'LM ', 'TCP', 'MG ', 'AYD', 'SLR', 'REY', 'VR ', 'LV ', 'MR ', 'AXX', 'COT', 'SNT', 'NUL') 
                     THEN LEFT(s.NombreTecnico, 3) ELSE 'GAC' END as Prefix
                 FROM [SIATC].[Dashboard_FSM] s
@@ -612,7 +822,12 @@ app.get('/api/dashboard/trends', verifyToken, async (req, res) => {
                     twc.ID_CAS, 
                     twc.IdServicio, 
                     twc.Categoria,
-                    COUNT(*) as Cnt
+                    SUM(CASE 
+                        WHEN twc.IdServicio = 'Visita' OR twc.ServicioNombre = 'Visita' THEN 0
+                        WHEN DATEDIFF(day, twc.FechaVisita, twc.CheckOut) > 1 THEN 0 
+                        WHEN LEFT(twc.CodigoExternoEquipo, 4) NOT IN ('3120', '3121', '5120', '5121') THEN 0
+                        ELSE 1 
+                    END) as Cnt
                 FROM TicketsCAS twc
                 GROUP BY YEAR(twc.CheckOut), MONTH(twc.CheckOut), twc.ID_CAS, twc.IdServicio, twc.Categoria
             ),
@@ -690,6 +905,76 @@ app.get('/api/dashboard/top-cas', verifyToken, async (req, res) => {
     }
     catch (err) {
         res.status(500).json({ error: err.message });
+    }
+});
+// --- C4C INTEGRATION ---
+app.get('/api/c4c/report/:ticketId', verifyToken, async (req, res) => {
+    try {
+        const { ticketId } = req.params;
+        if (!C4C_BASE_URL || !process.env.C4C_USER || !process.env.C4C_PASSWORD) {
+            return res.status(500).json({
+                error: 'C4C Integration not configured',
+                details: 'Missing C4C_BASE_URL or credentials in environment variables'
+            });
+        }
+        // 1. Find the Service Request
+        const searchUrl = `${C4C_BASE_URL}/ServiceRequestCollection?$filter=ID eq '${ticketId}'`;
+        const searchResponse = await axios.get(searchUrl, {
+            headers: { 'Authorization': `Basic ${C4C_AUTH}` }
+        });
+        const ticket = searchResponse.data.d.results[0];
+        if (!ticket) {
+            return res.status(404).json({ error: `Ticket ${ticketId} no encontrado en C4C` });
+        }
+        // 2. Fetch Attachments using the ObjectID
+        // We try to get from the expanded folder or fetch it directly
+        let attachments = ticket.ServiceRequestAttachmentFolder?.results;
+        if (!attachments || attachments.length === 0) {
+            const attachmentUrl = `${C4C_BASE_URL}/ServiceRequestCollection('${ticket.ObjectID}')/ServiceRequestAttachmentFolder`;
+            try {
+                const attachResponse = await axios.get(attachmentUrl, {
+                    headers: { 'Authorization': `Basic ${C4C_AUTH}` }
+                });
+                attachments = attachResponse.data.d.results;
+            }
+            catch (attachErr) {
+                console.warn('Could not fetch attachments directly:', attachErr);
+            }
+        }
+        if (!attachments || attachments.length === 0) {
+            return res.status(404).json({
+                error: `No se encontraron adjuntos para el ticket ${ticketId}`,
+                details: 'El ticket existe pero no tiene archivos asociados en la pestaña de Adjuntos de C4C.'
+            });
+        }
+        // 3. Look for the technical report PDF
+        // We prioritize PDFs with "Informe" or "Report" in the name
+        let report = attachments.find((a) => a.MimeType === 'application/pdf' &&
+            (a.Name.toLowerCase().includes('informe') || a.Name.toLowerCase().includes('report')));
+        // Fallback: take any PDF if no specific name match
+        if (!report) {
+            report = attachments.find((a) => a.MimeType === 'application/pdf');
+        }
+        if (!report) {
+            return res.status(404).json({ error: `No se encontró un informe en PDF para el ticket ${ticketId}` });
+        }
+        // 4. Fetch the actual PDF binary content
+        // In C4C OData, the content is in the /Binary/$value endpoint of the attachment
+        const downloadUrl = `${C4C_BASE_URL}/ServiceRequestAttachmentFolderCollection('${report.ObjectID}')/Binary/$value`;
+        const pdfResponse = await axios.get(downloadUrl, {
+            headers: { 'Authorization': `Basic ${C4C_AUTH}` },
+            responseType: 'arraybuffer'
+        });
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `inline; filename="${report.Name}"`);
+        res.send(pdfResponse.data);
+    }
+    catch (err) {
+        console.error('C4C Proxy Error:', err.response?.data || err.message);
+        res.status(err.response?.status || 500).json({
+            error: 'Failed to retrieve report from C4C',
+            details: err.response?.data?.error?.message?.value || err.message
+        });
     }
 });
 // --- CONFIG & MANAGEMENT (Standardized) ---
