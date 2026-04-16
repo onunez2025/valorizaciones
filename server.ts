@@ -19,6 +19,26 @@ const C4C_BASE_URL = process.env.C4C_BASE_URL;
 const C4C_AUTH = Buffer.from(`${process.env.C4C_USER}:${process.env.C4C_PASSWORD}`).toString('base64');
 const JWT_SECRET = process.env.JWT_SECRET || 'tablero_control_secret_2026';
 
+// MS Graph API Config
+const MS_GRAPH_TENANT_ID = process.env.MS_GRAPH_TENANT_ID;
+const MS_GRAPH_CLIENT_ID = process.env.MS_GRAPH_CLIENT_ID;
+const MS_GRAPH_CLIENT_SECRET = process.env.MS_GRAPH_CLIENT_SECRET;
+const MS_GRAPH_SENDER_EMAIL = process.env.MS_GRAPH_SENDER_EMAIL;
+
+async function getGraphToken() {
+    const url = `https://login.microsoftonline.com/${MS_GRAPH_TENANT_ID}/oauth2/v2.0/token`;
+    const params = new URLSearchParams({
+        client_id: MS_GRAPH_CLIENT_ID || '',
+        client_secret: MS_GRAPH_CLIENT_SECRET || '',
+        grant_type: 'client_credentials',
+        scope: 'https://graph.microsoft.com/.default'
+    });
+    const resp = await axios.post(url, params.toString(), {
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+    });
+    return resp.data.access_token;
+}
+
 const cleanApps = (str: string) => [...new Set((str || '').split(',').map(s => s.trim()).filter(Boolean))].join(', ');
 
 // Helper for Auditing
@@ -710,6 +730,49 @@ app.post('/api/valuations/close', verifyToken, async (req: Request, res: Respons
     } catch (err: any) { 
         console.error("Error en cierre:", err);
         res.status(500).json({ error: err.message }); 
+    }
+});
+
+app.post('/api/valuations/send-email', verifyToken, async (req: Request, res: Response) => {
+    const { to, subject, body, attachmentName, attachmentBase64 } = req.body;
+    try {
+        const token = await getGraphToken();
+        const url = `https://graph.microsoft.com/v1.0/users/${MS_GRAPH_SENDER_EMAIL}/sendMail`;
+        
+        const recipients = to.split(',').map((email: string) => ({
+            emailAddress: { address: email.trim() }
+        }));
+
+        const emailData = {
+            message: {
+                subject: subject,
+                body: {
+                    contentType: 'HTML',
+                    content: body
+                },
+                toRecipients: recipients,
+                attachments: attachmentBase64 ? [
+                    {
+                        "@odata.type": "#microsoft.graph.fileAttachment",
+                        name: attachmentName || "Valorizacion.xlsx",
+                        contentBytes: attachmentBase64
+                    }
+                ] : []
+            }
+        };
+
+        await axios.post(url, emailData, {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        await logAudit(req, 'EMAIL_SENT', 'VALUATION', attachmentName, { recipients: to });
+        res.json({ success: true, message: 'Email enviado correctamente' });
+    } catch (err: any) {
+        console.error('Error enviando email:', err.response?.data || err.message);
+        res.status(500).json({ error: 'No se pudo enviar el correo: ' + (err.response?.data?.error?.message || err.message) });
     }
 });
 
