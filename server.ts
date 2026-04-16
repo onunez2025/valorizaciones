@@ -323,6 +323,18 @@ async function getC4CDetails(ticketIds: string[]) {
     }
     return results;
 }
+app.get('/api/c4c-creators', verifyToken, async (req: Request, res: Response) => {
+    try {
+        const url = `${C4C_BASE_URL}/ServiceRequestCollection?$select=CreatedBy&$top=2000&$orderby=CreationDateTime desc`;
+        const resp = await axios.get(url, { headers: { 'Authorization': `Basic ${C4C_AUTH}` } });
+        const items = resp.data.d.results;
+        const creators = Array.from(new Set(items.map((item: any) => item.CreatedBy))).sort();
+        res.json(creators);
+    } catch (err: any) {
+        console.error('C4C Creators Error:', err.message);
+        res.status(500).json({ error: "No se pudieron obtener los creadores de C4C." });
+    }
+});
 
 // --- VALORIZACIONES ---
 app.get('/api/valuations/:ruc', verifyToken, async (req: Request, res: Response) => {

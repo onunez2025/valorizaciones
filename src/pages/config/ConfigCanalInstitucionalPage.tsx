@@ -25,6 +25,7 @@ interface ConfigInstitucional {
 
 export default function ConfigCanalInstitucionalPage() {
     const [configs, setConfigs] = useState<ConfigInstitucional[]>([]);
+    const [creators, setCreators] = useState<string[]>([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -33,6 +34,7 @@ export default function ConfigCanalInstitucionalPage() {
 
     useEffect(() => {
         fetchData();
+        fetchCreators();
     }, []);
 
     const fetchData = async () => {
@@ -44,6 +46,15 @@ export default function ConfigCanalInstitucionalPage() {
             alert({ message: "Error al cargar la configuración institucional." });
         } finally {
             setLoading(false);
+        }
+    };
+
+    const fetchCreators = async () => {
+        try {
+            const data = await ApiClient.request('/c4c-creators');
+            setCreators(data);
+        } catch (error) {
+            console.error("No se pudieron cargar los creadores.");
         }
     };
 
@@ -234,12 +245,16 @@ export default function ConfigCanalInstitucionalPage() {
                                 <Users className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-primary opacity-50" />
                                 <input 
                                     type="text" 
+                                    list="creators-list"
                                     className="w-full bg-slate-50 border border-border rounded-2xl pl-11 pr-4 py-3 text-sm font-black focus:ring-4 focus:ring-primary/5 focus:border-primary outline-none transition-all"
-                                    placeholder="Ej: Jose Perez"
+                                    placeholder="Buscar o escribir nombre... Ej: Jose Perez"
                                     value={editingConfig?.usuario_creador || ''}
                                     onChange={(e) => setEditingConfig({...editingConfig, usuario_creador: e.target.value})}
                                     required
                                 />
+                                <datalist id="creators-list">
+                                    {creators.map(c => <option key={c} value={c} />)}
+                                </datalist>
                             </div>
                         </div>
 
