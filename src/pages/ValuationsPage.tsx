@@ -342,25 +342,26 @@ export default function ValuationsPage() {
         const sheetPenalties = workbook.addWorksheet('Detalle Penalidades');
 
         // --- HOJA RESUMEN ---
-        sheetResumen.columns = [{ width: 35 }, { width: 15 }, { width: 20 }];
-        const titleCell = sheetResumen.getCell('A1');
-        titleCell.value = 'REPORTE DE CIERRE DE VALORIZACIÓN';
-        titleCell.font = { name: 'Arial', size: 12, bold: true };
-        titleCell.alignment = { horizontal: 'center' };
+        sheetResumen.columns = [{ width: 35 }, { width: 15 }, { width: 25 }];
+        
+        // Header
+        const headerRow = sheetResumen.getRow(1);
+        headerRow.getCell(1).value = 'REPORTE DE CIERRE DE VALORIZACIÓN';
+        headerRow.getCell(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+        headerRow.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E3A8A' } };
         sheetResumen.mergeCells('A1:C1');
-        sheetResumen.getCell('A1').border = { bottom: { style: 'thin' } };
 
         const info = [
             ['CÓDIGO:', 'PRE-VALORIZACION'],
             ['CAS:', selectedCas.Nombre_CAS],
-            ['Periodo:', `${startDate} al ${endDate}`],
-            ['Cerrado Por:', StorageService.getCurrentUser()?.full_name || 'N/D'],
-            ['Fecha de Cierre:', new Date().toLocaleString()]
+            ['Periodo:', `${startDate} al ${endDate}`]
         ];
 
         info.forEach((row, i) => {
             const r = sheetResumen.getRow(i + 2);
-            r.getCell(1).value = row[0]; r.getCell(1).font = { bold: true };
+            r.getCell(1).value = row[0];
+            r.getCell(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+            r.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E3A8A' } };
             r.getCell(2).value = row[1];
             sheetResumen.mergeCells(`B${i + 2}:C${i + 2}`);
             [1, 2, 3].forEach(col => {
@@ -369,40 +370,42 @@ export default function ValuationsPage() {
         });
 
         // Summary Table
-        const summaryStartRow = 9;
-        const summaryRows = [
-            ['CONCEPTO', 'CANTIDAD', 'TOTAL'],
+        const summaryStartRow = 7; // Adjusted to match spacing in image (one empty row after metadata)
+        const summaryHeader = sheetResumen.getRow(summaryStartRow);
+        summaryHeader.values = ['CONCEPTO', 'CANTIDAD', 'TOTAL'];
+        summaryHeader.eachCell(c => {
+            c.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+            c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E3A8A' } };
+            c.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+        });
+
+        const summaryData = [
             ['Servicios Realizados', tickets.length, totalTickets],
             ['Penalidades y Descuentos', penalties.length, -totalPenalties],
             ['', '', ''],
-            ['TOTAL LIQUIDADO', '', grandTotal]
+            ['TOTAL A FACTURAR', '', grandTotal]
         ];
 
-        summaryRows.forEach((row, i) => {
-            const r = sheetResumen.getRow(i + summaryStartRow);
+        summaryData.forEach((row, i) => {
+            const r = sheetResumen.getRow(summaryStartRow + 1 + i);
             r.values = row;
-            if (i === 0) {
-                r.eachCell(c => { c.font = { bold: true }; c.alignment = { horizontal: 'center' }; });
-            }
-            if (i === 4) {
+            if (i === 3) {
                 r.getCell(1).font = { bold: true };
                 r.getCell(3).font = { bold: true };
             }
             r.getCell(3).numFmt = '"S/" #,##0.00';
-            r.eachCell((c, colIdx) => {
-                if (row[0] || row[2] || i === 3) {
-                    c.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
-                }
+            r.eachCell(c => {
+                c.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
             });
         });
 
         // Group by Date Table
-        const dateBreakdownStartRow = 16;
+        const dateBreakdownStartRow = summaryStartRow + 6;
         const dateHeaderRow = sheetResumen.getRow(dateBreakdownStartRow);
         dateHeaderRow.values = ['Etiquetas de fila', 'Cuenta de TICKET', 'Suma de MONTO'];
         dateHeaderRow.eachCell(c => {
             c.font = { bold: true, color: { argb: 'FFFFFFFF' } };
-            c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF6B8E23' } }; 
+            c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E3A8A' } }; 
             c.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
         });
 
@@ -430,14 +433,15 @@ export default function ValuationsPage() {
             const r = sheetResumen.getRow(dateBreakdownStartRow + 1 + i);
             r.values = [dateStr, data.count, data.total];
             r.getCell(3).numFmt = '"S/" #,##0.00';
-            r.eachCell(c => { c.border = { bottom: { style: 'thin', color: { argb: 'FFE5E7EB' } } }; });
+            r.eachCell(c => { c.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } }; });
         });
 
         const footerRow = sheetResumen.getRow(dateBreakdownStartRow + 1 + sortedDates.length);
         footerRow.values = ['Total general', tickets.length, totalTickets];
         footerRow.eachCell(c => {
-            c.font = { bold: true };
-            c.border = { top: { style: 'thin' }, bottom: { style: 'double' } };
+            c.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+            c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E3A8A' } };
+            c.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
         });
         footerRow.getCell(3).numFmt = '"S/" #,##0.00';
 
@@ -514,25 +518,26 @@ export default function ValuationsPage() {
         const sheetPenalties = workbook.addWorksheet('Historial Penalidades');
 
         // --- HOJA RESUMEN ---
-        sheetResumen.columns = [{ width: 35 }, { width: 15 }, { width: 20 }];
-        const titleCell = sheetResumen.getCell('A1');
-        titleCell.value = 'REPORTE DE CIERRE DE VALORIZACIÓN';
-        titleCell.font = { name: 'Arial', size: 12, bold: true };
-        titleCell.alignment = { horizontal: 'center' };
+        sheetResumen.columns = [{ width: 35 }, { width: 15 }, { width: 25 }];
+        
+        // Header
+        const headerRow = sheetResumen.getRow(1);
+        headerRow.getCell(1).value = 'REPORTE DE CIERRE DE VALORIZACIÓN';
+        headerRow.getCell(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+        headerRow.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E3A8A' } };
         sheetResumen.mergeCells('A1:C1');
-        sheetResumen.getCell('A1').border = { bottom: { style: 'thin' } };
 
         const info = [
             ['CÓDIGO:', selectedClosure.Codigo_Valorizacion],
             ['CAS:', selectedClosure.Nombre_CAS],
-            ['Periodo:', `${new Date(selectedClosure.Fecha_Inicio).toLocaleDateString()} al ${new Date(selectedClosure.Fecha_Fin).toLocaleDateString()}`],
-            ['Cerrado Por:', selectedClosure.Cerrado_Por],
-            ['Fecha de Cierre:', new Date(selectedClosure.Cerrado_El).toLocaleString()]
+            ['Periodo:', `${new Date(selectedClosure.Fecha_Inicio).toLocaleDateString()} al ${new Date(selectedClosure.Fecha_Fin).toLocaleDateString()}`]
         ];
 
         info.forEach((row, i) => {
             const r = sheetResumen.getRow(i + 2);
-            r.getCell(1).value = row[0]; r.getCell(1).font = { bold: true };
+            r.getCell(1).value = row[0];
+            r.getCell(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+            r.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E3A8A' } };
             r.getCell(2).value = row[1];
             sheetResumen.mergeCells(`B${i + 2}:C${i + 2}`);
             [1, 2, 3].forEach(col => {
@@ -541,40 +546,42 @@ export default function ValuationsPage() {
         });
 
         // Summary Table
-        const summaryStartRow = 9;
-        const summaryRows = [
-            ['CONCEPTO', 'CANTIDAD', 'TOTAL'],
+        const summaryStartRow = 7;
+        const summaryHeader = sheetResumen.getRow(summaryStartRow);
+        summaryHeader.values = ['CONCEPTO', 'CANTIDAD', 'TOTAL'];
+        summaryHeader.eachCell(c => {
+            c.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+            c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E3A8A' } };
+            c.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+        });
+
+        const summaryData = [
             ['Servicios Realizados', services.length, selectedClosure.Subtotal_Servicios],
             ['Penalidades y Descuentos', penalties.length, -selectedClosure.Subtotal_Penalidades],
             ['', '', ''],
-            ['TOTAL LIQUIDADO', '', selectedClosure.Total_Final]
+            ['TOTAL A FACTURAR', '', selectedClosure.Total_Final]
         ];
 
-        summaryRows.forEach((row, i) => {
-            const r = sheetResumen.getRow(i + summaryStartRow);
+        summaryData.forEach((row, i) => {
+            const r = sheetResumen.getRow(summaryStartRow + 1 + i);
             r.values = row;
-            if (i === 0) {
-                r.eachCell(c => { c.font = { bold: true }; c.alignment = { horizontal: 'center' }; });
-            }
-            if (i === 4) {
+            if (i === 3) {
                 r.getCell(1).font = { bold: true };
                 r.getCell(3).font = { bold: true };
             }
             r.getCell(3).numFmt = '"S/" #,##0.00';
-            r.eachCell((c, colIdx) => {
-                if (row[0] || row[2] || i === 3) {
-                    c.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
-                }
+            r.eachCell(c => {
+                c.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
             });
         });
 
         // Group by Date Table
-        const dateBreakdownStartRow = 16;
+        const dateBreakdownStartRow = summaryStartRow + 6;
         const dateHeaderRow = sheetResumen.getRow(dateBreakdownStartRow);
         dateHeaderRow.values = ['Etiquetas de fila', 'Cuenta de TICKET', 'Suma de MONTO'];
         dateHeaderRow.eachCell(c => {
             c.font = { bold: true, color: { argb: 'FFFFFFFF' } };
-            c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF6B8E23' } }; 
+            c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E3A8A' } }; 
             c.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
         });
 
@@ -602,14 +609,15 @@ export default function ValuationsPage() {
             const r = sheetResumen.getRow(dateBreakdownStartRow + 1 + i);
             r.values = [dateStr, data.count, data.total];
             r.getCell(3).numFmt = '"S/" #,##0.00';
-            r.eachCell(c => { c.border = { bottom: { style: 'thin', color: { argb: 'FFE5E7EB' } } }; });
+            r.eachCell(c => { c.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } }; });
         });
 
         const footerRow = sheetResumen.getRow(dateBreakdownStartRow + 1 + sortedDates.length);
         footerRow.values = ['Total general', services.length, selectedClosure.Subtotal_Servicios];
         footerRow.eachCell(c => {
-            c.font = { bold: true };
-            c.border = { top: { style: 'thin' }, bottom: { style: 'double' } };
+            c.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+            c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E3A8A' } };
+            c.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
         });
         footerRow.getCell(3).numFmt = '"S/" #,##0.00';
 
