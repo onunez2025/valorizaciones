@@ -562,7 +562,7 @@ app.get('/api/penalties/:ruc', verifyToken, async (req: Request, res: Response) 
                 FROM [dbo].[GAC_APP_TB_TICKETS_DESCUENTOS] d
                 JOIN [APPGAC].[ServiciosViewSQL] s ON d.Ticket = s.Ticket
                 JOIN [dbo].[GAC_APP_TB_CAS] cas ON s.IdCAS = cas.ID_CAS
-                LEFT JOIN [dbo].[GAC_APP_TB_DESCUENTOS_MOTIVOS] m ON d.Motivo = m.IdMotivo
+                LEFT JOIN [dbo].[GAC_APP_TB_TICKETS_DESCUENTOS_MOTIVOS] m ON d.Motivo = m.IdMotivo
                 WHERE cas.RUC = @ruc 
                   AND d.Fecha BETWEEN @start AND @end
                   AND NOT EXISTS (
