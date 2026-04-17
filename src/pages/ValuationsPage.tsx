@@ -693,6 +693,7 @@ export default function ValuationsPage() {
             categoria: 'DESCUENTO'
         }));
 
+        try {
             const result = await ApiClient.request('/valuations/close', {
                 method: 'POST',
                 body: JSON.stringify({
