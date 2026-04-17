@@ -1568,7 +1568,7 @@ export default function ValuationsPage() {
                                         disabled={!selectedCas} 
                                         className="w-full flex items-center justify-center gap-2 p-4 bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 text-sm font-bold rounded-xl transition-all disabled:opacity-30"
                                     >
-                                        <Activity className="w-4 h-4" /> Ajuste Masivo (Recojo)
+                                        <Activity className="w-4 h-4" /> Ajuste Masivo
                                     </button>
                                 </div>
                             </div>
@@ -2278,7 +2278,7 @@ function BatchAdjustmentModal({ isOpen, onClose, onApply, tickets, setTickets, t
                 <div className="p-8 border-b border-border/50 bg-slate-50 flex items-center justify-between">
                     <div className="flex items-center gap-3">
                         <div className="p-2 bg-amber-500 rounded-lg text-white shadow-lg shadow-amber-500/20"><Activity className="w-5 h-5" /></div>
-                        <h2 className="text-xl font-black text-slate-800">Ajuste Masivo (Recojo)</h2>
+                        <h2 className="text-xl font-black text-slate-800">Ajuste Masivo</h2>
                     </div>
                     <button onClick={onClose} className="p-2 hover:bg-muted rounded-xl transition-all"><X className="w-5 h-5" /></button>
                 </div>
