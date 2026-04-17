@@ -922,8 +922,8 @@ app.get('/api/penalties/:ruc', verifyToken, async (req: Request, res: Response) 
         const db = await getDb();
         const result = await db.request()
             .input('ruc', ruc)
-            .input('start', start)
-            .input('end', end)
+            .input('start', sql.VarChar, `${start} 00:00:00`)
+            .input('end', sql.VarChar, `${end} 23:59:59`)
             .query(`
                 SELECT 
                     d.ID_Descuentos_CAS as Id,
@@ -938,7 +938,7 @@ app.get('/api/penalties/:ruc', verifyToken, async (req: Request, res: Response) 
                 JOIN [dbo].[GAC_APP_TB_CAS] cas ON s.IdCAS = cas.ID_CAS
                 LEFT JOIN [dbo].[GAC_APP_TB_TICKETS_DESCUENTOS_MOTIVOS] m ON d.Motivo = m.IdMotivo
                 WHERE cas.RUC = @ruc 
-                  AND d.Fecha BETWEEN @start AND @end
+                  AND d.Creado_el BETWEEN @start AND @end
                   AND NOT EXISTS (
                       SELECT 1 FROM [dbo].[GAC_APP_TB_VALORIZACIONES_DETALLE] det 
                       WHERE det.Ticket = d.Ticket AND det.Tipo = 'PENALIDAD'
