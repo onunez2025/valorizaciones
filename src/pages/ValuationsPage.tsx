@@ -62,6 +62,13 @@ export default function ValuationsPage() {
     const [isSendingEmail, setIsSendingEmail] = useState(false);
     const [pendingEmailData, setPendingEmailData] = useState<{blob: Blob, filename: string, subject: string, body: string} | null>(null);
 
+    // Batch adjustment states
+    const [showBatchAdjustmentModal, setShowBatchAdjustmentModal] = useState(false);
+    const [batchTickets, setBatchTickets] = useState('');
+    const [batchTargetAmount, setBatchTargetAmount] = useState('59.32');
+    const [batchMotivo, setBatchMotivo] = useState('Recojo en Planta');
+    const [isApplyingBatch, setIsApplyingBatch] = useState(false);
+
     const blobToBase64 = (blob: Blob): Promise<string> => {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
@@ -185,6 +192,41 @@ export default function ValuationsPage() {
             alert({ message: "No se pudo cargar la información de la valorización." });
         } finally {
             setLoadingData(false);
+        }
+    };
+
+    const handleApplyBatchAdjustment = async () => {
+        if (!selectedCas) return;
+        
+        const ticketList = batchTickets.split(/[\n,;]+/).map(t => t.trim()).filter(t => t.length > 0);
+        if (ticketList.length === 0) {
+            alert({ message: "Debe ingresar al menos un número de ticket." });
+            return;
+        }
+
+        setIsApplyingBatch(true);
+        try {
+            const result = await ApiClient.request('/valuations/batch-adjustment', {
+                method: 'POST',
+                body: JSON.stringify({
+                    tickets: ticketList,
+                    targetAmount: parseFloat(batchTargetAmount),
+                    motivo: batchMotivo,
+                    ruc: selectedCas.RUC
+                })
+            });
+
+            alert({ 
+                title: 'Ajuste Completado', 
+                message: `Se procesaron ${result.processed} tickets exitosamente.` 
+            });
+            setShowBatchAdjustmentModal(false);
+            setBatchTickets('');
+            handleFetchValuation(); // Refrescar los datos para ver los cambios
+        } catch (err: any) {
+            alert({ title: 'Error', message: err.message || 'Error al aplicar el ajuste masivo.' });
+        } finally {
+            setIsApplyingBatch(false);
         }
     };
 
@@ -1521,6 +1563,13 @@ export default function ValuationsPage() {
                                     >
                                         <Lock className="w-4 h-4" /> Cerrar y Notificar
                                     </button>
+                                    <button 
+                                        onClick={() => setShowBatchAdjustmentModal(true)} 
+                                        disabled={!selectedCas} 
+                                        className="w-full flex items-center justify-center gap-2 p-4 bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 text-sm font-bold rounded-xl transition-all disabled:opacity-30"
+                                    >
+                                        <Activity className="w-4 h-4" /> Ajuste Masivo (Recojo)
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -2204,6 +2253,90 @@ export default function ValuationsPage() {
                 setEmailTo={setEmailTo}
                 isSending={isSendingEmail}
             />
+
+            <BatchAdjustmentModal 
+                isOpen={showBatchAdjustmentModal}
+                onClose={() => setShowBatchAdjustmentModal(false)}
+                onApply={handleApplyBatchAdjustment}
+                tickets={batchTickets}
+                setTickets={setBatchTickets}
+                targetAmount={batchTargetAmount}
+                setTargetAmount={setBatchTargetAmount}
+                motivo={batchMotivo}
+                setMotivo={setBatchMotivo}
+                isApplying={isApplyingBatch}
+            />
+        </div>
+    );
+}
+
+function BatchAdjustmentModal({ isOpen, onClose, onApply, tickets, setTickets, targetAmount, setTargetAmount, motivo, setMotivo, isApplying }: any) {
+    if (!isOpen) return null;
+    return (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
+            <div className="bg-white w-full max-w-lg rounded-[32px] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
+                <div className="p-8 border-b border-border/50 bg-slate-50 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 bg-amber-500 rounded-lg text-white shadow-lg shadow-amber-500/20"><Activity className="w-5 h-5" /></div>
+                        <h2 className="text-xl font-black text-slate-800">Ajuste Masivo (Recojo)</h2>
+                    </div>
+                    <button onClick={onClose} className="p-2 hover:bg-muted rounded-xl transition-all"><X className="w-5 h-5" /></button>
+                </div>
+                
+                <div className="p-8 space-y-6">
+                    <div className="space-y-2">
+                        <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Tickets (pegue aquí la lista)</label>
+                        <textarea 
+                            value={tickets}
+                            onChange={(e) => setTickets(e.target.value)}
+                            placeholder="Ej: 1195343&#10;1195350&#10;1195943..."
+                            className="w-full h-48 p-4 bg-muted/20 border border-border/50 rounded-2xl text-[13px] font-bold focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all resize-none custom-scrollbar"
+                        />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Importe Final Fijo</label>
+                            <div className="relative">
+                                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs">S/</span>
+                                <input 
+                                    type="number"
+                                    step="0.01"
+                                    value={targetAmount}
+                                    onChange={(e) => setTargetAmount(e.target.value)}
+                                    className="w-full pl-10 pr-4 py-3.5 bg-muted/20 border border-border/50 rounded-xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all"
+                                />
+                            </div>
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Motivo</label>
+                            <input 
+                                type="text"
+                                value={motivo}
+                                onChange={(e) => setMotivo(e.target.value)}
+                                className="w-full px-4 py-3.5 bg-muted/20 border border-border/50 rounded-xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all"
+                            />
+                        </div>
+                    </div>
+
+                    <div className="p-4 bg-amber-50 border border-amber-100 rounded-2xl flex items-start gap-3">
+                        <AlertCircle className="w-4 h-4 text-amber-600 mt-0.5" />
+                        <p className="text-[10px] font-bold text-amber-700 leading-tight">
+                            El sistema calculará automáticamente la diferencia contra la tarifa base de cada ticket para que el total sume exactamente S/ {targetAmount}. 
+                            <br/><span className="font-black">Los ajustes previos en estos tickets serán reemplazados.</span>
+                        </p>
+                    </div>
+
+                    <button 
+                        onClick={onApply}
+                        disabled={isApplying || !tickets.trim()}
+                        className="w-full py-4 bg-slate-900 text-white text-xs font-black rounded-2xl hover:bg-slate-800 transition-all shadow-xl shadow-slate-900/20 disabled:opacity-50 flex items-center justify-center gap-2"
+                    >
+                        {isApplying ? <Activity className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                        {isApplying ? "Aplicando ajustes..." : "Aplicar Ajuste a Tickets"}
+                    </button>
+                </div>
+            </div>
         </div>
     );
 }

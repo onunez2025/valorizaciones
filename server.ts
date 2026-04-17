@@ -587,6 +587,106 @@ app.delete('/api/adicionales/:id', verifyToken, async (req: Request, res: Respon
     } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
+app.post('/api/valuations/batch-adjustment', verifyToken, async (req: Request, res: Response) => {
+    const { tickets, targetAmount, motivo, ruc } = req.body;
+    if (!tickets || !Array.isArray(tickets) || tickets.length === 0) {
+        return res.status(400).json({ error: "Debe proporcionar una lista de tickets." });
+    }
+
+    try {
+        const db = await getDb();
+        const pool = await getDb();
+        
+        // 1. Fetch TarifaBase for these tickets to calculate Delta
+        // Replicating logic from /api/valuations/:ruc
+        const request = pool.request();
+        request.input('ruc', ruc);
+        
+        // Create parameter list for the IN clause
+        const paramNames = tickets.map((_, i) => `@t${i}`);
+        tickets.forEach((t, i) => request.input(`t${i}`, t));
+
+        const query = `
+            SELECT 
+                s.Ticket,
+                ISNULL(rate.Importe, 0) as TarifaBaseCalculada
+            FROM [APPGAC].[ServiciosViewSQL] s
+            JOIN [dbo].[GAC_APP_TB_CAS] cas ON s.IdCAS = cas.ID_CAS
+            OUTER APPLY (
+                SELECT TOP 1 Categoria FROM [dbo].[GAC_APP_TB_MATERIALES] WHERE ID_Externo = s.CodigoExternoEquipo
+            ) m
+            OUTER APPLY (
+                SELECT TOP 1 CAST(Importe AS FLOAT) as Importe 
+                FROM [dbo].[GAC_APP_TB_TARIFARIO] t 
+                WHERE t.Empresa = cas.ID_CAS 
+                  AND (t.Servicio = s.IdServicio OR t.Servicio = s.Servicio)
+                  AND TRIM(t.Categoria) = TRIM(m.Categoria)
+                  AND s.CheckOut >= t.Fecha_inicio 
+                  AND (t.Fecha_fin IS NULL OR s.CheckOut <= t.Fecha_fin)
+                ORDER BY t.Estado DESC, t.Fecha_inicio DESC
+            ) rate
+            WHERE TRIM(cas.RUC) = @ruc 
+              AND s.Ticket IN (${paramNames.join(',')})
+        `;
+
+        const ratesResult = await request.query(query);
+        const foundTickets = ratesResult.recordset;
+
+        // Start transaction for updates
+        const transaction = new sql.Transaction(db);
+        await transaction.begin();
+
+        try {
+            for (const item of foundTickets) {
+                const ticket = item.Ticket;
+                const base = item.TarifaBaseCalculada;
+                const delta = targetAmount - base;
+                const adjustmentId = crypto.randomBytes(4).toString('hex');
+
+                // Delete existing adicionales for this ticket
+                await transaction.request()
+                    .input('ticket', ticket)
+                    .query("DELETE FROM [dbo].[GAC_APP_TB_TICKETS_VALORIZACION_ADICIONAL] WHERE Ticket = @ticket");
+
+                // Insert new delta
+                if (delta !== 0) {
+                    await transaction.request()
+                        .input('id', adjustmentId)
+                        .input('ticket', ticket)
+                        .input('motivo', motivo)
+                        .input('importe', delta)
+                        .query(`
+                            INSERT INTO [dbo].[GAC_APP_TB_TICKETS_VALORIZACION_ADICIONAL] 
+                            (ID_valorizacion_adicional, Ticket, Motivo, Importe)
+                            VALUES (@id, @ticket, @motivo, @importe)
+                        `);
+                }
+            }
+
+            await transaction.commit();
+            await logAudit(req, 'BATCH_ADJUST', 'VALUATION', ruc, { 
+                tickets_total: tickets.length, 
+                processed: foundTickets.length,
+                targetAmount, 
+                motivo 
+            });
+            
+            res.json({ 
+                success: true, 
+                processed: foundTickets.length, 
+                ignored: tickets.length - foundTickets.length 
+            });
+
+        } catch (err) {
+            await transaction.rollback();
+            throw err;
+        }
+    } catch (err: any) {
+        console.error("Batch Adjustment Error:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 app.post('/api/penalties/:id/status', verifyToken, async (req: Request, res: Response) => {
     const { id } = req.params;
     const { status, observation, isCas } = req.body;
