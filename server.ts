@@ -722,6 +722,7 @@ app.post('/api/valuations/close', verifyToken, async (req: Request, res: Respons
             }
 
             await transaction.commit();
+            await logAudit(req, 'CLOSE_FORTNIGHT', 'VALUATION', businessCode, { ruc, totalFinal });
             res.json({ success: true, message: "Quincena cerrada correctamente.", idCierre, codigo: businessCode });
         } catch (error) {
             await transaction.rollback();
@@ -730,6 +731,44 @@ app.post('/api/valuations/close', verifyToken, async (req: Request, res: Respons
     } catch (err: any) { 
         console.error("Error en cierre:", err);
         res.status(500).json({ error: err.message }); 
+    }
+});
+
+app.post('/api/valuations/reopen/:id', verifyToken, verifyPermission('VAL.REOPEN'), async (req: Request, res: Response) => {
+    const { id } = req.params;
+    try {
+        const db = await getDb();
+        const transaction = new sql.Transaction(db);
+        await transaction.begin();
+
+        try {
+            const request = new sql.Request(transaction).input('id', id);
+            
+            // Get closure info for audit
+            const closureInfo = await request.query("SELECT Codigo_Valorizacion, RUC, Total_Final FROM [dbo].[GAC_APP_TB_VALORIZACIONES_CIERRES] WHERE IdCierre = @id");
+            if (closureInfo.recordset.length === 0) {
+                return res.status(404).json({ error: 'Cierre no encontrado' });
+            }
+
+            // 1. Delete details
+            await new sql.Request(transaction).input('id', id).query("DELETE FROM [dbo].[GAC_APP_TB_VALORIZACIONES_DETALLE] WHERE IdCierre = @id");
+            
+            // 2. Delete header
+            await new sql.Request(transaction).input('id', id).query("DELETE FROM [dbo].[GAC_APP_TB_VALORIZACIONES_CIERRES] WHERE IdCierre = @id");
+
+            await transaction.commit();
+            
+            const info = closureInfo.recordset[0];
+            await logAudit(req, 'REOPEN_FORTNIGHT', 'VALUATION', info.Codigo_Valorizacion, { id, ruc: info.RUC, total: info.Total_Final });
+
+            res.json({ success: true, message: "Quincena reaperturada correctamente. Los tickets vuelven a estar disponibles." });
+        } catch (error) {
+            await transaction.rollback();
+            throw error;
+        }
+    } catch (err: any) {
+        console.error("Error reopening valuation:", err);
+        res.status(500).json({ error: err.message });
     }
 });
 

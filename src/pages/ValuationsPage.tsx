@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, Filter, Calendar, ChevronRight, Calculator, Download, AlertTriangle, CheckCircle2, FileText, X, ChevronDown, Briefcase, Building2, Check, Activity, AlertCircle, Lock, ArrowUpDown, Package, History, BarChart2, Eye, PlusCircle, Trash2, DollarSign, Mail } from 'lucide-react';
+import { Search, Filter, Calendar, ChevronRight, Calculator, Download, AlertTriangle, CheckCircle2, FileText, X, ChevronDown, Briefcase, Building2, Check, Activity, AlertCircle, Lock, ArrowUpDown, Package, History, BarChart2, Eye, PlusCircle, Trash2, DollarSign, Mail, RotateCcw } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import ExcelJS from 'exceljs';
 import { ApiClient } from '../services/apiClient';
@@ -446,7 +446,7 @@ export default function ValuationsPage() {
         setPendingEmailData({
             blob,
             filename: `Pre_Valorizacion_${selectedCas.Nombre_CAS.replace(/\s/g, '_')}.xlsx`,
-            subject,
+            subject: `PRE-VALORIZACIÓN: ${selectedCas.Nombre_CAS} - ${startDate} al ${endDate}`,
             body: bodyContent
         });
         setShowEmailModal(true);
@@ -620,7 +620,7 @@ export default function ValuationsPage() {
         setPendingEmailData({
             blob,
             filename: `Cierre_${selectedClosure.Codigo_Valorizacion}_${selectedClosure.Nombre_CAS.replace(/\s/g, '_')}.xlsx`,
-            subject,
+            subject: `CIERRE OFICIAL: ${selectedClosure.Codigo_Valorizacion} - ${selectedClosure.Nombre_CAS}`,
             body: bodyContent
         });
         setShowEmailModal(true);
@@ -693,7 +693,6 @@ export default function ValuationsPage() {
             categoria: 'DESCUENTO'
         }));
 
-        try {
             const result = await ApiClient.request('/valuations/close', {
                 method: 'POST',
                 body: JSON.stringify({
@@ -711,18 +710,90 @@ export default function ValuationsPage() {
                 })
             });
             setShowCloseModal(false);
-            alert({ 
-                title: "¡Cerrado!", 
-                message: `La quincena se ha cerrado correctamente con el código: ${result.codigo}`, 
-                type: 'success' 
-            });
+            
+            // Re-fetch to clear current screen
             handleFetchValuation();
+
+            alert({ 
+                title: "¡Cierre Exitoso!", 
+                message: `La quincena se ha cerrado con código: ${result.codigo}. ¿Deseas enviar el reporte oficial ahora?`, 
+                type: 'success',
+                onConfirm: () => {
+                   // Preparar correo de cierre usando el resultado
+                   handlePrepareClosureEmailFromResult(result, [...ticketDetails, ...penaltyDetails]);
+                }
+            });
         } catch (error) {
             console.error("Error closing fortnight:", error);
             alert({ message: "No se pudo cerrar la quincena. Intente nuevamente." });
         } finally {
             setIsClosing(false);
         }
+    };
+
+    const handlePrepareClosureEmailFromResult = async (closure: any, details: any[]) => {
+        // This is a variation of handlePrepareClosureEmail but for a freshly created closure
+        // logic similar to handlePrepareClosureEmail but mapping from result
+        const services = details.filter(d => d.tipo === 'SERVICIO');
+        const penaltiesList = details.filter(d => d.tipo === 'PENALIDAD');
+
+        const workbook = new ExcelJS.Workbook();
+        const sheetResumen = workbook.addWorksheet('Resumen');
+        const sheetDetalle = workbook.addWorksheet('Detalle Servicios');
+        const sheetPenalties = workbook.addWorksheet('Detalle Penalidades');
+
+        // Reuse existing excel logic from handlePreparePreValuationEmail but with OFFICIAL closure headers
+        // [Simplified for now, but in production I would refactor to a common generator]
+        
+        // Let's use handlePrepareClosureEmail but setting states first
+        const mockClosure = {
+            IdCierre: closure.idCierre,
+            Codigo_Valorizacion: closure.codigo,
+            Nombre_CAS: selectedCas?.Nombre_CAS,
+            Fecha_Inicio: startDate,
+            Fecha_Fin: endDate,
+            Subtotal_Servicios: totalTickets,
+            Subtotal_Penalidades: totalPenalties,
+            Total_Final: grandTotal
+        };
+        
+        const mappedDetails = details.map(d => ({
+            ...d,
+            Tipo: d.tipo,
+            Monto: d.monto,
+            Servicio_Nombre: d.servicio,
+            Fecha_Ticket: d.fecha,
+            Fecha_Visita: d.fechaVisita,
+            Fecha_Cierre: d.fechaCierre,
+            Codigo_Externo: d.codigoExterno,
+            Tarifa_Base: d.tarifaBase,
+            Adicionales: d.adicionales
+        }));
+
+        // Set states and trigger existing email prep
+        setSelectedClosure(mockClosure);
+        setClosureDetails(mappedDetails);
+        
+        // Small timeout to ensure states are set (or just call logic directly)
+        setTimeout(() => handlePrepareClosureEmail(), 100);
+    };
+
+    const handleReopenFortnight = async (idCierre: string, code: string) => {
+        alert({
+            title: '¿Reabrir Quincena?',
+            message: `Esta acción eliminará el registro de cierre ${code} y los tickets volverán a estar activos para edición. ¿Está seguro?`,
+            type: 'warning',
+            showCancel: true,
+            onConfirm: async () => {
+                try {
+                    await ApiClient.request(`/valuations/reopen/${idCierre}`, { method: 'POST' });
+                    alert({ title: 'Éxito', message: 'La quincena ha sido reabierta.', type: 'success' });
+                    handleFetchClosures();
+                } catch (err: any) {
+                    alert({ title: 'Error', message: err.message || 'No se pudo reabrir.' });
+                }
+            }
+        });
     };
 
     const handleViewC4CReport = async (ticketId: string) => {
@@ -1433,21 +1504,21 @@ export default function ValuationsPage() {
                                         disabled={!selectedCas || tickets.length === 0} 
                                         className="w-full flex items-center justify-center gap-2 p-4 bg-background border border-border rounded-xl text-sm font-bold transition-all disabled:opacity-30 disabled:cursor-not-allowed group"
                                     >
-                                        <Download className="w-4 h-4 text-primary group-hover:scale-110 transition-transform" /> Exportar a Excel
+                                        <Download className="w-4 h-4 text-primary group-hover:scale-110 transition-transform" /> Exportar Borrador
                                     </button>
                                     <button 
                                         onClick={handlePreparePreValuationEmail} 
                                         disabled={!selectedCas || tickets.length === 0} 
                                         className="w-full flex items-center justify-center gap-2 p-4 bg-background border border-border rounded-xl text-sm font-bold transition-all disabled:opacity-30 disabled:cursor-not-allowed group hover:bg-indigo-50 hover:border-indigo-200"
                                     >
-                                        <Mail className="w-4 h-4 text-indigo-600 group-hover:scale-110 transition-transform" /> Enviar por Correo
+                                        <Mail className="w-4 h-4 text-indigo-600 group-hover:scale-110 transition-transform" /> Enviar Pre-Valorización
                                     </button>
                                     <button 
                                         onClick={() => setShowCloseModal(true)} 
                                         disabled={!selectedCas || tickets.length === 0} 
-                                        className="w-full flex items-center justify-center gap-2 p-4 bg-gradient-to-r from-primary to-indigo-600 text-white hover:opacity-90 text-sm font-bold rounded-xl transition-all shadow-xl shadow-primary/20 disabled:opacity-30 disabled:cursor-not-allowed"
+                                        className="w-full flex items-center justify-center gap-2 p-4 bg-gradient-to-r from-emerald-600 to-emerald-700 text-white hover:opacity-90 text-sm font-bold rounded-xl transition-all shadow-xl shadow-emerald-600/20 disabled:opacity-30 disabled:cursor-not-allowed"
                                     >
-                                        <Lock className="w-4 h-4" /> Cerrar quincena
+                                        <Lock className="w-4 h-4" /> Cerrar y Notificar
                                     </button>
                                 </div>
                             </div>
@@ -1815,12 +1886,21 @@ export default function ValuationsPage() {
                                                 <p className="text-xs font-bold text-muted-foreground mb-1 uppercase opacity-30">Total Neto</p>
                                                 <p className="text-2xl font-black text-emerald-600 tracking-tighter">S/ {closure.Total_Final.toLocaleString()}</p>
                                             </div>
-                                            <button 
-                                                onClick={() => handleViewClosureDetails(closure)}
-                                                className="p-3 bg-muted rounded-xl hover:bg-primary hover:text-white transition-all shadow-sm"
-                                            >
-                                                <Eye className="w-5 h-5" />
-                                            </button>
+                                            <div className="flex gap-2">
+                                                <button 
+                                                    onClick={() => handleReopenFortnight(closure.IdCierre, closure.Codigo_Valorizacion)}
+                                                    className="p-3 bg-red-50 text-red-600 rounded-xl hover:bg-red-600 hover:text-white transition-all shadow-sm border border-red-100"
+                                                    title="Reabrir Quincena"
+                                                >
+                                                    <RotateCcw className="w-5 h-5" />
+                                                </button>
+                                                <button 
+                                                    onClick={() => handleViewClosureDetails(closure)}
+                                                    className="p-3 bg-muted rounded-xl hover:bg-primary hover:text-white transition-all shadow-sm"
+                                                >
+                                                    <Eye className="w-5 h-5" />
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                 ))}
@@ -1876,7 +1956,21 @@ export default function ValuationsPage() {
                                     onClick={handlePrepareClosureEmail}
                                     className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white rounded-xl text-xs font-black hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-600/20 active:scale-95"
                                 >
-                                    <Mail className="w-4 h-4" /> Enviar Correo
+                                    <Mail className="w-4 h-4" /> Enviar Reporte
+                                </button>
+
+                                <button 
+                                    onClick={() => {
+                                        if (selectedClosure) {
+                                            const id = selectedClosure.IdCierre;
+                                            const code = selectedClosure.Codigo_Valorizacion;
+                                            setSelectedClosure(null); 
+                                            handleReopenFortnight(id, code);
+                                        }
+                                    }}
+                                    className="flex items-center gap-2 px-5 py-2.5 bg-red-50 text-red-600 border border-red-100 rounded-xl text-xs font-black hover:bg-red-600 hover:text-white transition-all active:scale-95"
+                                >
+                                    <RotateCcw className="w-4 h-4" /> Reabrir
                                 </button>
                                 
                                 <button onClick={() => { setSelectedClosure(null); setDetailSearchQuery(''); setDetailActiveTab('services'); }} className="p-2.5 hover:bg-red-50 hover:text-red-500 rounded-xl transition-all border border-transparent hover:border-red-100">
