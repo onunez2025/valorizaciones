@@ -778,7 +778,7 @@ app.post('/api/valuations/send-email', verifyToken, async (req: Request, res: Re
         const token = await getGraphToken();
         const url = `https://graph.microsoft.com/v1.0/users/${MS_GRAPH_SENDER_EMAIL}/sendMail`;
         
-        const recipients = to.split(',').map((email: string) => ({
+        const recipients = to.split(/[,;]/).filter((email: string) => email.trim() !== "").map((email: string) => ({
             emailAddress: { address: email.trim() }
         }));
 
