@@ -732,7 +732,8 @@ export default function ValuationsPage() {
             fecha: p.Fecha,
             tipo: 'PENALIDAD',
             servicio: p.Motivo,
-            categoria: 'DESCUENTO'
+            categoria: 'DESCUENTO',
+            idReferencia: p.Id
         }));
 
         try {
@@ -2091,6 +2092,7 @@ export default function ValuationsPage() {
                                             <th className="px-4 py-4 border-b border-border shadow-[0_1px_2px_rgba(0,0,0,0.05)] text-center">Tipo</th>
                                             <th className="px-4 py-4 border-b border-border shadow-[0_1px_2px_rgba(0,0,0,0.05)]">Descripción</th>
                                             <th className="px-6 py-4 border-b border-border shadow-[0_1px_2px_rgba(0,0,0,0.05)] text-right">Monto</th>
+                                            <th className="px-6 py-4 border-b border-border shadow-[0_1px_2px_rgba(0,0,0,0.05)] text-center">Acciones</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border/10">
@@ -2116,6 +2118,22 @@ export default function ValuationsPage() {
                                                     <span className={cn("text-sm font-black tracking-tight", det.Monto < 0 ? "text-red-600" : "text-slate-800")}>
                                                         {det.Monto < 0 ? '-' : ''} S/ {Math.abs(det.Monto).toLocaleString('es-PE', { minimumFractionDigits: 2 })}
                                                     </span>
+                                                </td>
+                                                <td className="px-4 py-4 text-center">
+                                                    {det.Tipo === 'SERVICIO' && (
+                                                        <button 
+                                                            onClick={() => setShowPenaltyModal({ 
+                                                                show: true, 
+                                                                type: 'penalty', 
+                                                                ticket: det.Ticket, 
+                                                                date: det.Fecha_Ticket.split('T')[0] 
+                                                            })}
+                                                            className="p-2 bg-red-500/10 text-red-600 rounded-lg hover:bg-red-600 hover:text-white transition-all opacity-0 group-hover/det:opacity-100 shadow-sm flex items-center justify-center mx-auto" 
+                                                            title="Penalizar Ticket"
+                                                        >
+                                                            <AlertTriangle className="w-3.5 h-3.5" />
+                                                        </button>
+                                                    )}
                                                 </td>
                                             </tr>
                                         ))}

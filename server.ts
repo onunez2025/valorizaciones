@@ -813,10 +813,11 @@ app.post('/api/valuations/close', verifyToken, async (req: Request, res: Respons
                         .input('ce', item.codigoExterno || null)
                         .input('tb', item.tarifaBase || 0)
                         .input('ad', item.adicionales || 0)
+                        .input('ref', item.idReferencia || null)
                         .query(`
                             INSERT INTO [dbo].[GAC_APP_TB_VALORIZACIONES_DETALLE] 
-                            (IdCierre, Ticket, Monto, Fecha_Ticket, Tipo, Servicio_Nombre, Categoria, Fecha_Visita, Fecha_Cierre, Dias_Diferencia, Codigo_Externo, Tarifa_Base, Adicionales)
-                            VALUES (@idCierre, @ticket, @monto, @fecha, @tipo, @servicio, @categoria, @fv, @fc, @dd, @ce, @tb, @ad)
+                            (IdCierre, Ticket, Monto, Fecha_Ticket, Tipo, Servicio_Nombre, Categoria, Fecha_Visita, Fecha_Cierre, Dias_Diferencia, Codigo_Externo, Tarifa_Base, Adicionales, ID_Referencia)
+                            VALUES (@idCierre, @ticket, @monto, @fecha, @tipo, @servicio, @categoria, @fv, @fc, @dd, @ce, @tb, @ad, @ref)
                         `);
                 }
             }
@@ -941,7 +942,7 @@ app.get('/api/penalties/:ruc', verifyToken, async (req: Request, res: Response) 
                   AND d.Creado_el BETWEEN @start AND @end
                   AND NOT EXISTS (
                       SELECT 1 FROM [dbo].[GAC_APP_TB_VALORIZACIONES_DETALLE] det 
-                      WHERE det.Ticket = d.Ticket AND det.Tipo = 'PENALIDAD'
+                      WHERE det.ID_Referencia = d.ID_Descuentos_CAS
                   )
             `);
         res.json(result.recordset);
