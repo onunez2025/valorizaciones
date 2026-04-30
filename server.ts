@@ -1632,7 +1632,7 @@ app.delete('/api/roles/:id', verifyToken, verifyPermission('val.config.roles'), 
         await db.request().input('rid', id).query("DELETE FROM EBM.RolePermissions WHERE RoleId = @rid");
         await db.request().input('id', id).query("DELETE FROM EBM.Roles WHERE Id = @id");
         
-        await logAudit(req, 'DELETE', 'ROLES', id, {});
+        await logAudit(req, 'DELETE', 'ROLES', id as string, {});
         res.status(204).send();
     } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
