@@ -1576,27 +1576,67 @@ app.post('/api/roles', verifyToken, verifyPermission('val.config.roles'), async 
         const { name, permissions, apps } = req.body;
         const db = await getDb();
         const appsSave = cleanApps(apps || APP_IDENTIFIER);
+        const roleId = crypto.randomUUID().toUpperCase();
 
-        const checkRole = await db.request().input('name', name).query("SELECT Id FROM EBM.Roles WHERE Name = @name");
-        let roleId;
-        if (checkRole.recordset.length > 0) {
-            roleId = checkRole.recordset[0].Id;
-            await db.request().input('id', roleId).input('apps', appsSave).query("UPDATE EBM.Roles SET Apps = @apps WHERE Id = @id");
-        } else {
-            const result = await db.request().input('name', name).input('apps', appsSave).query("INSERT INTO EBM.Roles (Id, Name, Apps) OUTPUT INSERTED.Id VALUES (NEWID(), @name, @apps)");
-            roleId = result.recordset[0].Id;
-        }
+        await db.request()
+            .input('id', roleId)
+            .input('name', name)
+            .input('apps', appsSave)
+            .query("INSERT INTO EBM.Roles (Id, Name, Apps) VALUES (@id, @name, @apps)");
 
-        await db.request().input('rid', roleId).query("DELETE FROM EBM.RolePermissions WHERE RoleId = @rid");
         if (permissions && permissions.length > 0) {
             for (const p of permissions) {
                 await db.request().input('rid', roleId).input('p', p).query("INSERT INTO EBM.RolePermissions (RoleId, Permission) VALUES (@rid, @p)");
             }
         }
-        await logAudit(req, 'CREATE/UPDATE', 'ROLES', name, { apps: appsSave });
+        await logAudit(req, 'CREATE', 'ROLES', name, { apps: appsSave });
         res.status(201).json({ id: roleId, name, permissions });
     } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
+
+app.put('/api/roles/:id', verifyToken, verifyPermission('val.config.roles'), async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+        const { name, permissions, apps } = req.body;
+        const db = await getDb();
+        const appsSave = cleanApps(apps || APP_IDENTIFIER);
+
+        await db.request()
+            .input('id', id)
+            .input('name', name)
+            .input('apps', appsSave)
+            .query("UPDATE EBM.Roles SET Name = @name, Apps = @apps WHERE Id = @id");
+
+        await db.request().input('rid', id).query("DELETE FROM EBM.RolePermissions WHERE RoleId = @rid");
+        if (permissions && permissions.length > 0) {
+            for (const p of permissions) {
+                await db.request().input('rid', id).input('p', p).query("INSERT INTO EBM.RolePermissions (RoleId, Permission) VALUES (@rid, @p)");
+            }
+        }
+        await logAudit(req, 'UPDATE', 'ROLES', name, { apps: appsSave });
+        res.json({ id, name, permissions });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+app.delete('/api/roles/:id', verifyToken, verifyPermission('val.config.roles'), async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+        const db = await getDb();
+        
+        // Check if users are assigned to this role
+        const usersInRole = await db.request().input('rid', id).query("SELECT COUNT(*) as count FROM EBM.Users WHERE RoleId = @rid AND IsActive = 1");
+        if (usersInRole.recordset[0].count > 0) {
+            return res.status(400).json({ error: "No se puede eliminar el perfil porque tiene usuarios asignados." });
+        }
+
+        await db.request().input('rid', id).query("DELETE FROM EBM.RolePermissions WHERE RoleId = @rid");
+        await db.request().input('id', id).query("DELETE FROM EBM.Roles WHERE Id = @id");
+        
+        await logAudit(req, 'DELETE', 'ROLES', id, {});
+        res.status(204).send();
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
 
 // AUDIT LOGS
 app.get('/api/config/audit-logs', verifyToken, verifyPermission('val.config.audit'), async (req: Request, res: Response) => {
