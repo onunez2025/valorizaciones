@@ -140,10 +140,9 @@ export default function UsersPage() {
 
     const filtered = users
         .filter(u =>
-            (u.apps || APP_IDENTIFIER).split(',').some(a => a.trim().toUpperCase() === APP_IDENTIFIER) &&
-            ((u.full_name || '').toLowerCase().includes(search.toLowerCase()) ||
+            (u.full_name || '').toLowerCase().includes(search.toLowerCase()) ||
             (u.username || '').toLowerCase().includes(search.toLowerCase()) ||
-            (u.email || '').toLowerCase().includes(search.toLowerCase()))
+            (u.email || '').toLowerCase().includes(search.toLowerCase())
         )
         .sort((a, b) => {
             const factor = sortOrder === 'ASC' ? 1 : -1;

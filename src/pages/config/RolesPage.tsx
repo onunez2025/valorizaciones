@@ -149,7 +149,6 @@ export default function RolesPage() {
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         {roles
-                            .filter(role => (role.apps || APP_IDENTIFIER).split(',').some(a => a.trim().toUpperCase() === APP_IDENTIFIER))
                             .map((role) => (
                             <div key={role.id} className="group bg-card rounded-2xl border border-border shadow-sm p-5 hover:shadow-md transition-all duration-300 relative overflow-hidden">
                                 <div className="absolute top-0 right-0 p-8 opacity-[0.02] group-hover:opacity-[0.05] transition-opacity pointer-events-none">

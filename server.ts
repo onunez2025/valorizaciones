@@ -1476,13 +1476,12 @@ app.get('/api/c4c/report/:ticketId', verifyToken, async (req: Request, res: Resp
 app.get('/api/users', verifyToken, verifyPermission('val.config.users'), async (req: Request, res: Response) => {
     try {
         const db = await getDb();
-        const result = await db.request().input('app', APP_IDENTIFIER).query(`
+        const result = await db.request().query(`
             SELECT u.Id as id, u.FullName as full_name, u.Username as username, u.Email as email,
                    u.RoleId as role_id, r.Name as role_name, CAST(u.IsActive AS BIT) as is_active, 
                    u.Apps as apps, u.AvatarUrl as avatar_url
             FROM EBM.Users u
             LEFT JOIN EBM.Roles r ON u.RoleId = r.Id
-            WHERE u.Apps LIKE '%' + @app + '%'
         `);
         res.json(result.recordset);
     } catch (err: any) { res.status(500).json({ error: err.message }); }
@@ -1562,7 +1561,7 @@ app.delete('/api/users/:id', verifyToken, verifyPermission('val.config.users'), 
 app.get('/api/roles', verifyToken, verifyPermission('val.config.roles'), async (req: Request, res: Response) => {
     try {
         const db = await getDb();
-        const roles = (await db.request().input('app', APP_IDENTIFIER).query("SELECT Id as id, Name as name, Apps as apps FROM EBM.Roles WHERE Apps LIKE '%' + @app + '%'")).recordset;
+        const roles = (await db.request().query("SELECT Id as id, Name as name, Apps as apps FROM EBM.Roles")).recordset;
         const allPerms = (await db.request().query("SELECT RoleId, Permission FROM EBM.RolePermissions")).recordset;
         const result = roles.map((r: any) => ({
             ...r,
