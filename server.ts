@@ -469,6 +469,7 @@ app.get('/api/valuations/:ruc', verifyToken, async (req: Request, res: Response)
             tickets = tickets.map(t => {
                 const details = c4cDetails[t.Ticket];
                 let finalTarifaBase = t.TarifaBaseCalculada;
+                let esInstitucional = false;
 
                 if (details) {
                     const matchingRule = rules.find(r => {
@@ -483,6 +484,7 @@ app.get('/api/valuations/:ruc', verifyToken, async (req: Request, res: Response)
 
                     if (matchingRule) {
                         finalTarifaBase = matchingRule.Importe;
+                        esInstitucional = true;
                     }
                 }
 
@@ -490,7 +492,8 @@ app.get('/api/valuations/:ruc', verifyToken, async (req: Request, res: Response)
                     ...t,
                     TarifaBase: finalTarifaBase,
                     UsuarioCreador: details?.creator || 'N/D',
-                    C4CSubject: details?.subject || ''
+                    C4CSubject: details?.subject || '',
+                    EsInstitucional: esInstitucional
                 };
             });
         } else {
@@ -939,7 +942,7 @@ app.get('/api/penalties/:ruc', verifyToken, async (req: Request, res: Response) 
                 JOIN [dbo].[GAC_APP_TB_CAS] cas ON s.IdCAS = cas.ID_CAS
                 LEFT JOIN [dbo].[GAC_APP_TB_TICKETS_DESCUENTOS_MOTIVOS] m ON d.Motivo = m.IdMotivo
                 WHERE cas.RUC = @ruc 
-                  AND d.Creado_el BETWEEN @start AND @end
+                  AND (d.Fecha BETWEEN @start AND @end OR d.Creado_el BETWEEN @start AND @end)
                   AND NOT EXISTS (
                       SELECT 1 FROM [dbo].[GAC_APP_TB_VALORIZACIONES_DETALLE] det 
                       WHERE det.ID_Referencia = d.ID_Descuentos_CAS
