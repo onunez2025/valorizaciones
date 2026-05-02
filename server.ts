@@ -473,12 +473,16 @@ app.get('/api/valuations/:ruc', verifyToken, async (req: Request, res: Response)
 
                 if (details) {
                     const matchingRule = rules.find(r => {
-                        const tDate = new Date(t.FechaCierre).getTime();
-                        const rStart = new Date(r.Fecha_Inicio).getTime();
-                        const rEnd = new Date(r.Fecha_Fin).getTime();
+                        const tDate = new Date(t.FechaCierre);
+                        const rStart = new Date(r.Fecha_Inicio);
+                        const rEnd = new Date(r.Fecha_Fin);
                         
-                        const dateMatch = tDate >= rStart && tDate <= rEnd;
-                        const userMatch = details.creator === r.Usuario_Creador;
+                        tDate.setHours(0,0,0,0);
+                        rStart.setHours(0,0,0,0);
+                        rEnd.setHours(23,59,59,999);
+                        
+                        const dateMatch = tDate.getTime() >= rStart.getTime() && tDate.getTime() <= rEnd.getTime();
+                        const userMatch = details.creator && r.Usuario_Creador && details.creator.trim().toUpperCase() === r.Usuario_Creador.trim().toUpperCase();
                         return dateMatch && userMatch;
                     });
 

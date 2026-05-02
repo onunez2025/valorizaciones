@@ -390,7 +390,7 @@ export default function ValuationsPage() {
                 t.ComentarioAuditoria || '-',
                 t.CodigoEquipo || '-',
                 t.Categoria,
-                t.EsInstitucional ? "OBRAS" : "-",
+                (t.EsInstitucional === true || t.EsInstitucional === 'true' || (t.UsuarioCreador && t.UsuarioCreador !== 'N/D' && t.UsuarioCreador !== '-')) ? "OBRAS" : "-",
                 t.TarifaBase,
                 t.Adicionales || 0,
                 (t.TarifaBase + (t.Adicionales || 0))
@@ -1037,7 +1037,7 @@ export default function ValuationsPage() {
                 t.ComentarioTecnico || '-',
                 t.CodigoEquipo || '-',
                 t.Categoria,
-                t.EsInstitucional ? "OBRAS" : "-",
+                (t.EsInstitucional === true || t.EsInstitucional === 'true' || (t.UsuarioCreador && t.UsuarioCreador !== 'N/D' && t.UsuarioCreador !== '-')) ? "OBRAS" : "-",
                 t.TarifaBase ?? (t.TarifaBase + (t.Adicionales || 0)), // Si TarifaBase es null, usar el total
                 t.Adicionales || 0,
                 (t.TarifaBase + (t.Adicionales || 0))
