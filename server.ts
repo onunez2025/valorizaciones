@@ -1122,34 +1122,29 @@ app.post('/api/tarifarios/batch', verifyToken, async (req: Request, res: Respons
         await transaction.begin();
         
         try {
-            const request = new sql.Request(transaction);
-            
-            // ELIMINAMOS PREVIOS PARA ESTE CAS (Opcional, según lógica de negocio, o actualizamos)
-            // Para simplicidad en este batch, eliminamos y re-insertamos o actualizamos por lógica de batch.
-            // Aquí lo haremos por cada registro para mantener historial básico si fuese necesario.
-            
             for (const rate of rates) {
+                const req = transaction.request();
                 const id = rate.ID_TARIFARIO || crypto.randomBytes(4).toString('hex');
-                await request
-                    .input(`id_${id}`, id)
-                    .input(`casId_${id}`, casId)
-                    .input(`cat_${id}`, rate.Categoria)
-                    .input(`serv_${id}`, rate.Servicio)
-                    .input(`imp_${id}`, sql.Decimal(18, 2), rate.Importe)
-                    .input(`f_ini_${id}`, rate.Fecha_inicio ? new Date(rate.Fecha_inicio) : new Date())
-                    .input(`f_fin_${id}`, rate.Fecha_fin ? new Date(rate.Fecha_fin) : null)
+                await req
+                    .input('id', id)
+                    .input('casId', casId)
+                    .input('cat', rate.Categoria)
+                    .input('serv', rate.Servicio)
+                    .input('imp', sql.Decimal(18, 2), rate.Importe)
+                    .input('f_ini', rate.Fecha_inicio ? new Date(rate.Fecha_inicio) : new Date())
+                    .input('f_fin', rate.Fecha_fin ? new Date(rate.Fecha_fin) : null)
                     .query(`
-                        IF EXISTS (SELECT 1 FROM [dbo].[GAC_APP_TB_TARIFARIO] WHERE ID_Tarifario = @id_${id})
+                        IF EXISTS (SELECT 1 FROM [dbo].[GAC_APP_TB_TARIFARIO] WHERE ID_Tarifario = @id)
                         BEGIN
                             UPDATE [dbo].[GAC_APP_TB_TARIFARIO] 
-                            SET Importe = @imp_${id}, Categoria = @cat_${id}, Servicio = @serv_${id},
-                                Fecha_inicio = @f_ini_${id}, Fecha_fin = @f_fin_${id}
-                            WHERE ID_Tarifario = @id_${id}
+                            SET Importe = @imp, Categoria = @cat, Servicio = @serv,
+                                Fecha_inicio = @f_ini, Fecha_fin = @f_fin
+                            WHERE ID_Tarifario = @id
                         END
                         ELSE
                         BEGIN
                             INSERT INTO [dbo].[GAC_APP_TB_TARIFARIO] (ID_Tarifario, Empresa, Categoria, Servicio, Importe, Fecha_inicio, Fecha_fin, Estado)
-                            VALUES (@id_${id}, @casId_${id}, @cat_${id}, @serv_${id}, @imp_${id}, @f_ini_${id}, @f_fin_${id}, 'A')
+                            VALUES (@id, @casId, @cat, @serv, @imp, @f_ini, @f_fin, 'A')
                         END
                     `);
             }
