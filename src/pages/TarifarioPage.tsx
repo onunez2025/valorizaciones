@@ -22,7 +22,7 @@ interface Rate {
     Servicio: string;
     ServicioCode?: string;
     ServicioNombre?: string;
-    Importe: number;
+    Importe: number | string;
     Fecha_inicio?: string;
     Fecha_fin?: string;
     Nombre_CAS?: string;
@@ -123,11 +123,16 @@ export default function TarifarioPage() {
         if (!selectedCas) return;
         setSaving(true);
         try {
+            const ratesToSave = editRates.map(r => ({
+                ...r,
+                Importe: Number(r.Importe) || 0
+            }));
+
             await ApiClient.request('/tarifarios/batch', {
                 method: 'POST',
                 body: JSON.stringify({
                     casId: selectedCas.ID_CAS,
-                    rates: editRates
+                    rates: ratesToSave
                 })
             });
             alert({ title: "¡Tarifario Guardado!", message: "Los precios se han actualizado correctamente.", type: 'success' });
@@ -355,7 +360,7 @@ export default function TarifarioPage() {
                                                                                              value={rate.Servicio}
                                                                                              onChange={(e) => {
                                                                                                  const newRates = [...editRates];
-                                                                                                 newRates[globalIdx].Servicio = e.target.value.toUpperCase();
+                                                                                                 newRates[globalIdx] = { ...newRates[globalIdx], Servicio: e.target.value.toUpperCase() };
                                                                                                  setEditRates(newRates);
                                                                                                  setIsEditing(true);
                                                                                              }}
@@ -374,7 +379,7 @@ export default function TarifarioPage() {
                                                                                              value={rate.Categoria}
                                                                                              onChange={(e) => {
                                                                                                  const newRates = [...editRates];
-                                                                                                 newRates[globalIdx].Categoria = e.target.value.toUpperCase();
+                                                                                                 newRates[globalIdx] = { ...newRates[globalIdx], Categoria: e.target.value.toUpperCase() };
                                                                                                  setEditRates(newRates);
                                                                                                  setIsEditing(true);
                                                                                              }}
@@ -390,7 +395,7 @@ export default function TarifarioPage() {
                                                                                          value={rate.Fecha_inicio ? rate.Fecha_inicio.split('T')[0] : ''}
                                                                                          onChange={(e) => {
                                                                                              const newRates = [...editRates];
-                                                                                             newRates[globalIdx].Fecha_inicio = e.target.value;
+                                                                                             newRates[globalIdx] = { ...newRates[globalIdx], Fecha_inicio: e.target.value };
                                                                                              setEditRates(newRates);
                                                                                              setIsEditing(true);
                                                                                          }}
@@ -402,7 +407,7 @@ export default function TarifarioPage() {
                                                                                          value={rate.Fecha_fin ? rate.Fecha_fin.split('T')[0] : ''}
                                                                                          onChange={(e) => {
                                                                                              const newRates = [...editRates];
-                                                                                             newRates[globalIdx].Fecha_fin = e.target.value;
+                                                                                             newRates[globalIdx] = { ...newRates[globalIdx], Fecha_fin: e.target.value };
                                                                                              setEditRates(newRates);
                                                                                              setIsEditing(true);
                                                                                          }}
@@ -418,7 +423,7 @@ export default function TarifarioPage() {
                                                                                          value={rate.Importe}
                                                                                          onChange={(e) => {
                                                                                              const newRates = [...editRates];
-                                                                                             newRates[globalIdx].Importe = parseFloat(e.target.value) || 0;
+                                                                                             newRates[globalIdx] = { ...newRates[globalIdx], Importe: e.target.value };
                                                                                              setEditRates(newRates);
                                                                                              setIsEditing(true);
                                                                                          }}
