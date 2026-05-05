@@ -437,13 +437,30 @@ app.get('/api/valuations/:ruc', verifyToken, async (req: Request, res: Response)
             ) m
             OUTER APPLY (
                 SELECT TOP 1 CAST(Importe AS FLOAT) as Importe 
-                FROM [dbo].[GAC_APP_TB_TARIFARIO] t 
-                WHERE t.Empresa = cas.ID_CAS 
-                  AND (t.Servicio = s.IdServicio OR t.Servicio = s.Servicio)
-                  AND TRIM(t.Categoria) = TRIM(m.Categoria)
-                  AND s.CheckOut >= t.Fecha_inicio 
-                  AND (t.Fecha_fin IS NULL OR s.CheckOut <= t.Fecha_fin)
-                ORDER BY t.Estado DESC, t.Fecha_inicio DESC
+                FROM (
+                    -- 1. Buscar en Excepciones
+                    SELECT ex.Importe, ex.Prioridad, ex.Creado_El, 1 as Source
+                    FROM [dbo].[GAC_APP_TB_TARIFARIO_EXCEPCIONES] ex
+                    WHERE ex.Empresa = s.IdCAS
+                      AND ex.Estado = 'A'
+                      AND (ex.Categorias IS NULL OR ex.Categorias = 'null' OR EXISTS (SELECT 1 FROM OPENJSON(ex.Categorias) WHERE value = ISNULL(m.Categoria, 'N/A')))
+                      AND (ex.Servicios IS NULL OR ex.Servicios = 'null' OR EXISTS (SELECT 1 FROM OPENJSON(ex.Servicios) WHERE value = s.IdServicio OR value = s.Servicio))
+                      AND (ex.Zonas_Excluidas IS NULL OR ex.Zonas_Excluidas = 'null' OR NOT EXISTS (SELECT 1 FROM OPENJSON(ex.Zonas_Excluidas) WHERE value = s.Ciudad OR value = s.Distrito))
+                      AND (ex.Zonas_Incluidas IS NULL OR ex.Zonas_Incluidas = 'null' OR EXISTS (SELECT 1 FROM OPENJSON(ex.Zonas_Incluidas) WHERE value = s.Ciudad OR value = s.Distrito))
+                    
+                    UNION ALL
+                    
+                    -- 2. Tarifario Base
+                    SELECT t.Importe, 0 as Prioridad, t.Fecha_inicio as Creado_El, 0 as Source
+                    FROM [dbo].[GAC_APP_TB_TARIFARIO] t 
+                    WHERE t.Empresa = s.IdCAS 
+                      AND (t.Servicio = s.IdServicio OR t.Servicio = s.Servicio)
+                      AND TRIM(t.Categoria) = TRIM(ISNULL(m.Categoria, 'N/A'))
+                      AND s.CheckOut >= t.Fecha_inicio 
+                      AND (t.Fecha_fin IS NULL OR s.CheckOut <= t.Fecha_fin)
+                      AND t.Estado = 'A'
+                ) all_rates
+                ORDER BY Source DESC, Prioridad DESC, Creado_El DESC
             ) rate
             WHERE TRIM(cas.RUC) = TRIM(@ruc) 
               AND s.CheckOut BETWEEN @start AND @end
@@ -1158,6 +1175,64 @@ app.post('/api/tarifarios/batch', verifyToken, async (req: Request, res: Respons
     } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
+// --- TARIFARIO EXCEPCIONES ---
+app.get('/api/tarifarios/exceptions/:casId', verifyToken, async (req: Request, res: Response) => {
+    const { casId } = req.params;
+    try {
+        const db = await getDb();
+        const result = await db.request()
+            .input('casId', casId)
+            .query("SELECT * FROM [dbo].[GAC_APP_TB_TARIFARIO_EXCEPCIONES] WHERE Empresa = @casId AND Estado = 'A' ORDER BY Prioridad DESC, Creado_El DESC");
+        res.json(result.recordset);
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+app.post('/api/tarifarios/exceptions/save', verifyToken, async (req: Request, res: Response) => {
+    const { id, empresa, nombre, zonasIncluidas, zonasExcluidas, categorias, servicios, importe, prioridad, estado } = req.body;
+    try {
+        const db = await getDb();
+        const finalId = id || crypto.randomBytes(4).toString('hex');
+        
+        await db.request()
+            .input('id', finalId)
+            .input('empresa', empresa)
+            .input('nombre', nombre)
+            .input('zi', JSON.stringify(zonasIncluidas || null))
+            .input('ze', JSON.stringify(zonasExcluidas || null))
+            .input('cat', JSON.stringify(categorias || null))
+            .input('serv', JSON.stringify(servicios || null))
+            .input('imp', sql.Decimal(18, 2), importe)
+            .input('prio', prioridad || 0)
+            .input('est', estado || 'A')
+            .query(`
+                IF EXISTS (SELECT 1 FROM [dbo].[GAC_APP_TB_TARIFARIO_EXCEPCIONES] WHERE IdExcepcion = @id)
+                BEGIN
+                    UPDATE [dbo].[GAC_APP_TB_TARIFARIO_EXCEPCIONES]
+                    SET Nombre = @nombre, Zonas_Incluidas = @zi, Zonas_Excluidas = @ze, 
+                        Categorias = @cat, Servicios = @serv, Importe = @imp, 
+                        Prioridad = @prio, Estado = @est
+                    WHERE IdExcepcion = @id
+                END
+                ELSE
+                BEGIN
+                    INSERT INTO [dbo].[GAC_APP_TB_TARIFARIO_EXCEPCIONES] 
+                    (IdExcepcion, Empresa, Nombre, Zonas_Incluidas, Zonas_Excluidas, Categorias, Servicios, Importe, Prioridad, Estado)
+                    VALUES (@id, @empresa, @nombre, @zi, @ze, @cat, @serv, @imp, @prio, @est)
+                END
+            `);
+        res.json({ success: true, id: finalId });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+app.delete('/api/tarifarios/exceptions/:id', verifyToken, async (req: Request, res: Response) => {
+    const { id } = req.params;
+    try {
+        const db = await getDb();
+        await db.request().input('id', id).query("UPDATE [dbo].[GAC_APP_TB_TARIFARIO_EXCEPCIONES] SET Estado = 'I' WHERE IdExcepcion = @id");
+        res.json({ success: true });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
 // --- DASHBOARD ANALYTICS ---
 app.get('/api/dashboard/stats', verifyToken, async (req: Request, res: Response) => {
     try {
@@ -1233,16 +1308,47 @@ app.get('/api/dashboard/stats', verifyToken, async (req: Request, res: Response)
                           AND EXISTS (SELECT 1 FROM OPENJSON(cfg.Distritos) WHERE value = tc.Distrito)
                     ), 0)
                 ) as Total
+            ),
+            CalculoTarifas AS (
+                SELECT 
+                    tc.ID_CAS,
+                    tc.Ticket,
+                    tc.IdServicio,
+                    tc.Categoria,
+                    tc.Ciudad,
+                    tc.Distrito,
+                    COALESCE(
+                        -- 1. Buscar en Excepciones
+                        (SELECT TOP 1 ex.Importe 
+                         FROM [dbo].[GAC_APP_TB_TARIFARIO_EXCEPCIONES] ex
+                         WHERE ex.Empresa = tc.ID_CAS
+                           AND ex.Estado = 'A'
+                           AND (ex.Categorias IS NULL OR ex.Categorias = 'null' OR EXISTS (SELECT 1 FROM OPENJSON(ex.Categorias) WHERE value = tc.Categoria))
+                           AND (ex.Servicios IS NULL OR ex.Servicios = 'null' OR EXISTS (SELECT 1 FROM OPENJSON(ex.Servicios) WHERE value = tc.IdServicio))
+                           AND (ex.Zonas_Excluidas IS NULL OR ex.Zonas_Excluidas = 'null' OR NOT EXISTS (SELECT 1 FROM OPENJSON(ex.Zonas_Excluidas) WHERE value = tc.Ciudad OR value = tc.Distrito))
+                           AND (ex.Zonas_Incluidas IS NULL OR ex.Zonas_Incluidas = 'null' OR EXISTS (SELECT 1 FROM OPENJSON(ex.Zonas_Incluidas) WHERE value = tc.Ciudad OR value = tc.Distrito))
+                         ORDER BY ex.Prioridad DESC, ex.Creado_El DESC),
+                        -- 2. Tarifario Base
+                        (SELECT TOP 1 t.Importe 
+                         FROM [dbo].[GAC_APP_TB_TARIFARIO] t
+                         WHERE t.Empresa = tc.ID_CAS
+                           AND (t.Servicio = tc.IdServicio)
+                           AND TRIM(t.Categoria) = TRIM(tc.Categoria)
+                           AND t.Estado = 'A'
+                         ORDER BY t.Fecha_inicio DESC)
+                    ) as ImporteAplicado,
+                    -- Verificación de validos (mismos filtros que el original)
+                    CASE 
+                        WHEN tc.IdServicio = 'Visita' THEN 0
+                        WHEN DATEDIFF(day, tc.FechaVisita, tc.CheckOut) > 1 THEN 0 
+                        WHEN LEFT(tc.CodigoExternoEquipo, 4) NOT IN ('3120', '3121', '5120', '5121') THEN 0
+                        ELSE 1 
+                    END as EsValido
+                FROM TicketsCAS tc
             )
             SELECT 
                 (SELECT COUNT(*) FROM TicketsCAS) as TotalTickets,
-                (SELECT SUM(rs.CntValidos * ISNULL(t.Importe, 0)) 
-                 FROM ResumenServicios rs 
-                 LEFT JOIN [dbo].[GAC_APP_TB_TARIFARIO] t ON t.Empresa = rs.ID_CAS 
-                    AND (t.Servicio = rs.IdServicio)
-                    AND TRIM(t.Categoria) = TRIM(rs.Categoria)
-                    AND t.Estado = 'A'
-                ) as BaseImporte,
+                ISNULL((SELECT SUM(ImporteAplicado) FROM CalculoTarifas WHERE EsValido = 1), 0) as BaseImporte,
                 ISNULL((SELECT Total FROM ValAdicionales), 0) as Adicionales,
                 ISNULL((SELECT Total FROM ValSanciones), 0) as Sanciones
         `;
@@ -1294,21 +1400,43 @@ app.get('/api/dashboard/trends', verifyToken, async (req: Request, res: Response
 
         query += `
             ),
-            ResumenMensual AS (
+            CalculoTarifas AS (
                 SELECT 
-                    YEAR(twc.CheckOut) as Anio,
-                    MONTH(twc.CheckOut) as MesNum,
-                    twc.ID_CAS, 
-                    twc.IdServicio, 
-                    twc.Categoria,
-                    SUM(CASE 
-                        WHEN twc.IdServicio = 'Visita' OR twc.ServicioNombre = 'Visita' THEN 0
-                        WHEN DATEDIFF(day, twc.FechaVisita, twc.CheckOut) > 1 THEN 0 
-                        WHEN LEFT(twc.CodigoExternoEquipo, 4) NOT IN ('3120', '3121', '5120', '5121') THEN 0
+                    YEAR(tc.CheckOut) as Anio,
+                    MONTH(tc.CheckOut) as MesNum,
+                    COALESCE(
+                        -- 1. Buscar en Excepciones
+                        (SELECT TOP 1 ex.Importe 
+                         FROM [dbo].[GAC_APP_TB_TARIFARIO_EXCEPCIONES] ex
+                         WHERE ex.Empresa = tc.ID_CAS
+                           AND ex.Estado = 'A'
+                           AND (ex.Categorias IS NULL OR ex.Categorias = 'null' OR EXISTS (SELECT 1 FROM OPENJSON(ex.Categorias) WHERE value = tc.Categoria))
+                           AND (ex.Servicios IS NULL OR ex.Servicios = 'null' OR EXISTS (SELECT 1 FROM OPENJSON(ex.Servicios) WHERE value = tc.IdServicio))
+                           AND (ex.Zonas_Excluidas IS NULL OR ex.Zonas_Excluidas = 'null' OR NOT EXISTS (SELECT 1 FROM OPENJSON(ex.Zonas_Excluidas) WHERE value = tc.Ciudad OR value = tc.Distrito))
+                           AND (ex.Zonas_Incluidas IS NULL OR ex.Zonas_Incluidas = 'null' OR EXISTS (SELECT 1 FROM OPENJSON(ex.Zonas_Incluidas) WHERE value = tc.Ciudad OR value = tc.Distrito))
+                         ORDER BY ex.Prioridad DESC, ex.Creado_El DESC),
+                        -- 2. Tarifario Base
+                        (SELECT TOP 1 t.Importe 
+                         FROM [dbo].[GAC_APP_TB_TARIFARIO] t
+                         WHERE t.Empresa = tc.ID_CAS
+                           AND (t.Servicio = tc.IdServicio)
+                           AND TRIM(t.Categoria) = TRIM(tc.Categoria)
+                           AND t.Estado = 'A'
+                         ORDER BY t.Fecha_inicio DESC)
+                    ) as ImporteAplicado,
+                    CASE 
+                        WHEN tc.IdServicio = 'Visita' THEN 0
+                        WHEN DATEDIFF(day, tc.FechaVisita, tc.CheckOut) > 1 THEN 0 
+                        WHEN LEFT(tc.CodigoExternoEquipo, 4) NOT IN ('3120', '3121', '5120', '5121') THEN 0
                         ELSE 1 
-                    END) as Cnt
-                FROM TicketsCAS twc
-                GROUP BY YEAR(twc.CheckOut), MONTH(twc.CheckOut), twc.ID_CAS, twc.IdServicio, twc.Categoria
+                    END as EsValido
+                FROM TicketsCAS tc
+            ),
+            ResumenMensual AS (
+                SELECT Anio, MesNum, SUM(ImporteAplicado) as Bruto
+                FROM CalculoTarifas
+                WHERE EsValido = 1
+                GROUP BY Anio, MesNum
             ),
             SancionesMensuales AS (
                 SELECT YEAR(twc.CheckOut) as Anio, MONTH(twc.CheckOut) as MesNum, SUM(d.Importe) as TotalSanciones
@@ -1322,15 +1450,10 @@ app.get('/api/dashboard/trends', verifyToken, async (req: Request, res: Response
                     WHEN 5 THEN 'May' WHEN 6 THEN 'Jun' WHEN 7 THEN 'Jul' WHEN 8 THEN 'Ago'
                     WHEN 9 THEN 'Sep' WHEN 10 THEN 'Oct' WHEN 11 THEN 'Nov' WHEN 12 THEN 'Dic'
                 END as Mes,
-                SUM(rm.Cnt * ISNULL(t.Importe, 0)) as Bruto,
-                ISNULL(MIN(sm.TotalSanciones), 0) as Sanciones
+                rm.Bruto,
+                ISNULL(sm.TotalSanciones, 0) as Sanciones
             FROM ResumenMensual rm
-            LEFT JOIN [dbo].[GAC_APP_TB_TARIFARIO] t ON t.Empresa = rm.ID_CAS 
-                AND (t.Servicio = rm.IdServicio)
-                AND TRIM(t.Categoria) = TRIM(rm.Categoria) 
-                AND t.Estado = 'A'
             LEFT JOIN SancionesMensuales sm ON rm.Anio = sm.Anio AND rm.MesNum = sm.MesNum
-            GROUP BY rm.Anio, rm.MesNum
             ORDER BY rm.Anio ASC, rm.MesNum ASC
         `;
 

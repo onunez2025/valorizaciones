@@ -7,6 +7,7 @@ import { ApiClient } from '../services/apiClient';
 import { cn } from '../utils/cn';
 import { toTitleCase } from '../utils/formatters';
 import { useDialog } from '../context/DialogContext';
+import TarifarioExceptionsModal from '../components/tarifario/TarifarioExceptionsModal';
 
 interface CAS {
     ID_CAS: number;
@@ -44,6 +45,8 @@ export default function TarifarioPage() {
     const [isEditing, setIsEditing] = useState(false);
     const [editRates, setEditRates] = useState<Rate[]>([]);
     const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
+
+    const [isExceptionsModalOpen, setIsExceptionsModalOpen] = useState(false);
 
     useEffect(() => {
         const fetchCas = async () => {
@@ -302,6 +305,12 @@ export default function TarifarioPage() {
                                         <Plus className="w-3.5 h-3.5" /> Agregar tarifa
                                     </button>
                                 )}
+                                <button 
+                                    onClick={() => setIsExceptionsModalOpen(true)}
+                                    className="h-10 px-6 border border-amber-500/20 bg-amber-500/5 text-amber-600 rounded-lg font-bold text-[10px] shadow-sm flex items-center gap-2 transition-all hover:bg-amber-500/10 active:scale-95"
+                                >
+                                    <AlertCircle className="w-3.5 h-3.5" /> Casos Especiales
+                                </button>
                             </div>
                         </div>
 
@@ -481,6 +490,14 @@ export default function TarifarioPage() {
                     </>
                 )}
             </div>
+
+            {selectedCas && (
+                <TarifarioExceptionsModal 
+                    cas={selectedCas}
+                    isOpen={isExceptionsModalOpen}
+                    onClose={() => setIsExceptionsModalOpen(false)}
+                />
+            )}
         </div>
     );
 }
