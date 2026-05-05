@@ -305,7 +305,7 @@ export default function ValuationsPage() {
 
         const summaryData = [
             ['Servicios Realizados', tickets.length, totalTickets],
-            ['Penalidades y Descuentos', penalties.length, -totalPenalties],
+            ['Penalidades y Descuentos', activePenalties.length, -totalPenalties],
             ['', '', ''],
             ['TOTAL A FACTURAR', '', grandTotal]
         ];
@@ -414,7 +414,7 @@ export default function ValuationsPage() {
             c.font = { bold: true, color: { argb: 'FFFFFFFF' } };
             c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E3A8A' } };
         });
-        penalties.forEach(p => {
+        activePenalties.forEach(p => {
             const row = sheetPenalties.addRow([p.Id, new Date(p.Fecha), p.Motivo, p.Descripcion, p.Ticket || '-', p.Estado, -p.Importe]);
             row.getCell(2).numFmt = 'dd/mm/yyyy';
             row.getCell(7).numFmt = '"S/" #,##0.00';
@@ -699,13 +699,42 @@ export default function ValuationsPage() {
         }
     };
 
+    const handleTogglePenaltyStatus = async (penalty: Penalty) => {
+        const isAnulling = penalty.Estado !== 'Anulado';
+        const newStatus = isAnulling ? 'Anulado' : 'Pendiente';
+        const actionLabel = isAnulling ? 'anular' : 'habilitar';
+
+        confirm({
+            title: `${toTitleCase(actionLabel)} Penalidad`,
+            message: `¿Está seguro que desea ${actionLabel} esta penalidad?${isAnulling ? ' Esta será excluida de los cálculos y reportes.' : ''}`,
+            type: isAnulling ? 'warning' : 'info',
+            confirmText: isAnulling ? 'Sí, anular' : 'Sí, habilitar',
+            onConfirm: async () => {
+                try {
+                    await ApiClient.request(`/penalties/${penalty.Id}/status`, {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            status: newStatus,
+                            observation: isAnulling ? 'Anulado por el usuario' : 'Habilitado por el usuario',
+                            isCas: false
+                        })
+                    });
+                    handleFetchValuation();
+                } catch (error: any) {
+                    alert({ title: 'Error', message: `No se pudo ${actionLabel} la penalidad: ${error.message}`, type: 'error' });
+                }
+            }
+        });
+    };
+
     const filteredCasList = casList.filter(cas => 
         cas.Nombre_CAS.toLowerCase().includes(searchQuery.toLowerCase()) || 
         cas.RUC.includes(searchQuery)
     );
 
+    const activePenalties = penalties.filter(p => p.Estado !== 'Anulado');
     const totalTickets = tickets.reduce((sum, t) => sum + (isValuable(t.CodigoEquipo) ? (t.TarifaBase + (t.Adicionales || 0)) : 0), 0);
-    const totalPenalties = penalties.reduce((sum, p) => sum + p.Importe, 0);
+    const totalPenalties = activePenalties.reduce((sum, p) => sum + p.Importe, 0);
     const grandTotal = totalTickets - totalPenalties;
 
     const handleCloseFortnightCurrent = async () => {
@@ -733,7 +762,7 @@ export default function ValuationsPage() {
             nombreEquipo: t.NombreEquipo
         }));
 
-        const penaltyDetails = penalties.map(p => ({
+        const penaltyDetails = activePenalties.map(p => ({
             ticket: p.Ticket || 'G-DESCUENTO',
             monto: -p.Importe,
             fecha: p.Fecha,
@@ -962,7 +991,7 @@ export default function ValuationsPage() {
 
         const summaryData = [
             ['Servicios Realizados', tickets.length, totalTickets],
-            ['Penalidades y Descuentos', penalties.length, -totalPenalties],
+            ['Penalidades y Descuentos', activePenalties.length, -totalPenalties],
             ['', '', ''],
             ['TOTAL A FACTURAR', '', grandTotal]
         ];
@@ -1074,7 +1103,7 @@ export default function ValuationsPage() {
             c.font = { bold: true, color: { argb: 'FFFFFFFF' } };
             c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E3A8A' } };
         });
-        penalties.forEach(p => {
+        activePenalties.forEach(p => {
             const row = sheetPenalties.addRow([p.Id, new Date(p.Fecha), p.Motivo, p.Descripcion, p.Ticket || '-', p.Estado, -p.Importe]);
             row.getCell(2).numFmt = 'dd/mm/yyyy';
             row.getCell(7).numFmt = '"S/" #,##0.00';
@@ -1902,14 +1931,55 @@ export default function ValuationsPage() {
                                     <div className="space-y-4">
                                         {penalties.length > 0 ? (
                                             <div className="grid grid-cols-1 gap-4">
-                                                {penalties.map(penalty => (
-                                                    <div key={penalty.Id} className="bg-red-50/20 border border-red-100 rounded-2xl p-6 flex items-center justify-between hover:border-red-500/30 transition-all group">
-                                                        <div className="flex items-center gap-6"><div className="p-4 bg-red-500 text-white rounded-xl shadow-lg shadow-red-500/20 group-hover:scale-110 transition-transform"><AlertTriangle className="w-6 h-6" /></div>
-                                                        <div className="space-y-1"><div className="flex items-center gap-3"><span className="text-base font-black tracking-tight">{toTitleCase(penalty.Motivo)}</span><span className="px-2.5 py-1 bg-red-100 text-red-700 rounded-lg text-[10px] font-black">{penalty.Ticket || 'Descuento general'}</span></div>
-                                                        <p className="text-xs text-muted-foreground font-medium opacity-70 leading-relaxed font-sans">{penalty.Descripcion}</p><p className="text-[10px] font-black text-muted-foreground opacity-40">{new Date(penalty.Fecha).toLocaleDateString('es-PE', { timeZone: 'UTC' })} • Auditado</p></div></div>
-                                                        <div className="text-right"><p className="text-2xl font-black text-red-600 tracking-tighter">- S/ {penalty.Importe.toLocaleString()}</p><span className="text-[9px] font-black text-muted-foreground opacity-30 italic">Débito CAS</span></div>
+                                                {penalties.map(penalty => {
+                                                    const isAnulled = penalty.Estado === 'Anulado';
+                                                    return (
+                                                    <div key={penalty.Id} className={cn(
+                                                        "bg-red-50/20 border border-red-100 rounded-2xl p-6 flex items-center justify-between hover:border-red-500/30 transition-all group relative overflow-hidden",
+                                                        isAnulled && "opacity-60 bg-slate-50/50 border-slate-200 grayscale-[0.5]"
+                                                    )}>
+                                                        <div className="flex items-center gap-6">
+                                                            <div className={cn(
+                                                                "p-4 text-white rounded-xl shadow-lg transition-transform group-hover:scale-110",
+                                                                isAnulled ? "bg-slate-400 shadow-slate-400/20" : "bg-red-500 shadow-red-500/20"
+                                                            )}>
+                                                                <AlertTriangle className="w-6 h-6" />
+                                                            </div>
+                                                            <div className="space-y-1">
+                                                                <div className="flex items-center gap-3">
+                                                                    <span className={cn("text-base font-black tracking-tight", isAnulled && "line-through text-slate-500")}>{toTitleCase(penalty.Motivo)}</span>
+                                                                    <span className={cn("px-2.5 py-1 rounded-lg text-[10px] font-black", isAnulled ? "bg-slate-100 text-slate-600" : "bg-red-100 text-red-700")}>
+                                                                        {penalty.Ticket || 'Descuento general'}
+                                                                    </span>
+                                                                    {isAnulled && <span className="px-2 py-0.5 bg-slate-200 text-slate-700 rounded text-[9px] font-black uppercase">Anulado</span>}
+                                                                </div>
+                                                                <p className="text-xs text-muted-foreground font-medium opacity-70 leading-relaxed font-sans">{penalty.Descripcion}</p>
+                                                                <p className="text-[10px] font-black text-muted-foreground opacity-40">{new Date(penalty.Fecha).toLocaleDateString('es-PE', { timeZone: 'UTC' })} • Auditado</p>
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex flex-col items-end gap-3">
+                                                            <div className="text-right">
+                                                                <p className={cn("text-2xl font-black tracking-tighter", isAnulled ? "text-slate-400 line-through" : "text-red-600")}>
+                                                                    - S/ {penalty.Importe.toLocaleString()}
+                                                                </p>
+                                                                <span className="text-[9px] font-black text-muted-foreground opacity-30 italic">Débito CAS</span>
+                                                            </div>
+                                                            <button 
+                                                                onClick={() => handleTogglePenaltyStatus(penalty)}
+                                                                className={cn(
+                                                                    "px-4 py-1.5 rounded-xl text-[10px] font-black transition-all flex items-center gap-1.5 shadow-sm border",
+                                                                    isAnulled 
+                                                                        ? "bg-emerald-500 text-white border-emerald-600 hover:bg-emerald-600 shadow-emerald-500/20" 
+                                                                        : "bg-white text-red-600 border-red-100 hover:bg-red-50 hover:border-red-200"
+                                                                )}
+                                                            >
+                                                                {isAnulled ? <CheckCircle2 className="w-3.5 h-3.5" /> : <X className="w-3.5 h-3.5" />}
+                                                                {isAnulled ? 'Habilitar' : 'Anular'}
+                                                            </button>
+                                                        </div>
                                                     </div>
-                                                ))}
+                                                );
+                                            })}
                                             </div>
                                         ) : (
                                             <div className="py-24 text-center"><div className="w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-6 border border-emerald-100 shadow-sm"><CheckCircle2 className="w-10 h-10 text-emerald-500" /></div><h3 className="text-xl font-black">Sin observaciones</h3><p className="text-xs text-muted-foreground font-bold opacity-60 mt-2">No se han registrado penalizaciones en este periodo.</p></div>
