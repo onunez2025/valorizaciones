@@ -17,7 +17,7 @@ const isValuable = (code?: string) => ['3120', '3121', '5120', '5121'].some(pref
 
 // Version 1.0.1 - Fix Timezone UTC
 export default function ValuationsPage() {
-    const { alert } = useDialog();
+    const { alert, confirm } = useDialog();
     const [casList, setCasList] = useState<CAS[]>([]);
     const [selectedCas, setSelectedCas] = useState<CAS | null>(null);
     const [diasMaxCierre, setDiasMaxCierre] = useState<number>(1);
