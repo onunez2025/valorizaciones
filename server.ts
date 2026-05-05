@@ -404,6 +404,7 @@ app.get('/api/valuations/:ruc', verifyToken, async (req: Request, res: Response)
                 s.CodigoTecnico,
                 s.IdCAS,
                 s.Distrito,
+                s.Ciudad as Departamento,
                 s.NombreTecnico,
                 s.ApellidoTecnico,
                 s.ComentarioTecnico,
@@ -838,10 +839,12 @@ app.post('/api/valuations/close', verifyToken, async (req: Request, res: Respons
                         .input('tb', item.tarifaBase || 0)
                         .input('ad', item.adicionales || 0)
                         .input('ref', item.idReferencia || null)
+                        .input('dist', item.distrito || null)
+                        .input('dep', item.departamento || null)
                         .query(`
                             INSERT INTO [dbo].[GAC_APP_TB_VALORIZACIONES_DETALLE] 
-                            (IdCierre, Ticket, Monto, Fecha_Ticket, Tipo, Servicio_Nombre, Categoria, Fecha_Visita, Fecha_Cierre, Dias_Diferencia, Codigo_Externo, Tarifa_Base, Adicionales, ID_Referencia)
-                            VALUES (@idCierre, @ticket, @monto, @fecha, @tipo, @servicio, @categoria, @fv, @fc, @dd, @ce, @tb, @ad, @ref)
+                            (IdCierre, Ticket, Monto, Fecha_Ticket, Tipo, Servicio_Nombre, Categoria, Fecha_Visita, Fecha_Cierre, Dias_Diferencia, Codigo_Externo, Tarifa_Base, Adicionales, ID_Referencia, Distrito, Departamento)
+                            VALUES (@idCierre, @ticket, @monto, @fecha, @tipo, @servicio, @categoria, @fv, @fc, @dd, @ce, @tb, @ad, @ref, @dist, @dep)
                         `);
                 }
             }

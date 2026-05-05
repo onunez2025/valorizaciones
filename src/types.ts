@@ -54,6 +54,8 @@ export interface ValuationTicket {
   NombreTecnico?: string;
   ApellidoTecnico?: string;
   ComentarioTecnico?: string;
+  Distrito?: string;
+  Departamento?: string;
 }
 
 export interface Material {
