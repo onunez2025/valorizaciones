@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { 
     X, Plus, Trash2, MapPin, Tag, DollarSign, AlertCircle, 
-    ChevronDown, Save, Map, Globe
+    ChevronDown, Save, Map, Globe, Search
 } from 'lucide-react';
 import { ApiClient } from '../../services/apiClient';
 import { cn } from '../../utils/cn';
@@ -32,11 +32,13 @@ export default function TarifarioExceptionsModal({ cas, isOpen, onClose }: Props
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [availableCategories, setAvailableCategories] = useState<string[]>([]);
+    const [availableDistritos, setAvailableDistritos] = useState<string[]>([]);
 
     useEffect(() => {
         if (isOpen) {
             fetchExceptions();
             fetchCategories();
+            fetchDistritos();
         }
     }, [isOpen, cas.ID_CAS]);
 
@@ -64,6 +66,17 @@ export default function TarifarioExceptionsModal({ cas, isOpen, onClose }: Props
             setAvailableCategories(data);
         } catch (err) {
             console.error("Error fetching categories:", err);
+        }
+    };
+
+    const fetchDistritos = async () => {
+        try {
+            const data = await ApiClient.request('/distritos');
+            // Data is [{Ciudad: '...', Distrito: '...'}, ...]
+            const zones = Array.from(new Set(data.flatMap((d: any) => [d.Ciudad, d.Distrito]))).sort() as string[];
+            setAvailableDistritos(zones);
+        } catch (err) {
+            console.error("Error fetching distritos:", err);
         }
     };
 
@@ -195,38 +208,28 @@ export default function TarifarioExceptionsModal({ cas, isOpen, onClose }: Props
                                             </div>
 
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                <div className="space-y-2">
-                                                    <label className="text-[10px] font-black uppercase text-muted-foreground/60 tracking-widest flex items-center gap-2">
-                                                        <Globe className="w-3 h-3" /> Zonas Excluidas (Ej: PIURA, LAMBAYEQUE)
-                                                    </label>
-                                                    <input 
-                                                        type="text" 
-                                                        value={ex.Zonas_Excluidas?.join(', ') || ''}
-                                                        onChange={e => {
-                                                            const newEx = [...exceptions];
-                                                            newEx[idx].Zonas_Excluidas = e.target.value.split(',').map(s => s.trim().toUpperCase()).filter(s => s);
-                                                            setExceptions(newEx);
-                                                        }}
-                                                        className="w-full bg-background border border-border/40 rounded-lg px-3 py-2 text-xs font-bold outline-none"
-                                                        placeholder="Separar por comas..."
-                                                    />
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <label className="text-[10px] font-black uppercase text-muted-foreground/60 tracking-widest flex items-center gap-2">
-                                                        <MapPin className="w-3 h-3" /> Zonas Incluidas (Ej: JAEN)
-                                                    </label>
-                                                    <input 
-                                                        type="text" 
-                                                        value={ex.Zonas_Incluidas?.join(', ') || ''}
-                                                        onChange={e => {
-                                                            const newEx = [...exceptions];
-                                                            newEx[idx].Zonas_Incluidas = e.target.value.split(',').map(s => s.trim().toUpperCase()).filter(s => s);
-                                                            setExceptions(newEx);
-                                                        }}
-                                                        className="w-full bg-background border border-border/40 rounded-lg px-3 py-2 text-xs font-bold outline-none"
-                                                        placeholder="Separar por comas..."
-                                                    />
-                                                </div>
+                                                <ZoneSelector 
+                                                    label="Zonas Excluidas (Ej: PIURA, LAMBAYEQUE)"
+                                                    icon={Globe}
+                                                    selected={ex.Zonas_Excluidas || []}
+                                                    options={availableDistritos}
+                                                    onChange={val => {
+                                                        const newEx = [...exceptions];
+                                                        newEx[idx].Zonas_Excluidas = val;
+                                                        setExceptions(newEx);
+                                                    }}
+                                                />
+                                                <ZoneSelector 
+                                                    label="Zonas Incluidas (Ej: JAEN)"
+                                                    icon={MapPin}
+                                                    selected={ex.Zonas_Incluidas || []}
+                                                    options={availableDistritos}
+                                                    onChange={val => {
+                                                        const newEx = [...exceptions];
+                                                        newEx[idx].Zonas_Incluidas = val;
+                                                        setExceptions(newEx);
+                                                    }}
+                                                />
                                             </div>
 
                                             <div className="space-y-2">
@@ -320,6 +323,89 @@ export default function TarifarioExceptionsModal({ cas, isOpen, onClose }: Props
                     </button>
                 </div>
             </div>
+        </div>
+    );
+}
+
+function ZoneSelector({ 
+    label, 
+    icon: Icon, 
+    selected, 
+    options, 
+    onChange 
+}: { 
+    label: string, 
+    icon: any, 
+    selected: string[], 
+    options: string[], 
+    onChange: (val: string[]) => void 
+}) {
+    const [search, setSearch] = useState('');
+    const [isOpen, setIsOpen] = useState(false);
+    const containerRef = useState<HTMLDivElement | null>(null);
+
+    const filtered = options.filter(opt => 
+        opt.toLowerCase().includes(search.toLowerCase()) && !selected.includes(opt)
+    ).slice(0, 15);
+
+    return (
+        <div className="space-y-2 relative group/selector">
+            <label className="text-[10px] font-black uppercase text-muted-foreground/60 tracking-widest flex items-center gap-2">
+                <Icon className="w-3 h-3" /> {label}
+            </label>
+            <div className="flex flex-wrap gap-1.5 p-2 bg-background border border-border/40 rounded-lg min-h-[42px] focus-within:ring-2 ring-primary/10 transition-all">
+                {selected.map(s => (
+                    <span key={s} className="pl-2 pr-1 py-0.5 bg-primary/10 text-primary rounded-md text-[10px] font-black flex items-center gap-1 border border-primary/20 animate-in zoom-in-95">
+                        {s}
+                        <button 
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onChange(selected.filter(x => x !== s));
+                            }}
+                            className="p-0.5 hover:bg-primary/20 rounded-sm transition-colors"
+                        >
+                            <X className="w-3 h-3" />
+                        </button>
+                    </span>
+                ))}
+                <input 
+                    type="text"
+                    value={search}
+                    onFocus={() => setIsOpen(true)}
+                    onBlur={() => setTimeout(() => setIsOpen(false), 200)}
+                    onChange={e => setSearch(e.target.value)}
+                    placeholder={selected.length === 0 ? "Seleccionar zona..." : "Agregar..."}
+                    className="flex-1 min-w-[120px] bg-transparent outline-none text-[11px] font-bold placeholder:text-muted-foreground/40"
+                />
+            </div>
+            
+            {isOpen && (search || search === '') && (
+                <div className="absolute z-[100] w-full mt-1 bg-card border border-border shadow-2xl rounded-xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div className="max-h-[200px] overflow-y-auto custom-scrollbar p-1">
+                        {filtered.length === 0 ? (
+                            <div className="p-4 text-center">
+                                <Search className="w-8 h-8 text-muted-foreground/20 mx-auto mb-2" />
+                                <p className="text-[10px] font-bold text-muted-foreground italic">No se encontraron resultados</p>
+                            </div>
+                        ) : (
+                            filtered.map(opt => (
+                                <button
+                                    key={opt}
+                                    onMouseDown={(e) => {
+                                        e.preventDefault(); // Evita el blur del input
+                                        onChange([...selected, opt]);
+                                        setSearch('');
+                                    }}
+                                    className="w-full text-left px-3 py-2 text-[11px] font-black hover:bg-primary/5 hover:text-primary rounded-lg transition-all flex items-center justify-between group/item"
+                                >
+                                    {opt}
+                                    <Plus className="w-3 h-3 opacity-0 group-hover/item:opacity-100 transition-opacity" />
+                                </button>
+                            ))
+                        )}
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
