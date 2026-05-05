@@ -370,7 +370,7 @@ export default function ValuationsPage() {
         footerRow.getCell(3).numFmt = '"S/" #,##0.00';
 
         // --- HOJA DETALLE ---
-        const dHeaders = ["TICKET", "FECHA VISITA", "FECHA CIERRE", "DÍAS DIF.", "SERVICIO", "TECNICO", "COMENTARIO TECNICO", "COMENTARIO EXTERNO", "CÓD. EQUIPO", "CATEGORÍA", "CATEGORÍA VIRTUAL", "DISTRITO", "DEPARTAMENTO", "TARIFA BASE", "ADICIONALES", "TOTAL"];
+        const dHeaders = ["TICKET", "FECHA VISITA", "FECHA CIERRE", "DÍAS DIF.", "SERVICIO", "TECNICO", "COMENTARIO TECNICO", "COMENTARIO EXTERNO", "CÓD. EQUIPO", "DESCRIPCIÓN EQUIPO", "CATEGORÍA", "CATEGORÍA VIRTUAL", "DISTRITO", "DEPARTAMENTO", "TARIFA BASE", "ADICIONALES", "TOTAL"];
         sheetDetalle.getRow(1).values = dHeaders;
         sheetDetalle.getRow(1).eachCell(c => {
             c.font = { bold: true, color: { argb: 'FFFFFFFF' } };
@@ -389,6 +389,7 @@ export default function ValuationsPage() {
                 t.ComentarioTecnico || '-',
                 t.ComentarioAuditoria || '-',
                 t.CodigoEquipo || '-',
+                t.NombreEquipo || '-',
                 t.Categoria,
                 (t.EsInstitucional === true || t.EsInstitucional === 'true') ? "OBRAS" : "-",
                 t.Distrito || '-',
@@ -399,9 +400,9 @@ export default function ValuationsPage() {
             ]);
             row.getCell(2).numFmt = 'dd/mm/yyyy';
             row.getCell(3).numFmt = 'dd/mm/yyyy';
-            row.getCell(14).numFmt = '"S/" #,##0.00';
             row.getCell(15).numFmt = '"S/" #,##0.00';
             row.getCell(16).numFmt = '"S/" #,##0.00';
+            row.getCell(17).numFmt = '"S/" #,##0.00';
             row.eachCell(c => { c.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} }; });
         });
         sheetDetalle.columns.forEach(col => { col.width = 18; });
@@ -728,7 +729,8 @@ export default function ValuationsPage() {
             apellidoTecnico: t.ApellidoTecnico,
             comentarioTecnico: t.ComentarioTecnico,
             distrito: t.Distrito,
-            departamento: t.Departamento
+            departamento: t.Departamento,
+            nombreEquipo: t.NombreEquipo
         }));
 
         const penaltyDetails = penalties.map(p => ({
@@ -818,7 +820,8 @@ export default function ValuationsPage() {
             Tarifa_Base: d.tarifaBase,
             Adicionales: d.adicionales,
             Distrito: d.distrito,
-            Departamento: d.departamento
+            Departamento: d.departamento,
+            NombreEquipo: d.nombreEquipo || d.Nombre_Equipo
         }));
 
         // Set states and trigger existing email prep
@@ -1024,7 +1027,7 @@ export default function ValuationsPage() {
         footerRow.getCell(3).numFmt = '"S/" #,##0.00';
 
         // --- HOJA DETALLE ---
-        const dHeaders = ["TICKET", "FECHA VISITA", "FECHA CIERRE", "DÍAS DIF.", "SERVICIO", "TECNICO", "COMENTARIO TECNICO", "CÓD. EQUIPO", "CATEGORÍA", "CATEGORÍA VIRTUAL", "DISTRITO", "DEPARTAMENTO", "TARIFA BASE", "ADICIONALES", "TOTAL"];
+        const dHeaders = ["TICKET", "FECHA VISITA", "FECHA CIERRE", "DÍAS DIF.", "SERVICIO", "TECNICO", "COMENTARIO TECNICO", "CÓD. EQUIPO", "DESCRIPCIÓN EQUIPO", "CATEGORÍA", "CATEGORÍA VIRTUAL", "DISTRITO", "DEPARTAMENTO", "TARIFA BASE", "ADICIONALES", "TOTAL"];
         sheetDetalle.getRow(1).values = dHeaders;
         sheetDetalle.getRow(1).eachCell(c => {
             c.font = { bold: true, color: { argb: 'FFFFFFFF' } };
@@ -1042,6 +1045,7 @@ export default function ValuationsPage() {
                 `${t.NombreTecnico || ''} ${t.ApellidoTecnico || ''}`.trim() || '-',
                 t.ComentarioTecnico || '-',
                 t.CodigoEquipo || '-',
+                t.NombreEquipo || '-',
                 t.Categoria,
                 (t.EsInstitucional === true || t.EsInstitucional === 'true') ? "OBRAS" : "-",
                 t.Distrito || '-',
@@ -1052,9 +1056,9 @@ export default function ValuationsPage() {
             ]);
             row.getCell(2).numFmt = 'dd/mm/yyyy';
             row.getCell(3).numFmt = 'dd/mm/yyyy';
-            row.getCell(13).numFmt = '"S/" #,##0.00';
             row.getCell(14).numFmt = '"S/" #,##0.00';
             row.getCell(15).numFmt = '"S/" #,##0.00';
+            row.getCell(16).numFmt = '"S/" #,##0.00';
             if ((t.DiasDiferencia || 0) > 1) {
                 row.getCell(4).font = { color: { argb: 'FFFF0000' }, bold: true };
             }
@@ -1203,7 +1207,7 @@ export default function ValuationsPage() {
         footerRow.getCell(3).numFmt = '"S/" #,##0.00';
 
         // --- HOJA SERVICIOS ---
-        const sHeaders = ["TICKET", "FECHA VISITA", "FECHA CIERRE", "DÍAS DIF.", "SERVICIO", "TECNICO", "COMENTARIO TECNICO", "CÓD. EQUIPO", "CATEGORÍA", "CATEGORÍA VIRTUAL", "DISTRITO", "DEPARTAMENTO", "TARIFA BASE", "ADICIONALES", "TOTAL"];
+        const sHeaders = ["TICKET", "FECHA VISITA", "FECHA CIERRE", "DÍAS DIF.", "SERVICIO", "TECNICO", "COMENTARIO TECNICO", "CÓD. EQUIPO", "DESCRIPCIÓN EQUIPO", "CATEGORÍA", "CATEGORÍA VIRTUAL", "DISTRITO", "DEPARTAMENTO", "TARIFA BASE", "ADICIONALES", "TOTAL"];
         sheetDetalle.getRow(1).values = sHeaders;
         sheetDetalle.getRow(1).eachCell(c => { c.font = { bold: true, color: { argb: 'FFFFFFFF' } }; c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E3A8A' } }; });
         
@@ -1219,6 +1223,7 @@ export default function ValuationsPage() {
                 `${s.NombreTecnico || ''} ${s.ApellidoTecnico || ''}`.trim() || '-',
                 s.ComentarioTecnico || '-',
                 s.Codigo_Externo || '-', 
+                s.NombreEquipo || s.Nombre_Equipo || '-',
                 cleanCategoria, 
                 isObras ? "OBRAS" : "-",
                 s.Distrito || '-',
@@ -1229,9 +1234,9 @@ export default function ValuationsPage() {
             ]);
             row.getCell(2).numFmt = 'dd/mm/yyyy';
             row.getCell(3).numFmt = 'dd/mm/yyyy';
-            row.getCell(13).numFmt = '"S/" #,##0.00';
             row.getCell(14).numFmt = '"S/" #,##0.00';
             row.getCell(15).numFmt = '"S/" #,##0.00';
+            row.getCell(16).numFmt = '"S/" #,##0.00';
             row.eachCell(c => { c.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} }; });
         });
         sheetDetalle.autoFilter = { from: 'A1', to: 'M1' };

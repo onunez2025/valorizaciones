@@ -841,10 +841,11 @@ app.post('/api/valuations/close', verifyToken, async (req: Request, res: Respons
                         .input('ref', item.idReferencia || null)
                         .input('dist', item.distrito || null)
                         .input('dep', item.departamento || null)
+                        .input('ne', item.nombreEquipo || null)
                         .query(`
                             INSERT INTO [dbo].[GAC_APP_TB_VALORIZACIONES_DETALLE] 
-                            (IdCierre, Ticket, Monto, Fecha_Ticket, Tipo, Servicio_Nombre, Categoria, Fecha_Visita, Fecha_Cierre, Dias_Diferencia, Codigo_Externo, Tarifa_Base, Adicionales, ID_Referencia, Distrito, Departamento)
-                            VALUES (@idCierre, @ticket, @monto, @fecha, @tipo, @servicio, @categoria, @fv, @fc, @dd, @ce, @tb, @ad, @ref, @dist, @dep)
+                            (IdCierre, Ticket, Monto, Fecha_Ticket, Tipo, Servicio_Nombre, Categoria, Fecha_Visita, Fecha_Cierre, Dias_Diferencia, Codigo_Externo, Tarifa_Base, Adicionales, ID_Referencia, Distrito, Departamento, Nombre_Equipo)
+                            VALUES (@idCierre, @ticket, @monto, @fecha, @tipo, @servicio, @categoria, @fv, @fc, @dd, @ce, @tb, @ad, @ref, @dist, @dep, @ne)
                         `);
                 }
             }
