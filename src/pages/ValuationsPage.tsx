@@ -162,7 +162,7 @@ export default function ValuationsPage() {
         if (!globalSearch) return;
         setIsSearchingGlobal(true);
         try {
-            const result = await ApiClient.request(`/tickets/find/${globalSearch}`);
+            const result = await ApiClient.request(`/tickets/find/${globalSearch.trim()}`);
             setGlobalSearchResult(result);
         } catch (err) { 
             setGlobalSearchResult({ error: 'Ticket no encontrado' }); 

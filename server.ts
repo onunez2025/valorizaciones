@@ -730,25 +730,30 @@ app.post('/api/penalties/:id/status', verifyToken, async (req: Request, res: Res
 
 
 app.get('/api/tickets/find/:ticket', verifyToken, async (req: Request, res: Response) => {
-    const { ticket } = req.params;
+    const ticket = req.params.ticket?.trim();
+    if (!ticket) return res.status(400).json({ error: 'Ticket es requerido' });
+
     try {
         const db = await getDb();
         const result = await db.request()
-            .input('ticket', ticket)
+            .input('ticket', sql.NVarChar, ticket)
             .query(`
                 SELECT TOP 1
                     s.Ticket, s.CheckOut as Fecha, s.Servicio as ServicioNombre,
                     s.IdServicio as Servicio, cas.RUC, cas.Nombre_CAS as CAS_Nombre
                 FROM [APPGAC].[ServiciosViewSQL] s
                 JOIN [dbo].[GAC_APP_TB_CAS] cas ON s.IdCAS = cas.ID_CAS
-                WHERE s.Ticket = @ticket
+                WHERE TRIM(s.Ticket) = @ticket
             `);
         
         if (result.recordset.length === 0) {
             return res.status(404).json({ error: 'Ticket no encontrado' });
         }
         res.json(result.recordset[0]);
-    } catch (err: any) { res.status(500).json({ error: err.message }); }
+    } catch (err: any) { 
+        console.error('Error in ticket find:', err);
+        res.status(500).json({ error: err.message }); 
+    }
 });
 
 app.get('/api/tickets/search/:ruc', verifyToken, async (req: Request, res: Response) => {
