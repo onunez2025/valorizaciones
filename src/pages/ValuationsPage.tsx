@@ -408,14 +408,14 @@ export default function ValuationsPage() {
         sheetDetalle.columns.forEach(col => { col.width = 18; });
 
         // --- HOJA PENALIDADES ---
-        const pHeaders = ["ID", "FECHA", "MOTIVO", "DESCRIPCIÓN", "TICKET REF.", "ESTADO", "IMPORTE"];
+        const pHeaders = ["ID", "FECHA", "MOTIVO", "DESCRIPCIÓN", "TICKET REF.", "ESTADO", "IMPORTE", "REGISTRADO POR"];
         sheetPenalties.getRow(1).values = pHeaders;
         sheetPenalties.getRow(1).eachCell(c => {
             c.font = { bold: true, color: { argb: 'FFFFFFFF' } };
             c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E3A8A' } };
         });
         activePenalties.forEach(p => {
-            const row = sheetPenalties.addRow([p.Id, new Date(p.Fecha), p.Motivo, p.Descripcion, p.Ticket || '-', p.Estado, -p.Importe]);
+            const row = sheetPenalties.addRow([p.Id, new Date(p.Fecha), p.Motivo, p.Descripcion, p.Ticket || '-', p.Estado, -p.Importe, p.CreadoPor || 'N/D']);
             row.getCell(2).numFmt = 'dd/mm/yyyy';
             row.getCell(7).numFmt = '"S/" #,##0.00';
             row.eachCell(c => { c.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} }; });
@@ -1097,14 +1097,14 @@ export default function ValuationsPage() {
         sheetDetalle.columns.forEach(col => { col.width = 18; });
 
         // --- HOJA PENALIDADES ---
-        const pHeaders = ["ID", "FECHA", "MOTIVO", "DESCRIPCIÓN", "TICKET REF.", "ESTADO", "IMPORTE"];
+        const pHeaders = ["ID", "FECHA", "MOTIVO", "DESCRIPCIÓN", "TICKET REF.", "ESTADO", "IMPORTE", "REGISTRADO POR"];
         sheetPenalties.getRow(1).values = pHeaders;
         sheetPenalties.getRow(1).eachCell(c => {
             c.font = { bold: true, color: { argb: 'FFFFFFFF' } };
             c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E3A8A' } };
         });
         activePenalties.forEach(p => {
-            const row = sheetPenalties.addRow([p.Id, new Date(p.Fecha), p.Motivo, p.Descripcion, p.Ticket || '-', p.Estado, -p.Importe]);
+            const row = sheetPenalties.addRow([p.Id, new Date(p.Fecha), p.Motivo, p.Descripcion, p.Ticket || '-', p.Estado, -p.Importe, p.CreadoPor || 'N/D']);
             row.getCell(2).numFmt = 'dd/mm/yyyy';
             row.getCell(7).numFmt = '"S/" #,##0.00';
             row.eachCell(c => { c.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} }; });
@@ -1954,7 +1954,10 @@ export default function ValuationsPage() {
                                                                     {isAnulled && <span className="px-2 py-0.5 bg-slate-200 text-slate-700 rounded text-[9px] font-black uppercase">Anulado</span>}
                                                                 </div>
                                                                 <p className="text-xs text-muted-foreground font-medium opacity-70 leading-relaxed font-sans">{penalty.Descripcion}</p>
-                                                                <p className="text-[10px] font-black text-muted-foreground opacity-40">{new Date(penalty.Fecha).toLocaleDateString('es-PE', { timeZone: 'UTC' })} • Auditado</p>
+                                                                <p className="text-[10px] font-black text-muted-foreground opacity-40">
+                                                                    {new Date(penalty.Fecha).toLocaleDateString('es-PE', { timeZone: 'UTC' })} • Registrado por: {penalty.CreadoPor || 'N/D'}
+                                                                </p>
+
                                                             </div>
                                                         </div>
                                                         <div className="flex flex-col items-end gap-3">
@@ -2202,7 +2205,10 @@ export default function ValuationsPage() {
                                                 </td>
                                                 <td className="px-4 py-4">
                                                     <p className="text-xs font-bold truncate max-w-[400px]" title={det.Servicio_Nombre}>{det.Servicio_Nombre}</p>
-                                                    <p className="text-[10px] text-muted-foreground font-medium">{det.Categoria}</p>
+                                                    <p className="text-[10px] text-muted-foreground font-medium">
+                                                        {det.Categoria}{det.Tipo === 'PENALIDAD' && ` • Registrado por: ${det.CreadoPor || 'N/D'}`}
+                                                    </p>
+
                                                 </td>
                                                 <td className="px-8 py-4 text-right">
                                                     <span className={cn("text-sm font-black tracking-tight", det.Monto < 0 ? "text-red-600" : "text-slate-800")}>

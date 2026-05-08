@@ -966,8 +966,10 @@ app.get('/api/penalties/:ruc', verifyToken, async (req: Request, res: Response) 
                     COALESCE(m.Motivo, d.Motivo) as Motivo,
                     d.Descripcion,
                     d.Importe,
-                    d.Estado
+                    d.Estado,
+                    d.Creado_por as CreadoPor
                 FROM [dbo].[GAC_APP_TB_TICKETS_DESCUENTOS] d
+
                 JOIN [APPGAC].[ServiciosViewSQL] s ON d.Ticket = s.Ticket
                 JOIN [dbo].[GAC_APP_TB_CAS] cas ON s.IdCAS = cas.ID_CAS
                 LEFT JOIN [dbo].[GAC_APP_TB_TICKETS_DESCUENTOS_MOTIVOS] m ON d.Motivo = m.IdMotivo
@@ -1016,10 +1018,13 @@ app.get('/api/closures/:id/details', verifyToken, async (req: Request, res: Resp
                     ISNULL(d.Adicionales, 0) as Adicionales,
                     s.NombreTecnico,
                     s.ApellidoTecnico,
-                    s.ComentarioTecnico
+                    s.ComentarioTecnico,
+                    p.Creado_por as CreadoPor
                 FROM [dbo].[GAC_APP_TB_VALORIZACIONES_DETALLE] d
                 LEFT JOIN [APPGAC].[ServiciosViewSQL] s ON d.Ticket = s.Ticket AND d.Tipo = 'SERVICIO'
+                LEFT JOIN [dbo].[GAC_APP_TB_TICKETS_DESCUENTOS] p ON d.ID_Referencia = p.ID_Descuentos_CAS AND d.Tipo = 'PENALIDAD'
                 WHERE d.IdCierre = @id
+
             `);
         res.json(result.recordset);
     } catch (err: any) { res.status(500).json({ error: err.message }); }

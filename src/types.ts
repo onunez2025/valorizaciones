@@ -75,9 +75,11 @@ export interface Penalty {
   Descripcion: string;
   Importe: number;
   Estado: string;
+  CreadoPor?: string;
   Sustento_CAS?: string;
   Respuesta_Analista?: string;
 }
+
 
 export interface ValuationAdicional {
   Id: string;
