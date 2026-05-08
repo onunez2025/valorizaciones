@@ -730,7 +730,7 @@ app.post('/api/penalties/:id/status', verifyToken, async (req: Request, res: Res
 
 
 app.get('/api/tickets/find/:ticket', verifyToken, async (req: Request, res: Response) => {
-    const ticket = req.params.ticket?.trim();
+    const ticket = (req.params.ticket as string).trim();
     if (!ticket) return res.status(400).json({ error: 'Ticket es requerido' });
 
     try {
