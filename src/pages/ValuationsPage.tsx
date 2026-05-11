@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, Filter, Calendar, ChevronRight, Calculator, Download, AlertTriangle, CheckCircle2, FileText, X, ChevronDown, Briefcase, Building2, Check, Activity, AlertCircle, Info, Lock, ArrowUpDown, Package, History, BarChart2, Eye, PlusCircle, Trash2, DollarSign, Mail, RotateCcw } from 'lucide-react';
+import { Search, Filter, Calendar, ChevronRight, Calculator, Download, AlertTriangle, CheckCircle2, FileText, X, ChevronDown, Briefcase, Building2, Check, Activity, AlertCircle, Info, Lock, ArrowUpDown, Package, History, BarChart2, Eye, PlusCircle, Trash2, DollarSign, Mail, RotateCcw, Pencil } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import ExcelJS from 'exceljs';
 import { ApiClient } from '../services/apiClient';
@@ -34,7 +34,7 @@ export default function ValuationsPage() {
     const [tickets, setTickets] = useState<ValuationTicket[]>([]);
     const [penalties, setPenalties] = useState<Penalty[]>([]);
     const [loadingData, setLoadingData] = useState(false);
-    const [showPenaltyModal, setShowPenaltyModal] = useState<{show: boolean, type: 'penalty' | 'additional', ticket?: string, date?: string}>({show: false, type: 'penalty'});
+    const [showPenaltyModal, setShowPenaltyModal] = useState<{show: boolean, type: 'penalty' | 'additional', ticket?: string, date?: string, existingData?: any}>({show: false, type: 'penalty'});
     const [expandedDates, setExpandedDates] = useState<string[]>([]);
     const [showTarifarioModal, setShowTarifarioModal] = useState<{show: boolean, data: any}>({show: false, data: null});
     const [showMaterialModal, setShowMaterialModal] = useState<{show: boolean, data: any}>({show: false, data: null});
@@ -2018,6 +2018,21 @@ export default function ValuationsPage() {
                                                                                                                                             <span className="text-[10px] font-bold text-emerald-600">S/ {Number(item.Importe).toLocaleString('es-PE', { minimumFractionDigits: 2 })}</span>
                                                                                                                                         </div>
                                                                                                                                         <button
+                                                                                                                                            onClick={(e) => {
+                                                                                                                                                e.stopPropagation();
+                                                                                                                                                setShowPenaltyModal({ 
+                                                                                                                                                    show: true, 
+                                                                                                                                                    type: 'additional', 
+                                                                                                                                                    ticket: ticket.Ticket,
+                                                                                                                                                    existingData: item
+                                                                                                                                                });
+                                                                                                                                            }}
+                                                                                                                                            className="p-1.5 text-indigo-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all opacity-0 group-hover/item:opacity-100 ml-2 flex-shrink-0"
+                                                                                                                                            title="Editar adicional"
+                                                                                                                                        >
+                                                                                                                                            <Pencil className="w-3.5 h-3.5" />
+                                                                                                                                        </button>
+                                                                                                                                        <button
                                                                                                                                             onClick={async (e) => {
                                                                                                                                                 e.stopPropagation();
                                                                                                                                                 try {
@@ -2026,7 +2041,7 @@ export default function ValuationsPage() {
                                                                                                                                                     handleFetchValuation();
                                                                                                                                                 } catch (err) { console.error(err); }
                                                                                                                                             }}
-                                                                                                                                            className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover/item:opacity-100 ml-2 flex-shrink-0"
+                                                                                                                                            className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover/item:opacity-100 flex-shrink-0"
                                                                                                                                             title="Eliminar adicional"
                                                                                                                                         >
                                                                                                                                             <Trash2 className="w-3.5 h-3.5" />
@@ -2127,18 +2142,29 @@ export default function ValuationsPage() {
                                                                 </p>
                                                                 <span className="text-[9px] font-black text-muted-foreground opacity-30 italic">Débito CAS</span>
                                                             </div>
-                                                            <button 
-                                                                onClick={() => handleTogglePenaltyStatus(penalty)}
-                                                                className={cn(
-                                                                    "px-4 py-1.5 rounded-xl text-[10px] font-black transition-all flex items-center gap-1.5 shadow-sm border",
-                                                                    isAnulled 
-                                                                        ? "bg-emerald-500 text-white border-emerald-600 hover:bg-emerald-600 shadow-emerald-500/20" 
-                                                                        : "bg-white text-red-600 border-red-100 hover:bg-red-50 hover:border-red-200"
+                                                            <div className="flex items-center gap-2">
+                                                                {!isAnulled && (
+                                                                    <button 
+                                                                        onClick={() => setShowPenaltyModal({ show: true, type: 'penalty', existingData: penalty })}
+                                                                        className="p-2 bg-indigo-50 text-indigo-600 border border-indigo-100 rounded-xl hover:bg-indigo-600 hover:text-white transition-all shadow-sm"
+                                                                        title="Editar penalidad"
+                                                                    >
+                                                                        <Pencil className="w-3.5 h-3.5" />
+                                                                    </button>
                                                                 )}
-                                                            >
-                                                                {isAnulled ? <CheckCircle2 className="w-3.5 h-3.5" /> : <X className="w-3.5 h-3.5" />}
-                                                                {isAnulled ? 'Habilitar' : 'Anular'}
-                                                            </button>
+                                                                <button 
+                                                                    onClick={() => handleTogglePenaltyStatus(penalty)}
+                                                                    className={cn(
+                                                                        "px-4 py-1.5 rounded-xl text-[10px] font-black transition-all flex items-center gap-1.5 shadow-sm border",
+                                                                        isAnulled 
+                                                                            ? "bg-emerald-500 text-white border-emerald-600 hover:bg-emerald-600 shadow-emerald-500/20" 
+                                                                            : "bg-white text-red-600 border-red-100 hover:bg-red-50 hover:border-red-200"
+                                                                    )}
+                                                                >
+                                                                    {isAnulled ? <CheckCircle2 className="w-3.5 h-3.5" /> : <X className="w-3.5 h-3.5" />}
+                                                                    {isAnulled ? 'Habilitar' : 'Anular'}
+                                                                </button>
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 );
@@ -2451,6 +2477,7 @@ export default function ValuationsPage() {
                     tickets={tickets}
                     initialTicket={showPenaltyModal.ticket}
                     initialDate={showPenaltyModal.date}
+                    existingData={showPenaltyModal.existingData}
                     onSuccess={handleFetchValuation}
                     onClose={() => setShowPenaltyModal({show: false, type: 'penalty'})} 
                 />

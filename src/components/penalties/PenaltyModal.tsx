@@ -14,9 +14,10 @@ interface PenaltyModalProps {
     type: 'penalty' | 'additional';
     initialTicket?: string;
     initialDate?: string;
+    existingData?: any;
 }
 
-export default function PenaltyModal({ isOpen, onClose, onSuccess, ruc, tickets, type, initialTicket, initialDate }: PenaltyModalProps) {
+export default function PenaltyModal({ isOpen, onClose, onSuccess, ruc, tickets, type, initialTicket, initialDate, existingData }: PenaltyModalProps) {
     const [motives, setMotives] = useState<PenaltyMotive[]>([]);
     const [loading, setLoading] = useState(false);
     const [showDropdown, setShowDropdown] = useState(false);
@@ -32,15 +33,25 @@ export default function PenaltyModal({ isOpen, onClose, onSuccess, ruc, tickets,
 
     useEffect(() => {
         if (isOpen) {
-            setFormData({
-                ticket: initialTicket || '',
-                motivo: '',
-                descripcion: '',
-                importe: '',
-                fecha: initialDate || new Date().toISOString().split('T')[0]
-            });
+            if (existingData) {
+                setFormData({
+                    ticket: existingData.Ticket || '',
+                    motivo: existingData.Motivo || '',
+                    descripcion: existingData.Descripcion || '',
+                    importe: Math.abs(existingData.Importe).toString(),
+                    fecha: existingData.Fecha ? existingData.Fecha.split('T')[0] : new Date().toISOString().split('T')[0]
+                });
+            } else {
+                setFormData({
+                    ticket: initialTicket || '',
+                    motivo: '',
+                    descripcion: '',
+                    importe: '',
+                    fecha: initialDate || new Date().toISOString().split('T')[0]
+                });
+            }
         }
-    }, [isOpen, initialTicket, initialDate]);
+    }, [isOpen, initialTicket, initialDate, existingData]);
 
     useEffect(() => {
         if (isOpen && type === 'penalty') {
@@ -69,8 +80,11 @@ export default function PenaltyModal({ isOpen, onClose, onSuccess, ruc, tickets,
         setLoading(true);
         try {
             const endpoint = type === 'penalty' ? '/penalties' : '/adicionales';
-            await ApiClient.request(endpoint, {
-                method: 'POST',
+            const method = existingData ? 'PUT' : 'POST';
+            const url = existingData ? `${endpoint}/${existingData.Id}` : endpoint;
+
+            await ApiClient.request(url, {
+                method,
                 body: JSON.stringify({
                     ...formData,
                     ruc,

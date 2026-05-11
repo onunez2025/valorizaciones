@@ -563,6 +563,44 @@ app.post('/api/penalties', verifyToken, async (req: Request, res: Response) => {
     } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
+app.put('/api/penalties/:id', verifyToken, async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const { fecha, motivo, descripcion, importe } = req.body;
+    try {
+        const db = await getDb();
+        
+        // Validation: Check if already in a closure
+        const check = await db.request().input('id', id).query(`
+            SELECT 1 FROM [dbo].[GAC_APP_TB_VALORIZACIONES_DETALLE] 
+            WHERE ID_Referencia = @id
+        `);
+        if (check.recordset.length > 0) {
+            return res.status(403).json({ error: "No se puede editar una penalidad que ya ha sido cerrada en una valorización." });
+        }
+
+        const existing = await db.request().input('id', id).query("SELECT * FROM [dbo].[GAC_APP_TB_TICKETS_DESCUENTOS] WHERE ID_Descuentos_CAS = @id");
+        
+        await db.request()
+            .input('id', id)
+            .input('fecha', fecha)
+            .input('motivo', motivo)
+            .input('desc', descripcion)
+            .input('importe', importe.toString())
+            .query(`
+                UPDATE [dbo].[GAC_APP_TB_TICKETS_DESCUENTOS] 
+                SET Fecha = @fecha, Motivo = @motivo, Descripcion = @desc, Importe = @importe 
+                WHERE ID_Descuentos_CAS = @id
+            `);
+            
+        await logAudit(req, 'UPDATE', 'PENALTY', id, { 
+            before: existing.recordset[0], 
+            after: { fecha, motivo, descripcion, importe } 
+        });
+        
+        res.json({ success: true });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
 app.post('/api/adicionales', verifyToken, async (req: Request, res: Response) => {
     const { ticket, motivo, importe } = req.body;
     const id = crypto.randomBytes(4).toString('hex');
@@ -580,6 +618,32 @@ app.post('/api/adicionales', verifyToken, async (req: Request, res: Response) =>
             `);
         await logAudit(req, 'CREATE', 'ADICIONAL', ticket, { id, motivo, importe });
         res.status(201).json({ id });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+app.put('/api/adicionales/:id', verifyToken, async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const { motivo, importe } = req.body;
+    try {
+        const db = await getDb();
+        const existing = await db.request().input('id', id).query("SELECT * FROM [dbo].[GAC_APP_TB_TICKETS_VALORIZACION_ADICIONAL] WHERE ID_valorizacion_adicional = @id");
+        
+        await db.request()
+            .input('id', id)
+            .input('motivo', motivo)
+            .input('importe', importe.toString())
+            .query(`
+                UPDATE [dbo].[GAC_APP_TB_TICKETS_VALORIZACION_ADICIONAL] 
+                SET Motivo = @motivo, Importe = @importe 
+                WHERE ID_valorizacion_adicional = @id
+            `);
+            
+        await logAudit(req, 'UPDATE', 'ADICIONAL', id, { 
+            before: existing.recordset[0], 
+            after: { motivo, importe } 
+        });
+        
+        res.json({ success: true });
     } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
