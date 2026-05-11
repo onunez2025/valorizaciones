@@ -1128,7 +1128,8 @@ export default function ValuationsPage() {
             const dateVal = t.FechaCierre || t.Fecha;
             if (!dateVal) return;
             const d = new Date(dateVal);
-            const dateStr = d.toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+            // Fix: Use UTC timezone to match web grouping and prevent date shifting
+            const dateStr = d.toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' });
             const current = breakdownMap.get(dateStr) || { count: 0, total: 0 };
             breakdownMap.set(dateStr, {
                 count: current.count + 1,
@@ -1327,7 +1328,8 @@ export default function ValuationsPage() {
             const dateVal = s.FechaCierre || s.Fecha;
             if (!dateVal) return;
             const d = new Date(dateVal);
-            const dateStr = d.toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+            // Fix: Use UTC timezone to match web grouping and prevent date shifting
+            const dateStr = d.toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' });
             const current = breakdownMap.get(dateStr) || { count: 0, total: 0 };
             breakdownMap.set(dateStr, {
                 count: current.count + 1,
