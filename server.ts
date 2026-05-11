@@ -712,6 +712,17 @@ app.post('/api/valuations/batch-adjustment', verifyToken, async (req: Request, r
     }
 });
 
+app.get('/api/discount-motivos', verifyToken, async (req, res) => {
+    try {
+        const pool = await sql.connect(dbConfig);
+        const result = await pool.request().query('SELECT * FROM [dbo].[GAC_APP_TB_TICKETS_DESCUENTOS_MOTIVOS] ORDER BY Motivo ASC');
+        res.json(result.recordset);
+    } catch (error) {
+        console.error("Error fetching discount motivos:", error);
+        res.status(500).json({ message: "Error al obtener motivos de descuento" });
+    }
+});
+
 app.post('/api/valuations/batch-discount', verifyToken, async (req: Request, res: Response) => {
     const { tickets, amount, motivo, descripcion, ruc } = req.body;
     const userId = (req as any).user.username;

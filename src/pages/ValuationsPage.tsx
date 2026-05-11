@@ -76,6 +76,7 @@ export default function ValuationsPage() {
     const [discountMotivo, setDiscountMotivo] = useState('');
     const [discountDescripcion, setDiscountDescripcion] = useState('');
     const [isApplyingDiscount, setIsApplyingDiscount] = useState(false);
+    const [discountMotivos, setDiscountMotivos] = useState<{IdMotivo: string, Motivo: string}[]>([]);
 
     const blobToBase64 = (blob: Blob): Promise<string> => {
         return new Promise((resolve, reject) => {
@@ -148,8 +149,17 @@ export default function ValuationsPage() {
                 console.error("Error fetching config:", err);
             }
         };
+        const fetchDiscountMotivos = async () => {
+            try {
+                const data = await ApiClient.request('/discount-motivos');
+                setDiscountMotivos(data);
+            } catch (err) {
+                console.error("Error fetching discount motivos:", err);
+            }
+        };
         fetchCas();
         fetchConfig();
+        fetchDiscountMotivos();
 
         const handleClickOutside = (event: MouseEvent) => {
             if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -2460,6 +2470,7 @@ export default function ValuationsPage() {
                 descripcion={discountDescripcion}
                 setDescripcion={setDiscountDescripcion}
                 isApplying={isApplyingDiscount}
+                motivos={discountMotivos}
             />
         </div>
     );
@@ -2609,7 +2620,7 @@ function EmailModal({ isOpen, onClose, onSend, emailTo, setEmailTo, isSending }:
     );
 }
 
-function BatchDiscountModal({ isOpen, onClose, onApply, tickets, setTickets, amount, setAmount, motivo, setMotivo, descripcion, setDescripcion, isApplying }: any) {
+function BatchDiscountModal({ isOpen, onClose, onApply, tickets, setTickets, amount, setAmount, motivo, setMotivo, descripcion, setDescripcion, isApplying, motivos }: any) {
     if (!isOpen) return null;
     return (
         <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
@@ -2649,14 +2660,17 @@ function BatchDiscountModal({ isOpen, onClose, onApply, tickets, setTickets, amo
                             </div>
                         </div>
                         <div className="space-y-2">
-                            <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Motivo (Breve)</label>
-                            <input 
-                                type="text"
+                            <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Motivo del Descuento</label>
+                            <select 
                                 value={motivo}
                                 onChange={(e) => setMotivo(e.target.value)}
-                                placeholder="Ej: Penalidad"
-                                className="w-full px-4 py-3.5 bg-muted/20 border border-border/50 rounded-xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all"
-                            />
+                                className="w-full px-4 py-3.5 bg-muted/20 border border-border/50 rounded-xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all appearance-none cursor-pointer"
+                            >
+                                <option value="">Seleccione un motivo...</option>
+                                {motivos.map((m: any) => (
+                                    <option key={m.IdMotivo} value={m.Motivo}>{m.Motivo}</option>
+                                ))}
+                            </select>
                         </div>
                     </div>
 
