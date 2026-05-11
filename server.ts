@@ -1034,7 +1034,8 @@ app.get('/api/penalties/:ruc', verifyToken, async (req: Request, res: Response) 
                     d.Descripcion,
                     d.Importe,
                     d.Estado,
-                    d.Creado_por as CreadoPor
+                    d.Creado_por as CreadoPor,
+                    d.Creado_el as CreadoEl
                 FROM [dbo].[GAC_APP_TB_TICKETS_DESCUENTOS] d
 
                 JOIN [APPGAC].[ServiciosViewSQL] s ON d.Ticket = s.Ticket

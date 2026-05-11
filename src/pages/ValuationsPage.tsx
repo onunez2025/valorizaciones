@@ -486,7 +486,7 @@ export default function ValuationsPage() {
         sheetDetalle.columns.forEach(col => { col.width = 18; });
 
         // --- HOJA PENALIDADES ---
-        const pHeaders = ["ID", "FECHA", "MOTIVO", "DESCRIPCIÓN", "TICKET REF.", "ESTADO", "IMPORTE", "REGISTRADO POR"];
+        const pHeaders = ["ID", "FECHA", "MOTIVO", "DESCRIPCIÓN", "TICKET REF.", "ESTADO", "ESTADO VALORIZACIÓN", "IMPORTE ORIGINAL", "IMPORTE APLICADO", "REGISTRADO POR"];
         sheetPenalties.getRow(1).values = pHeaders;
         sheetPenalties.getRow(1).eachCell(c => {
             c.font = { bold: true, color: { argb: 'FFFFFFFF' } };
@@ -811,8 +811,31 @@ export default function ValuationsPage() {
     );
 
     const activePenalties = penalties.filter(p => p.Estado !== 'Anulado');
+
+    // Group by ticket and select the effective one (MAX amount, then latest CreadoEl)
+    const effectivePenaltiesMap = activePenalties.reduce((acc, p) => {
+        const ticketKey = p.Ticket || 'GENERAL';
+        
+        if (!acc[ticketKey]) {
+            acc[ticketKey] = p;
+        } else {
+            const currentMax = acc[ticketKey];
+            if (p.Importe > currentMax.Importe) {
+                acc[ticketKey] = p;
+            } else if (p.Importe === currentMax.Importe) {
+                // Tie-breaker: latest CreadoEl
+                if (new Date(p.CreadoEl) > new Date(currentMax.CreadoEl)) {
+                    acc[ticketKey] = p;
+                }
+            }
+        }
+        return acc;
+    }, {} as Record<string, any>);
+
+    const effectivePenaltyIds = new Set(Object.values(effectivePenaltiesMap).map(p => p.Id));
+
     const totalTickets = tickets.reduce((sum, t) => sum + (isValuable(t.CodigoEquipo) ? (t.TarifaBase + (t.Adicionales || 0)) : 0), 0);
-    const totalPenalties = activePenalties.reduce((sum, p) => sum + p.Importe, 0);
+    const totalPenalties = Object.values(effectivePenaltiesMap).reduce((sum: number, p: any) => sum + p.Importe, 0);
     const grandTotal = totalTickets - totalPenalties;
 
     const handleCloseFortnightCurrent = async () => {
@@ -840,15 +863,18 @@ export default function ValuationsPage() {
             nombreEquipo: t.NombreEquipo
         }));
 
-        const penaltyDetails = activePenalties.map(p => ({
-            ticket: p.Ticket || 'G-DESCUENTO',
-            monto: -p.Importe,
-            fecha: p.Fecha,
-            tipo: 'PENALIDAD',
-            servicio: p.Motivo,
-            categoria: 'DESCUENTO',
-            idReferencia: p.Id
-        }));
+        const penaltyDetails = activePenalties.map(p => {
+            const isEffective = effectivePenaltyIds.has(p.Id);
+            return {
+                ticket: p.Ticket || 'G-DESCUENTO',
+                monto: isEffective ? -p.Importe : 0,
+                fecha: p.Fecha,
+                tipo: 'PENALIDAD',
+                servicio: isEffective ? p.Motivo : `${p.Motivo} (No aplicado - mayor descuento existente)`,
+                categoria: 'DESCUENTO',
+                idReferencia: p.Id
+            };
+        });
 
         try {
             const result = await ApiClient.request('/valuations/close', {
@@ -1069,7 +1095,7 @@ export default function ValuationsPage() {
 
         const summaryData = [
             ['Servicios Realizados', tickets.length, totalTickets],
-            ['Penalidades y Descuentos', activePenalties.length, -totalPenalties],
+            ['Penalidades y Descuentos (Aplicadas)', effectivePenaltyIds.size, -totalPenalties],
             ['', '', ''],
             ['TOTAL A FACTURAR', '', grandTotal]
         ];
@@ -1175,16 +1201,35 @@ export default function ValuationsPage() {
         sheetDetalle.columns.forEach(col => { col.width = 18; });
 
         // --- HOJA PENALIDADES ---
-        const pHeaders = ["ID", "FECHA", "MOTIVO", "DESCRIPCIÓN", "TICKET REF.", "ESTADO", "IMPORTE", "REGISTRADO POR"];
+        const pHeaders = ["ID", "FECHA", "MOTIVO", "DESCRIPCIÓN", "TICKET REF.", "ESTADO", "ESTADO VALORIZACIÓN", "IMPORTE ORIGINAL", "IMPORTE APLICADO", "REGISTRADO POR"];
         sheetPenalties.getRow(1).values = pHeaders;
         sheetPenalties.getRow(1).eachCell(c => {
             c.font = { bold: true, color: { argb: 'FFFFFFFF' } };
             c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E3A8A' } };
         });
         activePenalties.forEach(p => {
-            const row = sheetPenalties.addRow([p.Id, new Date(p.Fecha), p.Motivo, p.Descripcion, p.Ticket || '-', p.Estado, -p.Importe, p.CreadoPor || 'N/D']);
+            const isEffective = effectivePenaltyIds.has(p.Id);
+            const row = sheetPenalties.addRow([
+                p.Id, 
+                new Date(p.Fecha), 
+                p.Motivo, 
+                p.Descripcion, 
+                p.Ticket || '-', 
+                p.Estado, 
+                isEffective ? 'APLICADO' : 'IGNORADO (MENOR)',
+                -p.Importe,
+                isEffective ? -p.Importe : 0, 
+                p.CreadoPor || 'N/D'
+            ]);
             row.getCell(2).numFmt = 'dd/mm/yyyy';
-            row.getCell(7).numFmt = '"S/" #,##0.00';
+            row.getCell(8).numFmt = '"S/" #,##0.00';
+            row.getCell(9).numFmt = '"S/" #,##0.00';
+            
+            if (!isEffective) {
+                row.getCell(7).font = { color: { argb: 'FFFF8C00' }, bold: true };
+            } else {
+                row.getCell(7).font = { color: { argb: 'FF059669' }, bold: true };
+            }
             row.eachCell(c => { c.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} }; });
         });
         sheetPenalties.columns.forEach(col => { col.width = 18; });
@@ -1249,7 +1294,7 @@ export default function ValuationsPage() {
 
         const summaryData = [
             ['Servicios Realizados', services.length, selectedClosure.Subtotal_Servicios],
-            ['Penalidades y Descuentos', penalties.length, -selectedClosure.Subtotal_Penalidades],
+            ['Penalidades y Descuentos (Aplicadas)', penalties.filter(p => p.Monto !== 0).length, -selectedClosure.Subtotal_Penalidades],
             ['', '', ''],
             ['TOTAL A FACTURAR', '', selectedClosure.Total_Final]
         ];
@@ -1350,14 +1395,29 @@ export default function ValuationsPage() {
         sheetDetalle.columns.forEach(col => { col.width = 15; });
 
         // --- HOJA PENALIDADES ---
-        const pHeaders = ["TICKET", "FECHA", "MOTIVO", "CATEGORÍA", "IMPORTE"];
+        const pHeaders = ["TICKET", "FECHA", "MOTIVO", "CATEGORÍA", "ESTADO", "IMPORTE"];
         sheetPenalties.getRow(1).values = pHeaders;
         sheetPenalties.getRow(1).eachCell(c => { c.font = { bold: true, color: { argb: 'FFFFFFFF' } }; c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E3A8A' } }; });
         
         penalties.forEach(p => {
-            const row = sheetPenalties.addRow([p.Ticket, new Date(p.Fecha_Ticket), p.Servicio_Nombre, p.Categoria, -p.Monto]);
+            const isEffective = p.Monto !== 0;
+            const row = sheetPenalties.addRow([
+                p.Ticket, 
+                new Date(p.Fecha_Ticket), 
+                p.Servicio_Nombre, 
+                p.Categoria, 
+                isEffective ? 'APLICADO' : 'IGNORADO',
+                -p.Monto
+            ]);
             row.getCell(2).numFmt = 'dd/mm/yyyy';
-            row.getCell(5).numFmt = '"S/" #,##0.00';
+            row.getCell(6).numFmt = '"S/" #,##0.00';
+            
+            if (!isEffective) {
+                row.getCell(5).font = { color: { argb: 'FFFF8C00' }, bold: true };
+            } else {
+                row.getCell(5).font = { color: { argb: 'FF059669' }, bold: true };
+            }
+            
             row.eachCell(c => { c.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} }; });
         });
         sheetPenalties.columns.forEach(col => { col.width = 20; });
@@ -2037,6 +2097,17 @@ export default function ValuationsPage() {
                                                                     <span className={cn("px-2.5 py-1 rounded-lg text-[10px] font-black", isAnulled ? "bg-slate-100 text-slate-600" : "bg-red-100 text-red-700")}>
                                                                         {penalty.Ticket || 'Descuento general'}
                                                                     </span>
+                                                                    {!isAnulled && (
+                                                                        effectivePenaltyIds.has(penalty.Id) ? (
+                                                                            <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded text-[9px] font-black uppercase flex items-center gap-1">
+                                                                                <CheckCircle2 className="w-3 h-3" /> Aplicado
+                                                                            </span>
+                                                                        ) : (
+                                                                            <span className="px-2 py-0.5 bg-amber-100 text-amber-700 rounded text-[9px] font-black uppercase flex items-center gap-1" title="Se aplicó un descuento mayor para este ticket">
+                                                                                <Info className="w-3 h-3" /> Ignorado
+                                                                            </span>
+                                                                        )
+                                                                    )}
                                                                     {isAnulled && <span className="px-2 py-0.5 bg-slate-200 text-slate-700 rounded text-[9px] font-black uppercase">Anulado</span>}
                                                                 </div>
                                                                 <p className="text-xs text-muted-foreground font-medium opacity-70 leading-relaxed font-sans">{penalty.Descripcion}</p>
@@ -2048,7 +2119,10 @@ export default function ValuationsPage() {
                                                         </div>
                                                         <div className="flex flex-col items-end gap-3">
                                                             <div className="text-right">
-                                                                <p className={cn("text-2xl font-black tracking-tighter", isAnulled ? "text-slate-400 line-through" : "text-red-600")}>
+                                                                <p className={cn(
+                                                                    "text-2xl font-black tracking-tighter", 
+                                                                    isAnulled ? "text-slate-400 line-through" : (effectivePenaltyIds.has(penalty.Id) ? "text-red-600" : "text-amber-500 opacity-60")
+                                                                )}>
                                                                     - S/ {penalty.Importe.toLocaleString()}
                                                                 </p>
                                                                 <span className="text-[9px] font-black text-muted-foreground opacity-30 italic">Débito CAS</span>
