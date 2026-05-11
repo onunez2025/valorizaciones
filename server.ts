@@ -592,7 +592,7 @@ app.put('/api/penalties/:id', verifyToken, async (req: Request, res: Response) =
                 WHERE ID_Descuentos_CAS = @id
             `);
             
-        await logAudit(req, 'UPDATE', 'PENALTY', id, { 
+        await logAudit(req, 'UPDATE', 'PENALTY', id as string, { 
             before: existing.recordset[0], 
             after: { fecha, motivo, descripcion, importe } 
         });
@@ -638,7 +638,7 @@ app.put('/api/adicionales/:id', verifyToken, async (req: Request, res: Response)
                 WHERE ID_valorizacion_adicional = @id
             `);
             
-        await logAudit(req, 'UPDATE', 'ADICIONAL', id, { 
+        await logAudit(req, 'UPDATE', 'ADICIONAL', id as string, { 
             before: existing.recordset[0], 
             after: { motivo, importe } 
         });
