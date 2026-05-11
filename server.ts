@@ -724,8 +724,8 @@ app.get('/api/discount-motivos', verifyToken, async (req, res) => {
 });
 
 app.post('/api/valuations/batch-discount', verifyToken, async (req: Request, res: Response) => {
-    const { tickets, amount, motivo, descripcion, ruc } = req.body;
-    const userId = (req as any).user.username;
+    const { tickets, motivo, descripcion, ruc } = req.body;
+    const user = (req as any).user;
 
     if (!tickets || !Array.isArray(tickets) || tickets.length === 0) {
         return res.status(400).json({ error: "Debe proporcionar una lista de tickets." });
@@ -737,18 +737,23 @@ app.post('/api/valuations/batch-discount', verifyToken, async (req: Request, res
         await transaction.begin();
 
         try {
-            for (const ticket of tickets) {
+            for (const item of tickets) {
+                const ticketId = item.id;
+                const ticketAmount = item.amount;
+
+                if (!ticketId || isNaN(ticketAmount)) continue;
+
                 const penaltyId = crypto.randomBytes(4).toString('hex');
-                const fecha = new Date().toISOString().split('T')[0]; // Fecha actual para el descuento
+                const fecha = new Date().toISOString().split('T')[0];
 
                 await transaction.request()
-                    .input('id', penaltyId)
-                    .input('ticket', ticket)
-                    .input('fecha', fecha)
-                    .input('motivo', motivo)
-                    .input('desc', descripcion)
-                    .input('importe', amount.toString())
-                    .input('user', userId)
+                    .input('id', sql.VarChar, penaltyId)
+                    .input('ticket', sql.VarChar, ticketId)
+                    .input('fecha', sql.Date, fecha)
+                    .input('motivo', sql.VarChar, motivo)
+                    .input('desc', sql.VarChar, descripcion)
+                    .input('importe', sql.Decimal(10, 2), ticketAmount)
+                    .input('user', sql.VarChar, user.username)
                     .query(`
                         INSERT INTO [dbo].[GAC_APP_TB_TICKETS_DESCUENTOS] 
                         (ID_Descuentos_CAS, Ticket, Fecha, Motivo, Descripcion, Importe, Creado_por, Creado_el, Estado)
@@ -759,7 +764,6 @@ app.post('/api/valuations/batch-discount', verifyToken, async (req: Request, res
             await transaction.commit();
             await logAudit(req, 'BATCH_DISCOUNT', 'VALUATION', ruc, { 
                 tickets_total: tickets.length, 
-                amount, 
                 motivo 
             });
             
@@ -769,9 +773,9 @@ app.post('/api/valuations/batch-discount', verifyToken, async (req: Request, res
             await transaction.rollback();
             throw err;
         }
-    } catch (err: any) {
-        console.error("Batch Discount Error:", err);
-        res.status(500).json({ error: err.message });
+    } catch (error) {
+        console.error("Error applying batch discount:", error);
+        res.status(500).json({ message: "Error al aplicar el descuento masivo" });
     }
 });
 

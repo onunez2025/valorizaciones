@@ -252,19 +252,30 @@ export default function ValuationsPage() {
     const handleApplyBatchDiscount = async () => {
         if (!selectedCas) return;
         
-        const ticketList = discountTickets.split(/[\n,;]+/).map(t => t.trim()).filter(t => t.length > 0);
-        if (ticketList.length === 0) {
-            alert({ message: "Debe ingresar al menos un número de ticket." });
-            return;
-        }
+        const lines = discountTickets.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+        
+        const preparedTickets = lines.map(line => {
+            if (line.includes(',') || line.includes('\t')) {
+                const [id, amt] = line.split(/[,\t]/);
+                const parsedAmt = parseFloat(amt?.trim().replace('S/', '').replace(',', ''));
+                return {
+                    id: id.trim(),
+                    amount: isNaN(parsedAmt) ? parseFloat(discountAmount) : parsedAmt
+                };
+            }
+            return {
+                id: line,
+                amount: parseFloat(discountAmount)
+            };
+        }).filter(t => t.id && !isNaN(t.amount));
 
-        if (!discountAmount || parseFloat(discountAmount) <= 0) {
-            alert({ message: "Debe ingresar un monto de descuento válido." });
+        if (preparedTickets.length === 0) {
+            alert({ message: "Debe ingresar al menos un número de ticket válido." });
             return;
         }
 
         if (!discountMotivo.trim()) {
-            alert({ message: "Debe ingresar un motivo para el descuento." });
+            alert({ message: "Debe seleccionar un motivo para el descuento." });
             return;
         }
 
@@ -273,8 +284,7 @@ export default function ValuationsPage() {
             const result = await ApiClient.request('/valuations/batch-discount', {
                 method: 'POST',
                 body: JSON.stringify({
-                    tickets: ticketList,
-                    amount: parseFloat(discountAmount),
+                    tickets: preparedTickets,
                     motivo: discountMotivo,
                     descripcion: discountDescripcion,
                     ruc: selectedCas.RUC
@@ -2635,13 +2645,17 @@ function BatchDiscountModal({ isOpen, onClose, onApply, tickets, setTickets, amo
                 
                 <div className="p-8 space-y-6">
                     <div className="space-y-2">
-                        <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Tickets (uno por línea)</label>
+                        <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Tickets (Ticket o Ticket,Monto)</label>
                         <textarea 
                             value={tickets}
                             onChange={(e) => setTickets(e.target.value)}
-                            placeholder="Ej: 1195343&#10;1195350&#10;1195943..."
+                            placeholder="Ejemplo:&#10;1195343,15.50&#10;1195350,20.00&#10;1195943 (usará el monto global)"
                             className="w-full h-40 p-4 bg-muted/20 border border-border/50 rounded-2xl text-[13px] font-bold focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all resize-none custom-scrollbar"
                         />
+                        <div className="flex items-center gap-2 px-2 opacity-60">
+                            <Info className="w-3 h-3 text-slate-400" />
+                            <p className="text-[9px] font-bold text-slate-500">Puedes pegar desde Excel (Ticket y Monto en columnas separadas).</p>
+                        </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
@@ -2689,7 +2703,7 @@ function BatchDiscountModal({ isOpen, onClose, onApply, tickets, setTickets, amo
                         <button onClick={onClose} className="flex-1 py-4 text-xs font-black text-muted-foreground hover:bg-muted rounded-2xl transition-all">Cancelar</button>
                         <button 
                             onClick={onApply}
-                            disabled={isApplying || !tickets.trim() || !amount || !motivo.trim()}
+                            disabled={isApplying || !tickets.trim() || !motivo.trim()}
                             className="flex-[2] py-4 bg-red-600 text-white text-xs font-black rounded-2xl hover:bg-red-700 transition-all shadow-xl shadow-red-600/20 disabled:opacity-50 flex items-center justify-center gap-2"
                         >
                             {isApplying ? (
