@@ -69,6 +69,14 @@ export default function ValuationsPage() {
     const [batchMotivo, setBatchMotivo] = useState('Recojo en Planta');
     const [isApplyingBatch, setIsApplyingBatch] = useState(false);
 
+    // Batch discount states
+    const [showBatchDiscountModal, setShowBatchDiscountModal] = useState(false);
+    const [discountTickets, setDiscountTickets] = useState('');
+    const [discountAmount, setDiscountAmount] = useState('');
+    const [discountMotivo, setDiscountMotivo] = useState('');
+    const [discountDescripcion, setDiscountDescripcion] = useState('');
+    const [isApplyingDiscount, setIsApplyingDiscount] = useState(false);
+
     const blobToBase64 = (blob: Blob): Promise<string> => {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
@@ -221,12 +229,62 @@ export default function ValuationsPage() {
                 message: `Se procesaron ${result.processed} tickets exitosamente.` 
             });
             setShowBatchAdjustmentModal(false);
+            setShowBatchDiscountModal(false);
             setBatchTickets('');
             handleFetchValuation(); // Refrescar los datos para ver los cambios
         } catch (err: any) {
             alert({ title: 'Error', message: err.message || 'Error al aplicar el ajuste masivo.' });
         } finally {
             setIsApplyingBatch(false);
+        }
+    };
+
+    const handleApplyBatchDiscount = async () => {
+        if (!selectedCas) return;
+        
+        const ticketList = discountTickets.split(/[\n,;]+/).map(t => t.trim()).filter(t => t.length > 0);
+        if (ticketList.length === 0) {
+            alert({ message: "Debe ingresar al menos un número de ticket." });
+            return;
+        }
+
+        if (!discountAmount || parseFloat(discountAmount) <= 0) {
+            alert({ message: "Debe ingresar un monto de descuento válido." });
+            return;
+        }
+
+        if (!discountMotivo.trim()) {
+            alert({ message: "Debe ingresar un motivo para el descuento." });
+            return;
+        }
+
+        setIsApplyingDiscount(true);
+        try {
+            const result = await ApiClient.request('/valuations/batch-discount', {
+                method: 'POST',
+                body: JSON.stringify({
+                    tickets: ticketList,
+                    amount: parseFloat(discountAmount),
+                    motivo: discountMotivo,
+                    descripcion: discountDescripcion,
+                    ruc: selectedCas.RUC
+                })
+            });
+
+            alert({ 
+                title: 'Descuento Completado', 
+                message: `Se procesaron ${result.processed} tickets exitosamente.` 
+            });
+            setShowBatchDiscountModal(false);
+            setDiscountTickets('');
+            setDiscountAmount('');
+            setDiscountMotivo('');
+            setDiscountDescripcion('');
+            handleFetchValuation(); // Refrescar los datos
+        } catch (err: any) {
+            alert({ title: 'Error', message: err.message || 'Error al aplicar el descuento masivo.' });
+        } finally {
+            setIsApplyingDiscount(false);
         }
     };
 
@@ -925,7 +983,7 @@ export default function ValuationsPage() {
             };
         }
         acc[dateStr].count += 1;
-        if (ticket.TarifaBase === 0 && isValuable(ticket.CodigoEquipo) && (ticket.DiasDiferencia || 0) < 2 && !(ticket.ServicioNombre || '').toLowerCase().includes('visita')) {
+        if (ticket.TarifaBase === 0 && isValuable(ticket.CodigoEquipo) && (ticket.DiasDiferencia || 0) <= diasMaxCierre && !(ticket.ServicioNombre || '').toLowerCase().includes('visita')) {
             acc[dateStr].zeroPriceCount += 1;
         }
         acc[dateStr].totalBase += ticket.TarifaBase;
@@ -1088,7 +1146,7 @@ export default function ValuationsPage() {
             row.getCell(14).numFmt = '"S/" #,##0.00';
             row.getCell(15).numFmt = '"S/" #,##0.00';
             row.getCell(16).numFmt = '"S/" #,##0.00';
-            if ((t.DiasDiferencia || 0) > 1) {
+            if ((t.DiasDiferencia || 0) > diasMaxCierre) {
                 row.getCell(4).font = { color: { argb: 'FFFF0000' }, bold: true };
             }
             row.eachCell(c => { c.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} }; });
@@ -1619,6 +1677,14 @@ export default function ValuationsPage() {
                                         className="w-full flex items-center justify-center gap-2 p-4 bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 text-sm font-bold rounded-xl transition-all disabled:opacity-30"
                                     >
                                         <Activity className="w-4 h-4" /> Ajuste Masivo
+                                    </button>
+
+                                    <button 
+                                        onClick={() => setShowBatchDiscountModal(true)} 
+                                        disabled={!selectedCas} 
+                                        className="w-full flex items-center justify-center gap-2 p-4 bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 text-sm font-bold rounded-xl transition-all disabled:opacity-30"
+                                    >
+                                        <AlertTriangle className="w-4 h-4" /> Descuento Masivo
                                     </button>
                                 </div>
                             </div>
@@ -2380,6 +2446,21 @@ export default function ValuationsPage() {
                 setMotivo={setBatchMotivo}
                 isApplying={isApplyingBatch}
             />
+
+            <BatchDiscountModal 
+                isOpen={showBatchDiscountModal}
+                onClose={() => setShowBatchDiscountModal(false)}
+                onApply={handleApplyBatchDiscount}
+                tickets={discountTickets}
+                setTickets={setDiscountTickets}
+                amount={discountAmount}
+                setAmount={setDiscountAmount}
+                motivo={discountMotivo}
+                setMotivo={setDiscountMotivo}
+                descripcion={discountDescripcion}
+                setDescripcion={setDiscountDescripcion}
+                isApplying={isApplyingDiscount}
+            />
         </div>
     );
 }
@@ -2519,6 +2600,88 @@ function EmailModal({ isOpen, onClose, onSend, emailTo, setEmailTo, isSending }:
                                 <><Activity className="w-4 h-4 animate-spin" /> Enviando...</>
                             ) : (
                                 <><Mail className="w-4 h-4" /> Enviar Reporte Ahora</>
+                            )}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function BatchDiscountModal({ isOpen, onClose, onApply, tickets, setTickets, amount, setAmount, motivo, setMotivo, descripcion, setDescripcion, isApplying }: any) {
+    if (!isOpen) return null;
+    return (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
+            <div className="bg-white w-full max-w-lg rounded-[32px] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
+                <div className="p-8 border-b border-border/50 bg-slate-50 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 bg-red-500 rounded-lg text-white shadow-lg shadow-red-500/20"><AlertTriangle className="w-5 h-5" /></div>
+                        <h2 className="text-xl font-black text-slate-800">Descuento Masivo</h2>
+                    </div>
+                    <button onClick={onClose} className="p-2 hover:bg-muted rounded-xl transition-all"><X className="w-5 h-5" /></button>
+                </div>
+                
+                <div className="p-8 space-y-6">
+                    <div className="space-y-2">
+                        <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Tickets (uno por línea)</label>
+                        <textarea 
+                            value={tickets}
+                            onChange={(e) => setTickets(e.target.value)}
+                            placeholder="Ej: 1195343&#10;1195350&#10;1195943..."
+                            className="w-full h-40 p-4 bg-muted/20 border border-border/50 rounded-2xl text-[13px] font-bold focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all resize-none custom-scrollbar"
+                        />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Monto a Descontar</label>
+                            <div className="relative">
+                                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs">S/</span>
+                                <input 
+                                    type="number"
+                                    step="0.01"
+                                    value={amount}
+                                    onChange={(e) => setAmount(e.target.value)}
+                                    placeholder="0.00"
+                                    className="w-full pl-10 pr-4 py-3.5 bg-muted/20 border border-border/50 rounded-xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all"
+                                />
+                            </div>
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Motivo (Breve)</label>
+                            <input 
+                                type="text"
+                                value={motivo}
+                                onChange={(e) => setMotivo(e.target.value)}
+                                placeholder="Ej: Penalidad"
+                                className="w-full px-4 py-3.5 bg-muted/20 border border-border/50 rounded-xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all"
+                            />
+                        </div>
+                    </div>
+
+                    <div className="space-y-2">
+                        <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Descripción Detallada</label>
+                        <input 
+                            type="text"
+                            value={descripcion}
+                            onChange={(e) => setDescripcion(e.target.value)}
+                            placeholder="Explicación detallada del descuento..."
+                            className="w-full px-4 py-3.5 bg-muted/20 border border-border/50 rounded-xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all"
+                        />
+                    </div>
+
+                    <div className="pt-4 flex gap-4">
+                        <button onClick={onClose} className="flex-1 py-4 text-xs font-black text-muted-foreground hover:bg-muted rounded-2xl transition-all">Cancelar</button>
+                        <button 
+                            onClick={onApply}
+                            disabled={isApplying || !tickets.trim() || !amount || !motivo.trim()}
+                            className="flex-[2] py-4 bg-red-600 text-white text-xs font-black rounded-2xl hover:bg-red-700 transition-all shadow-xl shadow-red-600/20 disabled:opacity-50 flex items-center justify-center gap-2"
+                        >
+                            {isApplying ? (
+                                <><Activity className="w-4 h-4 animate-spin" /> Aplicando...</>
+                            ) : (
+                                <><CheckCircle2 className="w-4 h-4" /> Aplicar Descuentos</>
                             )}
                         </button>
                     </div>

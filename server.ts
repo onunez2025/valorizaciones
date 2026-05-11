@@ -712,6 +712,58 @@ app.post('/api/valuations/batch-adjustment', verifyToken, async (req: Request, r
     }
 });
 
+app.post('/api/valuations/batch-discount', verifyToken, async (req: Request, res: Response) => {
+    const { tickets, amount, motivo, descripcion, ruc } = req.body;
+    const userId = (req as any).user.username;
+
+    if (!tickets || !Array.isArray(tickets) || tickets.length === 0) {
+        return res.status(400).json({ error: "Debe proporcionar una lista de tickets." });
+    }
+
+    try {
+        const db = await getDb();
+        const transaction = new sql.Transaction(db);
+        await transaction.begin();
+
+        try {
+            for (const ticket of tickets) {
+                const penaltyId = crypto.randomBytes(4).toString('hex');
+                const fecha = new Date().toISOString().split('T')[0]; // Fecha actual para el descuento
+
+                await transaction.request()
+                    .input('id', penaltyId)
+                    .input('ticket', ticket)
+                    .input('fecha', fecha)
+                    .input('motivo', motivo)
+                    .input('desc', descripcion)
+                    .input('importe', amount.toString())
+                    .input('user', userId)
+                    .query(`
+                        INSERT INTO [dbo].[GAC_APP_TB_TICKETS_DESCUENTOS] 
+                        (ID_Descuentos_CAS, Ticket, Fecha, Motivo, Descripcion, Importe, Creado_por, Creado_el, Estado)
+                        VALUES (@id, @ticket, @fecha, @motivo, @desc, @importe, @user, GETDATE(), 'Pendiente')
+                    `);
+            }
+
+            await transaction.commit();
+            await logAudit(req, 'BATCH_DISCOUNT', 'VALUATION', ruc, { 
+                tickets_total: tickets.length, 
+                amount, 
+                motivo 
+            });
+            
+            res.json({ success: true, processed: tickets.length });
+
+        } catch (err) {
+            await transaction.rollback();
+            throw err;
+        }
+    } catch (err: any) {
+        console.error("Batch Discount Error:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 app.post('/api/penalties/:id/status', verifyToken, async (req: Request, res: Response) => {
     const { id } = req.params;
     const { status, observation, isCas } = req.body;
