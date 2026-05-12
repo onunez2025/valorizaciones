@@ -1599,7 +1599,7 @@ export default function ValuationsPage() {
             )}
 
             {/* Barra de Filtros Unificada (Fila Única Permanente) */}
-            <div className="bg-card rounded-xl border border-border p-2 shadow-sm flex flex-wrap items-center gap-3">
+            <div className="crypto-card p-2 flex flex-wrap items-center gap-3">
                 {/* Selector de CAS */}
                 <div className="relative flex-1 min-w-[280px]" ref={dropdownRef}>
                     <div 
@@ -1696,7 +1696,7 @@ export default function ValuationsPage() {
                     <div className="grid grid-cols-1 xl:grid-cols-4 gap-6 h-full pb-2">
                         {/* Resumen */}
                         <div className="xl:col-span-1 h-full">
-                            <div className="bg-card border border-border rounded-2xl p-6 shadow-sm h-full flex flex-col justify-between">
+                            <div className="crypto-card p-6 h-full flex flex-col justify-between">
                                 <div className="space-y-6">
                                     <div className="flex items-center justify-between">
                                         <h3 className="text-[11px] font-bold text-muted-foreground">Resumen de Cuenta</h3>
@@ -1705,14 +1705,14 @@ export default function ValuationsPage() {
                                     
                                     <div className="space-y-3">
                                         <div className="flex justify-between items-center p-4 bg-muted/20 rounded-xl border border-border/30">
-                                            <span className="text-[11px] font-bold text-muted-foreground">Servicios</span>
-                                            <span className="text-base font-bold tracking-tight">S/ {totalTickets.toLocaleString()}</span>
+                                            <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Servicios</span>
+                                            <span className="text-base font-data">S/ {totalTickets.toLocaleString('es-PE', { minimumFractionDigits: 2 })}</span>
                                         </div>
                                         <div className="flex justify-between items-center p-4 bg-red-50/50 rounded-xl border border-red-100">
-                                            <span className="text-[11px] font-bold text-red-600">Penalidades</span>
-                                            <span className="text-base font-bold text-red-600 tracking-tight">- S/ {totalPenalties.toLocaleString()}</span>
+                                            <span className="text-[11px] font-bold text-red-600 uppercase tracking-wider">Penalidades</span>
+                                            <span className="text-base font-data text-red-600">- S/ {totalPenalties.toLocaleString('es-PE', { minimumFractionDigits: 2 })}</span>
                                         </div>                                               
-                                        <div className="flex flex-col px-5 py-6 bg-white border-l-[6px] border-[#059669] rounded-xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(5,150,105,0.1)] transition-all duration-500 group/neto">
+                                        <div className="flex flex-col px-5 py-6 bg-white border-l-[6px] border-emerald-600 rounded-xl shadow-sm hover:shadow-md transition-all duration-300 group/neto">
                                             <div className="flex items-center justify-between mb-3">
                                                 <span className="text-[11px] font-bold text-[#059669]">Total Neto</span>
                                                 <div className="flex items-center gap-1.5 bg-emerald-50 px-2 py-1 rounded-md">
@@ -1721,8 +1721,8 @@ export default function ValuationsPage() {
                                                 </div>
                                             </div>
                                             <div className="flex items-center gap-2 whitespace-nowrap overflow-hidden">
-                                                <span className="text-2xl font-bold text-[#059669]/40 mt-1">S/</span>
-                                                <span className="text-[27px] font-black tracking-tighter text-slate-800 group-hover/neto:text-[#059669] transition-colors duration-500">
+                                                <span className="text-2xl font-bold text-emerald-600/40 mt-1">S/</span>
+                                                <span className="text-[27px] font-data text-slate-800 group-hover/neto:text-emerald-600 transition-colors duration-300">
                                                     {grandTotal.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                                 </span>
                                             </div>
@@ -1773,7 +1773,7 @@ export default function ValuationsPage() {
                         </div>
 
                         {/* Tabs y Listado */}
-                        <div className="xl:col-span-3 flex flex-col bg-card border border-border rounded-2xl overflow-hidden shadow-sm">
+                        <div className="xl:col-span-3 flex flex-col crypto-card overflow-hidden">
                             <div className="flex p-2 bg-muted/20 border-b border-border/40">
                                 <button onClick={() => setActiveTab('services')} className={cn("flex-1 flex items-center justify-center gap-2 py-3 text-sm font-bold rounded-xl transition-all", activeTab === 'services' ? "bg-background text-primary shadow-sm ring-1 ring-border/50" : "text-muted-foreground hover:bg-background/40")}>
                                     <Briefcase className="w-4 h-4" /> Servicios realizados ({tickets.length})
@@ -1800,7 +1800,7 @@ export default function ValuationsPage() {
                                         ) : (
                                             <table className="w-full border-separate border-spacing-0">
                                                 <thead className="bg-white sticky top-[-20px] z-30 border-b border-border shadow-sm">
-                                                    <tr className="text-[15px] font-medium text-muted-foreground bg-white">
+                                                    <tr className="crypto-table-header bg-white">
                                                         <th className="px-5 py-4 text-left">Fecha de Proceso</th>
                                                         <th className="px-5 py-4 text-center">Servicios</th>
                                                         <th className="px-5 py-4 text-center">Estado de Auditoría</th>
@@ -1850,7 +1850,7 @@ export default function ValuationsPage() {
                                                                         </div>
                                                                     </td>
                                                                     <td className="px-5 py-4 text-right">
-                                                                        <span className="text-sm font-medium tracking-tighter">
+                                                                        <span className="text-sm font-data">
                                                                             S/ {(groupedTickets[date].totalBase + groupedTickets[date].totalAdicional).toLocaleString('es-PE', { minimumFractionDigits: 2 })}
                                                                         </span>
                                                                     </td>
@@ -1864,13 +1864,13 @@ export default function ValuationsPage() {
                                                                         <td colSpan={5} className="p-0 border-b border-border/40 bg-muted/[0.03]">
                                                                             <div className="max-h-[480px] overflow-y-auto custom-scrollbar animate-in slide-in-from-top-4 duration-500 shadow-[inset_0_2px_10px_rgba(0,0,0,0.02)]">
                                                                                 <table className="w-full border-collapse">
-                                                                                    <thead className="sticky top-0 z-10 bg-white/95 backdrop-blur-md shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
-                                                                                        <tr className="text-sm font-medium text-muted-foreground border-b border-border/30">
+                                                                                    <thead className="sticky top-0 z-10 bg-white/95 backdrop-blur-md shadow-sm">
+                                                                                        <tr className="crypto-table-header border-b border-border/30">
                                                                                             <th onClick={() => handleDetailSort('Ticket')} className="px-5 py-3 text-left cursor-pointer hover:text-primary transition-colors">
                                                                                                 <div className="flex items-center gap-1">Ticket <ArrowUpDown className="w-3 h-3 opacity-40" /></div>
                                                                                             </th>
-                                                                                            <th className="px-2 py-3 text-center text-[10px] uppercase tracking-wider opacity-50">Visita / Cierre</th>
-                                                                                            <th className="px-2 py-3 text-center text-[10px] uppercase tracking-wider opacity-50">Días</th>
+                                                                                            <th className="px-2 py-3 text-center">Visita / Cierre</th>
+                                                                                            <th className="px-2 py-3 text-center">Días</th>
                                                                                             <th onClick={() => handleDetailSort('ServicioNombre')} className="px-6 py-3 text-left cursor-pointer hover:text-primary transition-colors">
                                                                                                 <div className="flex items-center gap-1">Servicio Realizado <ArrowUpDown className="w-3 h-3 opacity-40" /></div>
                                                                                             </th>
@@ -1886,7 +1886,7 @@ export default function ValuationsPage() {
                                                                                     <tbody className="divide-y divide-border/10">
                                                                                         {getSortedTickets(groupedTickets[date].tickets).map((ticket) => (
                                                                                             <tr key={ticket.Ticket} className="hover:bg-primary/[0.01] transition-colors group/row">
-                                                                                                <td className="px-5 py-4 font-medium text-primary text-sm tracking-tighter cursor-default">{ticket.Ticket}</td>
+                                                                                                <td className="px-5 py-4 font-data text-primary text-sm cursor-default">{ticket.Ticket}</td>
                                                                                                 <td className="px-2 py-4 text-center">
                                                                                                     <div className="flex flex-col items-center">
                                                                                                         <span className="text-[10px] font-bold text-muted-foreground">{ticket.FechaVisita ? new Date(ticket.FechaVisita).toLocaleDateString('es-PE', {day:'2-digit', month:'2-digit'}) : '-'}</span>
@@ -1945,11 +1945,11 @@ export default function ValuationsPage() {
                                                                                                         )
                                                                                                     ) : (
                                                                                                         <div className="flex flex-col items-end">
-                                                                                                            <span className="font-bold text-sm tracking-tighter text-foreground/80">
+                                                                                                            <span className="font-data text-sm text-foreground/80">
                                                                                                                 S/ {(ticket.TarifaBase + (ticket.Adicionales || 0)).toLocaleString('es-PE', { minimumFractionDigits: 2 })}
                                                                                                             </span>
                                                                                                             {(ticket.Adicionales || 0) > 0 && (
-                                                                                                                <span className="text-[9px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded mt-0.5 border border-emerald-100">
+                                                                                                                <span className="text-[9px] font-data text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded mt-0.5 border border-emerald-100">
                                                                                                                     +S/ {ticket.Adicionales.toLocaleString('es-PE', { minimumFractionDigits: 2 })} adic.
                                                                                                                 </span>
                                                                                                             )}
@@ -2098,7 +2098,7 @@ export default function ValuationsPage() {
                                                     const isAnulled = penalty.Estado === 'Anulado';
                                                     return (
                                                     <div key={penalty.Id} className={cn(
-                                                        "bg-red-50/20 border border-red-100 rounded-2xl p-6 flex items-center justify-between hover:border-red-500/30 transition-all group relative overflow-hidden",
+                                                        "crypto-card p-6 flex items-center justify-between hover:border-red-500/30 transition-all group relative overflow-hidden",
                                                         isAnulled && "opacity-60 bg-slate-50/50 border-slate-200 grayscale-[0.5]"
                                                     )}>
                                                         <div className="flex items-center gap-6">
@@ -2137,10 +2137,10 @@ export default function ValuationsPage() {
                                                         <div className="flex flex-col items-end gap-3">
                                                             <div className="text-right">
                                                                 <p className={cn(
-                                                                    "text-2xl font-black tracking-tighter", 
+                                                                    "text-2xl font-data", 
                                                                     isAnulled ? "text-slate-400 line-through" : (effectivePenaltyIds.has(penalty.Id) ? "text-red-600" : "text-amber-500 opacity-60")
                                                                 )}>
-                                                                    - S/ {penalty.Importe.toLocaleString()}
+                                                                    - S/ {penalty.Importe.toLocaleString('es-PE', { minimumFractionDigits: 2 })}
                                                                 </p>
                                                                 <span className="text-[9px] font-black text-muted-foreground opacity-30 italic">Débito CAS</span>
                                                             </div>
@@ -2194,10 +2194,10 @@ export default function ValuationsPage() {
                         ) : (
                             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                                 {closures.map((closure) => (
-                                    <div key={closure.IdCierre} className="p-6 bg-card border border-border rounded-2xl hover:border-primary/50 transition-all group">
+                                    <div key={closure.IdCierre} className="p-6 crypto-card hover:border-primary/50 transition-all group">
                                         <div className="flex items-center justify-between mb-4">
-                                            <span className="text-sm font-black text-primary bg-primary/5 px-2.5 py-1 rounded-lg">{closure.Codigo_Valorizacion || `ID-${closure.IdCierre}`}</span>
-                                            <span className="text-[10px] font-black text-muted-foreground bg-muted px-2 py-0.5 rounded uppercase">Cerrado</span>
+                                            <span className="text-sm font-data text-primary bg-primary/5 px-2.5 py-1 rounded-lg">{closure.Codigo_Valorizacion || `ID-${closure.IdCierre}`}</span>
+                                            <span className="text-[10px] font-bold text-muted-foreground bg-muted px-2 py-0.5 rounded uppercase">Cerrado</span>
                                         </div>
                                         <div className="space-y-1 mb-4">
                                             <h4 className="font-black text-slate-800 text-lg">{closure.Nombre_CAS}</h4>
@@ -2215,8 +2215,8 @@ export default function ValuationsPage() {
                                         </div>
                                         <div className="flex justify-between items-end">
                                             <div>
-                                                <p className="text-xs font-bold text-muted-foreground mb-1 uppercase opacity-30">Total Neto</p>
-                                                <p className="text-2xl font-black text-emerald-600 tracking-tighter">S/ {closure.Total_Final.toLocaleString()}</p>
+                                                <p className="text-[10px] font-bold text-muted-foreground mb-1 uppercase opacity-30">Total Neto</p>
+                                                <p className="text-2xl font-data text-emerald-600">S/ {closure.Total_Final.toLocaleString('es-PE', { minimumFractionDigits: 2 })}</p>
                                             </div>
                                             <div className="flex gap-2">
                                                 <button 

@@ -1,18 +1,20 @@
 .counter {
+  font-family: var(--font-mono);
   font-size: 16px;
-  padding: 5px 10px;
-  border-radius: 5px;
-  color: var(--accent);
-  background: var(--accent-bg);
-  border: 2px solid transparent;
-  transition: border-color 0.3s;
+  padding: 8px 16px;
+  border-radius: var(--radius);
+  color: var(--primary);
+  background: var(--muted);
+  border: 1px solid var(--border);
+  transition: all 0.3s;
   margin-bottom: 24px;
 
   &:hover {
-    border-color: var(--accent-border);
+    border-color: var(--primary);
+    background: var(--card);
   }
   &:focus-visible {
-    outline: 2px solid var(--accent);
+    outline: 2px solid var(--primary);
     outline-offset: 2px;
   }
 }
@@ -116,19 +118,21 @@
   }
 
   a {
-    color: var(--text-h);
+    color: var(--foreground);
     font-size: 16px;
-    border-radius: 6px;
-    background: var(--social-bg);
+    border-radius: var(--radius);
+    background: var(--muted);
     display: flex;
     padding: 6px 12px;
     align-items: center;
     gap: 8px;
     text-decoration: none;
-    transition: box-shadow 0.3s;
+    transition: all 0.3s;
 
     &:hover {
-      box-shadow: var(--shadow);
+      box-shadow: 0 1px 3px rgba(5,15,26,0.06);
+      background: var(--card);
+      color: var(--primary);
     }
     .button-icon {
       height: 18px;

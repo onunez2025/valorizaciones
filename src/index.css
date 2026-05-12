@@ -1,119 +1,136 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap');
 @import "tailwindcss";
 
 @theme {
-  --font-sans: 'Lato', ui-sans-serif, system-ui, sans-serif;
+  --font-sans: 'DM Sans', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 
-  --color-background: hsl(var(--background));
-  --color-foreground: hsl(var(--foreground));
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
 
-  --color-card: hsl(var(--card));
-  --color-card-foreground: hsl(var(--card-foreground));
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
 
-  --color-popover: hsl(var(--popover));
-  --color-popover-foreground: hsl(var(--popover-foreground));
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
 
-  --color-primary: hsl(var(--primary));
-  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-hover: var(--primary-hover);
 
-  --color-secondary: hsl(var(--secondary));
-  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
 
-  --color-muted: hsl(var(--muted));
-  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
 
-  --color-accent: hsl(var(--accent));
-  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
 
-  --color-destructive: hsl(var(--destructive));
-  --color-destructive-foreground: hsl(var(--destructive-foreground));
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
 
-  --color-border: hsl(var(--border));
-  --color-input: hsl(var(--input));
-  --color-ring: hsl(var(--ring));
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-error: var(--error);
 
   --radius-lg: var(--radius);
   --radius-md: calc(var(--radius) - 2px);
   --radius-sm: calc(var(--radius) - 4px);
+  --radius-card: 12px;
+  --radius-chip: 6px;
 }
 
 @layer base {
   * {
-    @apply border-border;
+    border-color: var(--border);
   }
   body {
-    @apply bg-background text-foreground;
+    background-color: var(--background);
+    color: var(--foreground);
     font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
+
   :root {
-    --background: 210 40% 98%;
-    --foreground: 222.2 84% 4.9%;
+    /* Design Tokens - Crypto Blue */
+    --background: #F9FAFB;
+    --foreground: #050F1A;
 
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card: #FFFFFF;
+    --card-foreground: #050F1A;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover: #FFFFFF;
+    --popover-foreground: #050F1A;
 
-    --primary: 221.2 83.2% 53.3%;
-    --primary-foreground: 210 40% 98%;
+    --primary: #4C5F80;
+    --primary-foreground: #FFFFFF;
+    --primary-hover: #707F99;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    --secondary: #5B616E;
+    --secondary-foreground: #FFFFFF;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted: #F3F4F6;
+    --muted-foreground: #8A919E;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --accent: #F3F4F6;
+    --accent-foreground: #4C5F80;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: #DF2935;
+    --destructive-foreground: #FFFFFF;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 221.2 83.2% 53.3%;
+    --success: #05B169;
+    --warning: #F0AD4E;
+    --error: #DF2935;
 
-    --radius: 0.5rem;
+    --border: #D1D5DB;
+    --input: #D1D5DB;
+    --ring: #4C5F80;
+
+    --radius: 8px;
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
+    --background: #050F1A;
+    --foreground: #F9FAFB;
 
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
+    --card: #0A1929;
+    --card-foreground: #F9FAFB;
 
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
+    --popover: #0A1929;
+    --popover-foreground: #F9FAFB;
 
-    --primary: 217.2 91.2% 59.8%;
-    --primary-foreground: 222.2 47.4% 11.2%;
+    --primary: #707F99;
+    --primary-foreground: #FFFFFF;
+    
+    --secondary: #5B616E;
+    --secondary-foreground: #F9FAFB;
 
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
+    --muted: #1E293B;
+    --muted-foreground: #94A3B8;
 
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
+    --accent: #1E293B;
+    --accent-foreground: #F9FAFB;
 
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
+    --destructive: #DF2935;
+    --destructive-foreground: #FFFFFF;
 
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 224.3 76.3% 48%;
+    --border: #334155;
+    --input: #334155;
+    --ring: #707F99;
   }
 }
 
 @layer base {
+  /* Default font smoothing */
   body {
-    cursor: url('/cursor.png'), auto !important;
-  }
-
-  a, button, [role="button"], input[type="button"], input[type="submit"] {
-    cursor: url('/cursor.png'), pointer !important;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
   /* Custom Scrollbar - EBM Style */
@@ -167,4 +184,84 @@
 
 .zoom-in-95 {
   animation-name: zoomIn95;
+}
+
+@layer utilities {
+  .font-data {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+  }
+  
+  .crypto-card {
+    background-color: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.25rem;
+    transition: border-color 0.2s ease;
+  }
+  
+  .crypto-card:hover {
+    border-color: var(--primary);
+  }
+  
+  .crypto-btn-primary {
+    background-color: var(--primary);
+    color: var(--primary-foreground);
+    font-weight: 700;
+    height: 44px;
+    padding: 0 1.25rem;
+    border-radius: var(--radius);
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    font-family: var(--font-sans);
+    border: none;
+    cursor: pointer;
+  }
+  
+  .crypto-btn-primary:hover {
+    background-color: var(--primary-hover);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  }
+
+  .crypto-btn-secondary {
+    background-color: var(--card);
+    color: var(--foreground);
+    border: 1px solid var(--border);
+    font-weight: 700;
+    height: 44px;
+    padding: 0 1.25rem;
+    border-radius: var(--radius);
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    font-family: var(--font-sans);
+    cursor: pointer;
+  }
+  
+  .crypto-btn-secondary:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+  }
+
+  .crypto-table-header {
+    font-size: 12px;
+    text-transform: uppercase;
+    color: var(--muted-foreground);
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    padding: 0.75rem 1rem;
+  }
+
+  .text-crypto-success {
+    color: var(--success);
+  }
+
+  .text-crypto-error {
+    color: var(--error);
+  }
 }
