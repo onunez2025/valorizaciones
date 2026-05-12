@@ -73,7 +73,7 @@ export default function MaterialsPage() {
     };
 
     return (
-        <div className="flex flex-col h-full gap-5 animate-in fade-in duration-500 p-1">
+        <div className="flex flex-col h-full overflow-hidden gap-5 animate-in fade-in duration-500 p-1">
             {/* Header */}
             <div className="flex items-center justify-between px-1">
                 <div>

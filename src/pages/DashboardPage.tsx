@@ -132,7 +132,7 @@ export default function DashboardPage() {
     );
 
     return (
-        <div className="p-1 space-y-4 animate-in fade-in duration-700">
+        <div className="flex-1 overflow-y-auto p-1 space-y-4 animate-in fade-in duration-700 custom-scrollbar">
             {/* Header Section - Estilo Liquidaciones */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>

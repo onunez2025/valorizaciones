@@ -166,7 +166,7 @@ export default function TarifarioPage() {
     );
 
     return (
-        <div className="flex flex-col h-full gap-6 animate-in fade-in duration-500 p-1">
+        <div className="flex flex-col h-full overflow-hidden gap-6 animate-in fade-in duration-500 p-1">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                     <h1 className="text-2xl font-bold tracking-tight text-foreground">Tarifario de Servicios</h1>

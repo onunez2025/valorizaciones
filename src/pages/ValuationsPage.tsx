@@ -1458,7 +1458,7 @@ export default function ValuationsPage() {
     };
 
     return (
-        <div className="flex flex-col h-full gap-5 animate-in fade-in duration-500 p-1">
+        <div className="flex flex-col h-full overflow-hidden gap-5 animate-in fade-in duration-500 p-1">
             {/* Cabecera */}
             <div className="flex items-center justify-between px-1">
                 <div>
@@ -1695,8 +1695,8 @@ export default function ValuationsPage() {
                 <div className="flex-1 min-h-0">
                     <div className="grid grid-cols-1 xl:grid-cols-4 gap-6 h-full pb-2">
                         {/* Resumen */}
-                        <div className="xl:col-span-1 h-full">
-                            <div className="crypto-card p-6 h-full flex flex-col justify-between">
+                        <div className="xl:col-span-1 h-full min-h-0">
+                            <div className="crypto-card p-6 h-full flex flex-col justify-between overflow-y-auto custom-scrollbar">
                                 <div className="space-y-6">
                                     <div className="flex items-center justify-between">
                                         <h3 className="text-[11px] font-bold text-muted-foreground">Resumen de Cuenta</h3>

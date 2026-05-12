@@ -10,7 +10,8 @@ export type Permission =
   | 'val.tarifario.edit'
   | 'val.config.view'
   | 'val.config.users'
-  | 'val.config.roles';
+  | 'val.config.roles'
+  | 'val.config.audit';
 
 export interface User {
   id: string;
