@@ -1394,7 +1394,7 @@ app.get('/api/dashboard/stats', verifyToken, async (req: Request, res: Response)
                 SELECT s.Ticket, 
                     CASE WHEN LEFT(s.NombreTecnico, 3) IN ('SB2', 'SS ', 'AC ', 'EMS', 'SIL', 'VYA', 'SEY', 'TP ', 'TYG', 'FSI', 'LM ', 'TCP', 'MG ', 'AYD', 'SLR', 'REY', 'VR ', 'LV ', 'MR ', 'AXX', 'COT', 'SNT', 'NUL') 
                     THEN LEFT(s.NombreTecnico, 3) ELSE 'GAC' END as Prefix,
-                    s.IdServicio, s.CodigoExternoEquipo, s.FechaVisita, s.CheckOut
+                    s.IdServicio, s.CodigoExternoEquipo, s.FechaVisita, s.CheckOut, s.Ciudad, s.Distrito, s.NombreEquipo
                 FROM [SIATC].[Dashboard_FSM] s
                 WHERE s.CheckOut >= @start AND s.CheckOut < DATEADD(DAY, 1, @end)
                   AND s.Estado = 'Closed'
@@ -1424,7 +1424,7 @@ app.get('/api/dashboard/stats', verifyToken, async (req: Request, res: Response)
                     IdServicio, 
                     Categoria, 
                     SUM(CASE 
-                        WHEN s.IdServicio = 'Visita' OR s.Servicio = 'Visita' THEN 0
+                        WHEN IdServicio = 'Visita' THEN 0
                         WHEN DATEDIFF(day, FechaVisita, CheckOut) > 1 THEN 0 
                         WHEN LEFT(CodigoExternoEquipo, 4) NOT IN ('3120', '3121', '5120', '5121') THEN 0
                         ELSE 1 
@@ -1522,7 +1522,7 @@ app.get('/api/dashboard/trends', verifyToken, async (req: Request, res: Response
 
         let query = `
             WITH TicketsFilt AS (
-                SELECT s.Ticket, s.CheckOut, s.IdServicio, s.CodigoExternoEquipo, s.FechaVisita,
+                SELECT s.Ticket, s.CheckOut, s.IdServicio, s.CodigoExternoEquipo, s.FechaVisita, s.Ciudad, s.Distrito,
                     CASE WHEN LEFT(s.NombreTecnico, 3) IN ('SB2', 'SS ', 'AC ', 'EMS', 'SIL', 'VYA', 'SEY', 'TP ', 'TYG', 'FSI', 'LM ', 'TCP', 'MG ', 'AYD', 'SLR', 'REY', 'VR ', 'LV ', 'MR ', 'AXX', 'COT', 'SNT', 'NUL') 
                     THEN LEFT(s.NombreTecnico, 3) ELSE 'GAC' END as Prefix
                 FROM [SIATC].[Dashboard_FSM] s
