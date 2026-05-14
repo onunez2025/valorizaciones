@@ -912,12 +912,16 @@ app.get('/api/tickets/search/:ruc', verifyToken, async (req: Request, res: Respo
 
 app.post('/api/valuations/close', verifyToken, async (req: Request, res: Response) => {
     const { 
+        idCierre, // Si viene idCierre, es una actualización de un borrador
         ruc, nombreCas, start, end, 
         totalServicios, totalPenalidades, 
         subtotalServicios, subtotalPenalidades, 
         totalFinal, cerradoPor,
-        details // Esperamos un array de objetos { ticket, monto, fecha, tipo, servicio, categoria }
+        estado, // 'BORRADOR' o 'CERRADO'
+        details 
     } = req.body;
+
+    const finalEstado = estado || 'CERRADO';
 
     try {
         const db = await getDb();
@@ -925,43 +929,82 @@ app.post('/api/valuations/close', verifyToken, async (req: Request, res: Respons
         await transaction.begin();
 
         try {
-            const request = new sql.Request(transaction);
-            
-            // 1. Insertar Cabecera
-            const result = await request
-                .input('ruc', ruc)
-                .input('nombreCas', nombreCas)
-                .input('start', start)
-                .input('end', end)
-                .input('totalServicios', totalServicios)
-                .input('totalPenalidades', totalPenalidades)
-                .input('subtotalServicios', subtotalServicios)
-                .input('subtotalPenalidades', subtotalPenalidades)
-                .input('totalFinal', totalFinal)
-                .input('cerradoPor', cerradoPor)
-                .query(`
-                    INSERT INTO [dbo].[GAC_APP_TB_VALORIZACIONES_CIERRES] 
-                    (RUC, Nombre_CAS, Fecha_Inicio, Fecha_Fin, Total_Servicios, Total_Penalidades, Subtotal_Servicios, Subtotal_Penalidades, Total_Final, Cerrado_Por, Cerrado_El, Estado)
-                    VALUES (@ruc, @nombreCas, @start, @end, @totalServicios, @totalPenalidades, @subtotalServicios, @subtotalPenalidades, @totalFinal, @cerradoPor, GETDATE(), 'CERRADO')
-                    SELECT SCOPE_IDENTITY() as IdCierre
-                `);
-            
-            const idCierre = result.recordset[0].IdCierre;
-            const year = new Date().getFullYear();
-            const businessCode = `VAL-${year}-${idCierre.toString().padStart(5, '0')}`;
+            let actualIdCierre = idCierre;
+            let businessCode = '';
 
-            // 1.1 Actualizar con el código de negocio
-            await new sql.Request(transaction)
-                .input('id', idCierre)
-                .input('code', businessCode)
-                .query("UPDATE [dbo].[GAC_APP_TB_VALORIZACIONES_CIERRES] SET Codigo_Valorizacion = @code WHERE IdCierre = @id");
+            if (actualIdCierre) {
+                // 1. Actualizar Cabecera
+                await new sql.Request(transaction)
+                    .input('id', actualIdCierre)
+                    .input('totalServicios', totalServicios)
+                    .input('totalPenalidades', totalPenalidades)
+                    .input('subtotalServicios', subtotalServicios)
+                    .input('subtotalPenalidades', subtotalPenalidades)
+                    .input('totalFinal', totalFinal)
+                    .input('estado', finalEstado)
+                    .input('user', cerradoPor)
+                    .query(`
+                        UPDATE [dbo].[GAC_APP_TB_VALORIZACIONES_CIERRES]
+                        SET Total_Servicios = @totalServicios,
+                            Total_Penalidades = @totalPenalidades,
+                            Subtotal_Servicios = @subtotalServicios,
+                            Subtotal_Penalidades = @subtotalPenalidades,
+                            Total_Final = @totalFinal,
+                            Estado = @estado,
+                            Cerrado_Por = @user,
+                            Cerrado_El = GETDATE()
+                        WHERE IdCierre = @id
+                    `);
+                
+                // 1.1 Obtener código existente
+                const codeResult = await new sql.Request(transaction)
+                    .input('id', actualIdCierre)
+                    .query("SELECT Codigo_Valorizacion FROM [dbo].[GAC_APP_TB_VALORIZACIONES_CIERRES] WHERE IdCierre = @id");
+                businessCode = codeResult.recordset[0]?.Codigo_Valorizacion;
 
-            // 2. Insertar Detalles
+                // 2. Limpiar detalles antiguos
+                await new sql.Request(transaction)
+                    .input('id', actualIdCierre)
+                    .query("DELETE FROM [dbo].[GAC_APP_TB_VALORIZACIONES_DETALLE] WHERE IdCierre = @id");
+
+            } else {
+                // 1. Insertar Cabecera Nueva
+                const result = await new sql.Request(transaction)
+                    .input('ruc', ruc)
+                    .input('nombreCas', nombreCas)
+                    .input('start', start)
+                    .input('end', end)
+                    .input('totalServicios', totalServicios)
+                    .input('totalPenalidades', totalPenalidades)
+                    .input('subtotalServicios', subtotalServicios)
+                    .input('subtotalPenalidades', subtotalPenalidades)
+                    .input('totalFinal', totalFinal)
+                    .input('cerradoPor', cerradoPor)
+                    .input('estado', finalEstado)
+                    .query(`
+                        INSERT INTO [dbo].[GAC_APP_TB_VALORIZACIONES_CIERRES] 
+                        (RUC, Nombre_CAS, Fecha_Inicio, Fecha_Fin, Total_Servicios, Total_Penalidades, Subtotal_Servicios, Subtotal_Penalidades, Total_Final, Cerrado_Por, Cerrado_El, Estado)
+                        VALUES (@ruc, @nombreCas, @start, @end, @totalServicios, @totalPenalidades, @subtotalServicios, @subtotalPenalidades, @totalFinal, @cerradoPor, GETDATE(), @estado)
+                        SELECT SCOPE_IDENTITY() as IdCierre
+                    `);
+                
+                actualIdCierre = result.recordset[0].IdCierre;
+                const year = new Date().getFullYear();
+                businessCode = `VAL-${year}-${actualIdCierre.toString().padStart(5, '0')}`;
+
+                // 1.1 Actualizar con el código de negocio
+                await new sql.Request(transaction)
+                    .input('id', actualIdCierre)
+                    .input('code', businessCode)
+                    .query("UPDATE [dbo].[GAC_APP_TB_VALORIZACIONES_CIERRES] SET Codigo_Valorizacion = @code WHERE IdCierre = @id");
+            }
+
+            // 2. Insertar Detalles (Nuevos o Actualizados)
             if (details && Array.isArray(details)) {
                 for (const item of details) {
                     const detailRequest = new sql.Request(transaction);
                     await detailRequest
-                        .input('idCierre', idCierre)
+                        .input('idCierre', actualIdCierre)
                         .input('ticket', item.ticket)
                         .input('monto', item.monto)
                         .input('fecha', item.fecha)
@@ -987,17 +1030,38 @@ app.post('/api/valuations/close', verifyToken, async (req: Request, res: Respons
             }
 
             await transaction.commit();
-            await logAudit(req, 'CLOSE_FORTNIGHT', 'VALUATION', businessCode, { ruc, totalFinal });
-            res.json({ success: true, message: "Quincena cerrada correctamente.", idCierre, codigo: businessCode });
+            await logAudit(req, finalEstado === 'BORRADOR' ? 'SAVE_DRAFT' : 'CLOSE_FORTNIGHT', 'VALUATION', businessCode, { ruc, totalFinal });
+            res.json({ 
+                success: true, 
+                message: finalEstado === 'BORRADOR' ? "Borrador guardado correctamente." : "Quincena cerrada correctamente.", 
+                idCierre: actualIdCierre, 
+                codigo: businessCode 
+            });
         } catch (error) {
             await transaction.rollback();
             throw error;
         }
     } catch (err: any) { 
-        console.error("Error en cierre:", err);
+        console.error("Error en operación de valorización:", err);
         res.status(500).json({ error: err.message }); 
     }
 });
+
+app.post('/api/valuations/finalize/:id', verifyToken, async (req: Request, res: Response) => {
+    const { id } = req.params;
+    try {
+        const db = await getDb();
+        await db.request()
+            .input('id', id)
+            .query("UPDATE [dbo].[GAC_APP_TB_VALORIZACIONES_CIERRES] SET Estado = 'CERRADO', Cerrado_El = GETDATE() WHERE IdCierre = @id");
+        
+        await logAudit(req, 'FINALIZE_DRAFT', 'VALUATION', id, { status: 'CERRADO' });
+        res.json({ success: true, message: "Valorización cerrada correctamente." });
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 
 app.post('/api/valuations/reopen/:id', verifyToken, verifyPermission('VAL.REOPEN'), async (req: Request, res: Response) => {
     const { id } = req.params;

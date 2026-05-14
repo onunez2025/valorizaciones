@@ -47,6 +47,7 @@ export default function ValuationsPage() {
     
     // Historial de Cierres
     const [viewMode, setViewMode] = useState<'current' | 'history'>('current');
+    const [currentDraft, setCurrentDraft] = useState<any>(null); // State for the draft being edited
     const [closures, setClosures] = useState<any[]>([]);
     const [loadingHistory, setLoadingHistory] = useState(false);
     const [selectedClosure, setSelectedClosure] = useState<any | null>(null);
@@ -199,11 +200,22 @@ export default function ValuationsPage() {
             return;
         }
         setLoadingData(true);
+        setCurrentDraft(null); // Reset current draft
         try {
-            await Promise.all([
-                ApiClient.request(`/valuations/${selectedCas.RUC}?start=${startDate}&end=${endDate}`).then(setTickets),
-                ApiClient.request(`/penalties/${selectedCas.RUC}?start=${startDate}&end=${endDate}`).then(setPenalties)
+            const [ticketsData, penaltiesData, closuresData] = await Promise.all([
+                ApiClient.request(`/valuations/${selectedCas.RUC}?start=${startDate}&end=${endDate}`),
+                ApiClient.request(`/penalties/${selectedCas.RUC}?start=${startDate}&end=${endDate}`),
+                ApiClient.request(`/closures?ruc=${selectedCas.RUC}&start=${startDate}&end=${endDate}`)
             ]);
+
+            setTickets(ticketsData);
+            setPenalties(penaltiesData);
+
+            // Check if there is an active draft for this period
+            const draft = closuresData.find((c: any) => c.Estado === 'BORRADOR');
+            if (draft) {
+                setCurrentDraft(draft);
+            }
         } catch (error: any) {
             if (error.message === 'AUTH_EXPIRED') return;
             console.error("Error fetching valuation:", error);
@@ -334,29 +346,30 @@ export default function ValuationsPage() {
             setIsSendingEmail(false);
         }
     };
+     const handlePreparePreValuationEmail = async () => {
+        if (!selectedCas) return;
+        
+        // Save draft first
+        const draft = await handleSaveDraft();
+        if (!draft) return; // Error saving draft
 
-    const handlePreparePreValuationEmail = async () => {
-        if (!selectedCas || tickets.length === 0) return;
-        // Re-use logic from handleExportExcel but instead of downloading, set pendingEmailData
         const workbook = new ExcelJS.Workbook();
         const sheetResumen = workbook.addWorksheet('Resumen');
         const sheetDetalle = workbook.addWorksheet('Detalle Servicios');
         const sheetPenalties = workbook.addWorksheet('Detalle Penalidades');
 
-        // --- HOJA RESUMEN ---
+        // Headers setup
         sheetResumen.columns = [{ width: 35 }, { width: 15 }, { width: 25 }];
-        
-        // Header
         const headerRow = sheetResumen.getRow(1);
-        headerRow.getCell(1).value = 'REPORTE DE CIERRE DE VALORIZACIÓN';
+        headerRow.getCell(1).value = 'PRE-VALORIZACIÓN DE SERVICIOS';
         headerRow.getCell(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
         headerRow.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E3A8A' } };
         sheetResumen.mergeCells('A1:C1');
 
         const info = [
-            ['CÓDIGO:', 'PRE-VALORIZACION'],
             ['CAS:', selectedCas.Nombre_CAS],
-            ['Periodo:', `${startDate} al ${endDate}`]
+            ['Periodo:', `${startDate} al ${endDate}`],
+            ['Estado:', 'BORRADOR - SUJETO A REVISIÓN']
         ];
 
         info.forEach((row, i) => {
@@ -366,9 +379,7 @@ export default function ValuationsPage() {
             r.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E3A8A' } };
             r.getCell(2).value = row[1];
             sheetResumen.mergeCells(`B${i + 2}:C${i + 2}`);
-            [1, 2, 3].forEach(col => {
-                r.getCell(col).border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
-            });
+            [1, 2, 3].forEach(col => { r.getCell(col).border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } }; });
         });
 
         // Summary Table
@@ -385,120 +396,36 @@ export default function ValuationsPage() {
             ['Servicios Realizados', tickets.length, totalTickets],
             ['Penalidades y Descuentos', activePenalties.length, -totalPenalties],
             ['', '', ''],
-            ['TOTAL A FACTURAR', '', grandTotal]
+            ['TOTAL NETO ESTIMADO', '', grandTotal]
         ];
 
         summaryData.forEach((row, i) => {
             const r = sheetResumen.getRow(summaryStartRow + 1 + i);
             r.values = row;
-            if (i === 3) {
-                r.getCell(1).font = { bold: true };
-                r.getCell(3).font = { bold: true };
-            }
-            r.getCell(3).numFmt = '"S/" #,##0.00';
-            r.eachCell(c => {
-                c.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
-            });
-        });
-
-        // Group by Date Table
-        const dateBreakdownStartRow = summaryStartRow + 6;
-        const dateHeaderRow = sheetResumen.getRow(dateBreakdownStartRow);
-        dateHeaderRow.values = ['Etiquetas de fila', 'Cuenta de TICKET', 'Suma de MONTO'];
-        dateHeaderRow.eachCell(c => {
-            c.font = { bold: true, color: { argb: 'FFFFFFFF' } };
-            c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E3A8A' } }; 
-            c.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
-        });
-
-        const breakdownMap = new Map<string, { count: number, total: number }>();
-        tickets.forEach(t => {
-            const dateVal = t.FechaCierre || t.Fecha;
-            if (!dateVal) return;
-            const d = new Date(dateVal);
-            const dateStr = d.toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' });
-            const current = breakdownMap.get(dateStr) || { count: 0, total: 0 };
-            breakdownMap.set(dateStr, {
-                count: current.count + 1,
-                total: current.total + (t.TarifaBase + (t.Adicionales || 0))
-            });
-        });
-
-        const sortedDatesArr = Array.from(breakdownMap.keys()).sort((a, b) => {
-            const [da, ma, ya] = a.split('/').map(Number);
-            const [db, mb, yb] = b.split('/').map(Number);
-            return new Date(ya, ma - 1, da).getTime() - new Date(yb, mb - 1, db).getTime();
-        });
-
-        sortedDatesArr.forEach((dateStr, i) => {
-            const data = breakdownMap.get(dateStr)!;
-            const r = sheetResumen.getRow(dateBreakdownStartRow + 1 + i);
-            r.values = [dateStr, data.count, data.total];
+            if (i === 3) { r.getCell(1).font = { bold: true }; r.getCell(3).font = { bold: true }; }
             r.getCell(3).numFmt = '"S/" #,##0.00';
             r.eachCell(c => { c.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } }; });
         });
 
-        const footerRow = sheetResumen.getRow(dateBreakdownStartRow + 1 + sortedDatesArr.length);
-        footerRow.values = ['Total general', tickets.length, totalTickets];
-        footerRow.eachCell(c => {
-            c.font = { bold: true, color: { argb: 'FFFFFFFF' } };
-            c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E3A8A' } };
-            c.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
-        });
-        footerRow.getCell(3).numFmt = '"S/" #,##0.00';
-
-        // --- HOJA DETALLE ---
-        const dHeaders = ["TICKET", "FECHA VISITA", "FECHA CIERRE", "DÍAS DIF.", "SERVICIO", "TECNICO", "COMENTARIO TECNICO", "COMENTARIO EXTERNO", "CÓD. EQUIPO", "DESCRIPCIÓN EQUIPO", "CATEGORÍA", "CATEGORÍA VIRTUAL", "DISTRITO", "DEPARTAMENTO", "TARIFA BASE", "ADICIONALES", "TOTAL"];
-        sheetDetalle.getRow(1).values = dHeaders;
-        sheetDetalle.getRow(1).eachCell(c => {
-            c.font = { bold: true, color: { argb: 'FFFFFFFF' } };
-            c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E3A8A' } };
-            c.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
-        });
-
-        tickets.forEach(t => {
-            const row = sheetDetalle.addRow([
-                t.Ticket,
-                t.FechaVisita ? new Date(t.FechaVisita) : null,
-                t.FechaCierre ? new Date(t.FechaCierre) : new Date(t.Fecha),
-                t.DiasDiferencia ?? '-',
-                t.ServicioNombre || t.Servicio,
-                `${t.NombreTecnico || ''} ${t.ApellidoTecnico || ''}`.trim() || '-',
-                t.ComentarioTecnico || '-',
-                t.ComentarioAuditoria || '-',
-                t.CodigoEquipo || '-',
-                t.NombreEquipo || '-',
-                t.Categoria,
-                (t.EsInstitucional === true || t.EsInstitucional === 'true') ? "OBRAS" : "-",
-                t.Distrito || '-',
-                t.Departamento || '-',
-                t.TarifaBase,
-                t.Adicionales || 0,
-                (t.TarifaBase + (t.Adicionales || 0))
-            ]);
-            row.getCell(2).numFmt = 'dd/mm/yyyy';
-            row.getCell(3).numFmt = 'dd/mm/yyyy';
-            row.getCell(15).numFmt = '"S/" #,##0.00';
-            row.getCell(16).numFmt = '"S/" #,##0.00';
-            row.getCell(17).numFmt = '"S/" #,##0.00';
-            row.eachCell(c => { c.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} }; });
-        });
-        sheetDetalle.columns.forEach(col => { col.width = 18; });
-
-        // --- HOJA PENALIDADES ---
-        const pHeaders = ["ID", "FECHA", "MOTIVO", "DESCRIPCIÓN", "TICKET REF.", "ESTADO", "ESTADO VALORIZACIÓN", "IMPORTE ORIGINAL", "IMPORTE APLICADO", "REGISTRADO POR"];
-        sheetPenalties.getRow(1).values = pHeaders;
-        sheetPenalties.getRow(1).eachCell(c => {
-            c.font = { bold: true, color: { argb: 'FFFFFFFF' } };
-            c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E3A8A' } };
-        });
-        activePenalties.forEach(p => {
-            const row = sheetPenalties.addRow([p.Id, new Date(p.Fecha), p.Motivo, p.Descripcion, p.Ticket || '-', p.Estado, -p.Importe, p.CreadoPor || 'N/D']);
-            row.getCell(2).numFmt = 'dd/mm/yyyy';
+        // Services Detail
+        const sHeaders = ["TICKET", "FECHA", "SERVICIO", "TECNICO", "CATEGORIA", "DISTRITO", "TARIFA BASE", "ADICIONALES", "TOTAL"];
+        sheetDetalle.getRow(1).values = sHeaders;
+        sheetDetalle.getRow(1).eachCell(c => { c.font = { bold: true, color: { argb: 'FFFFFFFF' } }; c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E3A8A' } }; });
+        tickets.forEach(s => {
+            const row = sheetDetalle.addRow([s.Ticket, s.Fecha, s.ServicioNombre, `${s.NombreTecnico || ''} ${s.ApellidoTecnico || ''}`.trim(), s.Categoria, s.Distrito, s.TarifaBase, s.Adicionales || 0, s.TarifaBase + (s.Adicionales || 0)]);
             row.getCell(7).numFmt = '"S/" #,##0.00';
-            row.eachCell(c => { c.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} }; });
+            row.getCell(8).numFmt = '"S/" #,##0.00';
+            row.getCell(9).numFmt = '"S/" #,##0.00';
         });
-        sheetPenalties.columns.forEach(col => { col.width = 18; });
+
+        // Penalties Detail
+        const pHeaders = ["TICKET", "FECHA", "MOTIVO", "CATEGORIA", "ESTADO", "IMPORTE"];
+        sheetPenalties.getRow(1).values = pHeaders;
+        sheetPenalties.getRow(1).eachCell(c => { c.font = { bold: true, color: { argb: 'FFFFFFFF' } }; c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E3A8A' } }; });
+        penalties.forEach(p => {
+            const isEffective = effectivePenaltyIds.has(p.Id);
+            sheetPenalties.addRow([p.Ticket, p.Fecha, p.Motivo, p.Categoria, isEffective ? 'APLICADO' : 'EXCEDIDO', -p.Importe]);
+        });
 
         const buffer = await workbook.xlsx.writeBuffer();
         const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
@@ -570,9 +497,10 @@ export default function ValuationsPage() {
         setPendingEmailData({
             blob,
             filename: `Pre_Valorizacion_${selectedCas.Nombre_CAS.replace(/\s/g, '_')}.xlsx`,
-            subject: `PRE-VALORIZACIÓN: ${selectedCas.Nombre_CAS} - ${startDate} al ${endDate}`,
+            subject,
             body: bodyContent
         });
+        setEmailTo(selectedCas.Correo || '');
         setShowEmailModal(true);
     };
 
@@ -913,6 +841,104 @@ export default function ValuationsPage() {
         } finally {
             setIsClosing(false);
         }
+    };
+
+    const handleSaveDraft = async () => {
+        if (!selectedCas) return;
+        setIsClosing(true);
+
+        const ticketDetails = tickets.map(t => ({
+            ticket: t.Ticket,
+            monto: t.TarifaBase + (t.Adicionales || 0),
+            fecha: t.Fecha,
+            tipo: 'SERVICIO',
+            servicio: t.ServicioNombre || t.Servicio,
+            categoria: t.EsInstitucional ? `${t.Categoria} [OBRAS]` : t.Categoria,
+            fechaVisita: t.FechaVisita,
+            fechaCierre: t.FechaCierre || t.Fecha,
+            diasDiferencia: t.DiasDiferencia,
+            codigoExterno: t.CodigoEquipo,
+            tarifaBase: t.TarifaBase,
+            adicionales: (t.Adicionales || 0),
+            idReferencia: null,
+            distrito: t.Distrito,
+            departamento: t.Departamento,
+            nombreEquipo: t.NombreEquipo
+        }));
+
+        const penaltyDetails = activePenalties.map(p => {
+            const isEffective = effectivePenaltyIds.has(p.Id);
+            return {
+                ticket: p.Ticket || 'G-DESCUENTO',
+                monto: isEffective ? -p.Importe : 0,
+                fecha: p.Fecha,
+                tipo: 'PENALIDAD',
+                servicio: isEffective ? p.Motivo : `${p.Motivo} (No aplicado - mayor descuento existente)`,
+                categoria: 'DESCUENTO',
+                idReferencia: p.Id
+            };
+        });
+
+        try {
+            const result = await ApiClient.request('/valuations/close', {
+                method: 'POST',
+                body: JSON.stringify({
+                    idCierre: currentDraft?.IdCierre, // Si ya tenemos un borrador, lo actualizamos
+                    ruc: selectedCas.RUC,
+                    nombreCas: selectedCas.Nombre_CAS,
+                    start: startDate,
+                    end: endDate,
+                    totalServicios: tickets.length,
+                    totalPenalidades: penalties.length,
+                    subtotalServicios: totalTickets,
+                    subtotalPenalidades: totalPenalties,
+                    totalFinal: grandTotal,
+                    cerrado_por: "Auditor CAS (Borrador)",
+                    estado: 'BORRADOR',
+                    details: [...ticketDetails, ...penaltyDetails]
+                })
+            });
+            
+            // Actualizar el estado local del borrador
+            setCurrentDraft({
+                IdCierre: result.idCierre,
+                Codigo_Valorizacion: result.codigo,
+                Estado: 'BORRADOR'
+            });
+
+            alert({ 
+                title: "Borrador Guardado", 
+                message: "La pre-valorización se ha guardado correctamente. Ahora puedes enviarla o cerrarla desde el historial.", 
+                type: 'success'
+            });
+            
+            return result;
+        } catch (error: any) {
+            console.error("Error saving draft:", error);
+            alert({ message: "No se pudo guardar el borrador: " + error.message });
+        } finally {
+            setIsClosing(false);
+        }
+    };
+
+    const handleFinalizeDraft = async (closure: any) => {
+        confirm({
+            title: 'Cerrar Valorización',
+            message: `¿Está seguro que desea cerrar definitivamente la valorización ${closure.Codigo_Valorizacion}? Una vez cerrada, ya no podrá modificarse.`,
+            type: 'warning',
+            onConfirm: async () => {
+                try {
+                    await ApiClient.request(`/valuations/finalize/${closure.IdCierre}`, { method: 'POST' });
+                    alert({ title: 'Éxito', message: 'La valorización ha sido cerrada correctamente.', type: 'success' });
+                    handleFetchClosures();
+                    if (currentDraft?.IdCierre === closure.IdCierre) {
+                        setCurrentDraft(null);
+                    }
+                } catch (err: any) {
+                    alert({ title: 'Error', message: err.message || 'No se pudo finalizar.' });
+                }
+            }
+        });
     };
 
     const handlePrepareClosureEmailFromResult = async (closure: any, details: any[]) => {
@@ -2197,7 +2223,12 @@ export default function ValuationsPage() {
                                     <div key={closure.IdCierre} className="p-6 crypto-card hover:border-primary/50 transition-all group">
                                         <div className="flex items-center justify-between mb-4">
                                             <span className="text-sm font-data text-primary bg-primary/5 px-2.5 py-1 rounded-lg">{closure.Codigo_Valorizacion || `ID-${closure.IdCierre}`}</span>
-                                            <span className="text-[10px] font-bold text-muted-foreground bg-muted px-2 py-0.5 rounded uppercase">Cerrado</span>
+                                            <span className={cn(
+                                                "text-[10px] font-black px-2 py-0.5 rounded uppercase",
+                                                closure.Estado === 'BORRADOR' ? "bg-amber-100 text-amber-700" : "bg-muted text-muted-foreground"
+                                            )}>
+                                                {closure.Estado === 'BORRADOR' ? 'Borrador' : 'Cerrado'}
+                                            </span>
                                         </div>
                                         <div className="space-y-1 mb-4">
                                             <h4 className="font-black text-slate-800 text-lg">{closure.Nombre_CAS}</h4>
@@ -2226,6 +2257,15 @@ export default function ValuationsPage() {
                                                 >
                                                     <RotateCcw className="w-5 h-5" />
                                                 </button>
+                                                {closure.Estado === 'BORRADOR' && (
+                                                    <button 
+                                                        onClick={() => handleFinalizeDraft(closure)}
+                                                        className="p-3 bg-emerald-50 text-emerald-600 rounded-xl hover:bg-emerald-600 hover:text-white transition-all shadow-sm border border-emerald-100"
+                                                        title="Cerrar Definitivamente"
+                                                    >
+                                                        <Lock className="w-5 h-5" />
+                                                    </button>
+                                                )}
                                                 <button 
                                                     onClick={() => handleViewClosureDetails(closure)}
                                                     className="p-3 bg-muted rounded-xl hover:bg-primary hover:text-white transition-all shadow-sm"
