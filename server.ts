@@ -1055,7 +1055,7 @@ app.post('/api/valuations/finalize/:id', verifyToken, async (req: Request, res: 
             .input('id', id)
             .query("UPDATE [dbo].[GAC_APP_TB_VALORIZACIONES_CIERRES] SET Estado = 'CERRADO', Cerrado_El = GETDATE() WHERE IdCierre = @id");
         
-        await logAudit(req, 'FINALIZE_DRAFT', 'VALUATION', id, { status: 'CERRADO' });
+        await logAudit(req, 'FINALIZE_DRAFT', 'VALUATION', id as string, { status: 'CERRADO' });
         res.json({ success: true, message: "Valorización cerrada correctamente." });
     } catch (err: any) {
         res.status(500).json({ error: err.message });
