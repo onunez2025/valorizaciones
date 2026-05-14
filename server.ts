@@ -1062,6 +1062,7 @@ app.post('/api/valuations/close', verifyToken, async (req: Request, res: Respons
                 await request.bulk(table);
             }
 
+            await transaction.commit();
 
             res.json({ 
                 success: true, 
