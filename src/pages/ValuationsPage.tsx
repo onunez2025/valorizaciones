@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, Filter, Calendar, ChevronRight, Calculator, Download, AlertTriangle, CheckCircle2, FileText, X, ChevronDown, Briefcase, Building2, Check, Activity, AlertCircle, Info, Lock, ArrowUpDown, Package, History, BarChart2, Eye, PlusCircle, Trash2, DollarSign, Mail, RotateCcw, Pencil } from 'lucide-react';
+import { Search, Filter, Calendar, ChevronRight, Calculator, Download, AlertTriangle, CheckCircle2, FileText, X, ChevronDown, Briefcase, Building2, Check, Activity, AlertCircle, Info, Lock, ArrowUpDown, Package, History, BarChart2, Eye, PlusCircle, Trash2, DollarSign, Mail, RotateCcw, Pencil, Loader2 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import ExcelJS from 'exceljs';
 import { ApiClient } from '../services/apiClient';
@@ -1767,10 +1767,18 @@ export default function ValuationsPage() {
                                     </button>
                                     <button 
                                         onClick={handlePreparePreValuationEmail} 
-                                        disabled={!selectedCas || tickets.length === 0} 
-                                        className="w-full flex items-center justify-center gap-2 p-4 bg-background border border-border rounded-xl text-sm font-bold transition-all disabled:opacity-30 disabled:cursor-not-allowed group hover:bg-indigo-50 hover:border-indigo-200"
+                                        disabled={!selectedCas || tickets.length === 0 || isClosing} 
+                                        className={cn(
+                                            "w-full flex items-center justify-center gap-2 p-4 border rounded-xl text-sm font-bold transition-all disabled:opacity-30 disabled:cursor-not-allowed group",
+                                            isClosing ? "bg-indigo-50 border-indigo-300 text-indigo-700" : "bg-background border-border hover:bg-indigo-50 hover:border-indigo-200"
+                                        )}
                                     >
-                                        <Mail className="w-4 h-4 text-indigo-600 group-hover:scale-110 transition-transform" /> Enviar Pre-Valorización
+                                        {isClosing ? (
+                                            <Loader2 className="w-4 h-4 animate-spin" />
+                                        ) : (
+                                            <Mail className="w-4 h-4 text-indigo-600 group-hover:scale-110 transition-transform" />
+                                        )}
+                                        {isClosing ? "Guardando Borrador..." : "Enviar Pre-Valorización"}
                                     </button>
                                     <button 
                                         onClick={() => setShowCloseModal(true)} 

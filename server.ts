@@ -932,6 +932,20 @@ app.post('/api/valuations/close', verifyToken, async (req: Request, res: Respons
             let actualIdCierre = idCierre;
             let businessCode = '';
 
+            if (!actualIdCierre) {
+                // Fail-safe: Check if a draft already exists for this RUC and period to avoid duplicates
+                const checkDraft = await new sql.Request(transaction)
+                    .input('ruc', ruc)
+                    .input('start', start)
+                    .input('end', end)
+                    .query("SELECT IdCierre, Codigo_Valorizacion FROM [dbo].[GAC_APP_TB_VALORIZACIONES_CIERRES] WHERE RUC = @ruc AND Fecha_Inicio = @start AND Fecha_Fin = @end AND Estado = 'BORRADOR'");
+                
+                if (checkDraft.recordset.length > 0) {
+                    actualIdCierre = checkDraft.recordset[0].IdCierre;
+                    businessCode = checkDraft.recordset[0].Codigo_Valorizacion;
+                }
+            }
+
             if (actualIdCierre) {
                 // 1. Actualizar Cabecera
                 await new sql.Request(transaction)
@@ -956,11 +970,12 @@ app.post('/api/valuations/close', verifyToken, async (req: Request, res: Respons
                         WHERE IdCierre = @id
                     `);
                 
-                // 1.1 Obtener código existente
-                const codeResult = await new sql.Request(transaction)
-                    .input('id', actualIdCierre)
-                    .query("SELECT Codigo_Valorizacion FROM [dbo].[GAC_APP_TB_VALORIZACIONES_CIERRES] WHERE IdCierre = @id");
-                businessCode = codeResult.recordset[0]?.Codigo_Valorizacion;
+                if (!businessCode) {
+                    const codeResult = await new sql.Request(transaction)
+                        .input('id', actualIdCierre)
+                        .query("SELECT Codigo_Valorizacion FROM [dbo].[GAC_APP_TB_VALORIZACIONES_CIERRES] WHERE IdCierre = @id");
+                    businessCode = codeResult.recordset[0]?.Codigo_Valorizacion;
+                }
 
                 // 2. Limpiar detalles antiguos
                 await new sql.Request(transaction)
@@ -1000,37 +1015,59 @@ app.post('/api/valuations/close', verifyToken, async (req: Request, res: Respons
             }
 
             // 2. Insertar Detalles (Nuevos o Actualizados)
-            if (details && Array.isArray(details)) {
+            if (details && Array.isArray(details) && details.length > 0) {
+                const table = new sql.Table('[dbo].[GAC_APP_TB_VALORIZACIONES_DETALLE]');
+                table.create = false;
+                table.columns.add('IdCierre', sql.Int, { nullable: false });
+                table.columns.add('Ticket', sql.VarChar(50), { nullable: true });
+                table.columns.add('Monto', sql.Decimal(18, 2), { nullable: true });
+                table.columns.add('Fecha', sql.DateTime, { nullable: true });
+                table.columns.add('Tipo', sql.VarChar(20), { nullable: true });
+                table.columns.add('Servicio', sql.VarChar(200), { nullable: true });
+                table.columns.add('Categoria', sql.VarChar(100), { nullable: true });
+                table.columns.add('Fecha_Visita', sql.DateTime, { nullable: true });
+                table.columns.add('Fecha_Cierre', sql.DateTime, { nullable: true });
+                table.columns.add('Dias_Diferencia', sql.Int, { nullable: true });
+                table.columns.add('Codigo_Externo', sql.VarChar(100), { nullable: true });
+                table.columns.add('Tarifa_Base', sql.Decimal(18, 2), { nullable: true });
+                table.columns.add('Adicionales', sql.Decimal(18, 2), { nullable: true });
+                table.columns.add('IdReferencia', sql.Int, { nullable: true });
+                table.columns.add('Nombre_Tecnico', sql.VarChar(200), { nullable: true });
+                table.columns.add('Apellido_Tecnico', sql.VarChar(200), { nullable: true });
+                table.columns.add('Comentario_Tecnico', sql.Text, { nullable: true });
+                table.columns.add('Distrito', sql.VarChar(100), { nullable: true });
+                table.columns.add('Departamento', sql.VarChar(100), { nullable: true });
+                table.columns.add('Nombre_Equipo', sql.VarChar(255), { nullable: true });
+
                 for (const item of details) {
-                    const detailRequest = new sql.Request(transaction);
-                    await detailRequest
-                        .input('idCierre', actualIdCierre)
-                        .input('ticket', item.ticket)
-                        .input('monto', item.monto)
-                        .input('fecha', item.fecha)
-                        .input('tipo', item.tipo)
-                        .input('servicio', item.servicio)
-                        .input('categoria', item.categoria)
-                        .input('fv', item.fechaVisita || null)
-                        .input('fc', item.fechaCierre || null)
-                        .input('dd', item.diasDiferencia || null)
-                        .input('ce', item.codigoExterno || null)
-                        .input('tb', item.tarifaBase || 0)
-                        .input('ad', item.adicionales || 0)
-                        .input('ref', item.idReferencia || null)
-                        .input('dist', item.distrito || null)
-                        .input('dep', item.departamento || null)
-                        .input('ne', item.nombreEquipo || null)
-                        .query(`
-                            INSERT INTO [dbo].[GAC_APP_TB_VALORIZACIONES_DETALLE] 
-                            (IdCierre, Ticket, Monto, Fecha_Ticket, Tipo, Servicio_Nombre, Categoria, Fecha_Visita, Fecha_Cierre, Dias_Diferencia, Codigo_Externo, Tarifa_Base, Adicionales, ID_Referencia, Distrito, Departamento, Nombre_Equipo)
-                            VALUES (@idCierre, @ticket, @monto, @fecha, @tipo, @servicio, @categoria, @fv, @fc, @dd, @ce, @tb, @ad, @ref, @dist, @dep, @ne)
-                        `);
+                    table.rows.add(
+                        actualIdCierre,
+                        item.ticket,
+                        item.monto,
+                        item.fecha ? new Date(item.fecha) : null,
+                        item.tipo,
+                        item.servicio,
+                        item.categoria,
+                        item.fechaVisita ? new Date(item.fechaVisita) : null,
+                        item.fechaCierre ? new Date(item.fechaCierre) : null,
+                        item.diasDiferencia,
+                        item.codigoExterno,
+                        item.tarifaBase,
+                        item.adicionales,
+                        item.idReferencia,
+                        item.nombreTecnico,
+                        item.apellidoTecnico,
+                        item.comentarioTecnico,
+                        item.distrito,
+                        item.departamento,
+                        item.nombreEquipo
+                    );
                 }
+
+                const request = new sql.Request(transaction);
+                await request.bulk(table);
             }
 
-            await transaction.commit();
-            await logAudit(req, finalEstado === 'BORRADOR' ? 'SAVE_DRAFT' : 'CLOSE_FORTNIGHT', 'VALUATION', businessCode, { ruc, totalFinal });
             res.json({ 
                 success: true, 
                 message: finalEstado === 'BORRADOR' ? "Borrador guardado correctamente." : "Quincena cerrada correctamente.", 
