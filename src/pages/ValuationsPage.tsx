@@ -2464,7 +2464,7 @@ export default function ValuationsPage() {
                                         {closureDetails
                                             .filter(d => detailActiveTab === 'services' ? d.Tipo === 'SERVICIO' : d.Tipo === 'PENALIDAD')
                                             .filter(d => 
-                                                d.Ticket.toString().includes(detailSearchQuery) || 
+                                                (d.Ticket?.toString() || '').includes(detailSearchQuery) || 
                                                 (d.Servicio_Nombre || '').toLowerCase().includes(detailSearchQuery.toLowerCase())
                                             ).map((det) => (
                                             <tr key={det.IdDetalle} className="hover:bg-muted/30 transition-all group/det">
@@ -2507,7 +2507,7 @@ export default function ValuationsPage() {
                                         ))}
                                         {closureDetails
                                             .filter(d => detailActiveTab === 'services' ? d.Tipo === 'SERVICIO' : d.Tipo === 'PENALIDAD')
-                                            .filter(d => d.Ticket.toString().includes(detailSearchQuery) || (d.Servicio_Nombre || '').toLowerCase().includes(detailSearchQuery.toLowerCase())).length === 0 && (
+                                            .filter(d => (d.Ticket?.toString() || '').includes(detailSearchQuery) || (d.Servicio_Nombre || '').toLowerCase().includes(detailSearchQuery.toLowerCase())).length === 0 && (
                                             <tr>
                                                 <td colSpan={5} className="py-20 text-center text-muted-foreground opacity-40">
                                                     <Search className="w-10 h-10 mx-auto mb-3" />
