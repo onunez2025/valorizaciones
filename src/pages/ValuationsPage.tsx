@@ -215,6 +215,45 @@ export default function ValuationsPage() {
             const draft = closuresData.find((c: any) => c.Estado === 'BORRADOR');
             if (draft) {
                 setCurrentDraft(draft);
+                // Si hay un borrador, CARGAR los datos congelados (tickets y penalidades del momento del guardado)
+                // Esto garantiza que NO aparezcan tickets nuevos que no estaban en la pre-valorización
+                const detailResult = await ApiClient.request(`/valuations/details/${draft.IdCierre}`);
+                if (detailResult && detailResult.tickets) {
+                    const savedTickets = detailResult.tickets
+                        .filter((t: any) => t.Tipo === 'SERVICIO')
+                        .map((t: any) => ({
+                            ...t,
+                            Ticket: t.Ticket,
+                            Fecha: t.Fecha,
+                            Servicio: t.Servicio,
+                            Categoria: t.Categoria,
+                            FechaVisita: t.Fecha_Visita,
+                            FechaCierre: t.Fecha_Cierre,
+                            DiasDiferencia: t.Dias_Diferencia,
+                            CodigoEquipo: t.Codigo_Externo,
+                            TarifaBase: t.Tarifa_Base,
+                            Adicionales: t.Adicionales,
+                            NombreTecnico: t.Nombre_Tecnico,
+                            ApellidoTecnico: t.Apellido_Tecnico,
+                            ComentarioTecnico: t.Comentario_Tecnico,
+                            Distrito: t.Distrito,
+                            Departamento: t.Departamento,
+                            NombreEquipo: t.Nombre_Equipo
+                        }));
+                    
+                    const savedPenalties = detailResult.tickets
+                        .filter((t: any) => t.Tipo === 'PENALIDAD')
+                        .map((p: any) => ({
+                            Id: p.IdReferencia,
+                            Ticket: p.Ticket === 'G-DESCUENTO' ? null : p.Ticket,
+                            Importe: Math.abs(p.Monto),
+                            Fecha: p.Fecha,
+                            Motivo: p.Servicio
+                        }));
+
+                    setTickets(savedTickets);
+                    setPenalties(savedPenalties);
+                }
             }
         } catch (error: any) {
             if (error.message === 'AUTH_EXPIRED') return;
