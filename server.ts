@@ -1063,8 +1063,6 @@ app.post('/api/valuations/close', verifyToken, async (req: Request, res: Respons
             }
 
 
-            }
-
             res.json({ 
                 success: true, 
                 message: finalEstado === 'BORRADOR' ? "Borrador guardado correctamente." : "Quincena cerrada correctamente.", 
@@ -1257,7 +1255,6 @@ app.get('/api/valuations/details/:id', verifyToken, async (req: Request, res: Re
     } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
-});
 
 app.get('/api/tarifarios/:casId', verifyToken, async (req: Request, res: Response) => {
     const { casId } = req.params;
