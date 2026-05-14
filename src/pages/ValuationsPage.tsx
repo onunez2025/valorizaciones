@@ -893,7 +893,7 @@ export default function ValuationsPage() {
                     subtotalServicios: totalTickets,
                     subtotalPenalidades: totalPenalties,
                     totalFinal: grandTotal,
-                    cerrado_por: "Auditor CAS (Borrador)",
+                    cerradoPor: "Auditor CAS (Borrador)",
                     estado: 'BORRADOR',
                     details: [...ticketDetails, ...penaltyDetails]
                 })
