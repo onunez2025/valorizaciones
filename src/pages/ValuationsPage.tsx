@@ -224,8 +224,8 @@ export default function ValuationsPage() {
                         .map((t: any) => ({
                             ...t,
                             Ticket: t.Ticket,
-                            Fecha: t.Fecha,
-                            Servicio: t.Servicio,
+                            Fecha: t.Fecha_Ticket,
+                            Servicio: t.Servicio_Nombre,
                             Categoria: t.Categoria,
                             FechaVisita: t.Fecha_Visita,
                             FechaCierre: t.Fecha_Cierre,
@@ -233,9 +233,6 @@ export default function ValuationsPage() {
                             CodigoEquipo: t.Codigo_Externo,
                             TarifaBase: t.Tarifa_Base,
                             Adicionales: t.Adicionales,
-                            NombreTecnico: t.Nombre_Tecnico,
-                            ApellidoTecnico: t.Apellido_Tecnico,
-                            ComentarioTecnico: t.Comentario_Tecnico,
                             Distrito: t.Distrito,
                             Departamento: t.Departamento,
                             NombreEquipo: t.Nombre_Equipo
@@ -244,11 +241,11 @@ export default function ValuationsPage() {
                     const savedPenalties = detailResult.tickets
                         .filter((t: any) => t.Tipo === 'PENALIDAD')
                         .map((p: any) => ({
-                            Id: p.IdReferencia,
+                            Id: p.ID_Referencia,
                             Ticket: p.Ticket === 'G-DESCUENTO' ? null : p.Ticket,
                             Importe: Math.abs(p.Monto),
-                            Fecha: p.Fecha,
-                            Motivo: p.Servicio
+                            Fecha: p.Fecha_Ticket,
+                            Motivo: p.Servicio_Nombre
                         }));
 
                     setTickets(savedTickets);

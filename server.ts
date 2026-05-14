@@ -1021,9 +1021,9 @@ app.post('/api/valuations/close', verifyToken, async (req: Request, res: Respons
                 table.columns.add('IdCierre', sql.Int, { nullable: false });
                 table.columns.add('Ticket', sql.VarChar(50), { nullable: true });
                 table.columns.add('Monto', sql.Decimal(18, 2), { nullable: true });
-                table.columns.add('Fecha', sql.DateTime, { nullable: true });
+                table.columns.add('Fecha_Ticket', sql.DateTime, { nullable: true });
                 table.columns.add('Tipo', sql.VarChar(20), { nullable: true });
-                table.columns.add('Servicio', sql.VarChar(200), { nullable: true });
+                table.columns.add('Servicio_Nombre', sql.VarChar(255), { nullable: true });
                 table.columns.add('Categoria', sql.VarChar(100), { nullable: true });
                 table.columns.add('Fecha_Visita', sql.DateTime, { nullable: true });
                 table.columns.add('Fecha_Cierre', sql.DateTime, { nullable: true });
@@ -1031,13 +1031,10 @@ app.post('/api/valuations/close', verifyToken, async (req: Request, res: Respons
                 table.columns.add('Codigo_Externo', sql.VarChar(100), { nullable: true });
                 table.columns.add('Tarifa_Base', sql.Decimal(18, 2), { nullable: true });
                 table.columns.add('Adicionales', sql.Decimal(18, 2), { nullable: true });
-                table.columns.add('IdReferencia', sql.Int, { nullable: true });
-                table.columns.add('Nombre_Tecnico', sql.VarChar(200), { nullable: true });
-                table.columns.add('Apellido_Tecnico', sql.VarChar(200), { nullable: true });
-                table.columns.add('Comentario_Tecnico', sql.Text, { nullable: true });
+                table.columns.add('ID_Referencia', sql.VarChar(50), { nullable: true });
                 table.columns.add('Distrito', sql.VarChar(100), { nullable: true });
                 table.columns.add('Departamento', sql.VarChar(100), { nullable: true });
-                table.columns.add('Nombre_Equipo', sql.VarChar(255), { nullable: true });
+                table.columns.add('Nombre_Equipo', sql.NVarChar(255), { nullable: true });
 
                 for (const item of details) {
                     table.rows.add(
@@ -1054,10 +1051,7 @@ app.post('/api/valuations/close', verifyToken, async (req: Request, res: Respons
                         item.codigoExterno,
                         item.tarifaBase,
                         item.adicionales,
-                        item.idReferencia,
-                        item.nombreTecnico,
-                        item.apellidoTecnico,
-                        item.comentarioTecnico,
+                        item.idReferencia ? item.idReferencia.toString() : null,
                         item.distrito,
                         item.departamento,
                         item.nombreEquipo
@@ -1066,6 +1060,9 @@ app.post('/api/valuations/close', verifyToken, async (req: Request, res: Respons
 
                 const request = new sql.Request(transaction);
                 await request.bulk(table);
+            }
+
+
             }
 
             res.json({ 
@@ -1228,7 +1225,7 @@ app.get('/api/closures', verifyToken, async (req: Request, res: Response) => {
     } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
-app.get('/api/closures/:id/details', verifyToken, async (req: Request, res: Response) => {
+app.get('/api/valuations/details/:id', verifyToken, async (req: Request, res: Response) => {
     const { id } = req.params;
     try {
         const db = await getDb();
@@ -1243,24 +1240,23 @@ app.get('/api/closures/:id/details', verifyToken, async (req: Request, res: Resp
                     d.Categoria, 
                     d.Monto,
                     d.Fecha_Ticket,
-                    ISNULL(d.Fecha_Visita, s.FechaVisita) as Fecha_Visita,
-                    ISNULL(d.Fecha_Cierre, s.CheckOut) as Fecha_Cierre,
-                    ISNULL(d.Dias_Diferencia, DATEDIFF(day, s.FechaVisita, s.CheckOut)) as Dias_Diferencia,
-                    COALESCE(NULLIF(d.Codigo_Externo, ''), s.CodigoExternoEquipo) as Codigo_Externo,
-                    ISNULL(d.Tarifa_Base, d.Monto) as Tarifa_Base,
-                    ISNULL(d.Adicionales, 0) as Adicionales,
-                    s.NombreTecnico,
-                    s.ApellidoTecnico,
-                    s.ComentarioTecnico,
-                    p.Creado_por as CreadoPor
+                    d.Fecha_Visita,
+                    d.Fecha_Cierre,
+                    d.Dias_Diferencia,
+                    d.Codigo_Externo,
+                    d.Tarifa_Base,
+                    d.Adicionales,
+                    d.ID_Referencia,
+                    d.Distrito,
+                    d.Departamento,
+                    d.Nombre_Equipo
                 FROM [dbo].[GAC_APP_TB_VALORIZACIONES_DETALLE] d
-                LEFT JOIN [APPGAC].[ServiciosViewSQL] s ON d.Ticket = s.Ticket AND d.Tipo = 'SERVICIO'
-                LEFT JOIN [dbo].[GAC_APP_TB_TICKETS_DESCUENTOS] p ON d.ID_Referencia = p.ID_Descuentos_CAS AND d.Tipo = 'PENALIDAD'
                 WHERE d.IdCierre = @id
-
             `);
-        res.json(result.recordset);
+        res.json({ tickets: result.recordset });
     } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
 });
 
 app.get('/api/tarifarios/:casId', verifyToken, async (req: Request, res: Response) => {
