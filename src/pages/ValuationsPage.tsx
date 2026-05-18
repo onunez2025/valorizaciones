@@ -211,8 +211,16 @@ export default function ValuationsPage() {
             setTickets(ticketsData);
             setPenalties(penaltiesData);
 
-            // Check if there is an active draft for this period
-            const draft = closuresData.find((c: any) => c.Estado === 'BORRADOR');
+            // Check if there is an active draft for this period and CAS
+            const draft = closuresData.find((c: any) => {
+                if (c.Estado !== 'BORRADOR') return false;
+                if (c.RUC?.trim() !== selectedCas.RUC?.trim()) return false;
+                
+                const cStart = c.Fecha_Inicio ? (typeof c.Fecha_Inicio === 'string' ? c.Fecha_Inicio.split('T')[0] : new Date(c.Fecha_Inicio).toISOString().split('T')[0]) : '';
+                const cEnd = c.Fecha_Fin ? (typeof c.Fecha_Fin === 'string' ? c.Fecha_Fin.split('T')[0] : new Date(c.Fecha_Fin).toISOString().split('T')[0]) : '';
+                
+                return cStart === startDate && cEnd === endDate;
+            });
             if (draft) {
                 setCurrentDraft(draft);
                 // Si hay un borrador, CARGAR los datos congelados (tickets y penalidades del momento del guardado)

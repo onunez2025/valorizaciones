@@ -1214,12 +1214,32 @@ app.get('/api/penalties/:ruc', verifyToken, async (req: Request, res: Response) 
 });
 
 app.get('/api/closures', verifyToken, async (req: Request, res: Response) => {
+    const { ruc, start, end } = req.query;
     try {
         const db = await getDb();
-        const result = await db.request().query(`
-            SELECT * FROM [dbo].[GAC_APP_TB_VALORIZACIONES_CIERRES] 
-            ORDER BY Cerrado_El DESC
-        `);
+        const request = db.request();
+        let query = `SELECT * FROM [dbo].[GAC_APP_TB_VALORIZACIONES_CIERRES]`;
+        
+        const conditions: string[] = [];
+        if (ruc) {
+            conditions.push(`TRIM(RUC) = TRIM(@ruc)`);
+            request.input('ruc', sql.VarChar, ruc as string);
+        }
+        if (start) {
+            conditions.push(`Fecha_Inicio = @start`);
+            request.input('start', sql.VarChar, start as string);
+        }
+        if (end) {
+            conditions.push(`Fecha_Fin = @end`);
+            request.input('end', sql.VarChar, end as string);
+        }
+        
+        if (conditions.length > 0) {
+            query += ` WHERE ` + conditions.join(' AND ');
+        }
+        
+        query += ` ORDER BY Cerrado_El DESC`;
+        const result = await request.query(query);
         res.json(result.recordset);
     } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
