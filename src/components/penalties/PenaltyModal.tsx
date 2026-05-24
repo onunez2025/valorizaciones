@@ -4,6 +4,8 @@ import { ApiClient } from '../../services/apiClient';
 import type { PenaltyMotive, ValuationTicket } from '../../types';
 import { Modal } from '../common/Modal';
 import { toTitleCase } from '../../utils/formatters';
+import { SIATC_THEME } from '../../utils/siatc-theme';
+import { cn } from '../../utils/cn';
 
 interface PenaltyModalProps {
     isOpen: boolean;
@@ -109,7 +111,7 @@ export default function PenaltyModal({ isOpen, onClose, onSuccess, ruc, tickets,
             <form onSubmit={handleSubmit} className="space-y-5 p-1">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="relative space-y-1.5 text-left">
-                        <label className="text-[10px] font-black text-muted-foreground ml-1">Ticket Asociado (Opcional)</label>
+                        <label className="text-[11px] font-bold text-cb-neutral uppercase tracking-wider ml-1">Ticket Asociado (Opcional)</label>
                         <div className="relative">
                             <input 
                                 type="text"
@@ -122,15 +124,15 @@ export default function PenaltyModal({ isOpen, onClose, onSuccess, ruc, tickets,
                                     else setShowDropdown(true);
                                 }}
                                 onFocus={() => setShowDropdown(true)}
-                                className="w-full bg-background border border-border rounded-lg px-3 py-2.5 text-sm font-bold focus:ring-4 focus:ring-primary/5 focus:border-primary transition-all outline-none pr-10"
+                                className={cn(SIATC_THEME.COMPONENTS.INPUT, "pr-10 dark:bg-cb-bg text-cb-text-primary border-cb-border")}
                             />
                             <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
-                                <Search className="w-4 h-4 text-muted-foreground/40" />
+                                <Search className="w-4 h-4 text-cb-neutral/50" />
                             </div>
                         </div>
 
                         {showDropdown && (
-                            <div className="absolute z-50 w-full mt-1 bg-background border border-border rounded-xl shadow-2xl max-h-60 overflow-auto custom-scrollbar animate-in fade-in slide-in-from-top-2 duration-200">
+                            <div className="absolute z-50 w-full mt-1 bg-white dark:bg-cb-bg border border-cb-border rounded-cb-card shadow-cb-level-2 max-h-60 overflow-auto custom-scrollbar animate-in fade-in slide-in-from-top-2 duration-200">
                                 <div className="p-1">
                                     <button 
                                         type="button"
@@ -138,7 +140,7 @@ export default function PenaltyModal({ isOpen, onClose, onSuccess, ruc, tickets,
                                             setFormData({...formData, ticket: ''});
                                             setShowDropdown(false);
                                         }}
-                                        className="w-full text-left px-3 py-2 text-xs font-bold text-muted-foreground hover:bg-accent rounded-lg transition-colors"
+                                        className="w-full text-left px-3 py-2 text-xs font-bold text-cb-neutral hover:bg-cb-bg rounded-cb-btn transition-colors"
                                     >
                                         -- Sin ticket específico --
                                     </button>
@@ -155,11 +157,11 @@ export default function PenaltyModal({ isOpen, onClose, onSuccess, ruc, tickets,
                                                     });
                                                     setShowDropdown(false);
                                                 }}
-                                                className="w-full text-left px-3 py-2 rounded-lg hover:bg-primary/5 transition-colors group border-b border-border/10 last:border-none"
+                                                className="w-full text-left px-3 py-2 rounded-cb-btn hover:bg-primary/5 transition-colors group border-b border-cb-border/10 last:border-none"
                                             >
                                                 <div className="flex flex-col">
-                                                    <span className="text-sm font-black group-hover:text-primary transition-colors">{t.Ticket}</span>
-                                                    <span className="text-[10px] text-muted-foreground font-bold truncate">{toTitleCase(t.ServicioNombre || t.Servicio)}</span>
+                                                    <span className="text-sm font-bold group-hover:text-primary transition-colors text-cb-text-primary">{t.Ticket}</span>
+                                                    <span className="text-[10px] text-cb-neutral font-bold truncate">{toTitleCase(t.ServicioNombre || t.Servicio)}</span>
                                                 </div>
                                             </button>
                                         ))}
@@ -168,25 +170,25 @@ export default function PenaltyModal({ isOpen, onClose, onSuccess, ruc, tickets,
                         )}
                     </div>
                     <div className="space-y-1.5 text-left">
-                        <label className="text-[10px] font-black text-muted-foreground ml-1">Fecha</label>
+                        <label className="text-[11px] font-bold text-cb-neutral uppercase tracking-wider ml-1">Fecha</label>
                         <input 
                             type="date"
                             value={formData.fecha}
                             onChange={(e) => setFormData({...formData, fecha: e.target.value})}
                             required
-                            className="w-full bg-background border border-border rounded-lg px-3 py-2.5 text-sm font-bold focus:ring-4 focus:ring-primary/5 focus:border-primary transition-all outline-none"
+                            className={cn(SIATC_THEME.COMPONENTS.INPUT, "dark:bg-cb-bg text-cb-text-primary border-cb-border")}
                         />
                     </div>
                 </div>
 
                 <div className="space-y-1.5 text-left">
-                    <label className="text-[10px] font-black text-muted-foreground ml-1">Motivo / Concepto</label>
+                    <label className="text-[11px] font-bold text-cb-neutral uppercase tracking-wider ml-1">Motivo / Concepto</label>
                     {type === 'penalty' ? (
                         <select 
                             value={formData.motivo}
                             onChange={(e) => setFormData({...formData, motivo: e.target.value})}
                             required
-                            className="w-full bg-background border border-border rounded-lg px-3 py-2.5 text-sm font-bold focus:ring-4 focus:ring-primary/5 focus:border-primary transition-all outline-none"
+                            className={cn(SIATC_THEME.COMPONENTS.INPUT, "dark:bg-cb-bg text-cb-text-primary border-cb-border")}
                         >
                             <option value="">-- Seleccionar motivo --</option>
                             {motives.map(m => (
@@ -200,14 +202,14 @@ export default function PenaltyModal({ isOpen, onClose, onSuccess, ruc, tickets,
                             value={formData.motivo}
                             onChange={(e) => setFormData({...formData, motivo: e.target.value})}
                             required
-                            className="w-full bg-background border border-border rounded-lg px-3 py-2.5 text-sm font-bold focus:ring-4 focus:ring-primary/5 focus:border-primary transition-all outline-none"
+                            className={cn(SIATC_THEME.COMPONENTS.INPUT, "dark:bg-cb-bg text-cb-text-primary border-cb-border")}
                         />
                     )}
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-1.5 text-left">
-                        <label className="text-[10px] font-black text-muted-foreground ml-1">Importe (S/)</label>
+                        <label className="text-[11px] font-bold text-cb-neutral uppercase tracking-wider ml-1">Importe (S/)</label>
                         <input 
                             type="number"
                             step="0.01"
@@ -215,19 +217,19 @@ export default function PenaltyModal({ isOpen, onClose, onSuccess, ruc, tickets,
                             value={formData.importe}
                             onChange={(e) => setFormData({...formData, importe: e.target.value})}
                             required
-                            className="w-full bg-background border border-border rounded-lg px-3 py-2.5 text-sm font-bold focus:ring-4 focus:ring-primary/5 focus:border-primary transition-all outline-none"
+                            className={cn(SIATC_THEME.COMPONENTS.INPUT, "dark:bg-cb-bg text-cb-text-primary border-cb-border")}
                         />
                     </div>
                 </div>
 
                 <div className="space-y-1.5 text-left">
-                    <label className="text-[10px] font-black text-muted-foreground ml-1">Descripción / Observaciones</label>
+                    <label className="text-[11px] font-bold text-cb-neutral uppercase tracking-wider ml-1">Descripción / Observaciones</label>
                     <textarea 
                         rows={3}
                         value={formData.descripcion}
                         onChange={(e) => setFormData({...formData, descripcion: e.target.value})}
                         required
-                        className="w-full bg-background border border-border rounded-xl px-3 py-3 text-sm font-medium focus:ring-4 focus:ring-primary/5 focus:border-primary transition-all outline-none resize-none"
+                        className={cn(SIATC_THEME.COMPONENTS.INPUT, "h-auto py-2.5 resize-none dark:bg-cb-bg text-cb-text-primary border-cb-border")}
                         placeholder="Detalle los motivos del descuento o adicional..."
                     />
                 </div>
@@ -236,14 +238,14 @@ export default function PenaltyModal({ isOpen, onClose, onSuccess, ruc, tickets,
                     <button 
                         type="button" 
                         onClick={onClose}
-                        className="flex-1 px-4 py-2.5 border border-border rounded-xl text-xs font-black hover:bg-accent transition-colors"
+                        className={cn(SIATC_THEME.COMPONENTS.BUTTON_SECONDARY, "flex-1")}
                     >
                         Cancelar
                     </button>
                     <button 
                         type="submit" 
                         disabled={loading}
-                        className="flex-1 px-4 py-2.5 bg-primary text-primary-foreground rounded-xl text-xs font-black hover:opacity-90 transition-all flex items-center justify-center gap-2 shadow-lg shadow-primary/20"
+                        className={cn(SIATC_THEME.COMPONENTS.BUTTON_PRIMARY, "flex-1")}
                     >
                         {loading ? "Guardando..." : <><Save className="w-4 h-4" /> Guardar</>}
                     </button>

@@ -4,6 +4,8 @@ import { Modal } from '../common/Modal';
 import { Check, Calendar, AlertCircle } from 'lucide-react';
 import { useDialog } from '../../context/DialogContext';
 import { toTitleCase } from '../../utils/formatters';
+import { SIATC_THEME } from '../../utils/siatc-theme';
+import { cn } from '../../utils/cn';
 
 interface TarifarioModalProps {
     isOpen: boolean;
@@ -63,23 +65,23 @@ export default function TarifarioModal({ isOpen, onClose, onSuccess, initialData
         >
             <div className="flex flex-col gap-6">
                 {/* Context Card */}
-                <div className="bg-primary/5 border border-primary/10 rounded-xl p-4 flex flex-col gap-3">
+                <div className="bg-primary/5 border border-primary/10 rounded-cb-card p-4 flex flex-col gap-3">
                     <div className="flex items-center gap-2 text-primary">
                         <AlertCircle className="w-4 h-4" />
-                        <span className="text-[10px] font-black">Información del Ticket</span>
+                        <span className="text-[11px] font-bold uppercase tracking-wider">Información del Ticket</span>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                         <div className="flex flex-col">
-                            <span className="text-[10px] font-bold text-muted-foreground">CAS</span>
-                            <span className="text-sm font-black text-foreground truncate">{initialData.casNombre}</span>
+                            <span className="text-[11px] font-bold text-cb-neutral uppercase tracking-wider">CAS</span>
+                            <span className="text-sm font-bold text-cb-text-primary truncate">{initialData.casNombre}</span>
                         </div>
                         <div className="flex flex-col">
-                            <span className="text-[10px] font-bold text-muted-foreground">Categoría</span>
-                            <span className="text-sm font-black text-foreground truncate">{toTitleCase(initialData.categoria)}</span>
+                            <span className="text-[11px] font-bold text-cb-neutral uppercase tracking-wider">Categoría</span>
+                            <span className="text-sm font-bold text-cb-text-primary truncate">{toTitleCase(initialData.categoria)}</span>
                         </div>
                         <div className="flex flex-col col-span-2">
-                            <span className="text-[10px] font-bold text-muted-foreground">Servicio</span>
-                            <span className="text-sm font-black text-foreground">{toTitleCase(initialData.servicioNombre)} ({toTitleCase(initialData.servicio)})</span>
+                            <span className="text-[11px] font-bold text-cb-neutral uppercase tracking-wider">Servicio</span>
+                            <span className="text-sm font-bold text-cb-text-primary">{toTitleCase(initialData.servicioNombre)} ({toTitleCase(initialData.servicio)})</span>
                         </div>
                     </div>
                 </div>
@@ -87,14 +89,14 @@ export default function TarifarioModal({ isOpen, onClose, onSuccess, initialData
                 {/* Form */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="flex flex-col gap-1.5 col-span-full">
-                        <label className="text-[10px] font-black text-muted-foreground ml-1">Importe de Tarifa (S/)</label>
+                        <label className="text-[11px] font-bold text-cb-neutral uppercase tracking-wider ml-1">Importe de Tarifa (S/)</label>
                         <div className="relative">
-                            <span className="absolute left-4 top-1/2 -translate-y-1/2 font-black text-primary">S/</span>
+                            <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-primary">S/</span>
                             <input 
                                 type="number" 
                                 value={importe}
                                 onChange={(e) => setImporte(Number(e.target.value))}
-                                className="w-full pl-10 pr-4 py-3 bg-card border border-border rounded-xl text-lg font-black focus:ring-4 focus:ring-primary/5 focus:border-primary outline-none transition-all"
+                                className={cn(SIATC_THEME.COMPONENTS.INPUT, "pl-10 pr-4 text-base font-bold dark:bg-cb-bg text-cb-text-primary border-cb-border")}
                                 placeholder="0.00"
                                 autoFocus
                             />
@@ -102,27 +104,27 @@ export default function TarifarioModal({ isOpen, onClose, onSuccess, initialData
                     </div>
 
                     <div className="flex flex-col gap-1.5">
-                        <label className="text-[10px] font-black text-muted-foreground ml-1">Fecha Inicio</label>
+                        <label className="text-[11px] font-bold text-cb-neutral uppercase tracking-wider ml-1">Fecha Inicio</label>
                         <div className="relative">
-                            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-cb-neutral/50" />
                             <input 
                                 type="date" 
                                 value={fechaInicio}
                                 onChange={(e) => setFechaInicio(e.target.value)}
-                                className="w-full pl-10 pr-4 py-2.5 bg-card border border-border rounded-xl text-sm font-bold focus:ring-4 focus:ring-primary/5 focus:border-primary outline-none"
+                                className={cn(SIATC_THEME.COMPONENTS.INPUT, "pl-10 pr-4 dark:bg-cb-bg text-cb-text-primary border-cb-border")}
                             />
                         </div>
                     </div>
 
                     <div className="flex flex-col gap-1.5">
-                        <label className="text-[10px] font-black text-muted-foreground ml-1">Fecha Fin (Opcional)</label>
+                        <label className="text-[11px] font-bold text-cb-neutral uppercase tracking-wider ml-1">Fecha Fin (Opcional)</label>
                         <div className="relative">
-                            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-cb-neutral/50" />
                             <input 
                                 type="date" 
                                 value={fechaFin}
                                 onChange={(e) => setFechaFin(e.target.value)}
-                                className="w-full pl-10 pr-4 py-2.5 bg-card border border-border rounded-xl text-sm font-bold focus:ring-4 focus:ring-primary/5 focus:border-primary outline-none"
+                                className={cn(SIATC_THEME.COMPONENTS.INPUT, "pl-10 pr-4 dark:bg-cb-bg text-cb-text-primary border-cb-border")}
                             />
                         </div>
                     </div>
@@ -132,14 +134,14 @@ export default function TarifarioModal({ isOpen, onClose, onSuccess, initialData
                 <div className="flex items-center gap-3 pt-4">
                     <button 
                         onClick={onClose}
-                        className="flex-1 px-4 py-3 border border-border rounded-xl font-bold text-sm hover:bg-muted transition-colors"
+                        className={cn(SIATC_THEME.COMPONENTS.BUTTON_SECONDARY, "flex-1")}
                     >
                         Cancelar
                     </button>
                     <button 
                         onClick={handleSave}
                         disabled={loading}
-                        className="flex-[2] flex items-center justify-center gap-2 px-4 py-3 bg-primary text-white rounded-xl font-black text-sm shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50"
+                        className={cn(SIATC_THEME.COMPONENTS.BUTTON_PRIMARY, "flex-[2]")}
                     >
                         {loading ? "Guardando..." : (
                             <>

@@ -2,6 +2,7 @@ import React from 'react';
 import { Modal } from './Modal';
 import { AlertCircle, Info } from 'lucide-react';
 import { cn } from '../../utils/cn';
+import { SIATC_THEME } from '../../utils/siatc-theme';
 
 interface ConfirmDialogProps {
     isOpen: boolean;
@@ -26,15 +27,15 @@ export function ConfirmDialog({
 }: ConfirmDialogProps) {
     
     const iconMap = {
-        danger: <AlertCircle className="h-6 w-6 text-destructive" />,
-        warning: <AlertCircle className="h-6 w-6 text-yellow-500" />,
+        danger: <AlertCircle className="h-6 w-6 text-[#DF2935]" />,
+        warning: <AlertCircle className="h-6 w-6 text-[#F0AD4E]" />,
         info: <Info className="h-6 w-6 text-primary" />
     };
 
     const confirmButtonClasses = {
-        danger: 'bg-destructive hover:bg-destructive/90 text-white',
-        warning: 'bg-yellow-500 hover:bg-yellow-600 text-white',
-        info: 'bg-primary hover:bg-primary/90 text-white'
+        danger: SIATC_THEME.COMPONENTS.BUTTON_DANGER,
+        warning: 'h-[36px] px-4 inline-flex items-center justify-center gap-2 bg-[#F0AD4E] hover:bg-[#F0AD4E]/90 text-white rounded-cb-btn transition-all active:scale-95 font-bold text-sm shadow-sm',
+        info: SIATC_THEME.COMPONENTS.BUTTON_INFO
     };
 
     return (
@@ -45,7 +46,7 @@ export function ConfirmDialog({
                         {iconMap[variant]}
                     </div>
                     <div className="flex-1">
-                        <p className="text-sm text-foreground/80 leading-relaxed">
+                        <p className="text-sm text-cb-text-secondary leading-relaxed">
                             {message}
                         </p>
                     </div>
@@ -54,7 +55,7 @@ export function ConfirmDialog({
                 <div className="flex justify-end gap-3 pt-2">
                     <button
                         onClick={onClose}
-                        className="px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-accent rounded-md transition-colors border border-border"
+                        className={SIATC_THEME.COMPONENTS.BUTTON_SECONDARY}
                     >
                         {cancelText}
                     </button>
@@ -63,10 +64,7 @@ export function ConfirmDialog({
                             onConfirm();
                             onClose();
                         }}
-                        className={cn(
-                            "px-4 py-2 text-sm font-medium rounded-md shadow-sm transition-colors",
-                            confirmButtonClasses[variant]
-                        )}
+                        className={cn(confirmButtonClasses[variant])}
                     >
                         {confirmText}
                     </button>

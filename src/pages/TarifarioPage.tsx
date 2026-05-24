@@ -8,6 +8,7 @@ import { cn } from '../utils/cn';
 import { toTitleCase } from '../utils/formatters';
 import { useDialog } from '../context/DialogContext';
 import TarifarioExceptionsModal from '../components/tarifario/TarifarioExceptionsModal';
+import { SIATC_THEME } from '../utils/siatc-theme';
 
 interface CAS {
     ID_CAS: number;
@@ -166,18 +167,19 @@ export default function TarifarioPage() {
     );
 
     return (
-        <div className="flex flex-col h-full overflow-hidden gap-6 animate-in fade-in duration-500 p-1">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className={SIATC_THEME.LAYOUT.PAGE_WRAPPER}>
+            <div className={SIATC_THEME.LAYOUT.HEADER_WRAPPER}>
                 <div>
-                    <h1 className="text-2xl font-bold tracking-tight text-foreground">Tarifario de Servicios</h1>
-                    <p className="text-muted-foreground text-[11px] font-medium opacity-60">Configuración dinámica de precios por centro de atención.</p>
+                    <h1 className={SIATC_THEME.TYPOGRAPHY.PAGE_TITLE}>Tarifario de Servicios</h1>
+                    <p className={SIATC_THEME.TYPOGRAPHY.PAGE_SUBTITLE}>Configuración dinámica de precios por centro de atención.</p>
                 </div>
             </div>
 
             <div className="relative" ref={dropdownRef}>
                 <div 
                     className={cn(
-                        "bg-card rounded-xl border border-border p-0.5 shadow-sm flex items-center gap-2 transition-all group hover:border-primary/40",
+                        "p-0.5 shadow-sm flex items-center gap-2 transition-all group hover:border-primary/40",
+                        SIATC_THEME.COMPONENTS.CARD_CONTAINER,
                         isDropdownOpen && "ring-2 ring-primary/5 border-primary/40"
                     )}
                 >
@@ -258,7 +260,7 @@ export default function TarifarioPage() {
                 )}
             </div>
 
-            <div className="flex-1 min-h-0 bg-card rounded-xl border border-border shadow-sm overflow-hidden flex flex-col relative">
+            <div className={cn("flex-1 min-h-0 overflow-hidden flex flex-col relative", SIATC_THEME.COMPONENTS.CARD_CONTAINER)}>
                 {!selectedCas ? (
                     <div className="h-full flex flex-col items-center justify-center p-12 text-center">
                         <div className="w-32 h-32 bg-primary/[0.03] rounded-full flex items-center justify-center mb-10 border border-primary/5 relative">

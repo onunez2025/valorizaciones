@@ -6,6 +6,7 @@ import {
 import { ApiClient } from '../../services/apiClient';
 import { cn } from '../../utils/cn';
 import { useDialog } from '../../context/DialogContext';
+import { SIATC_THEME } from '../../utils/siatc-theme';
 
 interface Exception {
     IdExcepcion?: string;
@@ -36,6 +37,7 @@ export default function TarifarioExceptionsModal({ cas, isOpen, onClose }: Props
 
     useEffect(() => {
         if (isOpen) {
+            fetchExceptions();
             fetchExceptions();
             fetchCategories();
             fetchDistritos();
@@ -139,26 +141,26 @@ export default function TarifarioExceptionsModal({ cas, isOpen, onClose }: Props
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in duration-300">
-            <div className="bg-card w-full max-w-5xl max-h-[90vh] rounded-2xl border border-border shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-300">
-                <div className="p-6 border-b border-border/40 flex items-center justify-between bg-muted/5">
+        <div className={cn("fixed inset-0 z-[200] flex items-center justify-center p-4 animate-in fade-in duration-300", SIATC_THEME.TOKENS.MODAL_OVERLAY)}>
+            <div className={cn(SIATC_THEME.COMPONENTS.MODAL_CONTENT, "p-0 bg-white dark:bg-cb-bg w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-300")}>
+                <div className="p-6 border-b border-cb-border flex items-center justify-between bg-cb-bg/10">
                     <div className="flex items-center gap-4">
-                        <div className="p-3 bg-amber-500/10 rounded-xl text-amber-600 border border-amber-500/10">
+                        <div className="p-3 bg-amber-500/10 rounded-cb-btn text-amber-600 border border-amber-500/10">
                             <AlertCircle className="w-6 h-6" />
                         </div>
                         <div>
-                            <h2 className="text-xl font-black tracking-tight">Casos Especiales / Excepciones</h2>
-                            <p className="text-[10px] font-bold text-muted-foreground opacity-60 uppercase tracking-widest">{cas.Nombre_CAS}</p>
+                            <h2 className="text-xl font-bold tracking-tight text-cb-text-primary">Casos Especiales / Excepciones</h2>
+                            <p className="text-[11px] font-bold text-cb-text-secondary uppercase tracking-widest">{cas.Nombre_CAS}</p>
                         </div>
                     </div>
                     <div className="flex items-center gap-3">
                         <button 
                             onClick={handleAdd}
-                            className="px-4 py-2 bg-foreground text-background rounded-lg font-bold text-[11px] flex items-center gap-2 transition-all hover:opacity-90 shadow-lg"
+                            className={SIATC_THEME.COMPONENTS.BUTTON_PRIMARY}
                         >
                             <Plus className="w-4 h-4" /> Agregar Regla
                         </button>
-                        <button onClick={onClose} className="p-2 hover:bg-muted rounded-full transition-colors text-muted-foreground">
+                        <button onClick={onClose} className="p-2 hover:bg-cb-bg rounded-full transition-colors text-cb-text-secondary">
                             <X className="w-5 h-5" />
                         </button>
                     </div>
@@ -171,13 +173,13 @@ export default function TarifarioExceptionsModal({ cas, isOpen, onClose }: Props
                         </div>
                     ) : exceptions.length === 0 ? (
                         <div className="py-20 text-center flex flex-col items-center justify-center grayscale opacity-50">
-                            <Map className="w-16 h-16 mb-4 text-muted-foreground" />
-                            <p className="text-sm font-bold text-muted-foreground">No hay casos especiales configurados.</p>
+                            <Map className="w-16 h-16 mb-4 text-cb-neutral" />
+                            <p className="text-sm font-bold text-cb-neutral">No hay casos especiales configurados.</p>
                         </div>
                     ) : (
                         <div className="grid grid-cols-1 gap-4">
                             {exceptions.map((ex, idx) => (
-                                <div key={ex.IdExcepcion || idx} className="bg-muted/10 rounded-xl border border-border/40 p-6 space-y-4 relative group">
+                                <div key={ex.IdExcepcion || idx} className="bg-cb-bg/10 rounded-cb-card border border-cb-border p-6 space-y-4 relative group">
                                     <div className="flex items-start justify-between gap-6">
                                         <div className="flex-1 space-y-4">
                                             <div className="flex items-center gap-4">
@@ -189,10 +191,10 @@ export default function TarifarioExceptionsModal({ cas, isOpen, onClose }: Props
                                                         newEx[idx].Nombre = e.target.value;
                                                         setExceptions(newEx);
                                                     }}
-                                                    className="flex-1 bg-background border border-border/40 rounded-lg px-4 py-2 text-sm font-black outline-none focus:ring-2 ring-primary/20"
+                                                    className={cn(SIATC_THEME.COMPONENTS.INPUT, "flex-1 dark:bg-cb-bg text-cb-text-primary border-cb-border")}
                                                     placeholder="Nombre de la regla..."
                                                 />
-                                                <div className="flex items-center gap-2 bg-background border border-border/40 rounded-lg px-3 py-2">
+                                                <div className="flex items-center gap-2 bg-white dark:bg-cb-bg border border-cb-border rounded-cb-btn px-3 h-[36px]">
                                                     <DollarSign className="w-4 h-4 text-emerald-500" />
                                                     <input 
                                                         type="number" 
@@ -202,7 +204,7 @@ export default function TarifarioExceptionsModal({ cas, isOpen, onClose }: Props
                                                             newEx[idx].Importe = Number(e.target.value);
                                                             setExceptions(newEx);
                                                         }}
-                                                        className="w-20 bg-transparent border-none outline-none font-bold text-sm text-right"
+                                                        className="w-20 bg-transparent border-none outline-none font-bold text-sm text-right text-cb-text-primary"
                                                     />
                                                 </div>
                                             </div>
@@ -233,13 +235,14 @@ export default function TarifarioExceptionsModal({ cas, isOpen, onClose }: Props
                                             </div>
 
                                             <div className="space-y-2">
-                                                <label className="text-[10px] font-black uppercase text-muted-foreground/60 tracking-widest flex items-center gap-2">
+                                                <label className="text-[11px] font-bold uppercase text-cb-neutral tracking-wider flex items-center gap-2">
                                                     <Tag className="w-3 h-3" /> Categorías de Producto
                                                 </label>
                                                 <div className="flex flex-wrap gap-2">
                                                     {availableCategories.map(cat => (
                                                         <button 
                                                             key={cat}
+                                                            type="button"
                                                             onClick={() => {
                                                                 const newEx = [...exceptions];
                                                                 const current = newEx[idx].Categorias || [];
@@ -251,22 +254,22 @@ export default function TarifarioExceptionsModal({ cas, isOpen, onClose }: Props
                                                                 setExceptions(newEx);
                                                             }}
                                                             className={cn(
-                                                                "px-3 py-1 rounded-full text-[9px] font-black uppercase transition-all border",
                                                                 ex.Categorias?.includes(cat) 
-                                                                    ? "bg-primary border-primary text-white" 
-                                                                    : "bg-background border-border/40 text-muted-foreground hover:border-primary/40"
+                                                                    ? cn(SIATC_THEME.STATES.BADGE_BASE, SIATC_THEME.STATES.PRIMARY, "cursor-pointer") 
+                                                                    : cn(SIATC_THEME.STATES.BADGE_BASE, "bg-transparent border-dashed border-cb-border text-cb-neutral hover:border-primary/40 cursor-pointer")
                                                             )}
                                                         >
                                                             {cat}
                                                         </button>
                                                     ))}
                                                     <button 
+                                                        type="button"
                                                         onClick={() => {
                                                             const newEx = [...exceptions];
                                                             newEx[idx].Categorias = [];
                                                             setExceptions(newEx);
                                                         }}
-                                                        className="px-3 py-1 rounded-full text-[9px] font-black uppercase border border-dashed border-border/60 text-muted-foreground/60"
+                                                        className={cn(SIATC_THEME.STATES.BADGE_BASE, "bg-transparent border-dashed border-cb-border text-cb-neutral/60 cursor-pointer")}
                                                     >
                                                         Limpiar / Todas
                                                     </button>
@@ -278,20 +281,20 @@ export default function TarifarioExceptionsModal({ cas, isOpen, onClose }: Props
                                             <button 
                                                 onClick={() => handleSave(ex)}
                                                 disabled={saving}
-                                                className="p-3 bg-emerald-600 text-white rounded-xl shadow-lg hover:bg-emerald-700 transition-colors"
+                                                className="p-3 bg-[#05B169] text-white rounded-cb-btn shadow-cb-level-1 hover:bg-[#05B169]/90 transition-all active:scale-95 flex items-center justify-center cursor-pointer"
                                                 title="Guardar Regla"
                                             >
                                                 <Save className="w-5 h-5" />
                                             </button>
                                             <button 
                                                 onClick={() => handleDelete(ex.IdExcepcion)}
-                                                className="p-3 bg-red-50 text-red-500 rounded-xl hover:bg-red-100 transition-colors"
+                                                className="p-3 bg-[#DF2935]/10 text-[#DF2935] rounded-cb-btn hover:bg-[#DF2935]/20 transition-all active:scale-95 flex items-center justify-center cursor-pointer"
                                                 title="Eliminar Regla"
                                             >
                                                 <Trash2 className="w-5 h-5" />
                                             </button>
                                             <div className="mt-4 flex flex-col items-center">
-                                                <span className="text-[8px] font-black text-muted-foreground/40 uppercase mb-1">Prio</span>
+                                                <span className="text-[8px] font-bold text-cb-neutral uppercase mb-1">Prio</span>
                                                 <input 
                                                     type="number" 
                                                     value={ex.Prioridad}
@@ -300,7 +303,7 @@ export default function TarifarioExceptionsModal({ cas, isOpen, onClose }: Props
                                                         newEx[idx].Prioridad = Number(e.target.value);
                                                         setExceptions(newEx);
                                                     }}
-                                                    className="w-10 bg-muted rounded py-1 text-center font-bold text-xs outline-none"
+                                                    className={cn(SIATC_THEME.COMPONENTS.INPUT, "w-12 h-8 text-center text-xs dark:bg-cb-bg text-cb-text-primary border-cb-border px-1")}
                                                 />
                                             </div>
                                         </div>
@@ -311,13 +314,13 @@ export default function TarifarioExceptionsModal({ cas, isOpen, onClose }: Props
                     )}
                 </div>
 
-                <div className="p-6 border-t border-border/40 bg-muted/5 flex items-center justify-between">
-                    <p className="text-[11px] font-bold text-muted-foreground/60 italic max-w-md">
+                <div className="p-6 border-t border-cb-border bg-cb-bg/10 flex items-center justify-between">
+                    <p className="text-[11px] font-bold text-cb-neutral/80 italic max-w-md">
                         * Las reglas de exclusión tienen prioridad sobre las de inclusión. Si no se define zona, aplica a todo el país.
                     </p>
                     <button 
                         onClick={onClose}
-                        className="px-8 py-3 bg-muted rounded-xl font-black text-[12px] uppercase tracking-widest hover:bg-muted/80 transition-all"
+                        className={SIATC_THEME.COMPONENTS.BUTTON_SECONDARY}
                     >
                         Cerrar
                     </button>
@@ -339,10 +342,10 @@ function ZoneSelector({
     selected: string[], 
     options: string[], 
     onChange: (val: string[]) => void 
+    onChange: (val: string[]) => void 
 }) {
     const [search, setSearch] = useState('');
     const [isOpen, setIsOpen] = useState(false);
-    const containerRef = useState<HTMLDivElement | null>(null);
 
     const filtered = options.filter(opt => 
         opt.toLowerCase().includes(search.toLowerCase()) && !selected.includes(opt)
@@ -350,19 +353,20 @@ function ZoneSelector({
 
     return (
         <div className="space-y-2 relative group/selector">
-            <label className="text-[10px] font-black uppercase text-muted-foreground/60 tracking-widest flex items-center gap-2">
+            <label className="text-[11px] font-bold uppercase text-cb-neutral tracking-wider flex items-center gap-2">
                 <Icon className="w-3 h-3" /> {label}
             </label>
-            <div className="flex flex-wrap gap-1.5 p-2 bg-background border border-border/40 rounded-lg min-h-[42px] focus-within:ring-2 ring-primary/10 transition-all">
+            <div className="flex flex-wrap gap-1.5 p-2 bg-white dark:bg-cb-bg border border-cb-border rounded-cb-btn min-h-[42px] focus-within:ring-2 focus-within:ring-primary/10 transition-all">
                 {selected.map(s => (
-                    <span key={s} className="pl-2 pr-1 py-0.5 bg-primary/10 text-primary rounded-md text-[10px] font-black flex items-center gap-1 border border-primary/20 animate-in zoom-in-95">
+                    <span key={s} className={cn(SIATC_THEME.STATES.BADGE_BASE, SIATC_THEME.STATES.PRIMARY, "pl-2 pr-1 py-0.5 h-[22px]")}>
                         {s}
                         <button 
+                            type="button"
                             onClick={(e) => {
                                 e.stopPropagation();
                                 onChange(selected.filter(x => x !== s));
                             }}
-                            className="p-0.5 hover:bg-primary/20 rounded-sm transition-colors"
+                            className="p-0.5 hover:bg-primary/20 rounded-sm transition-colors cursor-pointer"
                         >
                             <X className="w-3 h-3" />
                         </button>
@@ -375,28 +379,29 @@ function ZoneSelector({
                     onBlur={() => setTimeout(() => setIsOpen(false), 200)}
                     onChange={e => setSearch(e.target.value)}
                     placeholder={selected.length === 0 ? "Seleccionar zona..." : "Agregar..."}
-                    className="flex-1 min-w-[120px] bg-transparent outline-none text-[11px] font-bold placeholder:text-muted-foreground/40"
+                    className="flex-1 min-w-[120px] bg-transparent outline-none text-[11px] font-bold placeholder:text-cb-neutral/40 text-cb-text-primary"
                 />
             </div>
             
             {isOpen && (search || search === '') && (
-                <div className="absolute z-[100] w-full mt-1 bg-card border border-border shadow-2xl rounded-xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="absolute z-[100] w-full mt-1 bg-white dark:bg-cb-bg border border-cb-border shadow-cb-level-3 rounded-cb-card overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
                     <div className="max-h-[200px] overflow-y-auto custom-scrollbar p-1">
                         {filtered.length === 0 ? (
                             <div className="p-4 text-center">
-                                <Search className="w-8 h-8 text-muted-foreground/20 mx-auto mb-2" />
-                                <p className="text-[10px] font-bold text-muted-foreground italic">No se encontraron resultados</p>
+                                <Search className="w-8 h-8 text-cb-neutral/20 mx-auto mb-2" />
+                                <p className="text-[10px] font-bold text-cb-neutral italic">No se encontraron resultados</p>
                             </div>
                         ) : (
                             filtered.map(opt => (
                                 <button
                                     key={opt}
+                                    type="button"
                                     onMouseDown={(e) => {
                                         e.preventDefault(); // Evita el blur del input
                                         onChange([...selected, opt]);
                                         setSearch('');
                                     }}
-                                    className="w-full text-left px-3 py-2 text-[11px] font-black hover:bg-primary/5 hover:text-primary rounded-lg transition-all flex items-center justify-between group/item"
+                                    className="w-full text-left px-3 py-2 text-[11px] font-bold hover:bg-primary/5 hover:text-primary rounded-cb-btn transition-all flex items-center justify-between group/item text-cb-text-primary cursor-pointer"
                                 >
                                     {opt}
                                     <Plus className="w-3 h-3 opacity-0 group-hover/item:opacity-100 transition-opacity" />

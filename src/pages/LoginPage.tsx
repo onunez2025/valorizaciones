@@ -5,6 +5,7 @@ import { useTheme } from '../context/ThemeContext';
 import { User, Lock, Eye, EyeOff, Moon, Sun } from 'lucide-react';
 import { cn } from '../utils/cn';
 import { API_BASE_URL } from '../services/apiClient';
+import { SIATC_THEME } from '../utils/siatc-theme';
 
 export default function LoginPage() {
     const { login } = useAuth();
@@ -58,20 +59,20 @@ export default function LoginPage() {
     };
 
     return (
-        <div className="min-h-screen flex flex-col md:flex-row bg-background text-foreground transition-colors duration-300 font-sans">
+        <div className={SIATC_THEME.LOGIN_LAYOUT.CONTAINER}>
             {/* Left Side - Brand / Visual (Matches Ecosystem Standard) */}
-            <div className="hidden md:flex flex-col justify-between w-1/2 bg-slate-900 text-white p-12 relative overflow-hidden">
+            <div className={SIATC_THEME.LOGIN_LAYOUT.LEFT_PANEL}>
                 <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCI+IDxyZWN0IHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgZmlsbD0ibm9uZSIvPiA8ZyBmaWxsPSJub25lIiBzdHJva2U9IiNmZmYiIHN0cm9rZS1vcGFjaXR5PSIwLjA1IiBzdHJva2Utd2lkdGg9IjIiPiA8cGF0aCBkPSJNMCAzdjU0TTMgMGg1NCIvPiA8L2c+IDwvc3ZnPg==')] bg-[size:60px_60px]" />
                 <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-900 to-blue-900/50" />
 
                 <div className="relative z-10">
                     <div className="flex items-center gap-3 mb-6">
-                        <div className="w-12 h-12 flex items-center justify-center shrink-0 overflow-hidden">
-                            <img src="/Logo.png" alt="Valorizaciones Logo" className="h-full w-full object-contain" />
+                        <div className="w-12 h-12 flex items-center justify-center shrink-0 overflow-hidden bg-white rounded-2xl shadow-lg border p-1.5">
+                            <img src="/logo.png" alt="Valorizaciones Logo" className="h-full w-full object-contain" />
                         </div>
-                        <span className="text-2xl font-bold tracking-tight">Valorizaciones</span>
+                        <span className="text-2xl font-bold tracking-tight text-white">Valorizaciones</span>
                     </div>
-                    <h1 className="text-5xl font-bold mb-4 leading-tight">
+                    <h1 className="text-5xl font-bold mb-4 leading-tight text-white">
                         Sistema<br />Gestión de<br />Valorizaciones
                     </h1>
                     <div className="text-slate-400 text-lg max-w-md space-y-6">
@@ -93,7 +94,7 @@ export default function LoginPage() {
             </div>
 
             {/* Right Side - Login Form */}
-            <div className="flex-1 flex flex-col justify-center items-center p-8 bg-background relative">
+            <div className={SIATC_THEME.LOGIN_LAYOUT.RIGHT_PANEL}>
                 <div className="absolute top-6 right-6 flex items-center gap-4">
                     <button
                         onClick={toggleTheme}
@@ -112,14 +113,14 @@ export default function LoginPage() {
 
                 <div className="w-full max-w-md space-y-8 animate-in fade-in zoom-in-95 duration-500">
                     <div className="text-center">
-                        <h2 className="text-3xl font-bold tracking-tight">Bienvenido</h2>
-                        <p className="mt-2 text-muted-foreground text-sm">
+                        <h2 className="text-3xl font-bold tracking-tight text-cb-text-primary">Bienvenido</h2>
+                        <p className="mt-2 text-cb-text-secondary text-sm">
                             Ingresa tus credenciales para acceder al sistema
                         </p>
                     </div>
 
                     {isExpired && (
-                        <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-500 text-sm flex items-start gap-3 animate-in fade-in slide-in-from-top-2">
+                        <div className={SIATC_THEME.LOGIN_LAYOUT.ALERT_EXPIRED}>
                             <Lock className="w-5 h-5 shrink-0 mt-0.5" />
                             <div>
                                 <p className="font-bold">Sesión expirada</p>
@@ -131,10 +132,10 @@ export default function LoginPage() {
                     <form onSubmit={handleLogin} className="space-y-6 mt-8">
                         <div className="space-y-4">
                             <div>
-                                <label className="block text-sm font-medium mb-1.5 ml-1">
+                                <label className="block text-sm font-medium mb-1.5 ml-1 text-cb-text-primary">
                                     Usuario
                                 </label>
-                                <div className="relative">
+                                <div className={SIATC_THEME.LOGIN_LAYOUT.INPUT_WRAPPER}>
                                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-muted-foreground">
                                         <User className="w-5 h-5" />
                                     </div>
@@ -142,7 +143,7 @@ export default function LoginPage() {
                                         type="text"
                                         value={username}
                                         onChange={(e) => setUsername(e.target.value)}
-                                        className="block w-full pl-10 pr-3 py-2.5 bg-input/50 border border-input rounded-lg focus:ring-2 focus:ring-primary focus:border-primary transition-all outline-none"
+                                        className={SIATC_THEME.LOGIN_LAYOUT.INPUT}
                                         placeholder="Ingrese usuario"
                                         required
                                         autoFocus
@@ -151,10 +152,10 @@ export default function LoginPage() {
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium mb-1.5 ml-1">
+                                <label className="block text-sm font-medium mb-1.5 ml-1 text-cb-text-primary">
                                     Contraseña
                                 </label>
-                                <div className="relative">
+                                <div className={SIATC_THEME.LOGIN_LAYOUT.INPUT_WRAPPER}>
                                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-muted-foreground">
                                         <Lock className="w-5 h-5" />
                                     </div>
@@ -162,7 +163,7 @@ export default function LoginPage() {
                                         type={showPassword ? 'text' : 'password'}
                                         value={password}
                                         onChange={(e) => setPassword(e.target.value)}
-                                        className="block w-full pl-10 pr-10 py-2.5 bg-input/50 border border-input rounded-lg focus:ring-2 focus:ring-primary focus:border-primary transition-all outline-none"
+                                        className={SIATC_THEME.LOGIN_LAYOUT.INPUT}
                                         placeholder="Ingrese contraseña"
                                         required
                                     />
@@ -180,7 +181,7 @@ export default function LoginPage() {
                         <div className="flex items-center justify-between text-sm">
                             <label className="flex items-center gap-2 cursor-pointer">
                                 <input type="checkbox" className="w-4 h-4 rounded border-input text-primary focus:ring-primary" />
-                                <span className="text-muted-foreground">Recordarme</span>
+                                <span className="text-cb-text-secondary">Recordarme</span>
                             </label>
                             <button
                                 type="button"
@@ -201,7 +202,7 @@ export default function LoginPage() {
                             type="submit"
                             disabled={loading}
                             className={cn(
-                                "w-full flex justify-center h-9 items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-bold text-primary-foreground bg-gradient-to-r from-primary/80 to-primary hover:from-primary/80 hover:to-primary focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ring transition-all transform active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed",
+                                "w-full flex justify-center h-11 items-center px-4 py-2 border border-transparent rounded-cb-btn shadow-sm text-sm font-bold text-primary-foreground bg-gradient-to-r from-primary/80 to-primary hover:from-primary hover:to-primary focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ring transition-all transform active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed",
                                 loading && "animate-pulse"
                             )}
                         >

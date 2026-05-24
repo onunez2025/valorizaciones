@@ -9,6 +9,7 @@ import {
 import { ApiClient } from '../services/apiClient';
 import { cn } from '../utils/cn';
 import { toTitleCase } from '../utils/formatters';
+import { SIATC_THEME } from '../utils/siatc-theme';
 
 interface DashboardStats {
     TotalTickets: number;
@@ -132,15 +133,15 @@ export default function DashboardPage() {
     );
 
     return (
-        <div className="flex-1 overflow-y-auto p-1 space-y-4 animate-in fade-in duration-700 custom-scrollbar">
+        <div className={SIATC_THEME.LAYOUT.PAGE_WRAPPER}>
             {/* Header Section - Estilo Liquidaciones */}
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div className={SIATC_THEME.LAYOUT.HEADER_WRAPPER}>
                 <div>
-                    <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-3">
+                    <h1 className={cn(SIATC_THEME.TYPOGRAPHY.PAGE_TITLE, "flex items-center gap-3")}>
                         Auditoría Analítica
                         <div className="w-2 h-2 bg-primary rounded-full animate-pulse shadow-[0_0_10px_rgba(var(--primary-rgb),0.5)]" />
                     </h1>
-                    <p className="text-muted-foreground text-sm font-medium">Inteligencia de negocios CAS en tiempo real.</p>
+                    <p className={SIATC_THEME.TYPOGRAPHY.PAGE_SUBTITLE}>Inteligencia de negocios CAS en tiempo real.</p>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-4">
@@ -149,8 +150,9 @@ export default function DashboardPage() {
                         <button 
                             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                             className={cn(
-                                "flex items-center justify-between gap-3 bg-background px-4 py-2 rounded-lg border border-border shadow-sm hover:border-primary/40 transition-all min-w-[200px]",
-                                isDropdownOpen && "ring-2 ring-primary/20 border-primary/50"
+                                "flex items-center justify-between gap-3 bg-background px-4 py-2 border shadow-sm transition-all min-w-[200px]",
+                                SIATC_THEME.TOKENS.COMPONENT_ROUNDNESS,
+                                isDropdownOpen ? "ring-2 ring-primary/20 border-primary/50" : "border-border hover:border-primary/40"
                             )}
                         >
                             <div className="flex items-center gap-2 truncate">
@@ -163,7 +165,7 @@ export default function DashboardPage() {
                         </button>
 
                         {isDropdownOpen && (
-                            <div className="absolute top-full right-0 mt-2 w-[300px] bg-card border border-border rounded-xl shadow-xl z-50 animate-in fade-in zoom-in-95 duration-200 overflow-hidden">
+                            <div className={cn("absolute top-full right-0 mt-2 w-[300px] shadow-xl z-50 animate-in fade-in zoom-in-95 duration-200 overflow-hidden", SIATC_THEME.COMPONENTS.MODAL_CONTENT, "p-0")}>
                                 <div className="p-3 border-b border-border/50">
                                     <div className="relative">
                                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
@@ -171,7 +173,7 @@ export default function DashboardPage() {
                                             autoFocus
                                             type="text" 
                                             placeholder="Buscar centro o RUC..."
-                                            className="w-full bg-muted/30 border-none rounded-xl pl-9 pr-4 py-2 text-[11px] font-bold focus:ring-1 focus:ring-primary/20 outline-none"
+                                            className={cn(SIATC_THEME.COMPONENTS.INPUT, "pl-9 text-[11px] font-bold")}
                                             value={searchQuery}
                                             onChange={(e) => setSearchQuery(e.target.value)}
                                         />
@@ -303,20 +305,20 @@ export default function DashboardPage() {
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* Grafico de Tendencias */}
-                <div className="lg:col-span-2 bg-card border border-border rounded-xl p-6 shadow-sm hover:border-primary/20 transition-all">
+                <div className={cn("lg:col-span-2 p-6 transition-all", SIATC_THEME.COMPONENTS.CARD_CONTAINER)}>
                     <div className="flex items-center justify-between mb-8">
                         <div>
-                            <h3 className="text-muted-foreground font-bold text-[10px] mb-1">Historial de Gastos</h3>
-                            <p className="text-xl font-bold tracking-tight">{selectedCas === 'all' ? 'Crecimiento Mensual' : 'Tendencia Individual'}</p>
+                            <h3 className={SIATC_THEME.TYPOGRAPHY.SECTION_TITLE}>Historial de Gastos</h3>
+                            <p className="text-xl font-bold tracking-tight text-cb-text-primary">{selectedCas === 'all' ? 'Crecimiento Mensual' : 'Tendencia Individual'}</p>
                         </div>
                         <div className="flex gap-4">
                             <div className="flex items-center gap-2">
                                 <div className="w-3 h-3 bg-primary rounded-full" />
-                                <span className="text-[10px] font-bold opacity-50">Bruto</span>
+                                <span className="text-[10px] font-bold opacity-50 text-cb-text-primary">Bruto</span>
                             </div>
                             <div className="flex items-center gap-2">
                                 <div className="w-3 h-3 bg-red-500 rounded-full" />
-                                <span className="text-[10px] font-bold opacity-50">Sanciones</span>
+                                <span className="text-[10px] font-bold opacity-50 text-cb-text-primary">Sanciones</span>
                             </div>
                         </div>
                     </div>
@@ -348,10 +350,10 @@ export default function DashboardPage() {
                 </div>
 
                 {/* Ranking de CAS */}
-                <div className="bg-card border border-border rounded-xl p-6 shadow-sm flex flex-col justify-between">
+                <div className={cn("p-6 flex flex-col justify-between", SIATC_THEME.COMPONENTS.CARD_CONTAINER)}>
                     <div>
-                        <h3 className="text-muted-foreground font-bold text-[10px] mb-1">Productividad</h3>
-                        <p className="text-xl font-bold tracking-tight mb-6">{selectedCas === 'all' ? 'Top 5 CAS Activos' : 'Desempeño Local'}</p>
+                        <h3 className={SIATC_THEME.TYPOGRAPHY.SECTION_TITLE}>Productividad</h3>
+                        <p className="text-xl font-bold tracking-tight mb-6 text-cb-text-primary">{selectedCas === 'all' ? 'Top 5 CAS Activos' : 'Desempeño Local'}</p>
                         
                         <div className="space-y-6">
                             {topCas.length > 0 ? topCas.map((cas, index) => (
@@ -359,9 +361,9 @@ export default function DashboardPage() {
                                     <div className="flex justify-between items-end mb-2">
                                         <div className="flex flex-col">
                                             <span className="text-[10px] font-black text-muted-foreground tracking-tighter">Ranking {index + 1}</span>
-                                            <span className="text-sm font-black group-hover:text-primary transition-colors line-clamp-1">{toTitleCase(cas.label)}</span>
+                                            <span className="text-sm font-black text-cb-text-primary group-hover:text-primary transition-colors line-clamp-1">{toTitleCase(cas.label)}</span>
                                         </div>
-                                        <span className="text-sm font-black opacity-40 group-hover:opacity-100 transition-opacity whitespace-nowrap">{cas.value} Tickets</span>
+                                        <span className="text-sm font-black opacity-40 text-cb-text-secondary group-hover:opacity-100 transition-opacity whitespace-nowrap">{cas.value} Tickets</span>
                                     </div>
                                     <div className="w-full bg-muted/40 h-2.5 rounded-full overflow-hidden">
                                         <div 
@@ -382,7 +384,7 @@ export default function DashboardPage() {
                     <div className="mt-8 pt-6 border-t border-border flex items-center justify-between">
                         <div className="flex flex-col">
                             <span className="text-[10px] font-black text-muted-foreground">Auditados</span>
-                            <span className="text-lg font-black">100% Completo</span>
+                            <span className="text-lg font-black text-cb-text-primary">100% Completo</span>
                         </div>
                         <div className="p-3 bg-emerald-500/10 text-emerald-600 rounded-lg shadow-sm">
                             <ArrowUpRight className="w-6 h-6" />
@@ -410,13 +412,13 @@ function StatCard({ title, value, subtitle, icon, trend, trendUp, color }: any) 
     };
 
     return (
-        <div className="bg-card border-2 border-border rounded-xl p-2.5 shadow-sm group transition-all">
-            <div className="flex items-center justify-between mb-1">
+        <div className={SIATC_THEME.COMPONENTS.KPI_CARD_CONTAINER}>
+            <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                     <div className={cn("p-1.5 rounded-lg transition-transform group-hover:scale-110", bgClasses[color], colorClasses[color])}>
                         {icon}
                     </div>
-                    <span className="text-[9px] font-bold text-muted-foreground">{title}</span>
+                    <span className={SIATC_THEME.COMPONENTS.KPI_CARD_LABEL}>{title}</span>
                 </div>
                 <div className={cn(
                     "flex items-center gap-1 text-[8px] font-bold px-1.5 py-0.5 rounded-full border",
@@ -427,11 +429,11 @@ function StatCard({ title, value, subtitle, icon, trend, trendUp, color }: any) 
                 </div>
             </div>
             
-            <p className="text-lg font-bold transition-colors group-hover:text-primary">{value}</p>
+            <p className={SIATC_THEME.COMPONENTS.KPI_CARD_VALUE}>{value}</p>
             
-            <div className="flex items-center gap-1.5 mt-0.5 opacity-60">
+            <div className="flex items-center gap-1.5 opacity-60">
                 <AlertCircle className="w-2.5 h-2.5 text-muted-foreground shrink-0" />
-                <p className="text-[9px] text-muted-foreground font-medium truncate">{subtitle}</p>
+                <p className={SIATC_THEME.COMPONENTS.KPI_CARD_SUB}>{subtitle}</p>
             </div>
         </div>
     );

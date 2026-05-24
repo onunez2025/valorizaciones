@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Grid } from 'lucide-react';
+import { toTitleCase } from '../../utils/formatters';
 
 const apps = [
     { id: 's-project', name: 'S-Project', url: 'https://gac-sole-sproject.jppsfv.easypanel.host/', logo: '/ecosystem-logos/s-project.png' },
@@ -7,7 +8,7 @@ const apps = [
     { id: 'liquidaciones', name: 'Liquidaciones', url: 'https://gac-sole-liquidaciones.jppsfv.easypanel.host/', logo: '/ecosystem-logos/liquidaciones.png' },
     { id: 'tablero-control', name: 'Tablero Control', url: 'https://gac-sole-tablero-control.jppsfv.easypanel.host/', logo: '/ecosystem-logos/tablero-control.png' },
     { id: 'ebm', name: 'EBM', url: 'https://gac-sole-ebm.jppsfv.easypanel.host/', logo: '/ecosystem-logos/ebm.png' },
-    { id: 'valorizaciones', name: 'Valorizaciones', url: 'https://gac-sole-valorizaciones.jppsfv.easypanel.host/', logo: '/Logo.png' }
+    { id: 'valorizaciones', name: 'Valorizaciones', url: 'https://gac-sole-valorizaciones.jppsfv.easypanel.host/', logo: '/logo.png' }
 ];
 
 interface AppSwitcherProps {
@@ -44,10 +45,10 @@ export function AppSwitcher({ currentAppId }: AppSwitcherProps) {
             {isOpen && (
                 <div 
                     className="absolute right-0 mt-2 w-[432px] backdrop-blur-md border border-black/10 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.2)] z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-300"
-                    style={{ backgroundColor: 'rgba(255, 255, 255, 0.95)' }}
+                    style={{ backgroundColor: '#FFFFFF' }}
                 >
                     <div className="p-5 border-b border-black/5 bg-[#2563EB]">
-                        <h3 className="text-base font-bold text-white tracking-tight">Más aplicaciones</h3>
+                        <h3 className="text-base font-bold text-white tracking-tight">{toTitleCase('Más aplicaciones')}</h3>
                     </div>
                     <div className="p-4 grid grid-cols-2 gap-4">
                         {otherApps.map(app => (
@@ -65,7 +66,7 @@ export function AppSwitcher({ currentAppId }: AppSwitcherProps) {
                                     <img src={app.logo} alt={`${app.name} logo`} className="w-full h-full object-contain rounded" />
                                 </div>
                                 <span className="relative text-sm font-bold text-[#0F172A] group-hover:text-blue-600 transition-colors text-center">
-                                    {app.name}
+                                    {toTitleCase(app.name)}
                                 </span>
                             </a>
                         ))}

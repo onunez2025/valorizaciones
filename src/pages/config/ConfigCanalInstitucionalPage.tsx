@@ -2,13 +2,13 @@ import { useState, useEffect } from 'react';
 import { ApiClient } from '../../services/apiClient';
 import { 
     Users, Plus, Edit2, Trash2, Search, 
-    Calendar, DollarSign, Activity,
-    Briefcase, Tag, AlertCircle, Hash
+    DollarSign, AlertCircle, ChevronRight
 } from 'lucide-react';
 import { Modal } from '../../components/common/Modal';
 import { useDialog } from '../../context/DialogContext';
 import { cn } from '../../utils/cn';
 import { format } from 'date-fns';
+import { SIATC_THEME } from '../../utils/siatc-theme';
 
 interface ConfigInstitucional {
     Id: number;
@@ -28,7 +28,7 @@ const formatDateUTC = (dateStr: string) => {
     try {
         const date = new Date(dateStr);
         return date.toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit', year: '2-digit', timeZone: 'UTC' });
-    } catch (e) {
+    } catch {
         return dateStr;
     }
 };
@@ -44,20 +44,15 @@ export default function ConfigCanalInstitucionalPage() {
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [editingConfig, setEditingConfig] = useState<any>(null);
+    const [editingConfig, setEditingConfig] = useState<Partial<ConfigInstitucional> | null>(null);
     const { alert, confirm } = useDialog();
-
-    useEffect(() => {
-        fetchData();
-        fetchCreators();
-    }, []);
 
     const fetchData = async () => {
         setLoading(true);
         try {
             const data = await ApiClient.request('/config-canal-institucional');
             setConfigs(data);
-        } catch (error: any) {
+        } catch {
             alert({ message: "Error al cargar la configuración institucional." });
         } finally {
             setLoading(false);
@@ -68,10 +63,16 @@ export default function ConfigCanalInstitucionalPage() {
         try {
             const data = await ApiClient.request('/c4c-creators');
             setCreators(data);
-        } catch (error) {
+        } catch {
             console.error("No se pudieron cargar los creadores.");
         }
     };
+
+    useEffect(() => {
+        fetchData();
+        fetchCreators();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     const handleDelete = async (id: number) => {
         if (await confirm({ 
@@ -84,7 +85,7 @@ export default function ConfigCanalInstitucionalPage() {
                 await ApiClient.request(`/config-canal-institucional/${id}`, { method: 'DELETE' });
                 alert({ title: "Eliminado", message: "La regla ha sido eliminada.", type: 'success' });
                 fetchData();
-            } catch (error: any) {
+            } catch {
                 alert({ message: "Error al eliminar." });
             }
         }
@@ -100,7 +101,7 @@ export default function ConfigCanalInstitucionalPage() {
             alert({ title: "Guardado", message: "Configuración actualizada correctamente.", type: 'success' });
             setIsModalOpen(false);
             fetchData();
-        } catch (error: any) {
+        } catch {
             alert({ message: "Error al guardar la configuración." });
         }
     };
@@ -111,15 +112,18 @@ export default function ConfigCanalInstitucionalPage() {
     );
 
     return (
-        <div className="flex flex-col h-full gap-5 animate-in fade-in slide-in-from-bottom-2 duration-500">
+        <div className={SIATC_THEME.LAYOUT.PAGE_WRAPPER}>
             {/* Header */}
-            <div className="flex items-center justify-between px-1">
-                <div>
-                    <h1 className="text-2xl font-black tracking-tight text-foreground flex items-center gap-3">
-                        <Briefcase className="w-8 h-8 text-primary" />
-                        Canal Institucional (OData)
-                    </h1>
-                    <p className="text-muted-foreground text-sm font-bold opacity-60 italic">
+            <div className={SIATC_THEME.LAYOUT.HEADER_WRAPPER}>
+                <div className="space-y-1">
+                    <div className="flex items-center gap-2 text-sm text-cb-text-secondary font-medium">
+                        <Briefcase className="w-4 h-4 text-cb-neutral" />
+                        <span>Configuración</span>
+                        <ChevronRight className="w-3 h-3 opacity-50" />
+                        <span className="text-cb-text-primary">Canal Institucional</span>
+                    </div>
+                    <h1 className={SIATC_THEME.TYPOGRAPHY.PAGE_TITLE}>Canal Institucional (OData)</h1>
+                    <p className={SIATC_THEME.TYPOGRAPHY.PAGE_SUBTITLE}>
                         Control de tarifas planas por usuario creador y palabras clave.
                     </p>
                 </div>
@@ -136,70 +140,70 @@ export default function ConfigCanalInstitucionalPage() {
                         });
                         setIsModalOpen(true);
                     }}
-                    className="bg-primary text-white h-11 px-6 rounded-2xl font-black text-sm shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-2"
+                    className={SIATC_THEME.COMPONENTS.BUTTON_PRIMARY}
                 >
-                    <Plus className="w-4 h-4" /> Nueva Regla
+                    <Plus className="w-4 h-4 stroke-[2.5]" /> Nueva Regla
                 </button>
             </div>
 
             {/* Content Table */}
-            <div className="flex-1 bg-card border border-border rounded-3xl overflow-hidden shadow-sm flex flex-col min-h-0 bg-white">
-                <div className="p-4 border-b border-border bg-slate-50/50 flex items-center gap-4">
-                    <div className="flex-1 relative">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <div className={cn(SIATC_THEME.LAYOUT.CONTENT_CONTAINER, "dark:bg-cb-bg")}>
+                <div className={SIATC_THEME.LAYOUT.SEARCH_BAR_WRAPPER}>
+                    <div className="relative flex-1 max-w-md">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-cb-neutral/60" />
                         <input 
                             type="text" 
                             placeholder="Buscar por usuario o palabras clave..." 
-                            className="w-full bg-white border border-border/50 rounded-xl pl-11 pr-4 py-2.5 text-sm font-bold focus:ring-4 focus:ring-primary/5 focus:border-primary outline-none transition-all"
+                            className={cn(SIATC_THEME.COMPONENTS.INPUT, "pl-11 pr-4 dark:bg-cb-bg text-cb-text-primary border-cb-border")}
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
                         />
                     </div>
                 </div>
 
-                <div className="flex-1 overflow-auto custom-scrollbar">
+                <div className={SIATC_THEME.TABLE.SCROLL_AREA}>
                     {loading ? (
-                        <div className="h-full flex flex-col items-center justify-center gap-4 opacity-40">
-                            <Activity className="w-10 h-10 animate-spin text-primary" />
-                            <p className="text-sm font-black italic">Consultando reglas institucionales...</p>
+                        <div className="absolute inset-0 flex flex-col items-center justify-center bg-card/60 backdrop-blur-md z-50">
+                            <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+                            <span className="text-sm font-bold text-cb-text-secondary mt-6 tracking-[0.2em] animate-pulse">Consultando reglas institucionales</span>
                         </div>
                     ) : filteredConfigs.length === 0 ? (
-                        <div className="h-full flex flex-col items-center justify-center text-center py-20 opacity-30">
-                            <AlertCircle className="w-16 h-16 mb-6" />
-                            <h3 className="text-lg font-black">No hay reglas configuradas</h3>
-                            <p className="text-xs font-bold mt-2 max-w-xs">Configura un usuario de C4C para aplicar tarifas institucionales.</p>
+                        <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-8 opacity-30">
+                            <AlertCircle className="w-16 h-16 mb-4 text-cb-neutral" />
+                            <h3 className="text-sm font-bold uppercase tracking-widest text-cb-neutral">No hay reglas configuradas</h3>
+                            <p className="text-xs text-cb-text-secondary mt-2 max-w-xs">Configura un usuario de C4C para aplicar tarifas institucionales.</p>
                         </div>
                     ) : (
-                        <table className="w-full border-separate border-spacing-0">
-                            <thead className="bg-slate-50 sticky top-0 z-10">
-                                <tr className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">
-                                    <th className="px-6 py-4 text-left">Usuario Creador (C4C)</th>
-                                    <th className="px-6 py-4 text-center">Importe Único</th>
-                                    <th className="px-6 py-4 text-center">Vigencia</th>
-                                    <th className="px-6 py-4 text-right">Acciones</th>
+                        <table className={SIATC_THEME.TABLE.TABLE_ELEMENT}>
+                            <thead className={SIATC_THEME.TABLE.HEADER_ROW}>
+                                <tr className="border-b border-cb-border">
+                                    <th className={SIATC_THEME.TABLE.HEADER_TH}><span className={SIATC_THEME.TYPOGRAPHY.TABLE_HEADER}>Usuario Creador (C4C)</span></th>
+                                    <th className={cn(SIATC_THEME.TABLE.HEADER_TH, "text-center")}><span className={SIATC_THEME.TYPOGRAPHY.TABLE_HEADER}>Importe Único</span></th>
+                                    <th className={cn(SIATC_THEME.TABLE.HEADER_TH, "text-center")}><span className={SIATC_THEME.TYPOGRAPHY.TABLE_HEADER}>Vigencia</span></th>
+                                    <th className={cn(SIATC_THEME.TABLE.HEADER_TH, "text-right")}><span className={SIATC_THEME.TYPOGRAPHY.TABLE_HEADER}>Acciones</span></th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-border/50">
+                            <tbody className="divide-y divide-cb-border/60">
                                 {filteredConfigs.map(c => (
-                                    <tr key={c.Id} className="hover:bg-primary/[0.01] transition-colors group">
-                                        <td className="px-6 py-4">
+                                    <tr key={c.Id} className={SIATC_THEME.TABLE.BODY_ROW}>
+                                        <td className={SIATC_THEME.TABLE.CELL}>
                                             <div className="flex items-center gap-3">
-                                                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                                                <div className="w-8 h-8 rounded-full bg-primary/10 dark:bg-primary/20 flex items-center justify-center text-primary dark:text-primary-foreground border border-cb-border shadow-inner">
                                                     <Users className="w-4 h-4" />
                                                 </div>
-                                                <span className="text-sm font-black text-foreground">{c.Usuario_Creador}</span>
+                                                <span className="text-sm font-bold text-cb-text-primary">{c.Usuario_Creador}</span>
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4 text-center">
-                                            <span className="text-sm font-black text-emerald-600">S/. {c.Importe.toFixed(2)}</span>
+                                        <td className={cn(SIATC_THEME.TABLE.CELL, "text-center")}>
+                                            <span className="text-sm font-bold text-emerald-600 dark:text-emerald-500 font-mono">S/. {c.Importe.toFixed(2)}</span>
                                         </td>
-                                        <td className="px-6 py-4 text-center">
-                                            <div className="text-[10px] font-black whitespace-nowrap">
+                                        <td className={cn(SIATC_THEME.TABLE.CELL, "text-center")}>
+                                            <div className="text-xs font-medium text-cb-text-secondary whitespace-nowrap font-mono">
                                                 {formatDateUTC(c.Fecha_Inicio)} - {formatDateUTC(c.Fecha_Fin)}
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4 text-right">
-                                            <div className="flex justify-end gap-2 group-hover:opacity-100 transition-all">
+                                        <td className={cn(SIATC_THEME.TABLE.CELL, "text-right")}>
+                                            <div className="flex justify-end gap-2">
                                                 <button 
                                                     onClick={() => {
                                                         setEditingConfig({
@@ -212,14 +216,14 @@ export default function ConfigCanalInstitucionalPage() {
                                                         });
                                                         setIsModalOpen(true);
                                                     }}
-                                                    className="p-2 bg-primary/10 text-primary rounded-lg hover:bg-primary hover:text-white transition-all shadow-sm"
+                                                    className="p-2 bg-primary/10 text-primary hover:bg-primary hover:text-white dark:bg-primary/20 dark:text-primary-foreground dark:hover:bg-primary dark:hover:text-white rounded-lg transition-all shadow-sm"
                                                     title="Editar"
                                                 >
                                                     <Edit2 className="w-3.5 h-3.5" />
                                                 </button>
                                                 <button 
                                                     onClick={() => handleDelete(c.Id)}
-                                                    className="p-2 bg-red-50 text-red-500 rounded-lg hover:bg-red-500 hover:text-white transition-all shadow-sm"
+                                                    className="p-2 bg-red-50 text-red-500 hover:bg-red-500 hover:text-white dark:bg-red-950/30 dark:text-red-400 dark:hover:bg-red-500 dark:hover:text-white rounded-lg transition-all shadow-sm"
                                                     title="Eliminar"
                                                 >
                                                     <Trash2 className="w-3.5 h-3.5" />
@@ -231,6 +235,17 @@ export default function ConfigCanalInstitucionalPage() {
                             </tbody>
                         </table>
                     )}
+                </div>
+
+                {/* Footer Stats: SIATC Standard */}
+                <div className={SIATC_THEME.TABLE.FOOTER}>
+                    <p className={SIATC_THEME.TYPOGRAPHY.FOOTER_STATS}>
+                        Total de reglas: <span className="text-cb-text-primary ml-1">{filteredConfigs.length}</span>
+                    </p>
+                    <div className="hidden sm:flex items-center gap-2 px-3 py-1 bg-white dark:bg-cb-bg rounded-cb-btn border border-cb-border shadow-cb-level-1">
+                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                        <span className="text-[9px] font-bold text-cb-neutral tracking-widest uppercase">Operativo</span>
+                    </div>
                 </div>
             </div>
 
@@ -244,13 +259,13 @@ export default function ConfigCanalInstitucionalPage() {
                 <form onSubmit={handleSave} className="space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                         <div className="flex flex-col gap-2 md:col-span-2">
-                            <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-1">Usuario Creador del Ticket (Nombre exacto en C4C)</label>
+                            <label className="text-[10px] font-bold text-cb-text-secondary uppercase tracking-widest ml-1">Usuario Creador del Ticket (Nombre exacto en C4C)</label>
                             <div className="relative">
-                                <Users className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-primary opacity-50" />
+                                <Users className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-cb-neutral/60 pointer-events-none" />
                                 <input 
                                     type="text" 
                                     list="creators-list"
-                                    className="w-full bg-slate-50 border border-border rounded-2xl pl-11 pr-4 py-3 text-sm font-black focus:ring-4 focus:ring-primary/5 focus:border-primary outline-none transition-all"
+                                    className={cn(SIATC_THEME.COMPONENTS.INPUT, "pl-11 pr-4 dark:bg-cb-bg text-cb-text-primary border-cb-border")}
                                     placeholder="Buscar o escribir nombre... Ej: Jose Perez"
                                     value={editingConfig?.usuario_creador || ''}
                                     onChange={(e) => setEditingConfig({...editingConfig, usuario_creador: e.target.value})}
@@ -263,10 +278,10 @@ export default function ConfigCanalInstitucionalPage() {
                         </div>
 
                         <div className="flex flex-col gap-2">
-                            <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-1">Fecha Inicio</label>
+                            <label className="text-[10px] font-bold text-cb-text-secondary uppercase tracking-widest ml-1">Fecha Inicio</label>
                             <input 
                                 type="date" 
-                                className="w-full bg-slate-50 border border-border rounded-2xl px-4 py-3 text-sm font-black focus:ring-4 focus:ring-primary/5 focus:border-primary outline-none transition-all"
+                                className={cn(SIATC_THEME.COMPONENTS.INPUT, "px-4 dark:bg-cb-bg text-cb-text-primary border-cb-border")}
                                 value={editingConfig?.fecha_inicio || ''}
                                 onChange={(e) => setEditingConfig({...editingConfig, fecha_inicio: e.target.value})}
                                 required
@@ -274,10 +289,10 @@ export default function ConfigCanalInstitucionalPage() {
                         </div>
 
                         <div className="flex flex-col gap-2">
-                            <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-1">Fecha Fin</label>
+                            <label className="text-[10px] font-bold text-cb-text-secondary uppercase tracking-widest ml-1">Fecha Fin</label>
                             <input 
                                 type="date" 
-                                className="w-full bg-slate-50 border border-border rounded-2xl px-4 py-3 text-sm font-black focus:ring-4 focus:ring-primary/5 focus:border-primary outline-none transition-all"
+                                className={cn(SIATC_THEME.COMPONENTS.INPUT, "px-4 dark:bg-cb-bg text-cb-text-primary border-cb-border")}
                                 value={editingConfig?.fecha_fin || ''}
                                 onChange={(e) => setEditingConfig({...editingConfig, fecha_fin: e.target.value})}
                                 required
@@ -285,13 +300,13 @@ export default function ConfigCanalInstitucionalPage() {
                         </div>
 
                         <div className="flex flex-col gap-2">
-                            <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-1">Importe Institucional (S/.)</label>
+                            <label className="text-[10px] font-bold text-cb-text-secondary uppercase tracking-widest ml-1">Importe Institucional (S/.)</label>
                             <div className="relative">
-                                <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-500" />
+                                <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-500 pointer-events-none" />
                                 <input 
                                     type="number" 
                                     step="0.01"
-                                    className="w-full bg-slate-50 border border-border rounded-2xl pl-11 pr-4 py-3 text-sm font-black focus:ring-4 focus:ring-primary/5 focus:border-primary outline-none transition-all"
+                                    className={cn(SIATC_THEME.COMPONENTS.INPUT, "pl-11 pr-4 dark:bg-cb-bg text-cb-text-primary border-cb-border")}
                                     value={editingConfig?.importe || 0}
                                     onChange={(e) => setEditingConfig({...editingConfig, importe: parseFloat(e.target.value)})}
                                     required
@@ -304,13 +319,13 @@ export default function ConfigCanalInstitucionalPage() {
                         <button 
                             type="button"
                             onClick={() => setIsModalOpen(false)}
-                            className="flex-1 py-4 text-sm font-bold text-muted-foreground hover:bg-slate-50 rounded-2xl transition-colors"
+                            className={SIATC_THEME.COMPONENTS.BUTTON_SECONDARY}
                         >
                             Cancelar
                         </button>
                         <button 
                             type="submit"
-                            className="flex-[2] py-4 bg-primary text-white text-sm font-black rounded-2xl shadow-xl shadow-primary/20 hover:scale-[1.01] transition-all"
+                            className={SIATC_THEME.COMPONENTS.BUTTON_PRIMARY}
                         >
                             Confirmar Configuración
                         </button>

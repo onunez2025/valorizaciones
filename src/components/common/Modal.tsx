@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { X } from 'lucide-react';
 import { cn } from '../../utils/cn';
+import { SIATC_THEME } from '../../utils/siatc-theme';
 
 interface ModalProps {
     isOpen: boolean;
@@ -32,28 +33,29 @@ export function Modal({ isOpen, onClose, title, subtitle, children, size = 'md',
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-background/80 backdrop-blur-sm animate-in fade-in duration-200">
+        <div className={cn("fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200", SIATC_THEME.TOKENS.MODAL_OVERLAY)}>
             <div className="fixed inset-0" onClick={onClose} />
             <div className={cn(
-                "relative w-full mx-4 bg-card text-foreground rounded-xl shadow-xl border border-border animate-in zoom-in-95 duration-200",
+                SIATC_THEME.COMPONENTS.MODAL_CONTENT,
+                "relative w-full mx-4 dark:bg-cb-bg text-cb-text-primary p-0 animate-in zoom-in-95 duration-200",
                 sizeClasses[size]
             )}>
-                <div className="flex items-center justify-between px-6 py-5 border-b border-border">
+                <div className="flex items-center justify-between px-6 py-5 border-b border-cb-border">
                     <div className="flex flex-col">
-                        <h2 className="text-xl font-black leading-none tracking-tight">{title}</h2>
-                        {subtitle && <p className="text-[10px] text-muted-foreground font-bold mt-2">{subtitle}</p>}
+                        <h2 className="text-[18px] font-bold leading-none tracking-tight text-cb-text-primary">{title}</h2>
+                        {subtitle && <p className="text-[11px] text-cb-text-secondary font-bold mt-2">{subtitle}</p>}
                     </div>
                     {!hideCloseButton && (
                         <button
                             onClick={onClose}
-                            className="rounded-sm opacity-70 transition-opacity hover:opacity-100 hover:bg-accent text-muted-foreground hover:text-foreground p-1"
+                            className="rounded-cb-btn opacity-70 transition-all hover:opacity-100 hover:bg-cb-bg text-cb-text-secondary p-1.5"
                         >
                             <X className="h-4 w-4" />
                             <span className="sr-only">Close</span>
                         </button>
                     )}
                 </div>
-                <div className="p-5 max-h-[85vh] overflow-y-auto">
+                <div className="p-6 max-h-[85vh] overflow-y-auto custom-scrollbar">
                     {children}
                 </div>
             </div>

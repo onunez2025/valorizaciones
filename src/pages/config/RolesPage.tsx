@@ -6,6 +6,7 @@ import { Modal } from '../../components/common/Modal';
 import { useDialog } from '../../context/DialogContext';
 import { useAuth } from '../../hooks/useAuth';
 import { RolesService } from '../../services/rolesService';
+import { SIATC_THEME } from '../../utils/siatc-theme';
 import type { Role, Permission } from '../../types';
 
 export default function RolesPage() {
@@ -117,21 +118,21 @@ export default function RolesPage() {
     return (
         <div className="flex flex-col h-full space-y-4 min-h-0 animate-in fade-in duration-500">
             {/* Header: SIATC Standard */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 shrink-0 px-1">
+            <div className={SIATC_THEME.LAYOUT.HEADER_WRAPPER}>
                 <div className="space-y-1">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground font-medium">
-                        <Shield className="w-4 h-4" />
+                    <div className="flex items-center gap-2 text-sm text-cb-text-secondary font-medium">
+                        <Shield className="w-4 h-4 text-cb-neutral" />
                         <span>Configuración</span>
                         <ChevronRight className="w-3 h-3 opacity-50" />
-                        <span className="text-foreground">Perfiles y Permisos</span>
+                        <span className="text-cb-text-primary">Perfiles y Permisos</span>
                     </div>
-                    <h1 className="text-2xl font-bold tracking-tight text-foreground">Gestión de Perfiles</h1>
-                    <p className="text-sm text-muted-foreground">Define las facultades y niveles de acceso para las identidades de Valorizaciones</p>
+                    <h1 className={SIATC_THEME.TYPOGRAPHY.PAGE_TITLE}>Gestión de Perfiles</h1>
+                    <p className={SIATC_THEME.TYPOGRAPHY.PAGE_SUBTITLE}>Define las facultades y niveles de acceso para las identidades de Valorizaciones</p>
                 </div>
                 {hasPermission('val.config.roles') && (
                     <button
                         onClick={handleCreate}
-                        className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground rounded-xl hover:bg-primary/90 transition-all active:scale-95 font-semibold text-sm shadow-sm"
+                        className={SIATC_THEME.COMPONENTS.BUTTON_PRIMARY}
                     >
                         <Plus className="w-4 h-4" />
                         Nuevo Perfil
@@ -142,30 +143,29 @@ export default function RolesPage() {
             {/* Content Container */}
             <div className="flex-1 min-h-0 overflow-auto pr-1 pb-4 custom-scrollbar">
                 {isLoading ? (
-                    <div className="flex flex-col items-center justify-center h-64 gap-4 bg-card rounded-2xl border border-border shadow-sm">
+                    <div className="flex flex-col items-center justify-center h-64 gap-4 bg-white dark:bg-cb-bg rounded-cb-card border border-cb-border shadow-cb-level-1">
                         <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-                        <span className="text-sm font-bold text-muted-foreground tracking-widest">Sincronizando seguridad...</span>
+                        <span className="text-sm font-bold text-cb-text-secondary tracking-widest">Sincronizando seguridad...</span>
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {roles
-                            .map((role) => (
-                            <div key={role.id} className="group bg-card rounded-2xl border border-border shadow-sm p-5 hover:shadow-md transition-all duration-300 relative overflow-hidden">
+                        {roles.map((role) => (
+                            <div key={role.id} className={cn(SIATC_THEME.COMPONENTS.CARD_CONTAINER, "group p-5 hover:shadow-cb-level-2 transition-all duration-300 relative overflow-hidden bg-white dark:bg-cb-bg border-cb-border")}>
                                 <div className="absolute top-0 right-0 p-8 opacity-[0.02] group-hover:opacity-[0.05] transition-opacity pointer-events-none">
                                     <Shield className="w-24 h-24 rotate-12" />
                                 </div>
                                 <div className="flex items-start justify-between mb-4 relative z-10">
                                     <div className="flex items-center gap-4">
-                                        <div className="w-11 h-11 rounded-xl bg-muted flex items-center justify-center text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary transition-all border border-transparent group-hover:border-primary/20 shrink-0">
+                                        <div className="w-11 h-11 rounded-cb-btn bg-cb-bg/50 flex items-center justify-center text-cb-neutral group-hover:bg-primary/10 group-hover:text-primary transition-all border border-cb-border shrink-0">
                                             <Shield className="w-5.5 h-5.5 stroke-[2]" />
                                         </div>
                                         <div>
-                                            <h3 className="font-bold text-foreground text-sm tracking-tight leading-none mb-1.5">
+                                            <h3 className="font-bold text-cb-text-primary text-sm tracking-tight leading-none mb-1.5">
                                                 {toTitleCase(role.name)}
                                             </h3>
                                             <div className="flex items-center gap-2">
-                                                <span className="inline-flex px-2 py-0.5 rounded-lg bg-emerald-50 text-emerald-700 text-[10px] font-bold border border-emerald-100">Activo</span>
-                                                <span className="text-[10px] text-muted-foreground font-bold tracking-tight">
+                                                <span className={cn(SIATC_THEME.STATES.BADGE_BASE, SIATC_THEME.STATES.SUCCESS)}>Activo</span>
+                                                <span className="text-[11px] text-cb-text-secondary font-bold tracking-tight">
                                                      {role.permissions.filter(p => allPermissions.some(ap => ap.id === p)).length} facultades
                                                 </span>
                                             </div>
@@ -176,7 +176,7 @@ export default function RolesPage() {
                                             <>
                                                 <button
                                                     onClick={() => { setEditingRole(role); setFormData({ name: role.name, permissions: role.permissions, apps: role.apps || APP_IDENTIFIER }); setIsModalOpen(true); }}
-                                                    className="p-2 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-lg transition-all active:scale-90"
+                                                    className="p-2 text-cb-text-secondary hover:text-primary hover:bg-primary/10 rounded-cb-btn transition-all active:scale-90 cursor-pointer"
                                                     title="Editar"
                                                 >
                                                     <Edit2 className="w-4 h-4" />
@@ -184,7 +184,7 @@ export default function RolesPage() {
                                                 {role.id !== 'ADMIN' && (
                                                     <button
                                                         onClick={() => handleDelete(role.id)}
-                                                        className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-all active:scale-90"
+                                                        className="p-2 text-cb-text-secondary hover:text-[#DF2935] hover:bg-[#DF2935]/10 rounded-cb-btn transition-all active:scale-90 cursor-pointer"
                                                         title="Eliminar"
                                                     >
                                                         <Trash2 className="w-4 h-4" />
@@ -197,9 +197,9 @@ export default function RolesPage() {
 
                                 <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto pr-1 custom-scrollbar relative z-10 transition-all">
                                     {role.permissions.filter(p => allPermissions.some(ap => ap.id === p)).length === 0 ? (
-                                        <div className="w-full flex flex-col items-center justify-center gap-2 py-4 px-4 bg-muted/20 rounded-xl border border-dashed border-border/60">
-                                            <Lock className="w-5 h-5 text-muted-foreground/30" />
-                                            <span className="text-[10px] text-muted-foreground font-bold italic text-center">Sin facultades asignadas</span>
+                                        <div className="w-full flex flex-col items-center justify-center gap-2 py-4 px-4 bg-cb-bg/30 rounded-cb-card border border-dashed border-cb-border">
+                                            <Lock className="w-5 h-5 text-cb-neutral/40" />
+                                            <span className="text-[10px] text-cb-neutral font-bold italic text-center">Sin facultades asignadas</span>
                                         </div>
                                     ) : (
                                         role.permissions
@@ -207,15 +207,15 @@ export default function RolesPage() {
                                             .map((perm: string) => {
                                                 const label = allPermissions.find((p: any) => p.id === perm)?.label || perm;
                                                 return (
-                                                    <span key={perm} className="px-2.5 py-0.5 rounded-lg text-[10px] font-bold bg-muted text-muted-foreground border border-transparent hover:border-primary/20 hover:bg-primary/5 hover:text-primary transition-colors whitespace-nowrap">
+                                                    <span key={perm} className={cn(SIATC_THEME.STATES.BADGE_BASE, SIATC_THEME.STATES.SECONDARY, "normal-case tracking-normal h-[22px] hover:border-primary/20 hover:bg-primary/5 hover:text-primary whitespace-nowrap")}>
                                                         {label}
                                                     </span>
                                                 );
                                             })
                                     )}
                                 </div>
-                                <div className="mt-5 pt-4 border-t border-border/50 flex items-center justify-between opacity-40 group-hover:opacity-100 transition-opacity">
-                                    <div className="flex items-center gap-1.5 font-bold text-[9px] text-muted-foreground tracking-widest uppercase">
+                                <div className="mt-5 pt-4 border-t border-cb-border flex items-center justify-between opacity-40 group-hover:opacity-100 transition-opacity">
+                                    <div className="flex items-center gap-1.5 font-bold text-[9px] text-cb-neutral tracking-widest uppercase">
                                         <Database className="w-3 h-3" />
                                         SIATC Global
                                     </div>
@@ -232,22 +232,22 @@ export default function RolesPage() {
                 <form onSubmit={handleSave} className="p-6 pt-2 space-y-6">
                     <div className="space-y-6">
                         {/* Role Header Section */}
-                        <div className="bg-muted/30 p-5 rounded-2xl border border-border/50 relative overflow-hidden group">
+                        <div className="bg-cb-bg/30 p-5 rounded-cb-card border border-cb-border relative overflow-hidden group">
                            <div className="absolute top-0 right-0 p-8 opacity-[0.03] group-hover:opacity-[0.05] transition-opacity pointer-events-none">
                                 <Shield className="w-20 h-20 rotate-12" />
                             </div>
                             <div className="relative z-10 flex flex-col gap-3">
-                                <label className="text-xs font-bold text-muted-foreground tracking-widest pl-1">Nombre del perfil:</label>
+                                <label className="text-[11px] font-bold text-cb-neutral uppercase tracking-wider pl-1">Nombre del perfil:</label>
                                 <div className="relative flex-1">
                                     <input 
                                         type="text" 
                                         required
                                         value={formData.name || ''} 
                                         onChange={e => setFormData({ ...formData, name: e.target.value })}
-                                        className="w-full h-11 pl-11 pr-4 bg-background border border-border rounded-xl text-sm font-bold focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none" 
+                                        className={cn(SIATC_THEME.COMPONENTS.INPUT, "h-11 pl-11 pr-4 dark:bg-cb-bg text-cb-text-primary border-cb-border")}
                                         placeholder="Ej: Administrador Compras, Auditor" 
                                     />
-                                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-primary/40">
+                                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-cb-neutral/60">
                                         <Lock className="w-4 h-4 stroke-[2.5]" />
                                     </div>
                                 </div>
@@ -256,7 +256,7 @@ export default function RolesPage() {
 
                         {/* Application Access Section */}
                         <div className="space-y-3">
-                            <label className="text-xs font-bold text-muted-foreground tracking-widest px-1 flex items-center gap-2">
+                            <label className="text-[11px] font-bold text-cb-neutral uppercase tracking-wider px-1 flex items-center gap-2">
                                 <AppWindow className="w-4 h-4 text-primary/60" />
                                 Ámbito del ecosistema SIATC
                             </label>
@@ -275,16 +275,16 @@ export default function RolesPage() {
                                             type="button" 
                                             onClick={() => toggleApp(app.id)}
                                             className={cn(
-                                                "flex items-center gap-3 px-3 py-2.5 rounded-xl text-[10px] font-bold tracking-tight border transition-all duration-200",
+                                                "flex items-center gap-3 px-3 py-2.5 rounded-cb-btn text-[10px] font-bold tracking-tight border transition-all duration-200 cursor-pointer",
                                                 isSelected
                                                     ? "bg-primary text-primary-foreground border-primary shadow-sm scale-[1.02]"
-                                                    : "bg-background border-border text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                                                    : "bg-white dark:bg-cb-bg border-cb-border text-cb-neutral hover:bg-cb-bg"
                                             )}>
                                             <div className={cn(
-                                                "w-7 h-7 rounded-lg flex items-center justify-center text-[10px] font-black transition-all",
+                                                "w-7 h-7 rounded-cb-btn flex items-center justify-center text-[10px] font-black transition-all",
                                                 isSelected 
                                                     ? "bg-white text-primary" 
-                                                    : "bg-muted text-muted-foreground/60"
+                                                    : "bg-muted text-cb-neutral/60"
                                             )}>
                                                 {app.id.substring(0, 1)}
                                             </div>
@@ -298,11 +298,11 @@ export default function RolesPage() {
                         {/* Permissions Section */}
                         <div className="space-y-4">
                             <div className="flex items-center gap-4">
-                                <label className="text-xs font-bold text-muted-foreground tracking-widest px-1 shrink-0 flex items-center gap-2">
+                                <label className="text-[11px] font-bold text-cb-neutral uppercase tracking-wider px-1 shrink-0 flex items-center gap-2">
                                      <Activity className="w-4 h-4 text-primary/60" />
                                      Matriz de facultades
                                 </label>
-                                <div className="h-px bg-border flex-1" />
+                                <div className="h-px bg-cb-border flex-1" />
                             </div>
 
                             <div className="space-y-3">
@@ -313,47 +313,47 @@ export default function RolesPage() {
 
                                     return (
                                         <div key={group} className={cn(
-                                            "border rounded-xl overflow-hidden bg-background transition-all duration-300",
-                                            isExpanded ? "border-primary/40 shadow-sm" : "border-border"
+                                            "border rounded-cb-card overflow-hidden bg-white dark:bg-cb-bg transition-all duration-300",
+                                            isExpanded ? "border-primary/40 shadow-sm" : "border-cb-border"
                                         )}>
                                             <button 
                                                 type="button"
                                                 onClick={() => toggleGroup(group)}
                                                 className={cn(
-                                                    "w-full flex items-center justify-between p-3.5 hover:bg-muted/30 transition-all",
-                                                    isExpanded && "bg-muted/20 border-b border-border"
+                                                    "w-full flex items-center justify-between p-3.5 hover:bg-cb-bg/50 transition-all",
+                                                    isExpanded && "bg-cb-bg/30 border-b border-cb-border"
                                                 )}
                                             >
                                                 <div className="flex items-center gap-3.5">
                                                     <div className={cn(
-                                                        "w-10 h-10 rounded-xl flex items-center justify-center transition-all border",
-                                                        isExpanded ? "bg-primary text-white border-primary" : "bg-muted text-primary border-border"
+                                                        "w-10 h-10 rounded-cb-btn flex items-center justify-center transition-all border",
+                                                        isExpanded ? "bg-primary text-white border-primary" : "bg-cb-bg text-primary border-cb-border"
                                                     )}>
                                                         {getGroupIcon(group)}
                                                     </div>
                                                     <div className="text-left">
-                                                        <p className="text-sm font-bold text-foreground leading-none mb-1.5">{group}</p>
-                                                        <p className="text-[10px] font-medium text-muted-foreground">
+                                                        <p className="text-sm font-bold text-cb-text-primary leading-none mb-1.5">{group}</p>
+                                                        <p className="text-[10px] font-medium text-cb-text-secondary">
                                                             {selectedCount} de {groupPermissions.length} activos
                                                         </p>
                                                     </div>
                                                 </div>
                                                 <div className="flex items-center gap-3">
                                                     {selectedCount > 0 && !isExpanded && (
-                                                        <div className="px-2 py-0.5 rounded-lg bg-emerald-50 text-emerald-700 text-[10px] font-bold border border-emerald-100 flex items-center gap-1">
+                                                        <div className="px-2 py-0.5 rounded-cb-chip bg-emerald-500/10 text-emerald-600 dark:text-emerald-500 text-[10px] font-bold border border-emerald-500/20 flex items-center gap-1">
                                                             <Check className="w-3 h-3 stroke-[3]" />
                                                             {selectedCount}
                                                         </div>
                                                     )}
                                                     <ChevronDown className={cn(
-                                                        "w-5 h-5 text-muted-foreground transition-transform duration-300",
+                                                        "w-5 h-5 text-cb-neutral transition-transform duration-300",
                                                         isExpanded ? "rotate-180" : ""
                                                     )} />
                                                 </div>
                                             </button>
 
                                             {isExpanded && (
-                                                <div className="p-4 bg-muted/5">
+                                                <div className="p-4 bg-cb-bg/10">
                                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
                                                         {groupPermissions.map((perm: any) => {
                                                             const isSelected = formData.permissions.includes(perm.id);
@@ -363,10 +363,10 @@ export default function RolesPage() {
                                                                     key={perm.id} 
                                                                     onClick={() => togglePermission(perm.id)}
                                                                     className={cn(
-                                                                        "group flex items-center gap-3 px-3 py-2.5 rounded-xl text-[10px] font-bold text-left transition-all border",
+                                                                        "group flex items-center gap-3 px-3 py-2.5 rounded-cb-btn text-[10px] font-bold text-left transition-all border cursor-pointer",
                                                                         isSelected
-                                                                            ? "bg-white border-primary text-primary shadow-sm"
-                                                                            : "bg-background border-transparent text-muted-foreground hover:bg-muted/30"
+                                                                            ? "bg-white dark:bg-cb-bg border-primary text-primary shadow-sm"
+                                                                            : "bg-white dark:bg-cb-bg border-cb-border text-cb-neutral hover:bg-cb-bg"
                                                                     )}
                                                                 >
                                                                     <div className={cn(
@@ -377,7 +377,7 @@ export default function RolesPage() {
                                                                     )}>
                                                                         {isSelected && <Check className="w-3 h-3 stroke-[4px]" />}
                                                                     </div>
-                                                                    <span className="truncate flex-1 tracking-tight">{perm.label}</span>
+                                                                    <span className="truncate flex-1 tracking-tight text-cb-text-primary">{perm.label}</span>
                                                                 </button>
                                                             );
                                                         })}
@@ -391,17 +391,17 @@ export default function RolesPage() {
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-3 pt-4 border-t border-border mt-2">
+                    <div className="flex items-center gap-3 pt-4 border-t border-cb-border mt-2">
                         <button
                             type="button"
                             onClick={() => setIsModalOpen(false)}
-                            className="flex-1 px-4 py-2.5 text-xs font-bold text-muted-foreground hover:bg-muted rounded-xl transition-all tracking-widest active:scale-95"
+                            className={cn(SIATC_THEME.COMPONENTS.BUTTON_SECONDARY, "flex-1")}
                         >
                             Cancelar
                         </button>
                         <button
                             type="submit"
-                            className="flex-1 px-4 py-2.5 text-xs font-bold text-primary-foreground bg-primary hover:bg-primary/90 rounded-xl shadow-lg shadow-primary/25 active:scale-95 transition-all tracking-widest flex items-center justify-center gap-2"
+                            className={cn(SIATC_THEME.COMPONENTS.BUTTON_PRIMARY, "flex-1")}
                         >
                             <Save className="w-4 h-4" />
                             {editingRole ? 'Guardar cambios' : 'Confirmar perfil'}

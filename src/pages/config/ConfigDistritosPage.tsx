@@ -10,6 +10,7 @@ import { Modal } from '../../components/common/Modal';
 import { useDialog } from '../../context/DialogContext';
 import { cn } from '../../utils/cn';
 import { format } from 'date-fns';
+import { SIATC_THEME } from '../../utils/siatc-theme';
 
 interface DistritoInfo {
     Distrito: string;
@@ -122,13 +123,13 @@ export default function ConfigDistritosPage() {
     return (
         <div className="flex flex-col h-full gap-5 animate-in fade-in slide-in-from-bottom-2 duration-500">
             {/* Header */}
-            <div className="flex items-center justify-between px-1">
-                <div>
-                    <h1 className="text-2xl font-black tracking-tight text-foreground flex items-center gap-3">
-                        <MapPin className="w-8 h-8 text-primary" />
+            <div className={SIATC_THEME.LAYOUT.HEADER_WRAPPER}>
+                <div className="space-y-1">
+                    <h1 className={cn(SIATC_THEME.TYPOGRAPHY.PAGE_TITLE, "flex items-center gap-3")}>
+                        <MapPin className="w-6 h-6 text-primary" />
                         Adicionales por Distrito
                     </h1>
-                    <p className="text-muted-foreground text-sm font-bold opacity-60 italic">Zonificación de incentivos y recargos por CAS/Distrito.</p>
+                    <p className={SIATC_THEME.TYPOGRAPHY.PAGE_SUBTITLE}>Zonificación de incentivos y recargos por CAS/Distrito.</p>
                 </div>
                 <button 
                     onClick={() => {
@@ -142,7 +143,7 @@ export default function ConfigDistritosPage() {
                         });
                         setIsEditModalOpen(true);
                     }}
-                    className="bg-primary text-white h-11 px-6 rounded-2xl font-black text-sm shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-2"
+                    className={SIATC_THEME.COMPONENTS.BUTTON_PRIMARY}
                 >
                     <Plus className="w-4 h-4" /> Crear Configuración
                 </button>
@@ -150,33 +151,33 @@ export default function ConfigDistritosPage() {
 
             {/* Quick Stats */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="bg-white p-5 rounded-3xl border border-border shadow-sm flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
+                <div className="bg-white dark:bg-cb-bg p-5 rounded-cb-card border border-cb-border shadow-cb-level-1 flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-cb-btn bg-primary/10 flex items-center justify-center text-primary">
                         <Activity className="w-6 h-6 leading-none" />
                     </div>
                     <div>
-                        <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest leading-none mb-1">Reglas Activas</p>
-                        <p className="text-2xl font-black text-foreground leading-none">{configs.filter(c => c.Activo).length}</p>
+                        <p className="text-[11px] font-bold text-cb-neutral uppercase tracking-wider leading-none mb-1">Reglas Activas</p>
+                        <p className="text-2xl font-bold text-cb-text-primary leading-none">{configs.filter(c => c.Activo).length}</p>
                     </div>
                 </div>
-                <div className="bg-white p-5 rounded-3xl border border-border shadow-sm flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-600">
+                <div className="bg-white dark:bg-cb-bg p-5 rounded-cb-card border border-cb-border shadow-cb-level-1 flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-cb-btn bg-cb-success/10 flex items-center justify-center text-cb-success">
                         <MapPin className="w-6 h-6 leading-none" />
                     </div>
                     <div>
-                        <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest leading-none mb-1">Distritos Cubiertos</p>
-                        <p className="text-2xl font-black text-foreground leading-none">
+                        <p className="text-[11px] font-bold text-cb-neutral uppercase tracking-wider leading-none mb-1">Distritos Cubiertos</p>
+                        <p className="text-2xl font-bold text-cb-text-primary leading-none">
                             {new Set(configs.flatMap(c => JSON.parse(c.Distritos))).size}
                         </p>
                     </div>
                 </div>
-                <div className="bg-white p-5 rounded-3xl border border-border shadow-sm flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-amber-50 flex items-center justify-center text-amber-600">
+                <div className="bg-white dark:bg-cb-bg p-5 rounded-cb-card border border-cb-border shadow-cb-level-1 flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-cb-btn bg-cb-warning/10 flex items-center justify-center text-cb-warning">
                         <Building2 className="w-6 h-6 leading-none" />
                     </div>
                     <div>
-                        <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest leading-none mb-1">CAS Participantes</p>
-                        <p className="text-2xl font-black text-foreground leading-none">
+                        <p className="text-[11px] font-bold text-cb-neutral uppercase tracking-wider leading-none mb-1">CAS Participantes</p>
+                        <p className="text-2xl font-bold text-cb-text-primary leading-none">
                             {new Set(configs.flatMap(c => JSON.parse(c.CAS_Ids))).size}
                         </p>
                     </div>
@@ -184,71 +185,71 @@ export default function ConfigDistritosPage() {
             </div>
 
             {/* Content Table */}
-            <div className="flex-1 bg-card border border-border rounded-3xl overflow-hidden shadow-sm flex flex-col min-h-0 bg-white">
-                <div className="p-4 border-b border-border bg-slate-50/50 flex items-center gap-4">
+            <div className={cn(SIATC_THEME.LAYOUT.CONTENT_CONTAINER, "dark:bg-cb-bg")}>
+                <div className={SIATC_THEME.LAYOUT.SEARCH_BAR_WRAPPER}>
                     <div className="flex-1 relative">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-cb-neutral/60" />
                         <input 
                             type="text" 
                             placeholder="Buscar por distrito..." 
-                            className="w-full bg-white border border-border/50 rounded-xl pl-11 pr-4 py-2.5 text-sm font-bold focus:ring-4 focus:ring-primary/5 focus:border-primary outline-none transition-all"
+                            className={cn(SIATC_THEME.COMPONENTS.INPUT, "pl-11 pr-4 dark:bg-cb-bg text-cb-text-primary border-cb-border")}
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
                         />
                     </div>
-                    <div className="flex items-center gap-2 px-3 py-2 bg-white border border-border/50 rounded-xl text-[10px] font-black text-muted-foreground">
+                    <div className={cn(SIATC_THEME.STATES.BADGE_BASE, SIATC_THEME.STATES.SECONDARY, "px-3 h-[36px]")}>
                         <Filter className="w-3.5 h-3.5" />
                         FILTROS ACTIVOS
                     </div>
                 </div>
 
-                <div className="flex-1 overflow-auto custom-scrollbar">
+                <div className={SIATC_THEME.TABLE.SCROLL_AREA}>
                     {loading ? (
                         <div className="h-full flex flex-col items-center justify-center gap-4 opacity-40">
                             <Activity className="w-10 h-10 animate-spin text-primary" />
-                            <p className="text-sm font-black italic">Sincronizando configuraciones...</p>
+                            <p className="text-sm font-bold text-cb-text-secondary italic">Sincronizando configuraciones...</p>
                         </div>
                     ) : filteredConfigs.length === 0 ? (
                         <div className="h-full flex flex-col items-center justify-center text-center py-20 opacity-30">
-                            <MapPin className="w-16 h-16 mb-6" />
-                            <h3 className="text-lg font-black">No hay reglas configuradas</h3>
-                            <p className="text-xs font-bold mt-2 max-w-xs">Cree una nueva regla para empezar a aplicar adicionales por zona.</p>
+                            <MapPin className="w-16 h-16 mb-6 text-cb-neutral" />
+                            <h3 className="text-lg font-bold text-cb-text-primary">No hay reglas configuradas</h3>
+                            <p className="text-xs font-bold text-cb-text-secondary mt-2 max-w-xs">Cree una nueva regla para empezar a aplicar adicionales por zona.</p>
                         </div>
                     ) : (
-                        <table className="w-full border-separate border-spacing-0">
-                            <thead className="bg-slate-50 sticky top-0 z-10">
-                                <tr className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">
-                                    <th className="px-6 py-4 text-left">Distritos</th>
-                                    <th className="px-6 py-4 text-left">CAS</th>
-                                    <th className="px-6 py-4 text-center">Importe</th>
-                                    <th className="px-6 py-4 text-center">Vigencia</th>
-                                    <th className="px-6 py-4 text-center">Estado</th>
-                                    <th className="px-6 py-4 text-right">Acciones</th>
+                        <table className={SIATC_THEME.TABLE.TABLE_ELEMENT}>
+                            <thead className={SIATC_THEME.TABLE.HEADER_ROW}>
+                                <tr>
+                                    <th className={SIATC_THEME.TABLE.HEADER_TH}><span className={SIATC_THEME.TYPOGRAPHY.TABLE_HEADER}>Distritos</span></th>
+                                    <th className={SIATC_THEME.TABLE.HEADER_TH}><span className={SIATC_THEME.TYPOGRAPHY.TABLE_HEADER}>CAS</span></th>
+                                    <th className={cn(SIATC_THEME.TABLE.HEADER_TH, "text-center")}><span className={SIATC_THEME.TYPOGRAPHY.TABLE_HEADER}>Importe</span></th>
+                                    <th className={cn(SIATC_THEME.TABLE.HEADER_TH, "text-center")}><span className={SIATC_THEME.TYPOGRAPHY.TABLE_HEADER}>Vigencia</span></th>
+                                    <th className={cn(SIATC_THEME.TABLE.HEADER_TH, "text-center")}><span className={SIATC_THEME.TYPOGRAPHY.TABLE_HEADER}>Estado</span></th>
+                                    <th className={cn(SIATC_THEME.TABLE.HEADER_TH, "text-right")}><span className={SIATC_THEME.TYPOGRAPHY.TABLE_HEADER}>Acciones</span></th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-border/50">
+                            <tbody className="divide-y divide-cb-border/50">
                                 {filteredConfigs.map(c => {
                                     const cCAS = JSON.parse(c.CAS_Ids);
                                     const cDist = JSON.parse(c.Distritos);
                                     return (
-                                        <tr key={c.Id} className="hover:bg-primary/[0.01] transition-colors group">
-                                            <td className="px-6 py-4 max-w-[300px]">
+                                        <tr key={c.Id} className={SIATC_THEME.TABLE.BODY_ROW}>
+                                            <td className={cn(SIATC_THEME.TABLE.CELL, "max-w-[300px]")}>
                                                 <div className="flex flex-wrap gap-1">
                                                     {cDist.map((d: any) => (
-                                                        <span key={d} className="px-2 py-0.5 bg-slate-100 text-slate-600 rounded-md text-[9px] font-black border border-slate-200">
+                                                        <span key={d} className={cn(SIATC_THEME.STATES.BADGE_BASE, SIATC_THEME.STATES.SECONDARY, "h-[22px] normal-case tracking-normal")}>
                                                             {d}
                                                         </span>
                                                     ))}
                                                 </div>
                                             </td>
-                                            <td className="px-6 py-4 max-w-[200px]">
-                                                <div className="text-xs font-bold text-muted-foreground group">
+                                            <td className={cn(SIATC_THEME.TABLE.CELL, "max-w-[200px]")}>
+                                                <div className="text-xs font-bold text-cb-text-secondary group">
                                                     {cCAS.length} {cCAS.length === 1 ? 'CAS Seleccionado' : 'CAS Seleccionados'}
                                                     <div className="hidden group-hover:flex flex-wrap gap-1 mt-2">
                                                         {cCAS.map((id: string) => {
                                                             const casItem = casList.find(item => item.ID_CAS === id);
                                                             return (
-                                                                <span key={id} className="px-2 py-0.5 bg-primary/5 text-primary rounded-md text-[9px] font-black border border-primary/10">
+                                                                <span key={id} className={cn(SIATC_THEME.STATES.BADGE_BASE, SIATC_THEME.STATES.PRIMARY, "h-[22px] normal-case tracking-normal")}>
                                                                     {casItem?.Abrev_nombre_colaboradores || id}
                                                                 </span>
                                                             );
@@ -256,33 +257,33 @@ export default function ConfigDistritosPage() {
                                                     </div>
                                                 </div>
                                             </td>
-                                            <td className="px-6 py-4 text-center">
-                                                <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-600 rounded-full font-black text-sm border border-emerald-100">
+                                            <td className={cn(SIATC_THEME.TABLE.CELL, "text-center")}>
+                                                <div className={cn(SIATC_THEME.STATES.BADGE_BASE, SIATC_THEME.STATES.SUCCESS, "text-sm h-8 px-3")}>
                                                     <DollarSign className="w-3.5 h-3.5" />
                                                     {c.Importe.toFixed(2)}
                                                 </div>
                                             </td>
-                                            <td className="px-6 py-4">
+                                            <td className={SIATC_THEME.TABLE.CELL}>
                                                 <div className="flex flex-col items-center gap-1">
-                                                    <div className="flex items-center gap-2 text-[10px] font-black text-foreground">
+                                                    <div className="flex items-center gap-2 text-[10px] font-bold text-cb-text-primary">
                                                         <Calendar className="w-3 h-3 text-primary opacity-50" />
                                                         {format(new Date(c.Fecha_Inicio), 'dd/MM/yy')}
-                                                        <span className="text-muted-foreground font-black">→</span>
-                                                        {c.Fecha_Fin ? format(new Date(c.Fecha_Fin), 'dd/MM/yy') : <span className="text-emerald-500 italic">Indefinido</span>}
+                                                        <span className="text-cb-text-secondary font-black">→</span>
+                                                        {c.Fecha_Fin ? format(new Date(c.Fecha_Fin), 'dd/MM/yy') : <span className="text-cb-success italic">Indefinido</span>}
                                                     </div>
                                                 </div>
                                             </td>
-                                            <td className="px-6 py-4 text-center">
+                                            <td className={cn(SIATC_THEME.TABLE.CELL, "text-center")}>
                                                 <span className={cn(
-                                                    "px-3 py-1 rounded-full text-[10px] font-black border",
+                                                    SIATC_THEME.STATES.BADGE_BASE,
                                                     c.Activo 
-                                                        ? "bg-emerald-50 text-emerald-600 border-emerald-100" 
-                                                        : "bg-slate-100 text-slate-400 border-slate-200"
+                                                        ? SIATC_THEME.STATES.SUCCESS 
+                                                        : SIATC_THEME.STATES.SECONDARY
                                                 )}>
                                                     {c.Activo ? 'ACTIVO' : 'INACTIVO'}
                                                 </span>
                                             </td>
-                                            <td className="px-6 py-4 text-right">
+                                            <td className={cn(SIATC_THEME.TABLE.CELL, "text-right")}>
                                                 <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-x-2 group-hover:translate-x-0">
                                                     <button 
                                                         onClick={() => {
@@ -295,13 +296,13 @@ export default function ConfigDistritosPage() {
                                                             });
                                                             setIsEditModalOpen(true);
                                                         }}
-                                                        className="p-2 bg-primary/10 text-primary rounded-xl hover:bg-primary hover:text-white transition-all shadow-sm"
+                                                        className="p-2 bg-primary/10 text-primary rounded-cb-btn hover:bg-primary hover:text-white transition-all shadow-sm cursor-pointer"
                                                     >
                                                         <Edit2 className="w-3.5 h-3.5" />
                                                     </button>
                                                     <button 
                                                         onClick={() => handleDelete(c.Id)}
-                                                        className="p-2 bg-red-50 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-all shadow-sm"
+                                                        className="p-2 bg-cb-error/10 text-cb-error rounded-cb-btn hover:bg-cb-error hover:text-white transition-all shadow-sm cursor-pointer"
                                                     >
                                                         <Trash2 className="w-3.5 h-3.5" />
                                                     </button>
@@ -328,7 +329,7 @@ export default function ConfigDistritosPage() {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             {/* CAS MultiSelect */}
                             <div className="flex flex-col gap-2">
-                                <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-1">Seleccionar CAS</label>
+                                <label className="text-[11px] font-bold text-cb-neutral uppercase tracking-wider ml-1">Seleccionar CAS</label>
                                 <MultiSelect 
                                     options={casList.map(cas => ({ value: cas.ID_CAS, label: cas.Nombre_CAS, badge: cas.Abrev_nombre_colaboradores }))}
                                     selected={editingConfig.cas_ids}
@@ -340,9 +341,9 @@ export default function ConfigDistritosPage() {
                             {/* Ciudad y Distrito MultiSelect */}
                             <div className="flex flex-col gap-4">
                                 <div className="flex flex-col gap-2">
-                                    <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-1">Filtrar por Ciudad</label>
+                                    <label className="text-[11px] font-bold text-cb-neutral uppercase tracking-wider ml-1">Filtrar por Ciudad</label>
                                     <select 
-                                        className="w-full bg-slate-50 border border-border rounded-xl px-4 py-2.5 text-xs font-bold focus:ring-4 focus:ring-primary/5 focus:border-primary outline-none transition-all"
+                                        className={cn(SIATC_THEME.COMPONENTS.INPUT, "h-11 dark:bg-cb-bg text-cb-text-primary border-cb-border appearance-none cursor-pointer")}
                                         value={selectedCity}
                                         onChange={(e) => setSelectedCity(e.target.value)}
                                     >
@@ -351,7 +352,7 @@ export default function ConfigDistritosPage() {
                                     </select>
                                 </div>
                                 <div className="flex flex-col gap-2">
-                                    <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-1">Seleccionar Distritos ({selectedCity || 'Todos'})</label>
+                                    <label className="text-[11px] font-bold text-cb-neutral uppercase tracking-wider ml-1">Seleccionar Distritos ({selectedCity || 'Todos'})</label>
                                     <MultiSelect 
                                         options={availableDistrictsForCity.map(d => ({ value: d, label: d }))}
                                         selected={editingConfig.distritos}
@@ -364,13 +365,13 @@ export default function ConfigDistritosPage() {
                             {/* Importe y Fechas */}
                             <div className="flex flex-col gap-4">
                                 <div className="flex flex-col gap-2">
-                                    <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-1">Importe Adicional (S/.)</label>
+                                    <label className="text-[11px] font-bold text-cb-neutral uppercase tracking-wider ml-1">Importe Adicional (S/.)</label>
                                     <div className="relative">
-                                        <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-500" />
+                                        <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-500 animate-in fade-in" />
                                         <input 
                                             type="number" 
                                             step="0.10"
-                                            className="w-full bg-slate-50 border border-border rounded-2xl pl-11 pr-4 py-3 text-sm font-black focus:ring-4 focus:ring-primary/5 focus:border-primary outline-none transition-all"
+                                            className={cn(SIATC_THEME.COMPONENTS.INPUT, "h-11 pl-11 dark:bg-cb-bg text-cb-text-primary border-cb-border font-bold")}
                                             value={editingConfig.importe}
                                             onChange={(e) => setEditingConfig({...editingConfig, importe: parseFloat(e.target.value)})}
                                             required
@@ -378,14 +379,14 @@ export default function ConfigDistritosPage() {
                                     </div>
                                 </div>
                                 <div className="flex flex-col gap-2">
-                                    <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-1">Estado</label>
-                                    <div className="flex p-1 bg-slate-100 rounded-2xl border border-border">
+                                    <label className="text-[11px] font-bold text-cb-neutral uppercase tracking-wider ml-1">Estado</label>
+                                    <div className="flex p-1 bg-cb-bg/50 rounded-cb-card border border-cb-border">
                                         <button 
                                             type="button"
                                             onClick={() => setEditingConfig({...editingConfig, activo: true})}
                                             className={cn(
-                                                "flex-1 py-2 text-xs font-black rounded-xl transition-all",
-                                                editingConfig.activo ? "bg-white text-emerald-600 shadow-sm border border-border" : "text-muted-foreground opacity-50"
+                                                "flex-1 py-2 text-xs font-bold rounded-cb-btn transition-all cursor-pointer",
+                                                editingConfig.activo ? "bg-white dark:bg-cb-bg text-cb-success shadow-cb-level-1 border border-cb-border" : "text-cb-neutral opacity-50"
                                             )}
                                         >
                                             REGLA ACTIVA
@@ -394,8 +395,8 @@ export default function ConfigDistritosPage() {
                                             type="button"
                                             onClick={() => setEditingConfig({...editingConfig, activo: false})}
                                             className={cn(
-                                                "flex-1 py-2 text-xs font-black rounded-xl transition-all",
-                                                !editingConfig.activo ? "bg-white text-red-600 shadow-sm border border-border" : "text-muted-foreground opacity-50"
+                                                "flex-1 py-2 text-xs font-bold rounded-cb-btn transition-all cursor-pointer",
+                                                !editingConfig.activo ? "bg-white dark:bg-cb-bg text-cb-error shadow-cb-level-1 border border-cb-border" : "text-cb-neutral opacity-50"
                                             )}
                                         >
                                             DESACTIVADA
@@ -406,12 +407,12 @@ export default function ConfigDistritosPage() {
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="flex flex-col gap-2">
-                                    <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-1">Fecha Inicio</label>
+                                    <label className="text-[11px] font-bold text-cb-neutral uppercase tracking-wider ml-1">Fecha Inicio</label>
                                     <div className="relative">
                                         <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-primary opacity-50" />
                                         <input 
                                             type="date" 
-                                            className="w-full bg-slate-50 border border-border rounded-2xl pl-11 pr-4 py-3 text-sm font-black focus:ring-4 focus:ring-primary/5 focus:border-primary outline-none transition-all"
+                                            className={cn(SIATC_THEME.COMPONENTS.INPUT, "h-11 pl-11 dark:bg-cb-bg text-cb-text-primary border-cb-border font-bold")}
                                             value={editingConfig.fecha_inicio}
                                             onChange={(e) => setEditingConfig({...editingConfig, fecha_inicio: e.target.value})}
                                             required
@@ -419,17 +420,17 @@ export default function ConfigDistritosPage() {
                                     </div>
                                 </div>
                                 <div className="flex flex-col gap-2">
-                                    <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-1">Fecha Fin (Opcional)</label>
+                                    <label className="text-[11px] font-bold text-cb-neutral uppercase tracking-wider ml-1">Fecha Fin (Opcional)</label>
                                     <div className="relative">
                                         <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-primary opacity-50" />
                                         <input 
                                             type="date" 
-                                            className="w-full bg-slate-50 border border-border rounded-2xl pl-11 pr-4 py-3 text-sm font-black focus:ring-4 focus:ring-primary/5 focus:border-primary outline-none transition-all"
+                                            className={cn(SIATC_THEME.COMPONENTS.INPUT, "h-11 pl-11 dark:bg-cb-bg text-cb-text-primary border-cb-border font-bold")}
                                             value={editingConfig.fecha_fin}
                                             onChange={(e) => setEditingConfig({...editingConfig, fecha_fin: e.target.value})}
                                         />
                                     </div>
-                                    <p className="text-[9px] font-bold text-muted-foreground ml-1 italic opacity-60">Deje en blanco para vigencia indefinida.</p>
+                                    <p className="text-[9px] font-bold text-cb-neutral ml-1 italic opacity-60">Deje en blanco para vigencia indefinida.</p>
                                 </div>
                             </div>
                         </div>
@@ -438,13 +439,13 @@ export default function ConfigDistritosPage() {
                             <button 
                                 type="button"
                                 onClick={() => setIsEditModalOpen(false)}
-                                className="flex-1 py-4 text-sm font-bold text-muted-foreground hover:bg-slate-50 rounded-2xl transition-colors"
+                                className={cn(SIATC_THEME.COMPONENTS.BUTTON_SECONDARY, "flex-1 h-12")}
                             >
                                 Cancelar
                             </button>
                             <button 
                                 type="submit"
-                                className="flex-[2] py-4 bg-primary text-white text-sm font-black rounded-2xl shadow-xl shadow-primary/20 hover:scale-[1.01] transition-all"
+                                className={cn(SIATC_THEME.COMPONENTS.BUTTON_PRIMARY, "flex-[2] h-12")}
                             >
                                 {editingConfig.Id ? 'Guardar Cambios' : 'Crear Configuración Ahora'}
                             </button>
@@ -474,17 +475,6 @@ function MultiSelect({ options, selected, onChange, placeholder }: {
         }
     };
 
-    const selectAll = () => {
-        const newVals = Array.from(new Set([...selected, ...options.map(o => o.value)]));
-        onChange(newVals);
-    };
-
-    const clearAllInView = () => {
-        const optionValues = options.map(o => o.value);
-        onChange(selected.filter(s => !optionValues.includes(s)));
-    };
-
-
     const filteredOptions = options.filter(o => 
         o.label.toLowerCase().includes(search.toLowerCase()) || 
         (o.badge && o.badge.toLowerCase().includes(search.toLowerCase()))
@@ -494,15 +484,15 @@ function MultiSelect({ options, selected, onChange, placeholder }: {
         <div className="relative">
             <div 
                 onClick={() => setIsOpen(!isOpen)}
-                className="min-h-[52px] w-full bg-slate-50 border border-border rounded-2xl p-2.5 flex flex-wrap gap-1.5 cursor-pointer hover:border-primary/30 transition-all"
+                className="min-h-[52px] w-full bg-white dark:bg-cb-bg border border-cb-border rounded-cb-card p-2.5 flex flex-wrap gap-1.5 cursor-pointer hover:border-primary/30 transition-all"
             >
                 {selected.length === 0 ? (
-                    <span className="text-sm font-bold text-muted-foreground ml-2 mt-1.5 opacity-40">{placeholder}</span>
+                    <span className="text-sm font-bold text-cb-neutral/40 ml-2 mt-1.5">{placeholder}</span>
                 ) : (
                     selected.map(val => {
                         const opt = options.find(o => o.value === val);
                         return (
-                            <div key={val} className="flex items-center gap-1.5 px-2.5 py-1.5 bg-primary text-white rounded-xl text-[10px] font-black shadow-sm group">
+                            <div key={val} className={cn(SIATC_THEME.STATES.BADGE_BASE, SIATC_THEME.STATES.PRIMARY, "h-[26px] normal-case tracking-normal gap-1 px-2.5 py-1.5 cursor-default")} onClick={(e) => e.stopPropagation()}>
                                 {opt?.badge || opt?.label || val}
                                 <X 
                                     className="w-3 h-3 cursor-pointer opacity-60 hover:opacity-100" 
@@ -512,21 +502,21 @@ function MultiSelect({ options, selected, onChange, placeholder }: {
                         )
                     })
                 )}
-                <div className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground opacity-30">
+                <div className="absolute right-4 top-1/2 -translate-y-1/2 text-cb-neutral/40">
                     <ChevronDown className={cn("w-4 h-4 transition-transform", isOpen && "rotate-180")} />
                 </div>
             </div>
 
             {isOpen && (
-                <div className="absolute top-full left-0 w-full mt-2 bg-white border border-border rounded-2xl shadow-2xl z-50 flex flex-col max-h-[300px] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
-                    <div className="p-3 border-b border-border bg-slate-50/50">
+                <div className="absolute top-full left-0 w-full mt-2 bg-white dark:bg-cb-bg border border-cb-border rounded-cb-card shadow-cb-level-3 z-50 flex flex-col max-h-[300px] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div className="p-3 border-b border-cb-border bg-cb-bg/30">
                         <div className="relative">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground opacity-40" />
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-cb-neutral/40" />
                             <input 
                                 autoFocus
                                 type="text" 
                                 placeholder="Filtrar..."
-                                className="w-full bg-white border border-border rounded-xl pl-9 pr-4 py-2 text-xs font-bold outline-none focus:border-primary"
+                                className={cn(SIATC_THEME.COMPONENTS.INPUT, "pl-9 dark:bg-cb-bg text-cb-text-primary border-cb-border")}
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
                             />
@@ -536,38 +526,38 @@ function MultiSelect({ options, selected, onChange, placeholder }: {
                         <div className="flex flex-col gap-0.5">
                             <div 
                                 onClick={() => selected.length === options.length ? onChange([]) : onChange(options.map(o => o.value))}
-                                className="px-3 py-2 hover:bg-primary/5 rounded-xl cursor-pointer flex items-center justify-between group"
+                                className="px-3 py-2 hover:bg-primary/5 rounded-cb-btn cursor-pointer flex items-center justify-between group"
                             >
-                                <span className="text-[10px] font-black text-primary">MARCAR/DESMARCAR TODOS</span>
+                                <span className="text-[10px] font-bold text-primary">MARCAR/DESMARCAR TODOS</span>
                                 <div className={cn(
-                                    "w-4 h-4 rounded-md border flex items-center justify-center transition-all",
-                                    selected.length === options.length ? "bg-primary border-primary" : "border-border bg-white"
+                                    "w-4 h-4 rounded-cb-chip border flex items-center justify-center transition-all",
+                                    selected.length === options.length ? "bg-primary border-primary" : "border-cb-border bg-white"
                                 )}>
                                     {selected.length === options.length && <Check className="w-3 h-3 text-white" />}
                                 </div>
                             </div>
-                            <div className="h-px bg-border/50 my-1 mx-2" />
+                            <div className="h-px bg-cb-border/50 my-1 mx-2" />
                             {filteredOptions.length === 0 ? (
                                 <div className="p-8 text-center opacity-20 flex flex-col items-center">
                                     <Search className="w-8 h-8 mb-2" />
-                                    <span className="text-[10px] font-black">SIN RESULTADOS</span>
+                                    <span className="text-[10px] font-bold text-cb-neutral">SIN RESULTADOS</span>
                                 </div>
                             ) : filteredOptions.map(opt => (
                                 <div 
                                     key={opt.value}
                                     onClick={() => toggle(opt.value)}
                                     className={cn(
-                                        "px-4 py-2.5 rounded-xl cursor-pointer flex items-center justify-between transition-colors",
-                                        selected.includes(opt.value) ? "bg-primary/5" : "hover:bg-slate-50"
+                                        "px-4 py-2.5 rounded-cb-btn cursor-pointer flex items-center justify-between transition-colors",
+                                        selected.includes(opt.value) ? "bg-primary/5" : "hover:bg-cb-bg"
                                     )}
                                 >
                                     <div className="flex flex-col">
-                                        <span className="text-xs font-bold text-foreground">{opt.label}</span>
-                                        {opt.badge && <span className="text-[9px] font-black text-primary opacity-60 leading-none">{opt.badge}</span>}
+                                        <span className="text-xs font-bold text-cb-text-primary">{opt.label}</span>
+                                        {opt.badge && <span className="text-[9px] font-bold text-primary opacity-60 leading-none">{opt.badge}</span>}
                                     </div>
                                     <div className={cn(
-                                        "w-5 h-5 rounded-lg border flex items-center justify-center transition-all",
-                                        selected.includes(opt.value) ? "bg-primary border-primary shadow-lg shadow-primary/20" : "border-border bg-white"
+                                        "w-5 h-5 rounded-cb-chip border flex items-center justify-center transition-all",
+                                        selected.includes(opt.value) ? "bg-primary border-primary shadow-cb-level-1" : "border-cb-border bg-white"
                                     )}>
                                         {selected.includes(opt.value) && <Check className="w-3.5 h-3.5 text-white" />}
                                     </div>
@@ -576,11 +566,11 @@ function MultiSelect({ options, selected, onChange, placeholder }: {
                         </div>
                     </div>
                     {selected.length > 0 && (
-                        <div className="p-3 border-t border-border bg-slate-50/50 flex items-center justify-between">
-                            <span className="text-[10px] font-black text-muted-foreground">{selected.length} SELECCIONADOS</span>
+                        <div className="p-3 border-t border-cb-border bg-cb-bg/30 flex items-center justify-between">
+                            <span className="text-[10px] font-bold text-cb-text-secondary">{selected.length} SELECCIONADOS</span>
                             <button 
                                 onClick={(e) => { e.stopPropagation(); setIsOpen(false); }}
-                                className="px-3 py-1 bg-white border border-border rounded-lg text-[10px] font-black hover:bg-slate-100"
+                                className={SIATC_THEME.COMPONENTS.BUTTON_SECONDARY}
                             >
                                 LISTO
                             </button>

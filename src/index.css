@@ -1,6 +1,9 @@
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap');
 @import "tailwindcss";
 
+/* Configure class-based dark mode variant for Tailwind CSS v4 */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --font-sans: 'DM Sans', ui-sans-serif, system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
@@ -43,6 +46,27 @@
   --radius-sm: calc(var(--radius) - 4px);
   --radius-card: 12px;
   --radius-chip: 6px;
+
+  /* Custom SIATC (Crypto Blue) Theme Extensions */
+  --color-cb-blue: #4C5F80;
+  --color-cb-slate: #5B616E;
+  --color-cb-neutral: #8A919E;
+  --color-cb-success: #05B169;
+  --color-cb-error: #DF2935;
+  --color-cb-warning: #F0AD4E;
+  --color-cb-bg: var(--cb-bg);
+  --color-cb-text-primary: var(--cb-text-primary);
+  --color-cb-text-secondary: var(--cb-text-secondary);
+  --color-cb-border: var(--cb-border);
+
+  --radius-cb-chip: 4px;
+  --radius-cb-btn: 8px;
+  --radius-cb-card: 12px;
+  --radius-cb-modal: 16px;
+
+  --shadow-cb-level-1: 0 1px 3px rgba(5,15,26,0.06);
+  --shadow-cb-level-2: 0 4px 12px rgba(5,15,26,0.08);
+  --shadow-cb-level-3: 0 12px 24px rgba(5,15,26,0.12);
 }
 
 @layer base {
@@ -93,6 +117,12 @@
     --ring: #4C5F80;
 
     --radius: 8px;
+
+    /* Custom SIATC variables for light mode */
+    --cb-bg: #F9FAFB;
+    --cb-text-primary: #1A1C1E;
+    --cb-text-secondary: #515254;
+    --cb-border: #E2E4E9;
   }
 
   .dark {
@@ -123,6 +153,12 @@
     --border: #334155;
     --input: #334155;
     --ring: #707F99;
+
+    /* Custom SIATC variables for dark mode */
+    --cb-bg: #0A1929;
+    --cb-text-primary: #F9FAFB;
+    --cb-text-secondary: #8A919E;
+    --cb-border: #1E293B;
   }
 }
 

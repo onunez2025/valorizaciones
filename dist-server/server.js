@@ -403,6 +403,7 @@ app.get('/api/valuations/:ruc', verifyToken, async (req, res) => {
                 s.CodigoTecnico,
                 s.IdCAS,
                 s.Distrito,
+                s.Ciudad as Departamento,
                 s.NombreTecnico,
                 s.ApellidoTecnico,
                 s.ComentarioTecnico,
@@ -436,13 +437,30 @@ app.get('/api/valuations/:ruc', verifyToken, async (req, res) => {
             ) m
             OUTER APPLY (
                 SELECT TOP 1 CAST(Importe AS FLOAT) as Importe 
-                FROM [dbo].[GAC_APP_TB_TARIFARIO] t 
-                WHERE t.Empresa = cas.ID_CAS 
-                  AND (t.Servicio = s.IdServicio OR t.Servicio = s.Servicio)
-                  AND TRIM(t.Categoria) = TRIM(m.Categoria)
-                  AND s.CheckOut >= t.Fecha_inicio 
-                  AND (t.Fecha_fin IS NULL OR s.CheckOut <= t.Fecha_fin)
-                ORDER BY t.Estado DESC, t.Fecha_inicio DESC
+                FROM (
+                    -- 1. Buscar en Excepciones
+                    SELECT ex.Importe, ex.Prioridad, ex.Creado_El, 1 as Source
+                    FROM [dbo].[GAC_APP_TB_TARIFARIO_EXCEPCIONES] ex
+                    WHERE ex.Empresa = s.IdCAS
+                      AND ex.Estado = 'A'
+                      AND (ex.Categorias IS NULL OR ex.Categorias = 'null' OR EXISTS (SELECT 1 FROM OPENJSON(ex.Categorias) WHERE value = ISNULL(m.Categoria, 'N/A')))
+                      AND (ex.Servicios IS NULL OR ex.Servicios = 'null' OR EXISTS (SELECT 1 FROM OPENJSON(ex.Servicios) WHERE value = s.IdServicio OR value = s.Servicio))
+                      AND (ex.Zonas_Excluidas IS NULL OR ex.Zonas_Excluidas = 'null' OR NOT EXISTS (SELECT 1 FROM OPENJSON(ex.Zonas_Excluidas) WHERE value = s.Ciudad OR value = s.Distrito))
+                      AND (ex.Zonas_Incluidas IS NULL OR ex.Zonas_Incluidas = 'null' OR EXISTS (SELECT 1 FROM OPENJSON(ex.Zonas_Incluidas) WHERE value = s.Ciudad OR value = s.Distrito))
+                    
+                    UNION ALL
+                    
+                    -- 2. Tarifario Base
+                    SELECT t.Importe, 0 as Prioridad, t.Fecha_inicio as Creado_El, 0 as Source
+                    FROM [dbo].[GAC_APP_TB_TARIFARIO] t 
+                    WHERE t.Empresa = s.IdCAS 
+                      AND (t.Servicio = s.IdServicio OR t.Servicio = s.Servicio)
+                      AND TRIM(t.Categoria) = TRIM(ISNULL(m.Categoria, 'N/A'))
+                      AND s.CheckOut >= t.Fecha_inicio 
+                      AND (t.Fecha_fin IS NULL OR s.CheckOut <= t.Fecha_fin)
+                      AND t.Estado = 'A'
+                ) all_rates
+                ORDER BY Source DESC, Prioridad DESC, Creado_El DESC
             ) rate
             WHERE TRIM(cas.RUC) = TRIM(@ruc) 
               AND s.CheckOut BETWEEN @start AND @end
@@ -539,6 +557,41 @@ app.post('/api/penalties', verifyToken, async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 });
+app.put('/api/penalties/:id', verifyToken, async (req, res) => {
+    const { id } = req.params;
+    const { fecha, motivo, descripcion, importe } = req.body;
+    try {
+        const db = await getDb();
+        // Validation: Check if already in a closure
+        const check = await db.request().input('id', id).query(`
+            SELECT 1 FROM [dbo].[GAC_APP_TB_VALORIZACIONES_DETALLE] 
+            WHERE ID_Referencia = @id
+        `);
+        if (check.recordset.length > 0) {
+            return res.status(403).json({ error: "No se puede editar una penalidad que ya ha sido cerrada en una valorización." });
+        }
+        const existing = await db.request().input('id', id).query("SELECT * FROM [dbo].[GAC_APP_TB_TICKETS_DESCUENTOS] WHERE ID_Descuentos_CAS = @id");
+        await db.request()
+            .input('id', id)
+            .input('fecha', fecha)
+            .input('motivo', motivo)
+            .input('desc', descripcion)
+            .input('importe', importe.toString())
+            .query(`
+                UPDATE [dbo].[GAC_APP_TB_TICKETS_DESCUENTOS] 
+                SET Fecha = @fecha, Motivo = @motivo, Descripcion = @desc, Importe = @importe 
+                WHERE ID_Descuentos_CAS = @id
+            `);
+        await logAudit(req, 'UPDATE', 'PENALTY', id, {
+            before: existing.recordset[0],
+            after: { fecha, motivo, descripcion, importe }
+        });
+        res.json({ success: true });
+    }
+    catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
 app.post('/api/adicionales', verifyToken, async (req, res) => {
     const { ticket, motivo, importe } = req.body;
     const id = crypto.randomBytes(4).toString('hex');
@@ -556,6 +609,31 @@ app.post('/api/adicionales', verifyToken, async (req, res) => {
             `);
         await logAudit(req, 'CREATE', 'ADICIONAL', ticket, { id, motivo, importe });
         res.status(201).json({ id });
+    }
+    catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+app.put('/api/adicionales/:id', verifyToken, async (req, res) => {
+    const { id } = req.params;
+    const { motivo, importe } = req.body;
+    try {
+        const db = await getDb();
+        const existing = await db.request().input('id', id).query("SELECT * FROM [dbo].[GAC_APP_TB_TICKETS_VALORIZACION_ADICIONAL] WHERE ID_valorizacion_adicional = @id");
+        await db.request()
+            .input('id', id)
+            .input('motivo', motivo)
+            .input('importe', importe.toString())
+            .query(`
+                UPDATE [dbo].[GAC_APP_TB_TICKETS_VALORIZACION_ADICIONAL] 
+                SET Motivo = @motivo, Importe = @importe 
+                WHERE ID_valorizacion_adicional = @id
+            `);
+        await logAudit(req, 'UPDATE', 'ADICIONAL', id, {
+            before: existing.recordset[0],
+            after: { motivo, importe }
+        });
+        res.json({ success: true });
     }
     catch (err) {
         res.status(500).json({ error: err.message });
@@ -683,6 +761,66 @@ app.post('/api/valuations/batch-adjustment', verifyToken, async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 });
+app.get('/api/discount-motivos', verifyToken, async (req, res) => {
+    try {
+        const pool = await sql.connect(dbConfig);
+        const result = await pool.request().query('SELECT * FROM [dbo].[GAC_APP_TB_TICKETS_DESCUENTOS_MOTIVOS] ORDER BY Motivo ASC');
+        res.json(result.recordset);
+    }
+    catch (error) {
+        console.error("Error fetching discount motivos:", error);
+        res.status(500).json({ message: "Error al obtener motivos de descuento" });
+    }
+});
+app.post('/api/valuations/batch-discount', verifyToken, async (req, res) => {
+    const { tickets, motivo, descripcion, ruc } = req.body;
+    const user = req.user;
+    if (!tickets || !Array.isArray(tickets) || tickets.length === 0) {
+        return res.status(400).json({ error: "Debe proporcionar una lista de tickets." });
+    }
+    try {
+        const db = await getDb();
+        const transaction = new sql.Transaction(db);
+        await transaction.begin();
+        try {
+            for (const item of tickets) {
+                const ticketId = item.id;
+                const ticketAmount = item.amount;
+                if (!ticketId || isNaN(ticketAmount))
+                    continue;
+                const penaltyId = crypto.randomBytes(4).toString('hex');
+                const fecha = new Date().toISOString().split('T')[0];
+                await transaction.request()
+                    .input('id', sql.VarChar, penaltyId)
+                    .input('ticket', sql.VarChar, ticketId)
+                    .input('fecha', sql.Date, fecha)
+                    .input('motivo', sql.VarChar, motivo)
+                    .input('desc', sql.VarChar, descripcion)
+                    .input('importe', sql.Decimal(10, 2), ticketAmount)
+                    .input('user', sql.VarChar, user.username)
+                    .query(`
+                        INSERT INTO [dbo].[GAC_APP_TB_TICKETS_DESCUENTOS] 
+                        (ID_Descuentos_CAS, Ticket, Fecha, Motivo, Descripcion, Importe, Creado_por, Creado_el, Estado)
+                        VALUES (@id, @ticket, @fecha, @motivo, @desc, @importe, @user, GETDATE(), 'Pendiente')
+                    `);
+            }
+            await transaction.commit();
+            await logAudit(req, 'BATCH_DISCOUNT', 'VALUATION', ruc, {
+                tickets_total: tickets.length,
+                motivo
+            });
+            res.json({ success: true, processed: tickets.length });
+        }
+        catch (err) {
+            await transaction.rollback();
+            throw err;
+        }
+    }
+    catch (error) {
+        console.error("Error applying batch discount:", error);
+        res.status(500).json({ message: "Error al aplicar el descuento masivo" });
+    }
+});
 app.post('/api/penalties/:id/status', verifyToken, async (req, res) => {
     const { id } = req.params;
     const { status, observation, isCas } = req.body;
@@ -701,18 +839,20 @@ app.post('/api/penalties/:id/status', verifyToken, async (req, res) => {
     }
 });
 app.get('/api/tickets/find/:ticket', verifyToken, async (req, res) => {
-    const { ticket } = req.params;
+    const ticket = req.params.ticket.trim();
+    if (!ticket)
+        return res.status(400).json({ error: 'Ticket es requerido' });
     try {
         const db = await getDb();
         const result = await db.request()
-            .input('ticket', ticket)
+            .input('ticket', sql.NVarChar, ticket)
             .query(`
                 SELECT TOP 1
                     s.Ticket, s.CheckOut as Fecha, s.Servicio as ServicioNombre,
                     s.IdServicio as Servicio, cas.RUC, cas.Nombre_CAS as CAS_Nombre
                 FROM [APPGAC].[ServiciosViewSQL] s
                 JOIN [dbo].[GAC_APP_TB_CAS] cas ON s.IdCAS = cas.ID_CAS
-                WHERE s.Ticket = @ticket
+                WHERE TRIM(s.Ticket) = @ticket
             `);
         if (result.recordset.length === 0) {
             return res.status(404).json({ error: 'Ticket no encontrado' });
@@ -720,6 +860,7 @@ app.get('/api/tickets/find/:ticket', verifyToken, async (req, res) => {
         res.json(result.recordset[0]);
     }
     catch (err) {
+        console.error('Error in ticket find:', err);
         res.status(500).json({ error: err.message });
     }
 });
@@ -802,10 +943,13 @@ app.post('/api/valuations/close', verifyToken, async (req, res) => {
                         .input('tb', item.tarifaBase || 0)
                         .input('ad', item.adicionales || 0)
                         .input('ref', item.idReferencia || null)
+                        .input('dist', item.distrito || null)
+                        .input('dep', item.departamento || null)
+                        .input('ne', item.nombreEquipo || null)
                         .query(`
                             INSERT INTO [dbo].[GAC_APP_TB_VALORIZACIONES_DETALLE] 
-                            (IdCierre, Ticket, Monto, Fecha_Ticket, Tipo, Servicio_Nombre, Categoria, Fecha_Visita, Fecha_Cierre, Dias_Diferencia, Codigo_Externo, Tarifa_Base, Adicionales, ID_Referencia)
-                            VALUES (@idCierre, @ticket, @monto, @fecha, @tipo, @servicio, @categoria, @fv, @fc, @dd, @ce, @tb, @ad, @ref)
+                            (IdCierre, Ticket, Monto, Fecha_Ticket, Tipo, Servicio_Nombre, Categoria, Fecha_Visita, Fecha_Cierre, Dias_Diferencia, Codigo_Externo, Tarifa_Base, Adicionales, ID_Referencia, Distrito, Departamento, Nombre_Equipo)
+                            VALUES (@idCierre, @ticket, @monto, @fecha, @tipo, @servicio, @categoria, @fv, @fc, @dd, @ce, @tb, @ad, @ref, @dist, @dep, @ne)
                         `);
                 }
             }
@@ -911,8 +1055,11 @@ app.get('/api/penalties/:ruc', verifyToken, async (req, res) => {
                     COALESCE(m.Motivo, d.Motivo) as Motivo,
                     d.Descripcion,
                     d.Importe,
-                    d.Estado
+                    d.Estado,
+                    d.Creado_por as CreadoPor,
+                    d.Creado_el as CreadoEl
                 FROM [dbo].[GAC_APP_TB_TICKETS_DESCUENTOS] d
+
                 JOIN [APPGAC].[ServiciosViewSQL] s ON d.Ticket = s.Ticket
                 JOIN [dbo].[GAC_APP_TB_CAS] cas ON s.IdCAS = cas.ID_CAS
                 LEFT JOIN [dbo].[GAC_APP_TB_TICKETS_DESCUENTOS_MOTIVOS] m ON d.Motivo = m.IdMotivo
@@ -965,10 +1112,13 @@ app.get('/api/closures/:id/details', verifyToken, async (req, res) => {
                     ISNULL(d.Adicionales, 0) as Adicionales,
                     s.NombreTecnico,
                     s.ApellidoTecnico,
-                    s.ComentarioTecnico
+                    s.ComentarioTecnico,
+                    p.Creado_por as CreadoPor
                 FROM [dbo].[GAC_APP_TB_VALORIZACIONES_DETALLE] d
                 LEFT JOIN [APPGAC].[ServiciosViewSQL] s ON d.Ticket = s.Ticket AND d.Tipo = 'SERVICIO'
+                LEFT JOIN [dbo].[GAC_APP_TB_TICKETS_DESCUENTOS] p ON d.ID_Referencia = p.ID_Descuentos_CAS AND d.Tipo = 'PENALIDAD'
                 WHERE d.IdCierre = @id
+
             `);
         res.json(result.recordset);
     }
@@ -1110,32 +1260,29 @@ app.post('/api/tarifarios/batch', verifyToken, async (req, res) => {
         const transaction = new sql.Transaction(db);
         await transaction.begin();
         try {
-            const request = new sql.Request(transaction);
-            // ELIMINAMOS PREVIOS PARA ESTE CAS (Opcional, según lógica de negocio, o actualizamos)
-            // Para simplicidad en este batch, eliminamos y re-insertamos o actualizamos por lógica de batch.
-            // Aquí lo haremos por cada registro para mantener historial básico si fuese necesario.
             for (const rate of rates) {
+                const req = transaction.request();
                 const id = rate.ID_TARIFARIO || crypto.randomBytes(4).toString('hex');
-                await request
-                    .input(`id_${id}`, id)
-                    .input(`casId_${id}`, casId)
-                    .input(`cat_${id}`, rate.Categoria)
-                    .input(`serv_${id}`, rate.Servicio)
-                    .input(`imp_${id}`, sql.Decimal(18, 2), rate.Importe)
-                    .input(`f_ini_${id}`, rate.Fecha_inicio ? new Date(rate.Fecha_inicio) : new Date())
-                    .input(`f_fin_${id}`, rate.Fecha_fin ? new Date(rate.Fecha_fin) : null)
+                await req
+                    .input('id', id)
+                    .input('casId', casId)
+                    .input('cat', rate.Categoria)
+                    .input('serv', rate.Servicio)
+                    .input('imp', sql.Decimal(18, 2), rate.Importe)
+                    .input('f_ini', rate.Fecha_inicio ? new Date(rate.Fecha_inicio) : new Date())
+                    .input('f_fin', rate.Fecha_fin ? new Date(rate.Fecha_fin) : null)
                     .query(`
-                        IF EXISTS (SELECT 1 FROM [dbo].[GAC_APP_TB_TARIFARIO] WHERE ID_Tarifario = @id_${id})
+                        IF EXISTS (SELECT 1 FROM [dbo].[GAC_APP_TB_TARIFARIO] WHERE ID_Tarifario = @id)
                         BEGIN
                             UPDATE [dbo].[GAC_APP_TB_TARIFARIO] 
-                            SET Importe = @imp_${id}, Categoria = @cat_${id}, Servicio = @serv_${id},
-                                Fecha_inicio = @f_ini_${id}, Fecha_fin = @f_fin_${id}
-                            WHERE ID_Tarifario = @id_${id}
+                            SET Importe = @imp, Categoria = @cat, Servicio = @serv,
+                                Fecha_inicio = @f_ini, Fecha_fin = @f_fin
+                            WHERE ID_Tarifario = @id
                         END
                         ELSE
                         BEGIN
                             INSERT INTO [dbo].[GAC_APP_TB_TARIFARIO] (ID_Tarifario, Empresa, Categoria, Servicio, Importe, Fecha_inicio, Fecha_fin, Estado)
-                            VALUES (@id_${id}, @casId_${id}, @cat_${id}, @serv_${id}, @imp_${id}, @f_ini_${id}, @f_fin_${id}, 'A')
+                            VALUES (@id, @casId, @cat, @serv, @imp, @f_ini, @f_fin, 'A')
                         END
                     `);
             }
@@ -1146,6 +1293,69 @@ app.post('/api/tarifarios/batch', verifyToken, async (req, res) => {
             await transaction.rollback();
             throw error;
         }
+    }
+    catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+// --- TARIFARIO EXCEPCIONES ---
+app.get('/api/tarifarios/exceptions/:casId', verifyToken, async (req, res) => {
+    const { casId } = req.params;
+    try {
+        const db = await getDb();
+        const result = await db.request()
+            .input('casId', casId)
+            .query("SELECT * FROM [dbo].[GAC_APP_TB_TARIFARIO_EXCEPCIONES] WHERE Empresa = @casId AND Estado = 'A' ORDER BY Prioridad DESC, Creado_El DESC");
+        res.json(result.recordset);
+    }
+    catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+app.post('/api/tarifarios/exceptions/save', verifyToken, async (req, res) => {
+    const { id, empresa, nombre, zonasIncluidas, zonasExcluidas, categorias, servicios, importe, prioridad, estado } = req.body;
+    try {
+        const db = await getDb();
+        const finalId = id || crypto.randomBytes(4).toString('hex');
+        await db.request()
+            .input('id', finalId)
+            .input('empresa', empresa)
+            .input('nombre', nombre)
+            .input('zi', JSON.stringify(zonasIncluidas || null))
+            .input('ze', JSON.stringify(zonasExcluidas || null))
+            .input('cat', JSON.stringify(categorias || null))
+            .input('serv', JSON.stringify(servicios || null))
+            .input('imp', sql.Decimal(18, 2), importe)
+            .input('prio', prioridad || 0)
+            .input('est', estado || 'A')
+            .query(`
+                IF EXISTS (SELECT 1 FROM [dbo].[GAC_APP_TB_TARIFARIO_EXCEPCIONES] WHERE IdExcepcion = @id)
+                BEGIN
+                    UPDATE [dbo].[GAC_APP_TB_TARIFARIO_EXCEPCIONES]
+                    SET Nombre = @nombre, Zonas_Incluidas = @zi, Zonas_Excluidas = @ze, 
+                        Categorias = @cat, Servicios = @serv, Importe = @imp, 
+                        Prioridad = @prio, Estado = @est
+                    WHERE IdExcepcion = @id
+                END
+                ELSE
+                BEGIN
+                    INSERT INTO [dbo].[GAC_APP_TB_TARIFARIO_EXCEPCIONES] 
+                    (IdExcepcion, Empresa, Nombre, Zonas_Incluidas, Zonas_Excluidas, Categorias, Servicios, Importe, Prioridad, Estado)
+                    VALUES (@id, @empresa, @nombre, @zi, @ze, @cat, @serv, @imp, @prio, @est)
+                END
+            `);
+        res.json({ success: true, id: finalId });
+    }
+    catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+app.delete('/api/tarifarios/exceptions/:id', verifyToken, async (req, res) => {
+    const { id } = req.params;
+    try {
+        const db = await getDb();
+        await db.request().input('id', id).query("UPDATE [dbo].[GAC_APP_TB_TARIFARIO_EXCEPCIONES] SET Estado = 'I' WHERE IdExcepcion = @id");
+        res.json({ success: true });
     }
     catch (err) {
         res.status(500).json({ error: err.message });
@@ -1164,7 +1374,7 @@ app.get('/api/dashboard/stats', verifyToken, async (req, res) => {
                 SELECT s.Ticket, 
                     CASE WHEN LEFT(s.NombreTecnico, 3) IN ('SB2', 'SS ', 'AC ', 'EMS', 'SIL', 'VYA', 'SEY', 'TP ', 'TYG', 'FSI', 'LM ', 'TCP', 'MG ', 'AYD', 'SLR', 'REY', 'VR ', 'LV ', 'MR ', 'AXX', 'COT', 'SNT', 'NUL') 
                     THEN LEFT(s.NombreTecnico, 3) ELSE 'GAC' END as Prefix,
-                    s.IdServicio, s.CodigoExternoEquipo, s.FechaVisita, s.CheckOut
+                    s.IdServicio, s.CodigoExternoEquipo, s.FechaVisita, s.CheckOut, s.Ciudad, s.Distrito, s.NombreEquipo
                 FROM [SIATC].[Dashboard_FSM] s
                 WHERE s.CheckOut >= @start AND s.CheckOut < DATEADD(DAY, 1, @end)
                   AND s.Estado = 'Closed'
@@ -1192,7 +1402,7 @@ app.get('/api/dashboard/stats', verifyToken, async (req, res) => {
                     IdServicio, 
                     Categoria, 
                     SUM(CASE 
-                        WHEN s.IdServicio = 'Visita' OR s.Servicio = 'Visita' THEN 0
+                        WHEN IdServicio = 'Visita' THEN 0
                         WHEN DATEDIFF(day, FechaVisita, CheckOut) > 1 THEN 0 
                         WHEN LEFT(CodigoExternoEquipo, 4) NOT IN ('3120', '3121', '5120', '5121') THEN 0
                         ELSE 1 
@@ -1222,16 +1432,47 @@ app.get('/api/dashboard/stats', verifyToken, async (req, res) => {
                           AND EXISTS (SELECT 1 FROM OPENJSON(cfg.Distritos) WHERE value = tc.Distrito)
                     ), 0)
                 ) as Total
+            ),
+            CalculoTarifas AS (
+                SELECT 
+                    tc.ID_CAS,
+                    tc.Ticket,
+                    tc.IdServicio,
+                    tc.Categoria,
+                    tc.Ciudad,
+                    tc.Distrito,
+                    COALESCE(
+                        -- 1. Buscar en Excepciones
+                        (SELECT TOP 1 ex.Importe 
+                         FROM [dbo].[GAC_APP_TB_TARIFARIO_EXCEPCIONES] ex
+                         WHERE ex.Empresa = tc.ID_CAS
+                           AND ex.Estado = 'A'
+                           AND (ex.Categorias IS NULL OR ex.Categorias = 'null' OR EXISTS (SELECT 1 FROM OPENJSON(ex.Categorias) WHERE value = tc.Categoria))
+                           AND (ex.Servicios IS NULL OR ex.Servicios = 'null' OR EXISTS (SELECT 1 FROM OPENJSON(ex.Servicios) WHERE value = tc.IdServicio))
+                           AND (ex.Zonas_Excluidas IS NULL OR ex.Zonas_Excluidas = 'null' OR NOT EXISTS (SELECT 1 FROM OPENJSON(ex.Zonas_Excluidas) WHERE value = tc.Ciudad OR value = tc.Distrito))
+                           AND (ex.Zonas_Incluidas IS NULL OR ex.Zonas_Incluidas = 'null' OR EXISTS (SELECT 1 FROM OPENJSON(ex.Zonas_Incluidas) WHERE value = tc.Ciudad OR value = tc.Distrito))
+                         ORDER BY ex.Prioridad DESC, ex.Creado_El DESC),
+                        -- 2. Tarifario Base
+                        (SELECT TOP 1 t.Importe 
+                         FROM [dbo].[GAC_APP_TB_TARIFARIO] t
+                         WHERE t.Empresa = tc.ID_CAS
+                           AND (t.Servicio = tc.IdServicio)
+                           AND TRIM(t.Categoria) = TRIM(tc.Categoria)
+                           AND t.Estado = 'A'
+                         ORDER BY t.Fecha_inicio DESC)
+                    ) as ImporteAplicado,
+                    -- Verificación de validos (mismos filtros que el original)
+                    CASE 
+                        WHEN tc.IdServicio = 'Visita' THEN 0
+                        WHEN DATEDIFF(day, tc.FechaVisita, tc.CheckOut) > 1 THEN 0 
+                        WHEN LEFT(tc.CodigoExternoEquipo, 4) NOT IN ('3120', '3121', '5120', '5121') THEN 0
+                        ELSE 1 
+                    END as EsValido
+                FROM TicketsCAS tc
             )
             SELECT 
                 (SELECT COUNT(*) FROM TicketsCAS) as TotalTickets,
-                (SELECT SUM(rs.CntValidos * ISNULL(t.Importe, 0)) 
-                 FROM ResumenServicios rs 
-                 LEFT JOIN [dbo].[GAC_APP_TB_TARIFARIO] t ON t.Empresa = rs.ID_CAS 
-                    AND (t.Servicio = rs.IdServicio)
-                    AND TRIM(t.Categoria) = TRIM(rs.Categoria)
-                    AND t.Estado = 'A'
-                ) as BaseImporte,
+                ISNULL((SELECT SUM(ImporteAplicado) FROM CalculoTarifas WHERE EsValido = 1), 0) as BaseImporte,
                 ISNULL((SELECT Total FROM ValAdicionales), 0) as Adicionales,
                 ISNULL((SELECT Total FROM ValSanciones), 0) as Sanciones
         `;
@@ -1257,7 +1498,7 @@ app.get('/api/dashboard/trends', verifyToken, async (req, res) => {
         request.input('m', sql.Int, -Number(months));
         let query = `
             WITH TicketsFilt AS (
-                SELECT s.Ticket, s.CheckOut, s.IdServicio, s.CodigoExternoEquipo, s.FechaVisita,
+                SELECT s.Ticket, s.CheckOut, s.IdServicio, s.CodigoExternoEquipo, s.FechaVisita, s.Ciudad, s.Distrito,
                     CASE WHEN LEFT(s.NombreTecnico, 3) IN ('SB2', 'SS ', 'AC ', 'EMS', 'SIL', 'VYA', 'SEY', 'TP ', 'TYG', 'FSI', 'LM ', 'TCP', 'MG ', 'AYD', 'SLR', 'REY', 'VR ', 'LV ', 'MR ', 'AXX', 'COT', 'SNT', 'NUL') 
                     THEN LEFT(s.NombreTecnico, 3) ELSE 'GAC' END as Prefix
                 FROM [SIATC].[Dashboard_FSM] s
@@ -1279,21 +1520,43 @@ app.get('/api/dashboard/trends', verifyToken, async (req, res) => {
         }
         query += `
             ),
-            ResumenMensual AS (
+            CalculoTarifas AS (
                 SELECT 
-                    YEAR(twc.CheckOut) as Anio,
-                    MONTH(twc.CheckOut) as MesNum,
-                    twc.ID_CAS, 
-                    twc.IdServicio, 
-                    twc.Categoria,
-                    SUM(CASE 
-                        WHEN twc.IdServicio = 'Visita' OR twc.ServicioNombre = 'Visita' THEN 0
-                        WHEN DATEDIFF(day, twc.FechaVisita, twc.CheckOut) > 1 THEN 0 
-                        WHEN LEFT(twc.CodigoExternoEquipo, 4) NOT IN ('3120', '3121', '5120', '5121') THEN 0
+                    YEAR(tc.CheckOut) as Anio,
+                    MONTH(tc.CheckOut) as MesNum,
+                    COALESCE(
+                        -- 1. Buscar en Excepciones
+                        (SELECT TOP 1 ex.Importe 
+                         FROM [dbo].[GAC_APP_TB_TARIFARIO_EXCEPCIONES] ex
+                         WHERE ex.Empresa = tc.ID_CAS
+                           AND ex.Estado = 'A'
+                           AND (ex.Categorias IS NULL OR ex.Categorias = 'null' OR EXISTS (SELECT 1 FROM OPENJSON(ex.Categorias) WHERE value = tc.Categoria))
+                           AND (ex.Servicios IS NULL OR ex.Servicios = 'null' OR EXISTS (SELECT 1 FROM OPENJSON(ex.Servicios) WHERE value = tc.IdServicio))
+                           AND (ex.Zonas_Excluidas IS NULL OR ex.Zonas_Excluidas = 'null' OR NOT EXISTS (SELECT 1 FROM OPENJSON(ex.Zonas_Excluidas) WHERE value = tc.Ciudad OR value = tc.Distrito))
+                           AND (ex.Zonas_Incluidas IS NULL OR ex.Zonas_Incluidas = 'null' OR EXISTS (SELECT 1 FROM OPENJSON(ex.Zonas_Incluidas) WHERE value = tc.Ciudad OR value = tc.Distrito))
+                         ORDER BY ex.Prioridad DESC, ex.Creado_El DESC),
+                        -- 2. Tarifario Base
+                        (SELECT TOP 1 t.Importe 
+                         FROM [dbo].[GAC_APP_TB_TARIFARIO] t
+                         WHERE t.Empresa = tc.ID_CAS
+                           AND (t.Servicio = tc.IdServicio)
+                           AND TRIM(t.Categoria) = TRIM(tc.Categoria)
+                           AND t.Estado = 'A'
+                         ORDER BY t.Fecha_inicio DESC)
+                    ) as ImporteAplicado,
+                    CASE 
+                        WHEN tc.IdServicio = 'Visita' THEN 0
+                        WHEN DATEDIFF(day, tc.FechaVisita, tc.CheckOut) > 1 THEN 0 
+                        WHEN LEFT(tc.CodigoExternoEquipo, 4) NOT IN ('3120', '3121', '5120', '5121') THEN 0
                         ELSE 1 
-                    END) as Cnt
-                FROM TicketsCAS twc
-                GROUP BY YEAR(twc.CheckOut), MONTH(twc.CheckOut), twc.ID_CAS, twc.IdServicio, twc.Categoria
+                    END as EsValido
+                FROM TicketsCAS tc
+            ),
+            ResumenMensual AS (
+                SELECT Anio, MesNum, SUM(ImporteAplicado) as Bruto
+                FROM CalculoTarifas
+                WHERE EsValido = 1
+                GROUP BY Anio, MesNum
             ),
             SancionesMensuales AS (
                 SELECT YEAR(twc.CheckOut) as Anio, MONTH(twc.CheckOut) as MesNum, SUM(d.Importe) as TotalSanciones
@@ -1307,15 +1570,10 @@ app.get('/api/dashboard/trends', verifyToken, async (req, res) => {
                     WHEN 5 THEN 'May' WHEN 6 THEN 'Jun' WHEN 7 THEN 'Jul' WHEN 8 THEN 'Ago'
                     WHEN 9 THEN 'Sep' WHEN 10 THEN 'Oct' WHEN 11 THEN 'Nov' WHEN 12 THEN 'Dic'
                 END as Mes,
-                SUM(rm.Cnt * ISNULL(t.Importe, 0)) as Bruto,
-                ISNULL(MIN(sm.TotalSanciones), 0) as Sanciones
+                rm.Bruto,
+                ISNULL(sm.TotalSanciones, 0) as Sanciones
             FROM ResumenMensual rm
-            LEFT JOIN [dbo].[GAC_APP_TB_TARIFARIO] t ON t.Empresa = rm.ID_CAS 
-                AND (t.Servicio = rm.IdServicio)
-                AND TRIM(t.Categoria) = TRIM(rm.Categoria) 
-                AND t.Estado = 'A'
             LEFT JOIN SancionesMensuales sm ON rm.Anio = sm.Anio AND rm.MesNum = sm.MesNum
-            GROUP BY rm.Anio, rm.MesNum
             ORDER BY rm.Anio ASC, rm.MesNum ASC
         `;
         const trends = await request.query(query);

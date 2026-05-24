@@ -10,6 +10,7 @@ import { useDialog } from '../context/DialogContext';
 import { toTitleCase } from '../utils/formatters';
 import { cn } from '../utils/cn';
 import type { Material } from '../types';
+import { SIATC_THEME } from '../utils/siatc-theme';
 
 export default function MaterialsPage() {
     const [materials, setMaterials] = useState<Material[]>([]);
@@ -73,15 +74,15 @@ export default function MaterialsPage() {
     };
 
     return (
-        <div className="flex flex-col h-full overflow-hidden gap-5 animate-in fade-in duration-500 p-1">
+        <div className={SIATC_THEME.LAYOUT.PAGE_WRAPPER}>
             {/* Header */}
-            <div className="flex items-center justify-between px-1">
+            <div className={SIATC_THEME.LAYOUT.HEADER_WRAPPER}>
                 <div>
-                    <h1 className="text-2xl font-black tracking-tight text-foreground flex items-center gap-3">
+                    <h1 className={cn(SIATC_THEME.TYPOGRAPHY.PAGE_TITLE, "flex items-center gap-3")}>
                         <Box className="w-8 h-8 text-primary" />
                         Maestro de Materiales
                     </h1>
-                    <p className="text-muted-foreground text-sm font-bold opacity-60">Gestión de catálogo y categorías para tarifario.</p>
+                    <p className={SIATC_THEME.TYPOGRAPHY.PAGE_SUBTITLE}>Gestión de catálogo y categorías para tarifario.</p>
                 </div>
                 <div className="flex items-center gap-3">
                     <div className="bg-primary/5 px-4 py-2 rounded-xl border border-primary/10 flex items-center gap-3">
@@ -95,7 +96,7 @@ export default function MaterialsPage() {
             </div>
 
             {/* Filters */}
-            <div className="bg-card rounded-2xl border border-border p-3 shadow-sm flex flex-wrap items-center gap-4">
+            <div className={cn("p-3 flex flex-wrap items-center gap-4", SIATC_THEME.COMPONENTS.CARD_CONTAINER)}>
                 <div className="flex-1 min-w-[300px] relative">
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <input 
@@ -131,7 +132,7 @@ export default function MaterialsPage() {
             </div>
 
             {/* Table */}
-            <div className="flex-1 bg-card border border-border rounded-2xl overflow-hidden shadow-sm flex flex-col">
+            <div className={cn("flex-1 overflow-hidden flex flex-col", SIATC_THEME.COMPONENTS.CARD_CONTAINER)}>
                 <div className="flex-1 overflow-auto custom-scrollbar">
                     {loading ? (
                         <div className="h-full flex flex-col items-center justify-center gap-4 opacity-40">

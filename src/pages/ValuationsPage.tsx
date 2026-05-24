@@ -12,6 +12,7 @@ import PenaltyModal from '../components/penalties/PenaltyModal';
 import TarifarioModal from '../components/tarifario/TarifarioModal';
 import MaterialRegisterModal from '../components/materials/MaterialRegisterModal';
 import { Modal } from '../components/common/Modal';
+import { SIATC_THEME } from '../utils/siatc-theme';
 
 const isValuable = (code?: string) => ['3120', '3121', '5120', '5121'].some(prefix => code?.startsWith(prefix));
 
@@ -1458,12 +1459,12 @@ export default function ValuationsPage() {
     };
 
     return (
-        <div className="flex flex-col h-full overflow-hidden gap-5 animate-in fade-in duration-500 p-1">
+        <div className={SIATC_THEME.LAYOUT.PAGE_WRAPPER}>
             {/* Cabecera */}
-            <div className="flex items-center justify-between px-1">
+            <div className={SIATC_THEME.LAYOUT.HEADER_WRAPPER}>
                 <div>
-                    <h1 className="text-2xl font-bold tracking-tight text-foreground">Valorizaciones CAS</h1>
-                    <p className="text-muted-foreground text-sm">Gestión quincenal de pagos y descuentos.</p>
+                    <h1 className={SIATC_THEME.TYPOGRAPHY.PAGE_TITLE}>Valorizaciones CAS</h1>
+                    <p className={SIATC_THEME.TYPOGRAPHY.PAGE_SUBTITLE}>Gestión quincenal de pagos y descuentos.</p>
                 </div>
 
                 <div className="flex bg-muted/30 p-1 rounded-2xl border border-border/50">
@@ -1599,7 +1600,7 @@ export default function ValuationsPage() {
             )}
 
             {/* Barra de Filtros Unificada (Fila Única Permanente) */}
-            <div className="crypto-card p-2 flex flex-wrap items-center gap-3">
+            <div className={cn("p-2 flex flex-wrap items-center gap-3", SIATC_THEME.COMPONENTS.CARD_CONTAINER)}>
                 {/* Selector de CAS */}
                 <div className="relative flex-1 min-w-[280px]" ref={dropdownRef}>
                     <div 
@@ -1696,7 +1697,7 @@ export default function ValuationsPage() {
                     <div className="grid grid-cols-1 xl:grid-cols-4 gap-6 h-full pb-2">
                         {/* Resumen */}
                         <div className="xl:col-span-1 h-full min-h-0">
-                            <div className="crypto-card p-6 h-full flex flex-col justify-between overflow-y-auto custom-scrollbar">
+                            <div className={cn("p-6 h-full flex flex-col justify-between overflow-y-auto custom-scrollbar", SIATC_THEME.COMPONENTS.CARD_CONTAINER)}>
                                 <div className="space-y-6">
                                     <div className="flex items-center justify-between">
                                         <h3 className="text-[11px] font-bold text-muted-foreground">Resumen de Cuenta</h3>
@@ -1773,7 +1774,7 @@ export default function ValuationsPage() {
                         </div>
 
                         {/* Tabs y Listado */}
-                        <div className="xl:col-span-3 flex flex-col crypto-card overflow-hidden">
+                        <div className={cn("xl:col-span-3 flex flex-col overflow-hidden", SIATC_THEME.COMPONENTS.CARD_CONTAINER)}>
                             <div className="flex p-2 bg-muted/20 border-b border-border/40">
                                 <button onClick={() => setActiveTab('services')} className={cn("flex-1 flex items-center justify-center gap-2 py-3 text-sm font-bold rounded-xl transition-all", activeTab === 'services' ? "bg-background text-primary shadow-sm ring-1 ring-border/50" : "text-muted-foreground hover:bg-background/40")}>
                                     <Briefcase className="w-4 h-4" /> Servicios realizados ({tickets.length})
@@ -1798,14 +1799,14 @@ export default function ValuationsPage() {
                                                 <p className="text-xs font-bold">No se detectaron servicios en el rango seleccionado</p>
                                             </div>
                                         ) : (
-                                            <table className="w-full border-separate border-spacing-0">
-                                                <thead className="bg-white sticky top-[-20px] z-30 border-b border-border shadow-sm">
-                                                    <tr className="crypto-table-header bg-white">
-                                                        <th className="px-5 py-4 text-left">Fecha de Proceso</th>
-                                                        <th className="px-5 py-4 text-center">Servicios</th>
-                                                        <th className="px-5 py-4 text-center">Estado de Auditoría</th>
-                                                        <th className="px-5 py-4 text-right">Acumulado Diario</th>
-                                                        <th className="px-5 py-4 text-center w-10"></th>
+                                            <table className={SIATC_THEME.TABLE.TABLE_ELEMENT}>
+                                                <thead className={SIATC_THEME.TABLE.HEADER_ROW}>
+                                                    <tr>
+                                                        <th className={SIATC_THEME.TABLE.HEADER_TH}>Fecha de Proceso</th>
+                                                        <th className={cn(SIATC_THEME.TABLE.HEADER_TH, "text-center")}>Servicios</th>
+                                                        <th className={cn(SIATC_THEME.TABLE.HEADER_TH, "text-center")}>Estado de Auditoría</th>
+                                                        <th className={cn(SIATC_THEME.TABLE.HEADER_TH, "text-right")}>Acumulado Diario</th>
+                                                        <th className={cn(SIATC_THEME.TABLE.HEADER_TH, "w-10")}></th>
                                                     </tr>
                                                 </thead>
                                                     <tbody className="divide-y divide-border/10">
@@ -1814,11 +1815,12 @@ export default function ValuationsPage() {
                                                                 <tr 
                                                                     onClick={() => toggleDate(date)} 
                                                                     className={cn(
-                                                                        "group cursor-pointer transition-all hover:bg-primary/[0.03] select-none",
+                                                                        SIATC_THEME.TABLE.BODY_ROW,
+                                                                        "cursor-pointer select-none",
                                                                         expandedDates.includes(date) ? "bg-primary/[0.02]" : ""
                                                                     )}
                                                                 >
-                                                                    <td className="px-5 py-4">
+                                                                    <td className={SIATC_THEME.TABLE.CELL}>
                                                                         <div className="flex items-center gap-3">
                                                                             <div className={cn(
                                                                                 "p-2 rounded-lg transition-all duration-300", 

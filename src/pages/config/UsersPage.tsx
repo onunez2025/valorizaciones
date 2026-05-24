@@ -26,6 +26,7 @@ import { ResizableHeader } from '../../components/common/ResizableHeader';
 import { useAuth } from '../../hooks/useAuth';
 import { cn } from '../../utils/cn';
 import { toTitleCase } from '../../utils/formatters';
+import { SIATC_THEME } from '../../utils/siatc-theme';
 import type { User, Role } from '../../types';
 
 export default function UsersPage() {
@@ -153,23 +154,23 @@ export default function UsersPage() {
         });
 
     return (
-        <div className="flex flex-col h-full space-y-3 min-h-0 animate-in fade-in duration-500">
+        <div className="flex flex-col h-full space-y-4 min-h-0 animate-in fade-in duration-500">
             {/* Header: SIATC Standard */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 shrink-0 px-1">
+            <div className={SIATC_THEME.LAYOUT.HEADER_WRAPPER}>
                 <div className="space-y-1">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground font-medium">
-                        <Users className="w-4 h-4" />
+                    <div className="flex items-center gap-2 text-sm text-cb-text-secondary font-medium">
+                        <Users className="w-4 h-4 text-cb-neutral" />
                         <span>Configuración</span>
                         <ChevronRight className="w-3 h-3 opacity-50" />
-                        <span className="text-foreground">Gestión de Usuarios</span>
+                        <span className="text-cb-text-primary">Gestión de Usuarios</span>
                     </div>
-                    <h1 className="text-2xl font-bold tracking-tight text-foreground">Gestión de Usuarios</h1>
-                    <p className="text-sm text-muted-foreground">Administra los permisos y accesos al ecosistema de Valorizaciones</p>
+                    <h1 className={SIATC_THEME.TYPOGRAPHY.PAGE_TITLE}>Gestión de Usuarios</h1>
+                    <p className={SIATC_THEME.TYPOGRAPHY.PAGE_SUBTITLE}>Administra los permisos y accesos al ecosistema de Valorizaciones</p>
                 </div>
                 {hasPermission('val.config.users') && (
                     <button
                         onClick={openNew}
-                        className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground rounded-xl hover:bg-primary/90 transition-all active:scale-95 font-semibold text-sm shadow-sm"
+                        className={SIATC_THEME.COMPONENTS.BUTTON_PRIMARY}
                     >
                         <Plus className="w-4 h-4" />
                         Nuevo Usuario
@@ -178,121 +179,121 @@ export default function UsersPage() {
             </div>
 
             {/* Content Container */}
-            <div className="flex-1 min-h-0 flex flex-col bg-card rounded-[2rem] border border-border/50 shadow-xl shadow-slate-200/20 dark:shadow-none overflow-hidden backdrop-blur-sm">
+            <div className={cn(SIATC_THEME.LAYOUT.CONTENT_CONTAINER, "dark:bg-cb-bg")}>
                 {/* Search / Filters Toolbar */}
-                <div className="p-3.5 border-b border-border bg-muted/20 flex flex-col sm:flex-row items-center gap-4">
+                <div className={SIATC_THEME.LAYOUT.SEARCH_BAR_WRAPPER}>
                     <div className="relative flex-1 max-w-md">
-                        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-cb-neutral/60" />
                         <input
                             type="text"
                             value={search}
                             onChange={e => setSearch(e.target.value)}
                             placeholder="Buscar por nombre, usuario o email..."
-                            className="w-full pl-10 pr-4 py-2 bg-background border border-border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-sm font-medium"
+                            className={cn(SIATC_THEME.COMPONENTS.INPUT, "pl-10 pr-4 dark:bg-cb-bg text-cb-text-primary border-cb-border")}
                         />
                     </div>
                 </div>
 
                 {/* Table Area */}
-                <div className="flex-1 overflow-auto relative custom-scrollbar">
+                <div className={SIATC_THEME.TABLE.SCROLL_AREA}>
                     {isLoading ? (
                         <div className="absolute inset-0 flex flex-col items-center justify-center bg-card/50 backdrop-blur-sm z-50">
                             <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-                            <span className="text-sm font-bold text-muted-foreground mt-4 tracking-widest">Sincronizando identidades...</span>
+                            <span className="text-sm font-bold text-cb-text-secondary mt-4 tracking-widest">Sincronizando identidades...</span>
                         </div>
                     ) : (
-                        <table className="w-full text-sm text-left border-collapse table-fixed min-w-[1000px]">
-                            <thead className="sticky top-0 z-20 bg-muted/90 backdrop-blur-md">
-                                <tr className="border-b border-border">
-                                    <ResizableHeader columnId="usuario" width={widths.usuario} onResizeStart={onResizeStart} className="px-6 py-4">
+                        <table className={cn(SIATC_THEME.TABLE.TABLE_ELEMENT, "table-fixed")}>
+                            <thead className={SIATC_THEME.TABLE.HEADER_ROW}>
+                                <tr className="border-b border-cb-border">
+                                    <ResizableHeader columnId="usuario" width={widths.usuario} onResizeStart={onResizeStart} className={cn(SIATC_THEME.TABLE.HEADER_TH, "relative")}>
                                         <div className="flex items-center justify-between gap-2 group/header cursor-pointer" onClick={() => handleSort('username')}>
-                                            <span className="font-bold text-sm text-foreground tracking-tight">Responsable / ID</span>
+                                            <span className={SIATC_THEME.TYPOGRAPHY.TABLE_HEADER}>Responsable / ID</span>
                                             <SortIcon column="username" />
                                         </div>
                                     </ResizableHeader>
-                                    <ResizableHeader columnId="email" width={widths.email} onResizeStart={onResizeStart} className="px-6 py-4">
+                                    <ResizableHeader columnId="email" width={widths.email} onResizeStart={onResizeStart} className={cn(SIATC_THEME.TABLE.HEADER_TH, "relative")}>
                                         <div className="flex items-center justify-between gap-2 group/header cursor-pointer" onClick={() => handleSort('email')}>
-                                            <span className="font-bold text-sm text-foreground tracking-tight">Correo Corporativo</span>
+                                            <span className={SIATC_THEME.TYPOGRAPHY.TABLE_HEADER}>Correo Corporativo</span>
                                             <SortIcon column="email" />
                                         </div>
                                     </ResizableHeader>
-                                    <ResizableHeader columnId="rol" width={widths.rol} onResizeStart={onResizeStart} className="px-6 py-4">
+                                    <ResizableHeader columnId="rol" width={widths.rol} onResizeStart={onResizeStart} className={cn(SIATC_THEME.TABLE.HEADER_TH, "relative")}>
                                         <div className="flex items-center justify-between gap-2 group/header cursor-pointer" onClick={() => handleSort('rol')}>
-                                            <span className="font-bold text-sm text-foreground tracking-tight">Perfil de Seguridad</span>
+                                            <span className={SIATC_THEME.TYPOGRAPHY.TABLE_HEADER}>Perfil de Seguridad</span>
                                             <SortIcon column="rol" />
                                         </div>
                                     </ResizableHeader>
-                                    <ResizableHeader columnId="apps" width={widths.apps} onResizeStart={onResizeStart} className="px-6 py-4 text-center">
-                                        <span className="font-bold text-sm text-foreground tracking-tight">Alcance Ecosistema</span>
+                                    <ResizableHeader columnId="apps" width={widths.apps} onResizeStart={onResizeStart} className={cn(SIATC_THEME.TABLE.HEADER_TH, "relative text-center")}>
+                                        <span className={SIATC_THEME.TYPOGRAPHY.TABLE_HEADER}>Alcance Ecosistema</span>
                                     </ResizableHeader>
-                                    <th className="px-6 py-4 w-28 bg-muted/30 text-right italic font-medium text-[10px] text-muted-foreground uppercase tracking-widest">Acciones</th>
+                                    <th className={cn(SIATC_THEME.TABLE.HEADER_TH, "w-28 text-right italic font-medium text-[10px] text-cb-neutral uppercase tracking-wider")}>Acciones</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-border">
+                            <tbody className="divide-y divide-cb-border/60">
                                 {filtered.length === 0 ? (
                                     <tr>
                                         <td colSpan={5} className="px-6 py-20 text-center opacity-60">
                                             <div className="flex flex-col items-center gap-3">
-                                                <Activity className="w-10 h-10 text-muted-foreground/20" />
-                                                <p className="text-sm font-medium text-muted-foreground italic">No se encontraron identidades para el filtro seleccionado</p>
+                                                <Activity className="w-10 h-10 text-cb-neutral/20" />
+                                                <p className="text-sm font-bold text-cb-neutral italic">No se encontraron identidades para el filtro seleccionado</p>
                                             </div>
                                         </td>
                                     </tr>
                                 ) : (
                                     filtered.map((user) => (
-                                        <tr key={user.id} className="group hover:bg-muted/30 transition-colors">
-                                            <td className="px-6 py-4">
+                                        <tr key={user.id} className={SIATC_THEME.TABLE.BODY_ROW}>
+                                            <td className={SIATC_THEME.TABLE.CELL}>
                                                 <div className="flex items-center gap-3">
-                                                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-extrabold text-xs border border-primary/20 shadow-inner shrink-0 group-hover:scale-110 transition-transform">
+                                                    <div className="w-10 h-10 rounded-full bg-primary/10 dark:bg-primary/20 flex items-center justify-center text-primary dark:text-primary-foreground font-bold text-xs border border-primary/20 shadow-inner shrink-0 group-hover:scale-110 transition-transform">
                                                         {user.username?.substring(0, 2).toUpperCase()}
                                                     </div>
                                                     <div className="min-w-0">
-                                                        <div className="font-bold text-foreground text-sm truncate tracking-tight">
+                                                        <div className="font-bold text-cb-text-primary text-sm truncate tracking-tight">
                                                             {toTitleCase(user.full_name || user.username)}
                                                         </div>
-                                                        <div className="text-[10px] text-muted-foreground font-mono truncate flex items-center gap-1.5 opacity-60 mt-0.5">
+                                                        <div className="text-[10px] text-cb-text-secondary font-mono truncate flex items-center gap-1.5 opacity-60 mt-0.5">
                                                             <Activity className="w-2.5 h-2.5" /> ID: {user.username}
                                                         </div>
                                                     </div>
                                                 </div>
                                             </td>
-                                            <td className="px-6 py-3.5">
+                                            <td className={SIATC_THEME.TABLE.CELL}>
                                                 <div className="flex flex-col min-w-0">
-                                                    <span className="text-muted-foreground font-medium truncate">{user.email}</span>
+                                                    <span className="text-cb-text-secondary font-medium truncate">{user.email}</span>
                                                     {!user.is_active && (
-                                                        <span className="text-[9px] font-bold text-destructive tracking-tight mt-0.5">Cuenta suspendida</span>
+                                                        <span className="text-[9px] font-bold text-[#DF2935] tracking-tight mt-0.5">Cuenta suspendida</span>
                                                     )}
                                                 </div>
                                             </td>
-                                            <td className="px-6 py-4">
-                                                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black shadow-sm border bg-secondary/50 text-secondary-foreground border-border">
+                                            <td className={SIATC_THEME.TABLE.CELL}>
+                                                <span className={cn(SIATC_THEME.STATES.BADGE_BASE, SIATC_THEME.STATES.PRIMARY, "gap-1")}>
                                                      <ShieldCheck className="w-3 h-3 text-primary/60" />
                                                     {user.role_name || 'Invitado'}
                                                 </span>
                                             </td>
-                                            <td className="px-6 py-4">
+                                            <td className={SIATC_THEME.TABLE.CELL}>
                                                 <div className="flex flex-wrap gap-1 justify-center">
                                                     {(user.apps || APP_IDENTIFIER).split(',').map((app: string) => (
-                                                        <span key={app} className="px-2 py-0.5 rounded-lg text-[9px] font-black tracking-tighter border bg-primary/5 text-primary border-primary/10 uppercase transition-colors group-hover:bg-primary/10 group-hover:border-primary/30">
+                                                        <span key={app} className={cn(SIATC_THEME.STATES.BADGE_BASE, SIATC_THEME.STATES.INFO)}>
                                                             {app.trim()}
                                                         </span>
                                                     ))}
                                                 </div>
                                             </td>
-                                            <td className="px-6 py-3.5 text-right">
+                                            <td className={SIATC_THEME.TABLE.CELL}>
                                                 <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                                     {hasPermission('val.config.users') && (
                                                         <>
                                                             <button
                                                                 onClick={() => openEdit(user)}
-                                                                className="p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-lg transition-all active:scale-90"
+                                                                className="p-1.5 text-cb-text-secondary hover:text-primary hover:bg-primary/10 rounded-cb-btn transition-all active:scale-90 cursor-pointer"
                                                                 title="Configurar"
                                                             >
                                                                 <Edit2 className="w-4 h-4" />
                                                             </button>
                                                             <button
                                                                 onClick={() => handleDelete(user.id)}
-                                                                className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-all active:scale-90"
+                                                                className="p-1.5 text-cb-text-secondary hover:text-[#DF2935] hover:bg-[#DF2935]/10 rounded-cb-btn transition-all active:scale-90 cursor-pointer"
                                                                 title="Revocar"
                                                             >
                                                                 <Trash2 className="w-4 h-4" />
@@ -310,9 +311,9 @@ export default function UsersPage() {
                 </div>
                 
                 {/* Footer Stats */}
-                <div className="px-6 py-3 border-t border-border/50 bg-muted/30 flex items-center justify-between shrink-0">
-                    <p className="text-[10px] font-black text-muted-foreground tracking-[0.2em] uppercase opacity-60">
-                        Total de registros: <span className="text-foreground ml-1">{filtered.length}</span>
+                <div className={SIATC_THEME.TABLE.FOOTER}>
+                    <p className={SIATC_THEME.TYPOGRAPHY.FOOTER_STATS}>
+                        Total de registros: <span className="text-cb-text-primary ml-1">{filtered.length}</span>
                     </p>
                 </div>
             </div>
@@ -329,46 +330,46 @@ export default function UsersPage() {
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
                         <div className="space-y-1.5">
-                            <label className="text-xs font-bold text-muted-foreground tracking-widest pl-1">Nombre completo:</label>
+                            <label className="text-[11px] font-bold text-cb-neutral uppercase tracking-wider pl-1">Nombre completo:</label>
                             <input
                                 type="text"
                                 required
                                 value={editingUser?.full_name || ''}
                                 onChange={(e) => setEditingUser(prev => prev ? { ...prev, full_name: e.target.value } : null)}
-                                className="w-full h-11 px-4 bg-background border border-border rounded-xl text-sm font-bold focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder:text-muted-foreground/30"
+                                className={cn(SIATC_THEME.COMPONENTS.INPUT, "h-11 dark:bg-cb-bg text-cb-text-primary border-cb-border")}
                                 placeholder="Ej: Juan Pérez"
                             />
                         </div>
 
                         <div className="space-y-1.5">
-                            <label className="text-xs font-bold text-muted-foreground tracking-widest pl-1">ID de acceso / Usuario:</label>
+                            <label className="text-[11px] font-bold text-cb-neutral uppercase tracking-wider pl-1">ID de acceso / Usuario:</label>
                             <div className="relative">
-                                <Activity className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/40" />
+                                <Activity className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-cb-neutral/40" />
                                 <input
                                     type="text"
                                     required
                                     value={editingUser?.username || ''}
                                     onChange={(e) => setEditingUser(prev => prev ? { ...prev, username: e.target.value } : null)}
-                                    className="w-full h-11 pl-10 pr-4 bg-background border border-border rounded-xl text-sm font-bold focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder:text-muted-foreground/30 font-mono"
+                                    className={cn(SIATC_THEME.COMPONENTS.INPUT, "h-11 pl-10 pr-4 dark:bg-cb-bg text-cb-text-primary border-cb-border font-mono")}
                                     placeholder="Ej: jperez"
                                 />
                             </div>
                         </div>
 
                         <div className="space-y-1.5">
-                            <label className="text-xs font-bold text-muted-foreground tracking-widest pl-1">Correo corporativo:</label>
+                            <label className="text-[11px] font-bold text-cb-neutral uppercase tracking-wider pl-1">Correo corporativo:</label>
                             <input
                                 type="email"
                                 required
                                 value={editingUser?.email || ''}
                                 onChange={(e) => setEditingUser(prev => prev ? { ...prev, email: e.target.value } : null)}
-                                className="w-full h-11 px-4 bg-background border border-border rounded-xl text-sm font-bold focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder:text-muted-foreground/30"
+                                className={cn(SIATC_THEME.COMPONENTS.INPUT, "h-11 dark:bg-cb-bg text-cb-text-primary border-cb-border")}
                                 placeholder="ejemplo@siatc.com"
                             />
                         </div>
 
                         <div className="space-y-1.5">
-                            <label className="text-xs font-bold text-muted-foreground tracking-widest pl-1">
+                            <label className="text-[11px] font-bold text-cb-neutral uppercase tracking-wider pl-1">
                                 {editingUser?.id ? 'Actualizar credencial:' : 'Credencial de acceso:'}
                             </label>
                             <input
@@ -376,20 +377,20 @@ export default function UsersPage() {
                                 required={!editingUser?.id}
                                 value={editingUser?.password_hash || ''}
                                 onChange={(e) => setEditingUser(prev => prev ? { ...prev, password_hash: e.target.value } : null)}
-                                className="w-full h-11 px-4 bg-background border border-border rounded-xl text-sm font-bold focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder:text-muted-foreground/30 font-mono"
+                                className={cn(SIATC_THEME.COMPONENTS.INPUT, "h-11 dark:bg-cb-bg text-cb-text-primary border-cb-border font-mono")}
                                 placeholder={editingUser?.id ? "Solo si desea cambiar" : "••••••••"}
                             />
                         </div>
 
                         <div className="space-y-1.5">
-                            <label className="text-xs font-bold text-muted-foreground tracking-widest pl-1">Perfil de seguridad:</label>
+                            <label className="text-[11px] font-bold text-cb-neutral uppercase tracking-wider pl-1">Perfil de seguridad:</label>
                             <div className="relative">
-                                <ShieldCheck className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/40" />
+                                <ShieldCheck className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-cb-neutral/40" />
                                 <select
                                     required
                                     value={editingUser?.role_id || ''}
                                     onChange={(e) => setEditingUser(prev => prev ? { ...prev, role_id: e.target.value } : null)}
-                                    className="w-full h-11 pl-10 pr-4 bg-background border border-border rounded-xl text-sm font-bold focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all appearance-none cursor-pointer"
+                                    className={cn(SIATC_THEME.COMPONENTS.INPUT, "h-11 pl-10 pr-4 dark:bg-cb-bg text-cb-text-primary border-cb-border appearance-none cursor-pointer")}
                                 >
                                     <option value="" disabled>Seleccionar perfil...</option>
                                     {roles.map(role => (
@@ -400,7 +401,7 @@ export default function UsersPage() {
                         </div>
 
                         <div className="col-span-full pt-2">
-                            <label className="text-xs font-bold text-muted-foreground tracking-widest pl-1 mb-3 block">Ámbito del ecosistema SIATC:</label>
+                            <label className="text-[11px] font-bold text-cb-neutral uppercase tracking-wider pl-1 mb-3 block">Ámbito del ecosistema SIATC:</label>
                             <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                                 {[
                                     { id: 'EBM', label: 'EBM' },
@@ -416,10 +417,10 @@ export default function UsersPage() {
                                             type="button"
                                             onClick={() => toggleApp(app.id)}
                                             className={cn(
-                                                "flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-[10px] font-bold tracking-tight transition-all border shadow-sm",
+                                                "flex items-center gap-2.5 px-3 py-2.5 rounded-cb-btn text-[10px] font-bold tracking-tight transition-all border shadow-sm cursor-pointer",
                                                 isSelected
-                                                    ? "bg-primary text-primary-foreground border-primary shadow-sm"
-                                                    : "bg-background border-border text-muted-foreground hover:bg-muted"
+                                                    ? "bg-primary text-primary-foreground border-primary"
+                                                    : "bg-white dark:bg-cb-bg border-cb-border text-cb-neutral hover:bg-cb-bg"
                                             )}
                                         >
                                             <div className={cn(
@@ -440,13 +441,13 @@ export default function UsersPage() {
                                 type="button"
                                 onClick={() => setEditingUser(prev => prev ? { ...prev, is_active: !prev.is_active } : null)}
                                 className={cn(
-                                    "w-full flex items-center justify-between px-5 py-3.5 rounded-xl text-xs font-bold transition-all border shadow-sm",
+                                    "w-full flex items-center justify-between px-5 py-3.5 rounded-cb-card text-xs font-bold transition-all border shadow-sm cursor-pointer",
                                     editingUser?.is_active
-                                        ? "bg-emerald-50 text-emerald-700 border-emerald-200/50"
-                                        : "bg-rose-50 text-rose-700 border-rose-200/50"
+                                        ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-500"
+                                        : "bg-[#DF2935]/10 border-[#DF2935]/20 text-[#DF2935]"
                                 )}
                             >
-                                <span className="tracking-widest">Estado operativo:</span>
+                                <span className="tracking-widest uppercase text-[10px] text-cb-neutral">Estado operativo:</span>
                                 <div className="flex items-center gap-3">
                                     {editingUser?.is_active ? 'Habilitado' : 'Suspendido'}
                                     <div className={cn(
@@ -463,17 +464,17 @@ export default function UsersPage() {
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-3 pt-4 border-t border-border mt-2">
+                    <div className="flex items-center gap-3 pt-4 border-t border-cb-border mt-2">
                         <button
                             type="button"
                             onClick={() => setIsModalOpen(false)}
-                            className="flex-1 px-4 py-2.5 text-xs font-bold text-muted-foreground hover:bg-muted rounded-xl transition-all tracking-widest active:scale-95"
+                            className={cn(SIATC_THEME.COMPONENTS.BUTTON_SECONDARY, "flex-1")}
                         >
                             Cancelar
                         </button>
                         <button
                             type="submit"
-                            className="flex-1 px-4 py-2.5 text-xs font-bold text-primary-foreground bg-primary hover:bg-primary/90 rounded-xl shadow-lg shadow-primary/25 active:scale-95 transition-all tracking-widest flex items-center justify-center gap-2"
+                            className={cn(SIATC_THEME.COMPONENTS.BUTTON_PRIMARY, "flex-1")}
                         >
                             <Save className="w-4 h-4" />
                             {editingUser?.id ? 'Guardar cambios' : 'Confirmar usuario'}
