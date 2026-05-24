@@ -81,8 +81,8 @@ export function MainLayout() {
                         </button>
 
                         <div className="flex items-center gap-4 group cursor-default">
-                            <div className="w-12 h-12 rounded-[1.25rem] bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-white/10 shadow-lg shadow-slate-200/40 dark:shadow-none flex items-center justify-center group-hover:scale-110 transition-all duration-500">
-                                <img src="/logo.png" alt="Valorizaciones" className="w-7 h-7 object-contain rounded" />
+                            <div className="w-12 h-12 flex items-center justify-center group-hover:scale-110 transition-all duration-500">
+                                <img src="/logo.png" alt="Valorizaciones" className="w-10 h-10 object-contain" />
                             </div>
                             <div className="flex flex-col">
                                 <span className="font-black text-sm tracking-tight text-foreground uppercase pt-1">Valorizaciones</span>
