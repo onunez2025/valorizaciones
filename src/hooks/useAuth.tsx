@@ -54,7 +54,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                     setUser(data.user);
                     StorageService.setCurrentUser(data.user);
                 } else {
-                    logout();
+                    StorageService.remove('current_user');
+                    StorageService.remove('auth_token');
+                    window.location.href = '/login?expired=true';
                 }
             } catch (error) {
                 console.error("Session validation error", error);
@@ -64,7 +66,43 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         };
 
         validateSession();
-    }, [logout]);
+    }, []);
+
+    // --- Inactivity Logout Logic (5 Minutes) ---
+    useEffect(() => {
+        if (!user) return;
+
+        let timeoutId: any;
+
+        const resetTimer = () => {
+            timeoutId = setTimeout(() => {
+                StorageService.remove('current_user');
+                StorageService.remove('auth_token');
+                window.location.href = '/login?expired=true';
+            }, 5 * 60 * 1000); // 5 minutes
+        };
+
+        const activityEvents = ['mousemove', 'keydown', 'mousedown', 'touchstart', 'scroll'];
+        
+        const handleActivity = () => {
+            if (timeoutId) clearTimeout(timeoutId);
+            resetTimer();
+        };
+
+        activityEvents.forEach(event => {
+            window.addEventListener(event, handleActivity);
+        });
+
+        resetTimer();
+
+        return () => {
+            if (timeoutId) clearTimeout(timeoutId);
+            activityEvents.forEach(event => {
+                window.removeEventListener(event, handleActivity);
+            });
+        };
+    }, [user]);
+    // ------------------------------------------
 
     const login = useCallback((newUser: User, token?: string, remember: boolean = true) => {
         setUser(newUser);

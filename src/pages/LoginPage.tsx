@@ -110,11 +110,10 @@ export default function LoginPage() {
                         ES
                     </button>
                 </div>
-
-                <div className="w-full max-w-md space-y-8 animate-in fade-in zoom-in-95 duration-500">
+                <div className="w-full max-w-md space-y-8">
                     <div className="text-center">
-                        <h2 className="text-3xl font-bold tracking-tight text-cb-text-primary">Bienvenido</h2>
-                        <p className="mt-2 text-cb-text-secondary text-sm">
+                        <h2 className={SIATC_THEME.LOGIN_LAYOUT.TITLE}>Bienvenido</h2>
+                        <p className={SIATC_THEME.LOGIN_LAYOUT.SUBTITLE}>
                             Ingresa tus credenciales para acceder al sistema
                         </p>
                     </div>
@@ -129,86 +128,88 @@ export default function LoginPage() {
                         </div>
                     )}
 
-                    <form onSubmit={handleLogin} className="space-y-6 mt-8">
-                        <div className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium mb-1.5 ml-1 text-cb-text-primary">
-                                    Usuario
-                                </label>
-                                <div className={SIATC_THEME.LOGIN_LAYOUT.INPUT_WRAPPER}>
-                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-muted-foreground">
-                                        <User className="w-5 h-5" />
+                    <div className={SIATC_THEME.LOGIN_LAYOUT.CARD}>
+                        <form onSubmit={handleLogin} className="space-y-6">
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-medium mb-1.5 ml-1 text-cb-text-primary">
+                                        Usuario
+                                    </label>
+                                    <div className={SIATC_THEME.LOGIN_LAYOUT.INPUT_WRAPPER}>
+                                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-muted-foreground">
+                                            <User className="w-5 h-5" />
+                                        </div>
+                                        <input
+                                            type="text"
+                                            value={username}
+                                            onChange={(e) => setUsername(e.target.value)}
+                                            className={SIATC_THEME.LOGIN_LAYOUT.INPUT}
+                                            placeholder="Ingrese usuario"
+                                            required
+                                            autoFocus
+                                        />
                                     </div>
-                                    <input
-                                        type="text"
-                                        value={username}
-                                        onChange={(e) => setUsername(e.target.value)}
-                                        className={SIATC_THEME.LOGIN_LAYOUT.INPUT}
-                                        placeholder="Ingrese usuario"
-                                        required
-                                        autoFocus
-                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium mb-1.5 ml-1 text-cb-text-primary">
+                                        Contraseña
+                                    </label>
+                                    <div className={SIATC_THEME.LOGIN_LAYOUT.INPUT_WRAPPER}>
+                                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-muted-foreground">
+                                            <Lock className="w-5 h-5" />
+                                        </div>
+                                        <input
+                                            type={showPassword ? 'text' : 'password'}
+                                            value={password}
+                                            onChange={(e) => setPassword(e.target.value)}
+                                            className={SIATC_THEME.LOGIN_LAYOUT.INPUT}
+                                            placeholder="Ingrese contraseña"
+                                            required
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowPassword(!showPassword)}
+                                            className="absolute inset-y-0 right-0 pr-3 flex items-center text-muted-foreground hover:text-foreground transition-colors"
+                                        >
+                                            {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
 
-                            <div>
-                                <label className="block text-sm font-medium mb-1.5 ml-1 text-cb-text-primary">
-                                    Contraseña
+                            <div className="flex items-center justify-between text-sm">
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                    <input type="checkbox" className="w-4 h-4 rounded border-input text-primary focus:ring-primary" />
+                                    <span className="text-cb-text-secondary">Recordarme</span>
                                 </label>
-                                <div className={SIATC_THEME.LOGIN_LAYOUT.INPUT_WRAPPER}>
-                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-muted-foreground">
-                                        <Lock className="w-5 h-5" />
-                                    </div>
-                                    <input
-                                        type={showPassword ? 'text' : 'password'}
-                                        value={password}
-                                        onChange={(e) => setPassword(e.target.value)}
-                                        className={SIATC_THEME.LOGIN_LAYOUT.INPUT}
-                                        placeholder="Ingrese contraseña"
-                                        required
-                                    />
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowPassword(!showPassword)}
-                                        className="absolute inset-y-0 right-0 pr-3 flex items-center text-muted-foreground hover:text-foreground transition-colors"
-                                    >
-                                        {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                                    </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setError('Por favor, contacta a tu administrador de sistemas para una nueva contraseña.')}
+                                    className="font-medium text-primary hover:text-primary/80 transition-colors bg-transparent border-none p-0 cursor-pointer"
+                                >
+                                    ¿Olvidaste tu contraseña?
+                                </button>
+                            </div>
+
+                            {error && (
+                                <div className="p-3 rounded-lg bg-destructive/10 text-destructive text-sm font-medium text-center animate-in fade-in zoom-in-95">
+                                    {error}
                                 </div>
-                            </div>
-                        </div>
-
-                        <div className="flex items-center justify-between text-sm">
-                            <label className="flex items-center gap-2 cursor-pointer">
-                                <input type="checkbox" className="w-4 h-4 rounded border-input text-primary focus:ring-primary" />
-                                <span className="text-cb-text-secondary">Recordarme</span>
-                            </label>
-                            <button
-                                type="button"
-                                onClick={() => setError('Por favor, contacta a tu administrador de sistemas para una nueva contraseña.')}
-                                className="font-medium text-primary hover:text-primary/80 transition-colors bg-transparent border-none p-0 cursor-pointer"
-                            >
-                                ¿Olvidaste tu contraseña?
-                            </button>
-                        </div>
-
-                        {error && (
-                            <div className="p-3 rounded-lg bg-destructive/10 text-destructive text-sm font-medium text-center animate-in fade-in zoom-in-95">
-                                {error}
-                            </div>
-                        )}
-
-                        <button
-                            type="submit"
-                            disabled={loading}
-                            className={cn(
-                                "w-full flex justify-center h-11 items-center px-4 py-2 border border-transparent rounded-cb-btn shadow-sm text-sm font-bold text-primary-foreground bg-gradient-to-r from-primary/80 to-primary hover:from-primary hover:to-primary focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ring transition-all transform active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed",
-                                loading && "animate-pulse"
                             )}
-                        >
-                            {loading ? 'Autenticando...' : 'Iniciar Sesión'}
-                        </button>
-                    </form>
+
+                            <button
+                                type="submit"
+                                disabled={loading}
+                                className={cn(
+                                    SIATC_THEME.COMPONENTS.BUTTON_PRIMARY,
+                                    "w-full flex justify-center disabled:opacity-70 disabled:cursor-not-allowed"
+                                )}
+                            >
+                                {loading ? 'Autenticando...' : 'Iniciar Sesión'}
+                            </button>
+                        </form>
+                    </div>
                 </div>
             </div>
         </div>
