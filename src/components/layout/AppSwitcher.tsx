@@ -1,14 +1,19 @@
 import { useState, useRef, useEffect } from 'react';
-import { Grid } from 'lucide-react';
-import { toTitleCase } from '../../utils/formatters';
+import { Grid, Info } from 'lucide-react';
+import { cn } from '../../utils/cn';
+import { SIATC_THEME } from '../../utils/siatc-theme';
+
+// SIATC PREMIUM MASTER — AppSwitcher v3.0 (Platinum 4-Cols Grid)
+// Idéntico en todos los proyectos del ecosistema. Solo cambia currentAppId.
 
 const apps = [
-    { id: 's-project', name: 'S-Project', url: 'https://gac-sole-sproject.jppsfv.easypanel.host/', logo: '/ecosystem-logos/s-project.png' },
-    { id: 'gestor-fsm', name: 'Gestor FSM', url: 'https://gac-sole-gestor-de-tickets-fsm.jppsfv.easypanel.host/', logo: '/ecosystem-logos/gestor-fsm.png' },
-    { id: 'liquidaciones', name: 'Liquidaciones', url: 'https://gac-sole-liquidaciones.jppsfv.easypanel.host/', logo: '/ecosystem-logos/liquidaciones.png' },
-    { id: 'tablero-control', name: 'Tablero Control', url: 'https://gac-sole-tablero-control.jppsfv.easypanel.host/', logo: '/ecosystem-logos/tablero-control.png' },
-    { id: 'ebm', name: 'EBM', url: 'https://gac-sole-ebm.jppsfv.easypanel.host/', logo: '/ecosystem-logos/ebm.png' },
-    { id: 'valorizaciones', name: 'Valorizaciones', url: 'https://gac-sole-valorizaciones.jppsfv.easypanel.host/', logo: '/logo.png' }
+    { id: 's-project',       name: 'S-Project',       url: 'https://gac-sole-sproject.jppsfv.easypanel.host/',                logo: '/ecosystem-logos/s-project.png' },
+    { id: 'mesa-atencion',   name: 'Mesa de Atención', url: 'https://gac-sole-nc-cxg-cancelaciones.jppsfv.easypanel.host/',  logo: '/ecosystem-logos/mesa-atencion.png' },
+    { id: 'gestor-fsm',      name: 'Gestor FSM',       url: 'https://gac-sole-gestor-de-tickets-fsm.jppsfv.easypanel.host/', logo: '/ecosystem-logos/gestor-fsm.png' },
+    { id: 'liquidaciones',   name: 'Liquidaciones',    url: 'https://gac-sole-liquidaciones.jppsfv.easypanel.host/',          logo: '/ecosystem-logos/liquidaciones.png' },
+    { id: 'tablero-control', name: 'Tablero Control',  url: 'https://gac-sole-tablero-control.jppsfv.easypanel.host/',       logo: '/ecosystem-logos/tablero-control.png' },
+    { id: 'ebm',             name: 'EBM',              url: 'https://gac-sole-ebm.jppsfv.easypanel.host/',                   logo: '/ecosystem-logos/ebm.png' },
+    { id: 'valorizaciones',  name: 'Valorizaciones',   url: 'https://gac-sole-valorizaciones.jppsfv.easypanel.host/',        logo: '/ecosystem-logos/valorizaciones.png' },
 ];
 
 interface AppSwitcherProps {
@@ -27,49 +32,64 @@ export function AppSwitcher({ currentAppId }: AppSwitcherProps) {
                 setIsOpen(false);
             }
         }
-        document.addEventListener("mousedown", handleClickOutside);
-        return () => document.removeEventListener("mousedown", handleClickOutside);
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
+
+    const theme = SIATC_THEME.APP_SWITCHER;
 
     return (
         <div className="relative inline-block" ref={dropdownRef}>
-            <button 
+            <button
                 onClick={() => setIsOpen(!isOpen)}
-                className="p-2 text-slate-400 hover:text-slate-100 hover:bg-slate-800/50 rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary/50 flex items-center justify-center"
-                title="Ecosistema de Aplicaciones"
+                className={cn(
+                    theme.TRIGGER,
+                    isOpen && theme.TRIGGER_ACTIVE
+                )}
+                title="Ecosistema de Aplicaciones SIATC"
                 type="button"
             >
-                <Grid className="w-5 h-5" />
+                <Grid className={cn('w-5 h-5 transition-transform duration-500', isOpen && 'rotate-90')} />
             </button>
 
             {isOpen && (
-                <div 
-                    className="absolute right-0 mt-2 w-[432px] backdrop-blur-md border border-black/10 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.2)] z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-300"
-                    style={{ backgroundColor: '#FFFFFF' }}
-                >
-                    <div className="p-5 border-b border-black/5 bg-[#2563EB]">
-                        <h3 className="text-base font-bold text-white tracking-tight">{toTitleCase('Más aplicaciones')}</h3>
+                <div className={theme.CONTAINER}>
+                    {/* Switcher Header */}
+                    <div className={theme.HEADER}>
+                        <div className="flex flex-col gap-1">
+                            <h3 className={theme.HEADER_TITLE}>Ecosistema SIATC</h3>
+                            <span className={theme.HEADER_SUBTITLE}>Nube Corporativa</span>
+                        </div>
+                        <div className={theme.SYNC_BADGE}>
+                            <div className={theme.SYNC_DOT} />
+                            <span className={theme.SYNC_TEXT}>Global Sync</span>
+                        </div>
                     </div>
-                    <div className="p-4 grid grid-cols-2 gap-4">
+
+                    {/* Apps Grid */}
+                    <div className={theme.GRID}>
                         {otherApps.map(app => (
-                            <a 
-                                key={app.id} 
+                            <a
+                                key={app.id}
                                 href={app.url}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="group relative flex flex-col items-center justify-center p-6 rounded-xl hover:bg-blue-600/10 transition-all duration-500 border border-transparent hover:border-blue-200/50 hover:shadow-[0_8px_30px_rgb(37,99,235,0.06)]"
+                                className={theme.ITEM_CARD}
                             >
-                                {/* Glow Effect Background */}
-                                <div className="absolute inset-0 bg-gradient-to-br from-blue-600/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-xl" />
-                                
-                                <div className="relative w-20 h-20 mb-3 flex items-center justify-center overflow-hidden drop-shadow-md group-hover:scale-110 group-hover:drop-shadow-[0_15px_25px_rgba(37,99,235,0.4)] transition-all duration-500 ease-out">
-                                    <img src={app.logo} alt={`${app.name} logo`} className="w-full h-full object-contain rounded" />
+                                <div className={theme.ITEM_LOGO_WRAPPER}>
+                                    <img src={app.logo} alt={app.name} className="w-full h-full object-contain" />
                                 </div>
-                                <span className="relative text-sm font-bold text-[#0F172A] group-hover:text-blue-600 transition-colors text-center">
-                                    {toTitleCase(app.name)}
+                                <span className={theme.ITEM_NAME}>
+                                    {app.name}
                                 </span>
                             </a>
                         ))}
+                    </div>
+
+                    {/* Footer */}
+                    <div className={theme.FOOTER}>
+                        <Info className="w-4 h-4 text-muted-foreground opacity-30 shrink-0" />
+                        <p className={theme.FOOTER_TEXT}>Plataforma Unificada SIATC v3.5</p>
                     </div>
                 </div>
             )}

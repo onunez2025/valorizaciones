@@ -131,6 +131,25 @@ export const SIATC_THEME = {
         ALERT_EXPIRED: "p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-500 text-sm flex items-start gap-3 animate-in fade-in slide-in-from-top-2",
         INPUT_WRAPPER: "relative rounded-cb-btn shadow-sm",
         INPUT: "block w-full pl-10 pr-3 py-2.5 bg-white dark:bg-cb-bg border border-cb-border rounded-cb-btn focus:ring-2 focus:ring-primary focus:border-primary transition-all outline-none text-sm font-medium",
+    },
+
+    // 8. ECOSISTEMA DE APLICACIONES (App Switcher)
+    APP_SWITCHER: {
+        TRIGGER: "w-11 h-11 flex items-center justify-center rounded-full transition-all duration-300 active:scale-95 text-slate-400 hover:text-primary hover:bg-primary/10",
+        TRIGGER_ACTIVE: "bg-primary text-white shadow-lg shadow-primary/20 scale-110",
+        CONTAINER: "absolute right-0 mt-6 w-[540px] bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl border border-white dark:border-white/10 rounded-[2.5rem] shadow-[0_32px_128px_rgba(0,0,0,0.18)] dark:shadow-none z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-300 origin-top-right",
+        HEADER: "px-10 pt-8 pb-4 flex items-center justify-between",
+        HEADER_TITLE: "text-sm font-black text-foreground tracking-[0.2em] uppercase",
+        HEADER_SUBTITLE: "text-[10px] font-black text-primary tracking-[0.3em] uppercase opacity-60",
+        SYNC_BADGE: "flex items-center gap-2 px-3 py-1.5 bg-primary/5 rounded-full border border-primary/20",
+        SYNC_DOT: "w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-sm shadow-emerald-500/50",
+        SYNC_TEXT: "text-[9px] font-black text-primary uppercase tracking-widest",
+        GRID: "p-6 grid grid-cols-4 gap-3",
+        ITEM_CARD: "group relative flex flex-col items-center justify-center p-4 rounded-[1.5rem] bg-slate-50 dark:bg-white/5 hover:bg-white dark:hover:bg-white/10 transition-all duration-500 border border-transparent hover:border-primary/20 hover:shadow-xl hover:shadow-primary/5 active:scale-95 text-center",
+        ITEM_LOGO_WRAPPER: "w-12 h-12 bg-white dark:bg-slate-950 rounded-2xl flex items-center justify-center p-2.5 shadow-lg shadow-slate-200/50 dark:shadow-none group-hover:scale-110 group-hover:-rotate-3 transition-all duration-500 border border-slate-100/50 dark:border-white/5 shrink-0",
+        ITEM_NAME: "text-[10px] font-black text-foreground group-hover:text-primary transition-colors tracking-tight uppercase truncate w-full mt-2",
+        FOOTER: "px-10 py-5 bg-muted/30 border-t border-border/50 flex items-center gap-3",
+        FOOTER_TEXT: "text-[10px] font-black text-muted-foreground tracking-[0.15em] uppercase opacity-60",
     }
 };
 
