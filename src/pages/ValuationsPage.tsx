@@ -1542,7 +1542,7 @@ export default function ValuationsPage() {
                         onClick={() => setViewMode('current')}
                         className={cn(
                             "flex items-center gap-2 px-5 py-2 rounded-xl text-xs font-black transition-all",
-                            viewMode === 'current' ? "bg-white text-primary shadow-sm ring-1 ring-border/50" : "text-muted-foreground hover:bg-white/40"
+                            viewMode === 'current' ? "bg-card text-primary shadow-sm ring-1 ring-border/50" : "text-muted-foreground hover:bg-white/40"
                         )}
                     >
                         <BarChart2 className="w-4 h-4" /> Generar
@@ -1551,7 +1551,7 @@ export default function ValuationsPage() {
                         onClick={() => { setViewMode('history'); handleFetchClosures(); }}
                         className={cn(
                             "flex items-center gap-2 px-5 py-2 rounded-xl text-xs font-black transition-all",
-                            viewMode === 'history' ? "bg-white text-primary shadow-sm ring-1 ring-border/50" : "text-muted-foreground hover:bg-white/40"
+                            viewMode === 'history' ? "bg-card text-primary shadow-sm ring-1 ring-border/50" : "text-muted-foreground hover:bg-white/40"
                         )}
                     >
                         <History className="w-4 h-4" /> Historial
@@ -1574,7 +1574,7 @@ export default function ValuationsPage() {
                             <input 
                                 type="text"
                                 placeholder="ejemplo@correo.com, otro@correo.com"
-                                className="w-full pl-11 pr-4 py-3.5 bg-muted/20 border border-transparent rounded-2xl text-sm font-bold outline-none ring-primary/5 focus:ring-4 focus:bg-white focus:border-primary/20 transition-all"
+                                className="w-full pl-11 pr-4 py-3.5 bg-muted/20 border border-transparent rounded-2xl text-sm font-bold outline-none ring-primary/5 focus:ring-4 focus:bg-card focus:border-primary/20 transition-all"
                                 value={emailTo}
                                 onChange={(e) => setEmailTo(e.target.value)}
                             />
@@ -1582,9 +1582,9 @@ export default function ValuationsPage() {
                         <p className="text-[10px] font-bold text-muted-foreground ml-1 opacity-50">Separe múltiples correos con una coma (,)</p>
                     </div>
 
-                    <div className="p-4 bg-indigo-50/50 border border-indigo-100/50 rounded-2xl space-y-3">
+                    <div className="p-4 bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-100/50 dark:border-indigo-900/30 rounded-2xl space-y-3">
                         <div className="flex items-center gap-3">
-                            <div className="p-2 bg-white rounded-lg border border-indigo-100">
+                            <div className="p-2 bg-card rounded-lg border border-cb-border">
                                 <FileText className="w-4 h-4 text-indigo-600" />
                             </div>
                             <div className="flex flex-col">
@@ -1783,7 +1783,7 @@ export default function ValuationsPage() {
                                             <span className="text-[11px] font-bold text-red-600 uppercase tracking-wider">Penalidades</span>
                                             <span className="text-base font-data text-red-600">- S/ {totalPenalties.toLocaleString('es-PE', { minimumFractionDigits: 2 })}</span>
                                         </div>                                               
-                                        <div className="flex flex-col px-5 py-6 bg-white border-l-[6px] border-emerald-600 rounded-xl shadow-sm hover:shadow-md transition-all duration-300 group/neto">
+                                        <div className="flex flex-col px-5 py-6 bg-card border-l-[6px] border-emerald-600 rounded-xl shadow-sm hover:shadow-md transition-all duration-300 group/neto">
                                             <div className="flex items-center justify-between mb-3">
                                                 <span className="text-[11px] font-bold text-[#059669]">Total Neto</span>
                                                 <div className="flex items-center gap-1.5 bg-emerald-50 px-2 py-1 rounded-md">
@@ -1793,7 +1793,7 @@ export default function ValuationsPage() {
                                             </div>
                                             <div className="flex items-center gap-2 whitespace-nowrap overflow-hidden">
                                                 <span className="text-2xl font-bold text-emerald-600/40 mt-1">S/</span>
-                                                <span className="text-[27px] font-data text-slate-800 group-hover/neto:text-emerald-600 transition-colors duration-300">
+                                                <span className="text-[27px] font-data text-cb-text-primary group-hover/neto:text-emerald-600 transition-colors duration-300">
                                                     {grandTotal.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                                 </span>
                                             </div>
@@ -2078,7 +2078,7 @@ export default function ValuationsPage() {
                                                                                                             </button>
                                                                                                             {/* Popover de Adicionales */}
                                                                                                             {adicionalesPopover?.ticket === ticket.Ticket && (
-                                                                                                                <div className="absolute right-0 top-full mt-2 w-[320px] bg-white border border-border rounded-2xl shadow-2xl z-50 animate-in fade-in zoom-in-95 duration-200 overflow-hidden" onClick={e => e.stopPropagation()}>
+                                                                                                                <div className="absolute right-0 top-full mt-2 w-[320px] bg-card border border-cb-border rounded-2xl shadow-2xl z-50 animate-in fade-in zoom-in-95 duration-200 overflow-hidden" onClick={e => e.stopPropagation()}>
                                                                                                                     <div className="px-4 py-3 bg-gradient-to-r from-emerald-50 to-emerald-100/50 border-b border-emerald-100 flex items-center justify-between">
                                                                                                                         <div className="flex items-center gap-2">
                                                                                                                             <DollarSign className="w-4 h-4 text-emerald-600" />
@@ -2262,7 +2262,7 @@ export default function ValuationsPage() {
                     </div>
                 </div>
             ) : (
-                <div className="flex-1 bg-white border border-border rounded-2xl overflow-hidden shadow-sm flex flex-col">
+                <div className="flex-1 bg-card border border-cb-border rounded-2xl overflow-hidden shadow-sm flex flex-col">
                     <div className="flex-1 overflow-auto p-6">
                         {loadingHistory ? (
                              <div className="h-full flex items-center justify-center"><Activity className="w-8 h-8 animate-spin text-primary" /></div>
@@ -2339,14 +2339,14 @@ export default function ValuationsPage() {
             {/* Modal de Detalle de Cierre */}
             {selectedClosure && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
-                    <div className="bg-white w-full max-w-5xl rounded-[32px] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300 flex flex-col max-h-[90vh]">
-                        <div className="p-6 border-b border-border/50 bg-white flex items-center justify-between gap-6 relative">
+                    <div className="bg-card w-full max-w-5xl rounded-[32px] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300 flex flex-col max-h-[90vh] border border-cb-border">
+                        <div className="p-6 border-b border-cb-border bg-card flex items-center justify-between gap-6 relative">
                             <div className="flex-1 flex items-center gap-4">
                                 <div className="p-3 bg-primary/10 rounded-2xl">
                                     <FileText className="w-6 h-6 text-primary" />
                                 </div>
                                 <div>
-                                    <h2 className="text-xl font-black text-slate-800 flex items-center gap-3">
+                                    <h2 className="text-xl font-black text-cb-text-primary flex items-center gap-3">
                                         Detalle del Cierre
                                         <span className="text-xs font-black text-primary bg-primary/5 border border-primary/20 px-3 py-1 rounded-full">{selectedClosure.Codigo_Valorizacion}</span>
                                     </h2>
@@ -2373,7 +2373,7 @@ export default function ValuationsPage() {
                                 
                                 <button 
                                     onClick={handleExportClosureExcel}
-                                    className="flex items-center gap-2 px-5 py-2.5 bg-background border border-border text-slate-700 rounded-xl text-xs font-black hover:bg-muted transition-all active:scale-95"
+                                    className="flex items-center gap-2 px-5 py-2.5 bg-card border border-cb-border text-cb-text-primary rounded-xl text-xs font-black hover:bg-muted transition-all active:scale-95"
                                 >
                                     <Download className="w-4 h-4" /> Excel
                                 </button>
@@ -2405,7 +2405,7 @@ export default function ValuationsPage() {
                             </div>
                         </div>
                         
-                        <div className="px-6 bg-white border-b border-border/50 flex gap-2 pt-2">
+                        <div className="px-6 bg-card border-b border-cb-border/50 flex gap-2 pt-2">
                             <button 
                                 onClick={() => setDetailActiveTab('services')}
                                 className={cn(
@@ -2438,16 +2438,16 @@ export default function ValuationsPage() {
                                 <div className="h-64 flex items-center justify-center p-8"><Activity className="w-8 h-8 animate-spin text-primary" /></div>
                             ) : (
                                 <>
-                                <div className="px-6 py-4 bg-slate-50 border-b border-border/30 flex items-center justify-between">
+                                <div className="px-6 py-4 bg-cb-bg/30 border-b border-cb-border/50 flex items-center justify-between">
                                     <div className="flex gap-6">
-                                        <div className="flex items-center gap-3 px-4 py-2 bg-white rounded-xl border border-border/50 shadow-sm">
+                                        <div className="flex items-center gap-3 px-4 py-2 bg-card rounded-xl border border-cb-border/50 shadow-sm">
                                             <div className="w-2 h-2 rounded-full bg-blue-500" />
                                             <div className="flex flex-col">
                                                 <span className="text-[9px] font-black uppercase text-muted-foreground opacity-60 leading-none">Subtotal Servicios</span>
-                                                <span className="text-sm font-black text-slate-800">S/ {(selectedClosure.Subtotal_Servicios || 0).toLocaleString()}</span>
+                                                <span className="text-sm font-black text-cb-text-primary">S/ {(selectedClosure.Subtotal_Servicios || 0).toLocaleString()}</span>
                                             </div>
                                         </div>
-                                        <div className="flex items-center gap-3 px-4 py-2 bg-white rounded-xl border border-border/50 shadow-sm">
+                                        <div className="flex items-center gap-3 px-4 py-2 bg-card rounded-xl border border-cb-border/50 shadow-sm">
                                             <div className="w-2 h-2 rounded-full bg-red-500" />
                                             <div className="flex flex-col">
                                                 <span className="text-[9px] font-black uppercase text-muted-foreground opacity-60 leading-none">Total Penalidades</span>
@@ -2460,7 +2460,7 @@ export default function ValuationsPage() {
                                     </div>
                                 </div>
                                 <table className="w-full border-separate border-spacing-0">
-                                    <thead className="sticky top-0 z-20 bg-white/95 backdrop-blur-md">
+                                    <thead className="sticky top-0 z-20 bg-card/95 backdrop-blur-md">
                                         <tr className="text-[14px] font-semibold text-muted-foreground text-left">
                                             <th className="px-6 py-4 border-b border-border shadow-[0_1px_2px_rgba(0,0,0,0.05)]">Ticket</th>
                                             <th className="px-4 py-4 border-b border-border shadow-[0_1px_2px_rgba(0,0,0,0.05)]">Fecha</th>
@@ -2600,9 +2600,9 @@ export default function ValuationsPage() {
             {/* Modal de Confirmación de Cierre */}
             {showCloseModal && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
-                    <div className="bg-white w-full max-w-lg rounded-[32px] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300 flex flex-col">
-                        <div className="p-8 border-b border-border/50 bg-slate-50 flex items-center justify-between">
-                            <h2 className="text-xl font-black text-slate-800">Confirmar Cierre de Operaciones</h2>
+                    <div className="bg-card w-full max-w-lg rounded-[32px] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300 flex flex-col border border-cb-border">
+                        <div className="p-8 border-b border-cb-border bg-cb-bg/30 flex items-center justify-between">
+                            <h2 className="text-xl font-black text-cb-text-primary">Confirmar Cierre de Operaciones</h2>
                             <button onClick={() => setShowCloseModal(false)} className="p-2 hover:bg-muted rounded-xl transition-all"><X className="w-5 h-5" /></button>
                         </div>
                         
@@ -2618,7 +2618,7 @@ export default function ValuationsPage() {
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="p-5 bg-muted/20 border border-border/30 rounded-2xl">
                                     <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-4 opacity-40">Ingresos (bruto)</p>
-                                    <p className="text-2xl font-black text-slate-800 tracking-tighter">S/ {totalTickets.toLocaleString()}</p>
+                                    <p className="text-2xl font-black text-cb-text-primary tracking-tighter">S/ {totalTickets.toLocaleString()}</p>
                                 </div>
                                 <div className="p-5 bg-red-50 text-red-600 border border-red-100 rounded-2xl">
                                     <p className="text-[10px] font-black text-red-400 uppercase tracking-widest mb-4 opacity-40">Egresos (penalidades)</p>
@@ -2631,7 +2631,7 @@ export default function ValuationsPage() {
                                 <button 
                                     onClick={handleCloseFortnightCurrent} 
                                     disabled={isClosing}
-                                    className="flex-[2] py-4 bg-slate-900 text-white text-xs font-black rounded-2xl hover:bg-slate-800 transition-all shadow-xl shadow-slate-900/20 disabled:opacity-50"
+                                    className="flex-[2] py-4 bg-slate-900 dark:bg-slate-800 text-white text-xs font-black rounded-2xl hover:bg-slate-800 dark:hover:bg-slate-700 transition-all shadow-xl shadow-slate-900/20 disabled:opacity-50"
                                 >
                                     {isClosing ? "Procesando cierre..." : "Confirmar cierre final"}
                                 </button>
@@ -2687,11 +2687,11 @@ function BatchAdjustmentModal({ isOpen, onClose, onApply, tickets, setTickets, t
     if (!isOpen) return null;
     return (
         <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
-            <div className="bg-white w-full max-w-lg rounded-[32px] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
-                <div className="p-8 border-b border-border/50 bg-slate-50 flex items-center justify-between">
+            <div className="bg-card w-full max-w-lg rounded-[32px] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300 border border-cb-border">
+                <div className="p-8 border-b border-cb-border bg-cb-bg/30 flex items-center justify-between">
                     <div className="flex items-center gap-3">
                         <div className="p-2 bg-amber-500 rounded-lg text-white shadow-lg shadow-amber-500/20"><Activity className="w-5 h-5" /></div>
-                        <h2 className="text-xl font-black text-slate-800">Ajuste Masivo</h2>
+                        <h2 className="text-xl font-black text-cb-text-primary">Ajuste Masivo</h2>
                     </div>
                     <button onClick={onClose} className="p-2 hover:bg-muted rounded-xl transition-all"><X className="w-5 h-5" /></button>
                 </div>
@@ -2772,13 +2772,13 @@ function EmailModal({ isOpen, onClose, onSend, emailTo, setEmailTo, isSending }:
     if (!isOpen) return null;
     return (
         <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
-            <div className="bg-white w-full max-w-md rounded-[32px] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
-                <div className="p-8 border-b border-border/50 bg-slate-50 flex items-center justify-between">
+            <div className="bg-card w-full max-w-md rounded-[32px] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300 border border-cb-border">
+                <div className="p-8 border-b border-cb-border bg-cb-bg/30 flex items-center justify-between">
                     <div className="flex items-center gap-3">
                         <div className="p-2.5 bg-indigo-500 rounded-xl text-white shadow-lg shadow-indigo-500/20">
                             <Mail className="w-5 h-5" />
                         </div>
-                        <h2 className="text-xl font-black text-slate-800 tracking-tight">Enviar Reporte</h2>
+                        <h2 className="text-xl font-black text-cb-text-primary tracking-tight">Enviar Reporte</h2>
                     </div>
                     <button onClick={onClose} className="p-2 hover:bg-muted rounded-xl transition-all"><X className="w-5 h-5" /></button>
                 </div>
@@ -2799,11 +2799,11 @@ function EmailModal({ isOpen, onClose, onSend, emailTo, setEmailTo, isSending }:
                         <p className="text-[10px] font-medium text-muted-foreground ml-1 opacity-60">Separe múltiples correos con punto y coma (;)</p>
                     </div>
 
-                    <div className="p-5 bg-indigo-50 border border-indigo-100 rounded-2xl flex items-start gap-4">
+                    <div className="p-5 bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-100/50 dark:border-indigo-900/30 rounded-2xl flex items-start gap-4">
                         <div className="p-2 bg-indigo-100 text-indigo-600 rounded-lg"><FileText className="w-4 h-4" /></div>
                         <div>
-                            <p className="text-xs font-black text-indigo-900">Se adjuntará el reporte Excel</p>
-                            <p className="text-[10px] text-indigo-800/60 font-medium">El archivo se genera automáticamente con los datos actuales de la vista.</p>
+                            <p className="text-xs font-black text-indigo-800 dark:text-indigo-300">Se adjuntará el reporte Excel</p>
+                            <p className="text-[10px] text-indigo-700/60 dark:text-indigo-400/60 font-medium">El archivo se genera automáticamente con los datos actuales de la vista.</p>
                         </div>
                     </div>
 
@@ -2831,11 +2831,11 @@ function BatchDiscountModal({ isOpen, onClose, onApply, tickets, setTickets, amo
     if (!isOpen) return null;
     return (
         <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
-            <div className="bg-white w-full max-w-lg rounded-[32px] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
-                <div className="p-8 border-b border-border/50 bg-slate-50 flex items-center justify-between">
+            <div className="bg-card w-full max-w-lg rounded-[32px] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300 border border-cb-border">
+                <div className="p-8 border-b border-cb-border bg-cb-bg/30 flex items-center justify-between">
                     <div className="flex items-center gap-3">
                         <div className="p-2 bg-red-500 rounded-lg text-white shadow-lg shadow-red-500/20"><AlertTriangle className="w-5 h-5" /></div>
-                        <h2 className="text-xl font-black text-slate-800">Descuento Masivo</h2>
+                        <h2 className="text-xl font-black text-cb-text-primary">Descuento Masivo</h2>
                     </div>
                     <button onClick={onClose} className="p-2 hover:bg-muted rounded-xl transition-all"><X className="w-5 h-5" /></button>
                 </div>

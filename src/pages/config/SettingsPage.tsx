@@ -93,7 +93,7 @@ export default function SettingsPage() {
             </div>
 
             {/* Content Card Container */}
-            <div className={cn(SIATC_THEME.COMPONENTS.CARD_CONTAINER, "max-w-4xl w-full mx-auto flex-1 flex flex-col min-h-0 bg-white")}>
+            <div className={cn(SIATC_THEME.COMPONENTS.CARD_CONTAINER, "max-w-4xl w-full mx-auto flex-1 flex flex-col min-h-0")}>
                 <div className="p-6 border-b border-cb-border flex items-center gap-3 bg-cb-bg/30">
                     <div className="p-2 bg-primary/10 text-primary dark:bg-primary/20 dark:text-primary-foreground rounded-cb-btn border border-cb-border/50">
                         <Settings2 className="w-5 h-5 stroke-[2]" />
