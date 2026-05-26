@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { ApiClient } from '../../services/apiClient';
 import { 
     Users, Plus, Edit2, Trash2, Search, 
-    DollarSign, AlertCircle, ChevronRight
+    DollarSign, AlertCircle, ChevronRight, Briefcase
 } from 'lucide-react';
 import { Modal } from '../../components/common/Modal';
 import { useDialog } from '../../context/DialogContext';
