@@ -138,7 +138,11 @@ export function MainLayout() {
                             title="Mi Perfil"
                         >
                             <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center text-white font-black text-xs shadow-lg shadow-primary/20 ring-2 ring-white dark:ring-slate-900 overflow-hidden shrink-0">
-                                {user?.username?.substring(0, 2).toUpperCase() || 'VAL'}
+                                {user?.avatar_url ? (
+                                    <img src={user.avatar_url} alt="Profile" className="w-full h-full object-cover" />
+                                ) : (
+                                    user?.username?.substring(0, 2).toUpperCase() || 'VAL'
+                                )}
                             </div>
                             <div className="flex flex-col min-w-0 hidden md:flex">
                                 <span className="text-[11px] font-black text-foreground truncate uppercase tracking-tight">{user?.username || 'Usuario'}</span>
