@@ -11,6 +11,7 @@ const DashboardPage = lazy(() => import('./pages/DashboardPage'));
 const ValuationsPage = lazy(() => import('./pages/ValuationsPage'));
 const TarifarioPage = lazy(() => import('./pages/TarifarioPage'));
 const MaterialsPage = lazy(() => import('./pages/MaterialsPage'));
+const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 
 // Configuration Pages
 const ConfigLayout = lazy(() => import('./pages/config/ConfigLayout'));
@@ -46,6 +47,7 @@ function App() {
                 <Route path="/valuations" element={<ValuationsPage />} />
                 <Route path="/tarifario" element={<TarifarioPage />} />
                 <Route path="/materiales" element={<MaterialsPage />} />
+                <Route path="/profile" element={<ProfilePage />} />
                 
                 {/* Configuración */}
                 <Route path="/config" element={<ConfigLayout />}>
