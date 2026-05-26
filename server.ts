@@ -127,8 +127,9 @@ app.post('/api/auth/login', async (req: Request, res: Response) => {
     try {
         const db = await getDb();
         const result = await db.request().input('u', username).input('app', APP_IDENTIFIER).query(`
-            SELECT u.*, r.Name as RoleName FROM EBM.Users u 
+            SELECT u.*, r.Name as RoleName, m.Name as ManagementName FROM EBM.Users u 
             LEFT JOIN EBM.Roles r ON u.RoleId = r.Id 
+            LEFT JOIN EBM.Managements m ON u.ManagementId = m.Id
             WHERE (u.Username = @u OR u.Email = @u) AND u.IsActive = 1 AND (u.Apps LIKE '%' + @app + '%' OR u.Apps LIKE '%ADMIN%')
         `);
         const user = result.recordset[0];
@@ -147,7 +148,7 @@ app.post('/api/auth/login', async (req: Request, res: Response) => {
         
         const token = jwt.sign({ id: user.Id, username: user.Username, role: user.RoleName, perms }, JWT_SECRET, { expiresIn: '12h' });
 
-        res.json({ token, user: { id: user.Id, username: user.Username, full_name: user.FullName, role_name: user.RoleName, permissions: perms, requires_password_change: user.RequiresPasswordChange === 1 } });
+        res.json({ token, user: { id: user.Id, username: user.Username, full_name: user.FullName, email: user.Email, role_name: user.RoleName, management_id: user.ManagementId, management_name: user.ManagementName, avatar_url: user.AvatarUrl, permissions: perms, requires_password_change: user.RequiresPasswordChange === 1 } });
     } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
@@ -156,15 +157,16 @@ app.get('/api/auth/me', verifyToken, async (req: Request, res: Response) => {
         const { id } = (req as any).user;
         const db = await getDb();
         const result = await db.request().input('id', id).query(`
-            SELECT u.*, r.Name as RoleName FROM EBM.Users u 
+            SELECT u.*, r.Name as RoleName, m.Name as ManagementName FROM EBM.Users u 
             LEFT JOIN EBM.Roles r ON u.RoleId = r.Id 
+            LEFT JOIN EBM.Managements m ON u.ManagementId = m.Id
             WHERE u.Id = @id
         `);
         const user = result.recordset[0];
         if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
         
         const perms = (await db.request().input('rid', user.RoleId).input('app', APP_IDENTIFIER).query("SELECT Permission FROM EBM.RolePermissions WHERE RoleId = @rid AND (Permission LIKE @app + '.%' OR Permission LIKE 'ebm.%')")).recordset.map(p => p.Permission);
-        res.json({ user: { id: user.Id, username: user.Username, full_name: user.FullName, role_name: user.RoleName, permissions: perms } });
+        res.json({ user: { id: user.Id, username: user.Username, full_name: user.FullName, email: user.Email, role_name: user.RoleName, management_id: user.ManagementId, management_name: user.ManagementName, avatar_url: user.AvatarUrl, permissions: perms } });
     } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
