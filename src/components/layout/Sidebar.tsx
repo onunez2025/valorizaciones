@@ -8,13 +8,11 @@ import {
     ChevronRight
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
-import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../hooks/useAuth';
 import { SIATC_THEME } from '../../utils/siatc-theme';
 import { toTitleCase } from '../../utils/formatters';
 
 export function Sidebar({ className }: { className?: string }) {
-    const { theme } = useTheme();
     const { logout, hasPermission } = useAuth();
 
     const navItems = [
@@ -50,8 +48,7 @@ export function Sidebar({ className }: { className?: string }) {
 
     return (
         <div className={cn(
-            "flex flex-col h-full border-r border-border/50 transition-all duration-500",
-            theme === 'dark' ? "bg-card text-card-foreground" : "bg-white text-slate-800",
+            SIATC_THEME.LAYOUT.SIDEBAR_INNER,
             className
         )}>
             {/* Header / Logo: SIATC High Density */}
