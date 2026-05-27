@@ -42,7 +42,7 @@ export const SIATC_THEME = {
         COMPONENT_ROUNDNESS: CRYPTO_BLUE_TOKENS.RADIUS.BUTTON,
         BUTTON_ROUNDNESS: CRYPTO_BLUE_TOKENS.RADIUS.BUTTON,
         PRIMARY_ACCENT: "bg-primary text-primary-foreground",
-        SIDEBAR_BG: "bg-card",
+        SIDEBAR_BG: "bg-cb-bg",
         MODAL_OVERLAY: "bg-slate-900/60 backdrop-blur-md",
     },
 
