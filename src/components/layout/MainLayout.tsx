@@ -69,7 +69,7 @@ export function MainLayout() {
             </aside>
 
             {/* Main Content Viewport */}
-            <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
+            <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative pr-4 pb-4">
                 {/* SIATC PREMIUM HEADER — h-20 estandarizado */}
                 <header className="h-20 shrink-0 px-8 flex items-center justify-between sticky top-0 z-40">
                     <div className="flex items-center gap-6">
