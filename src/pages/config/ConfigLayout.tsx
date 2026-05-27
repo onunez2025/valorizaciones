@@ -33,7 +33,7 @@ export default function ConfigLayout() {
             <div className="grid grid-cols-1 lg:grid-cols-[18rem_1fr] gap-4 h-full min-h-0 w-full">
                 {/* SIATC Premium Sidebar */}
                 <aside className="shrink-0 flex flex-col min-h-0 h-fit lg:h-full group">
-                    <div className={cn(SIATC_THEME.LAYOUT.SIDEBAR_CONTAINER, "w-full lg:w-72 h-full bg-white dark:bg-cb-bg border-cb-border")}>
+                    <div className={cn(SIATC_THEME.LAYOUT.SIDEBAR_CONTAINER, "w-full lg:w-72 h-full bg-card border-cb-border")}>
                         <div className="p-6 border-b border-cb-border bg-gradient-to-br from-primary/5 to-transparent">
                             <div className="flex items-center gap-3">
                                 <div className="p-2.5 bg-primary text-white rounded-cb-btn shadow-lg shadow-primary/20 ring-4 ring-primary/5">
@@ -75,7 +75,7 @@ export default function ConfigLayout() {
 
                         {/* Sidebar Footer Info */}
                         <div className="p-4 bg-cb-bg/30 border-t border-cb-border">
-                            <div className="p-4 bg-white dark:bg-cb-bg rounded-cb-card border border-cb-border shadow-cb-level-1">
+                            <div className="p-4 bg-cb-bg/50 rounded-cb-card border border-cb-border shadow-cb-level-1">
                                 <div className="flex items-center gap-2 mb-1.5 font-bold text-[11px] text-cb-text-primary tracking-wider uppercase">
                                     <div className="w-1.5 h-1.5 rounded-full bg-[#05B169] animate-pulse" />
                                     Sistema SIATC
