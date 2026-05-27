@@ -11,6 +11,12 @@ import { useDialog } from '../../context/DialogContext';
 import { cn } from '../../utils/cn';
 import { format } from 'date-fns';
 import { SIATC_THEME } from '../../utils/siatc-theme';
+import { 
+    SIATCTable, 
+    SIATCTableRow, 
+    SIATCTableCell, 
+    SIATCTableFooter 
+} from '../../components/siatc/table/SIATCTable';
 
 interface DistritoInfo {
     Distrito: string;
@@ -45,6 +51,8 @@ export default function ConfigDistritosPage() {
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [editingConfig, setEditingConfig] = useState<any>(null);
     const { alert, confirm } = useDialog();
+    const [currentPage, setCurrentPage] = useState(1);
+    const recordsPerPage = 10;
 
     const cities = Array.from(new Set(distritosRepo.map(d => d.Ciudad))).sort();
     const availableDistrictsForCity = selectedCity 
@@ -120,6 +128,9 @@ export default function ConfigDistritosPage() {
         return districts.toLowerCase().includes(search.toLowerCase());
     });
 
+    const totalPages = Math.ceil(filteredConfigs.length / recordsPerPage);
+    const paginatedConfigs = filteredConfigs.slice((currentPage - 1) * recordsPerPage, currentPage * recordsPerPage);
+
     return (
         <div className="flex flex-col h-full space-y-4 min-h-0 animate-in fade-in duration-500">
             {/* Header */}
@@ -194,7 +205,7 @@ export default function ConfigDistritosPage() {
                             placeholder="Buscar por distrito..." 
                             className={cn(SIATC_THEME.COMPONENTS.INPUT, "pl-11 pr-4 dark:bg-cb-bg text-cb-text-primary border-cb-border")}
                             value={search}
-                            onChange={(e) => setSearch(e.target.value)}
+                            onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
                         />
                     </div>
                     <div className={cn(SIATC_THEME.STATES.BADGE_BASE, SIATC_THEME.STATES.SECONDARY, "px-3 h-[36px]")}>
@@ -203,20 +214,20 @@ export default function ConfigDistritosPage() {
                     </div>
                 </div>
 
-                <div className={SIATC_THEME.TABLE.SCROLL_AREA}>
+                <SIATCTable containerClassName="relative">
                     {loading ? (
                         <div className="h-full flex flex-col items-center justify-center gap-4 opacity-40">
                             <Activity className="w-10 h-10 animate-spin text-primary" />
                             <p className="text-sm font-bold text-cb-text-secondary italic">Sincronizando configuraciones...</p>
                         </div>
-                    ) : filteredConfigs.length === 0 ? (
+                    ) : paginatedConfigs.length === 0 ? (
                         <div className="h-full flex flex-col items-center justify-center text-center py-20 opacity-30">
                             <MapPin className="w-16 h-16 mb-6 text-cb-neutral" />
                             <h3 className="text-lg font-bold text-cb-text-primary">No hay reglas configuradas</h3>
                             <p className="text-xs font-bold text-cb-text-secondary mt-2 max-w-xs">Cree una nueva regla para empezar a aplicar adicionales por zona.</p>
                         </div>
                     ) : (
-                        <table className={SIATC_THEME.TABLE.TABLE_ELEMENT}>
+                        <>
                             <thead className={SIATC_THEME.TABLE.HEADER_ROW}>
                                 <tr>
                                     <th className={SIATC_THEME.TABLE.HEADER_TH}><span className={SIATC_THEME.TYPOGRAPHY.TABLE_HEADER}>Distritos</span></th>
@@ -228,12 +239,12 @@ export default function ConfigDistritosPage() {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-cb-border/50">
-                                {filteredConfigs.map(c => {
+                                {paginatedConfigs.map(c => {
                                     const cCAS = JSON.parse(c.CAS_Ids);
                                     const cDist = JSON.parse(c.Distritos);
                                     return (
-                                        <tr key={c.Id} className={SIATC_THEME.TABLE.BODY_ROW}>
-                                            <td className={cn(SIATC_THEME.TABLE.CELL, "max-w-[300px]")}>
+                                        <SIATCTableRow key={c.Id}>
+                                            <SIATCTableCell className="max-w-[300px]">
                                                 <div className="flex flex-wrap gap-1">
                                                     {cDist.map((d: any) => (
                                                         <span key={d} className={cn(SIATC_THEME.STATES.BADGE_BASE, SIATC_THEME.STATES.SECONDARY, "h-[22px] normal-case tracking-normal")}>
@@ -241,8 +252,8 @@ export default function ConfigDistritosPage() {
                                                         </span>
                                                     ))}
                                                 </div>
-                                            </td>
-                                            <td className={cn(SIATC_THEME.TABLE.CELL, "max-w-[200px]")}>
+                                            </SIATCTableCell>
+                                            <SIATCTableCell className="max-w-[200px]">
                                                 <div className="text-xs font-bold text-cb-text-secondary group">
                                                     {cCAS.length} {cCAS.length === 1 ? 'CAS Seleccionado' : 'CAS Seleccionados'}
                                                     <div className="hidden group-hover:flex flex-wrap gap-1 mt-2">
@@ -256,14 +267,14 @@ export default function ConfigDistritosPage() {
                                                         })}
                                                     </div>
                                                 </div>
-                                            </td>
-                                            <td className={cn(SIATC_THEME.TABLE.CELL, "text-center")}>
+                                            </SIATCTableCell>
+                                            <SIATCTableCell className="text-center">
                                                 <div className={cn(SIATC_THEME.STATES.BADGE_BASE, SIATC_THEME.STATES.SUCCESS, "text-sm h-8 px-3")}>
                                                     <DollarSign className="w-3.5 h-3.5" />
                                                     {c.Importe.toFixed(2)}
                                                 </div>
-                                            </td>
-                                            <td className={SIATC_THEME.TABLE.CELL}>
+                                            </SIATCTableCell>
+                                            <SIATCTableCell>
                                                 <div className="flex flex-col items-center gap-1">
                                                     <div className="flex items-center gap-2 text-[10px] font-bold text-cb-text-primary">
                                                         <Calendar className="w-3 h-3 text-primary opacity-50" />
@@ -272,8 +283,8 @@ export default function ConfigDistritosPage() {
                                                         {c.Fecha_Fin ? format(new Date(c.Fecha_Fin), 'dd/MM/yy') : <span className="text-cb-success italic">Indefinido</span>}
                                                     </div>
                                                 </div>
-                                            </td>
-                                            <td className={cn(SIATC_THEME.TABLE.CELL, "text-center")}>
+                                            </SIATCTableCell>
+                                            <SIATCTableCell className="text-center">
                                                 <span className={cn(
                                                     SIATC_THEME.STATES.BADGE_BASE,
                                                     c.Activo 
@@ -282,8 +293,8 @@ export default function ConfigDistritosPage() {
                                                 )}>
                                                     {c.Activo ? 'ACTIVO' : 'INACTIVO'}
                                                 </span>
-                                            </td>
-                                            <td className={cn(SIATC_THEME.TABLE.CELL, "text-right")}>
+                                            </SIATCTableCell>
+                                            <SIATCTableCell className="text-right">
                                                 <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-x-2 group-hover:translate-x-0">
                                                     <button 
                                                         onClick={() => {
@@ -307,14 +318,22 @@ export default function ConfigDistritosPage() {
                                                         <Trash2 className="w-3.5 h-3.5" />
                                                     </button>
                                                 </div>
-                                            </td>
-                                        </tr>
+                                            </SIATCTableCell>
+                                        </SIATCTableRow>
                                     );
                                 })}
                             </tbody>
-                        </table>
+                        </>
                     )}
-                </div>
+                </SIATCTable>
+
+                {/* Footer Stats: SIATC Standard */}
+                <SIATCTableFooter 
+                    totalRecords={filteredConfigs.length} 
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={setCurrentPage}
+                />
             </div>
 
             {/* Edit / Create Modal */}

@@ -28,6 +28,12 @@ import { cn } from '../../utils/cn';
 import { toTitleCase } from '../../utils/formatters';
 import { SIATC_THEME } from '../../utils/siatc-theme';
 import type { User, Role } from '../../types';
+import { 
+    SIATCTable, 
+    SIATCTableRow, 
+    SIATCTableCell, 
+    SIATCTableFooter 
+} from '../../components/siatc/table/SIATCTable';
 
 export default function UsersPage() {
     const { confirm, alert } = useDialog();
@@ -41,6 +47,8 @@ export default function UsersPage() {
     const [sortBy, setSortBy] = useState<string>('username');
     const [sortOrder, setSortOrder] = useState<'ASC' | 'DESC'>('ASC');
     const [error, setError] = useState('');
+    const [currentPage, setCurrentPage] = useState(1);
+    const recordsPerPage = 10;
 
     const APP_IDENTIFIER = 'VAL';
 
@@ -153,6 +161,9 @@ export default function UsersPage() {
             return 0;
         });
 
+    const totalPages = Math.ceil(filtered.length / recordsPerPage);
+    const paginatedRecords = filtered.slice((currentPage - 1) * recordsPerPage, currentPage * recordsPerPage);
+
     return (
         <div className="flex flex-col h-full space-y-4 min-h-0 animate-in fade-in duration-500">
             {/* Header: SIATC Standard */}
@@ -187,7 +198,7 @@ export default function UsersPage() {
                         <input
                             type="text"
                             value={search}
-                            onChange={e => setSearch(e.target.value)}
+                            onChange={e => { setSearch(e.target.value); setCurrentPage(1); }}
                             placeholder="Buscar por nombre, usuario o email..."
                             className={cn(SIATC_THEME.COMPONENTS.INPUT, "pl-10 pr-4 dark:bg-cb-bg text-cb-text-primary border-cb-border")}
                         />
@@ -195,14 +206,14 @@ export default function UsersPage() {
                 </div>
 
                 {/* Table Area */}
-                <div className={SIATC_THEME.TABLE.SCROLL_AREA}>
+                <SIATCTable containerClassName="relative">
                     {isLoading ? (
                         <div className="absolute inset-0 flex flex-col items-center justify-center bg-card/50 backdrop-blur-sm z-50">
                             <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
                             <span className="text-sm font-bold text-cb-text-secondary mt-4 tracking-widest">Sincronizando identidades...</span>
                         </div>
                     ) : (
-                        <table className={cn(SIATC_THEME.TABLE.TABLE_ELEMENT, "table-fixed")}>
+                        <>
                             <thead className={SIATC_THEME.TABLE.HEADER_ROW}>
                                 <tr className="border-b border-cb-border">
                                     <ResizableHeader columnId="usuario" width={widths.usuario} onResizeStart={onResizeStart} className={cn(SIATC_THEME.TABLE.HEADER_TH, "relative")}>
@@ -230,7 +241,7 @@ export default function UsersPage() {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-cb-border/60">
-                                {filtered.length === 0 ? (
+                                {paginatedRecords.length === 0 ? (
                                     <tr>
                                         <td colSpan={5} className="px-6 py-20 text-center opacity-60">
                                             <div className="flex flex-col items-center gap-3">
@@ -240,9 +251,9 @@ export default function UsersPage() {
                                         </td>
                                     </tr>
                                 ) : (
-                                    filtered.map((user) => (
-                                        <tr key={user.id} className={SIATC_THEME.TABLE.BODY_ROW}>
-                                            <td className={SIATC_THEME.TABLE.CELL}>
+                                    paginatedRecords.map((user) => (
+                                        <SIATCTableRow key={user.id}>
+                                            <SIATCTableCell>
                                                 <div className="flex items-center gap-3">
                                                     <div className="w-10 h-10 rounded-full bg-primary/10 dark:bg-primary/20 flex items-center justify-center text-primary dark:text-primary-foreground font-bold text-xs border border-primary/20 shadow-inner shrink-0 group-hover:scale-110 transition-transform">
                                                         {user.username?.substring(0, 2).toUpperCase()}
@@ -256,22 +267,22 @@ export default function UsersPage() {
                                                         </div>
                                                     </div>
                                                 </div>
-                                            </td>
-                                            <td className={SIATC_THEME.TABLE.CELL}>
+                                            </SIATCTableCell>
+                                            <SIATCTableCell>
                                                 <div className="flex flex-col min-w-0">
                                                     <span className="text-cb-text-secondary font-medium truncate">{user.email}</span>
                                                     {!user.is_active && (
                                                         <span className="text-[9px] font-bold text-[#DF2935] tracking-tight mt-0.5">Cuenta suspendida</span>
                                                     )}
                                                 </div>
-                                            </td>
-                                            <td className={SIATC_THEME.TABLE.CELL}>
+                                            </SIATCTableCell>
+                                            <SIATCTableCell>
                                                 <span className={cn(SIATC_THEME.STATES.BADGE_BASE, SIATC_THEME.STATES.PRIMARY, "gap-1")}>
                                                      <ShieldCheck className="w-3 h-3 text-primary/60" />
                                                     {user.role_name || 'Invitado'}
                                                 </span>
-                                            </td>
-                                            <td className={SIATC_THEME.TABLE.CELL}>
+                                            </SIATCTableCell>
+                                            <SIATCTableCell>
                                                 <div className="flex flex-wrap gap-1 justify-center">
                                                     {(user.apps || APP_IDENTIFIER).split(',').map((app: string) => (
                                                         <span key={app} className={cn(SIATC_THEME.STATES.BADGE_BASE, SIATC_THEME.STATES.INFO)}>
@@ -279,8 +290,8 @@ export default function UsersPage() {
                                                         </span>
                                                     ))}
                                                 </div>
-                                            </td>
-                                            <td className={SIATC_THEME.TABLE.CELL}>
+                                            </SIATCTableCell>
+                                            <SIATCTableCell>
                                                 <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                                     {hasPermission('val.config.users') && (
                                                         <>
@@ -301,21 +312,22 @@ export default function UsersPage() {
                                                         </>
                                                     )}
                                                 </div>
-                                            </td>
-                                        </tr>
+                                            </SIATCTableCell>
+                                        </SIATCTableRow>
                                     ))
                                 )}
                             </tbody>
-                        </table>
+                        </>
                     )}
-                </div>
+                </SIATCTable>
                 
                 {/* Footer Stats */}
-                <div className={SIATC_THEME.TABLE.FOOTER}>
-                    <p className={SIATC_THEME.TYPOGRAPHY.FOOTER_STATS}>
-                        Total de registros: <span className="text-cb-text-primary ml-1">{filtered.length}</span>
-                    </p>
-                </div>
+                <SIATCTableFooter 
+                    totalRecords={filtered.length} 
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={setCurrentPage}
+                />
             </div>
 
             {/* Modal de Usuario: SIATC Standard */}

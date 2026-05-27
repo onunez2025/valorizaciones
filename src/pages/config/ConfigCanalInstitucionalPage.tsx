@@ -9,6 +9,12 @@ import { useDialog } from '../../context/DialogContext';
 import { cn } from '../../utils/cn';
 import { format } from 'date-fns';
 import { SIATC_THEME } from '../../utils/siatc-theme';
+import { 
+    SIATCTable, 
+    SIATCTableRow, 
+    SIATCTableCell, 
+    SIATCTableFooter 
+} from '../../components/siatc/table/SIATCTable';
 
 interface ConfigInstitucional {
     Id: number;
@@ -46,6 +52,8 @@ export default function ConfigCanalInstitucionalPage() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingConfig, setEditingConfig] = useState<Partial<ConfigInstitucional> | null>(null);
     const { alert, confirm } = useDialog();
+    const [currentPage, setCurrentPage] = useState(1);
+    const recordsPerPage = 10;
 
     const fetchData = async () => {
         setLoading(true);
@@ -111,6 +119,9 @@ export default function ConfigCanalInstitucionalPage() {
         (c.Keywords && c.Keywords.toLowerCase().includes(search.toLowerCase()))
     );
 
+    const totalPages = Math.ceil(filteredConfigs.length / recordsPerPage);
+    const paginatedConfigs = filteredConfigs.slice((currentPage - 1) * recordsPerPage, currentPage * recordsPerPage);
+
     return (
         <div className="flex flex-col h-full space-y-4 min-h-0 animate-in fade-in duration-500">
             {/* Header */}
@@ -156,25 +167,25 @@ export default function ConfigCanalInstitucionalPage() {
                             placeholder="Buscar por usuario o palabras clave..." 
                             className={cn(SIATC_THEME.COMPONENTS.INPUT, "pl-11 pr-4 dark:bg-cb-bg text-cb-text-primary border-cb-border")}
                             value={search}
-                            onChange={(e) => setSearch(e.target.value)}
+                            onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
                         />
                     </div>
                 </div>
 
-                <div className={SIATC_THEME.TABLE.SCROLL_AREA}>
+                <SIATCTable containerClassName="relative">
                     {loading ? (
                         <div className="absolute inset-0 flex flex-col items-center justify-center bg-card/60 backdrop-blur-md z-50">
                             <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
                             <span className="text-sm font-bold text-cb-text-secondary mt-6 tracking-[0.2em] animate-pulse">Consultando reglas institucionales</span>
                         </div>
-                    ) : filteredConfigs.length === 0 ? (
+                    ) : paginatedConfigs.length === 0 ? (
                         <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-8 opacity-30">
                             <AlertCircle className="w-16 h-16 mb-4 text-cb-neutral" />
                             <h3 className="text-sm font-bold uppercase tracking-widest text-cb-neutral">No hay reglas configuradas</h3>
                             <p className="text-xs text-cb-text-secondary mt-2 max-w-xs">Configura un usuario de C4C para aplicar tarifas institucionales.</p>
                         </div>
                     ) : (
-                        <table className={SIATC_THEME.TABLE.TABLE_ELEMENT}>
+                        <>
                             <thead className={SIATC_THEME.TABLE.HEADER_ROW}>
                                 <tr className="border-b border-cb-border">
                                     <th className={SIATC_THEME.TABLE.HEADER_TH}><span className={SIATC_THEME.TYPOGRAPHY.TABLE_HEADER}>Usuario Creador (C4C)</span></th>
@@ -184,25 +195,25 @@ export default function ConfigCanalInstitucionalPage() {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-cb-border/60">
-                                {filteredConfigs.map(c => (
-                                    <tr key={c.Id} className={SIATC_THEME.TABLE.BODY_ROW}>
-                                        <td className={SIATC_THEME.TABLE.CELL}>
+                                {paginatedConfigs.map(c => (
+                                    <SIATCTableRow key={c.Id}>
+                                        <SIATCTableCell>
                                             <div className="flex items-center gap-3">
                                                 <div className="w-8 h-8 rounded-full bg-primary/10 dark:bg-primary/20 flex items-center justify-center text-primary dark:text-primary-foreground border border-cb-border shadow-inner">
                                                     <Users className="w-4 h-4" />
                                                 </div>
                                                 <span className="text-sm font-bold text-cb-text-primary">{c.Usuario_Creador}</span>
                                             </div>
-                                        </td>
-                                        <td className={cn(SIATC_THEME.TABLE.CELL, "text-center")}>
+                                        </SIATCTableCell>
+                                        <SIATCTableCell className="text-center">
                                             <span className="text-sm font-bold text-emerald-600 dark:text-emerald-500 font-mono">S/. {c.Importe.toFixed(2)}</span>
-                                        </td>
-                                        <td className={cn(SIATC_THEME.TABLE.CELL, "text-center")}>
+                                        </SIATCTableCell>
+                                        <SIATCTableCell className="text-center">
                                             <div className="text-xs font-medium text-cb-text-secondary whitespace-nowrap font-mono">
                                                 {formatDateUTC(c.Fecha_Inicio)} - {formatDateUTC(c.Fecha_Fin)}
                                             </div>
-                                        </td>
-                                        <td className={cn(SIATC_THEME.TABLE.CELL, "text-right")}>
+                                        </SIATCTableCell>
+                                        <SIATCTableCell className="text-right">
                                             <div className="flex justify-end gap-2">
                                                 <button 
                                                     onClick={() => {
@@ -216,37 +227,34 @@ export default function ConfigCanalInstitucionalPage() {
                                                         });
                                                         setIsModalOpen(true);
                                                     }}
-                                                    className="p-2 bg-primary/10 text-primary hover:bg-primary hover:text-white dark:bg-primary/20 dark:text-primary-foreground dark:hover:bg-primary dark:hover:text-white rounded-lg transition-all shadow-sm"
+                                                    className="p-2 bg-primary/10 text-primary hover:bg-primary hover:text-white dark:bg-primary/20 dark:text-primary-foreground dark:hover:bg-primary dark:hover:text-white rounded-lg transition-all shadow-sm cursor-pointer"
                                                     title="Editar"
                                                 >
                                                     <Edit2 className="w-3.5 h-3.5" />
                                                 </button>
                                                 <button 
                                                     onClick={() => handleDelete(c.Id)}
-                                                    className="p-2 bg-red-50 text-red-500 hover:bg-red-500 hover:text-white dark:bg-red-950/30 dark:text-red-400 dark:hover:bg-red-500 dark:hover:text-white rounded-lg transition-all shadow-sm"
+                                                    className="p-2 bg-red-50 text-red-500 hover:bg-red-500 hover:text-white dark:bg-red-950/30 dark:text-red-400 dark:hover:bg-red-500 dark:hover:text-white rounded-lg transition-all shadow-sm cursor-pointer"
                                                     title="Eliminar"
                                                 >
                                                     <Trash2 className="w-3.5 h-3.5" />
                                                 </button>
                                             </div>
-                                        </td>
-                                    </tr>
+                                        </SIATCTableCell>
+                                    </SIATCTableRow>
                                 ))}
                             </tbody>
-                        </table>
+                        </>
                     )}
-                </div>
+                </SIATCTable>
 
                 {/* Footer Stats: SIATC Standard */}
-                <div className={SIATC_THEME.TABLE.FOOTER}>
-                    <p className={SIATC_THEME.TYPOGRAPHY.FOOTER_STATS}>
-                        Total de reglas: <span className="text-cb-text-primary ml-1">{filteredConfigs.length}</span>
-                    </p>
-                    <div className="hidden sm:flex items-center gap-2 px-3 py-1 bg-white dark:bg-cb-bg rounded-cb-btn border border-cb-border shadow-cb-level-1">
-                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                        <span className="text-[9px] font-bold text-cb-neutral tracking-widest uppercase">Operativo</span>
-                    </div>
-                </div>
+                <SIATCTableFooter 
+                    totalRecords={filteredConfigs.length} 
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={setCurrentPage}
+                />
             </div>
 
             {/* Modal */}
