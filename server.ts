@@ -1860,6 +1860,26 @@ app.get('/api/c4c/report/:ticketId', verifyToken, async (req: Request, res: Resp
 
 // --- CONFIG & MANAGEMENT (Standardized) ---
 
+// MANAGEMENTS
+app.get('/api/managements', verifyToken, async (req: Request, res: Response) => {
+    try {
+        const db = await getDb();
+        const result = await db.request().query('SELECT Id as id, Name as name, Code as code FROM EBM.Managements');
+        res.json(result.recordset);
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// PREFERENCES
+app.get('/api/config/preferences', verifyToken, (req: Request, res: Response) => {
+    res.json({});
+});
+
+app.post('/api/config/preferences', verifyToken, (req: Request, res: Response) => {
+    res.json({ success: true });
+});
+
 // USERS
 app.get('/api/users', verifyToken, verifyPermission('val.config.users'), async (req: Request, res: Response) => {
     try {
