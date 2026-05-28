@@ -31,6 +31,7 @@ import {
     SIATCTableCell, 
     SIATCTableFooter 
 } from '../../components/siatc/table/SIATCTable';
+import { SIATC_THEME } from '../../utils/siatc-theme';
 
 // ==========================================
 // SIATC CONFIGURATION MODULE VARIABLES
