@@ -162,7 +162,7 @@ export default function ConfigDistritosPage() {
 
             {/* Quick Stats */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="bg-white dark:bg-cb-bg p-5 rounded-cb-card border border-cb-border shadow-cb-level-1 flex items-center gap-4">
+                <div className={cn(SIATC_THEME.COMPONENTS.CARD_CONTAINER, "p-5 flex items-center gap-4")}>
                     <div className="w-12 h-12 rounded-cb-btn bg-primary/10 flex items-center justify-center text-primary">
                         <Activity className="w-6 h-6 leading-none" />
                     </div>
@@ -171,7 +171,7 @@ export default function ConfigDistritosPage() {
                         <p className="text-2xl font-bold text-cb-text-primary leading-none">{configs.filter(c => c.Activo).length}</p>
                     </div>
                 </div>
-                <div className="bg-white dark:bg-cb-bg p-5 rounded-cb-card border border-cb-border shadow-cb-level-1 flex items-center gap-4">
+                <div className={cn(SIATC_THEME.COMPONENTS.CARD_CONTAINER, "p-5 flex items-center gap-4")}>
                     <div className="w-12 h-12 rounded-cb-btn bg-cb-success/10 flex items-center justify-center text-cb-success">
                         <MapPin className="w-6 h-6 leading-none" />
                     </div>
@@ -182,7 +182,7 @@ export default function ConfigDistritosPage() {
                         </p>
                     </div>
                 </div>
-                <div className="bg-white dark:bg-cb-bg p-5 rounded-cb-card border border-cb-border shadow-cb-level-1 flex items-center gap-4">
+                <div className={cn(SIATC_THEME.COMPONENTS.CARD_CONTAINER, "p-5 flex items-center gap-4")}>
                     <div className="w-12 h-12 rounded-cb-btn bg-cb-warning/10 flex items-center justify-center text-cb-warning">
                         <Building2 className="w-6 h-6 leading-none" />
                     </div>
@@ -196,14 +196,14 @@ export default function ConfigDistritosPage() {
             </div>
 
             {/* Content Table */}
-            <div className={cn(SIATC_THEME.LAYOUT.CONTENT_CONTAINER, "dark:bg-cb-bg")}>
+            <div className={SIATC_THEME.LAYOUT.CONTENT_CONTAINER}>
                 <div className={SIATC_THEME.LAYOUT.SEARCH_BAR_WRAPPER}>
                     <div className="flex-1 relative">
                         <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-cb-neutral/60" />
                         <input 
                             type="text" 
                             placeholder="Buscar por distrito..." 
-                            className={cn(SIATC_THEME.COMPONENTS.INPUT, "pl-11 pr-4 dark:bg-cb-bg text-cb-text-primary border-cb-border")}
+                            className={cn(SIATC_THEME.COMPONENTS.INPUT, "pl-11 pr-4")}
                             value={search}
                             onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
                         />
@@ -362,7 +362,7 @@ export default function ConfigDistritosPage() {
                                 <div className="flex flex-col gap-2">
                                     <label className="text-[11px] font-bold text-cb-neutral uppercase tracking-wider ml-1">Filtrar por Ciudad</label>
                                     <select 
-                                        className={cn(SIATC_THEME.COMPONENTS.INPUT, "h-11 dark:bg-cb-bg text-cb-text-primary border-cb-border appearance-none cursor-pointer")}
+                                        className={cn(SIATC_THEME.COMPONENTS.INPUT, "h-11 appearance-none cursor-pointer")}
                                         value={selectedCity}
                                         onChange={(e) => setSelectedCity(e.target.value)}
                                     >
@@ -390,7 +390,7 @@ export default function ConfigDistritosPage() {
                                         <input 
                                             type="number" 
                                             step="0.10"
-                                            className={cn(SIATC_THEME.COMPONENTS.INPUT, "h-11 pl-11 dark:bg-cb-bg text-cb-text-primary border-cb-border font-bold")}
+                                            className={cn(SIATC_THEME.COMPONENTS.INPUT, "h-11 pl-11 font-bold")}
                                             value={editingConfig.importe}
                                             onChange={(e) => setEditingConfig({...editingConfig, importe: parseFloat(e.target.value)})}
                                             required
@@ -405,7 +405,7 @@ export default function ConfigDistritosPage() {
                                             onClick={() => setEditingConfig({...editingConfig, activo: true})}
                                             className={cn(
                                                 "flex-1 py-2 text-xs font-bold rounded-cb-btn transition-all cursor-pointer",
-                                                editingConfig.activo ? "bg-white dark:bg-cb-bg text-cb-success shadow-cb-level-1 border border-cb-border" : "text-cb-neutral opacity-50"
+                                                editingConfig.activo ? "bg-card text-cb-success shadow-cb-level-1 border border-cb-border" : "text-cb-neutral opacity-50"
                                             )}
                                         >
                                             REGLA ACTIVA
@@ -415,7 +415,7 @@ export default function ConfigDistritosPage() {
                                             onClick={() => setEditingConfig({...editingConfig, activo: false})}
                                             className={cn(
                                                 "flex-1 py-2 text-xs font-bold rounded-cb-btn transition-all cursor-pointer",
-                                                !editingConfig.activo ? "bg-white dark:bg-cb-bg text-cb-error shadow-cb-level-1 border border-cb-border" : "text-cb-neutral opacity-50"
+                                                !editingConfig.activo ? "bg-card text-cb-error shadow-cb-level-1 border border-cb-border" : "text-cb-neutral opacity-50"
                                             )}
                                         >
                                             DESACTIVADA
@@ -431,7 +431,7 @@ export default function ConfigDistritosPage() {
                                         <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-primary opacity-50" />
                                         <input 
                                             type="date" 
-                                            className={cn(SIATC_THEME.COMPONENTS.INPUT, "h-11 pl-11 dark:bg-cb-bg text-cb-text-primary border-cb-border font-bold")}
+                                            className={cn(SIATC_THEME.COMPONENTS.INPUT, "h-11 pl-11 font-bold")}
                                             value={editingConfig.fecha_inicio}
                                             onChange={(e) => setEditingConfig({...editingConfig, fecha_inicio: e.target.value})}
                                             required
@@ -444,7 +444,7 @@ export default function ConfigDistritosPage() {
                                         <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-primary opacity-50" />
                                         <input 
                                             type="date" 
-                                            className={cn(SIATC_THEME.COMPONENTS.INPUT, "h-11 pl-11 dark:bg-cb-bg text-cb-text-primary border-cb-border font-bold")}
+                                            className={cn(SIATC_THEME.COMPONENTS.INPUT, "h-11 pl-11 font-bold")}
                                             value={editingConfig.fecha_fin}
                                             onChange={(e) => setEditingConfig({...editingConfig, fecha_fin: e.target.value})}
                                         />
@@ -503,7 +503,7 @@ function MultiSelect({ options, selected, onChange, placeholder }: {
         <div className="relative">
             <div 
                 onClick={() => setIsOpen(!isOpen)}
-                className="min-h-[52px] w-full bg-white dark:bg-cb-bg border border-cb-border rounded-cb-card p-2.5 flex flex-wrap gap-1.5 cursor-pointer hover:border-primary/30 transition-all"
+                className="min-h-[52px] w-full bg-card border border-cb-border rounded-cb-card p-2.5 flex flex-wrap gap-1.5 cursor-pointer hover:border-primary/30 transition-all"
             >
                 {selected.length === 0 ? (
                     <span className="text-sm font-bold text-cb-neutral/40 ml-2 mt-1.5">{placeholder}</span>
@@ -527,7 +527,7 @@ function MultiSelect({ options, selected, onChange, placeholder }: {
             </div>
 
             {isOpen && (
-                <div className="absolute top-full left-0 w-full mt-2 bg-white dark:bg-cb-bg border border-cb-border rounded-cb-card shadow-cb-level-3 z-50 flex flex-col max-h-[300px] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="absolute top-full left-0 w-full mt-2 bg-card border border-cb-border rounded-cb-card shadow-cb-level-3 z-50 flex flex-col max-h-[300px] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
                     <div className="p-3 border-b border-cb-border bg-cb-bg/30">
                         <div className="relative">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-cb-neutral/40" />
@@ -535,7 +535,7 @@ function MultiSelect({ options, selected, onChange, placeholder }: {
                                 autoFocus
                                 type="text" 
                                 placeholder="Filtrar..."
-                                className={cn(SIATC_THEME.COMPONENTS.INPUT, "pl-9 dark:bg-cb-bg text-cb-text-primary border-cb-border")}
+                                className={cn(SIATC_THEME.COMPONENTS.INPUT, "pl-9")}
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
                             />

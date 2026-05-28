@@ -104,3 +104,17 @@ export interface TarifarioEntry {
   Importe: number;
   Estado: string;
 }
+
+export interface Role {
+  id: string;
+  name: string;
+  permissions: Permission[];
+  apps?: string;
+}
+
+export interface Management {
+  id: string;
+  name: string;
+  code: string;
+}
+

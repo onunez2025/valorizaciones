@@ -9,6 +9,8 @@ import {
     SIATCTableCell, 
     SIATCTableFooter 
 } from '../../components/siatc/table/SIATCTable';
+import { useTableResizer } from '../../hooks/useTableResizer';
+import { ResizableHeader } from '../../components/common/ResizableHeader';
 
 interface AuditLog {
     id: number;
@@ -21,7 +23,28 @@ interface AuditLog {
     created_at: string;
 }
 
+const normalizeLogs = (data: any[]): AuditLog[] => {
+    if (!Array.isArray(data)) return [];
+    return data.map((item, index) => ({
+        id: item.id ?? item.Id ?? index,
+        created_at: item.created_at ?? item.Fecha ?? item.fecha ?? new Date().toISOString(),
+        user_id: item.user_id ?? item.UsuarioID ?? item.usuario_id ?? '',
+        user_name: item.user_name ?? item.UsuarioNombre ?? item.usuario_nombre ?? item.user_id ?? item.UsuarioID ?? 'Sistema',
+        action: item.action ?? item.Accion ?? item.accion ?? 'Operación',
+        entity: item.entity ?? item.Entidad ?? item.entidad ?? 'General',
+        entity_id: item.entity_id ?? item.EntidadID ?? item.entidad_id ?? '',
+        details: item.details ?? item.Detalle ?? item.detalle ?? ''
+    }));
+};
+
 export default function AuditLogPage() {
+    const { widths, onResizeStart } = useTableResizer('val_audit_column_widths', {
+        fecha: 180,
+        usuario: 220,
+        operacion: 180,
+        entidad: 200,
+        payload: 300
+    });
     const [logs, setLogs] = useState<AuditLog[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [search, setSearch] = useState('');
@@ -34,7 +57,7 @@ export default function AuditLogPage() {
         setIsLoading(true);
         try {
             const data = await AuditService.getLogs();
-            setLogs(data);
+            setLogs(normalizeLogs(data));
         } catch (error) {
             console.error('Error fetching audit logs:', error);
         } finally {
@@ -150,10 +173,18 @@ export default function AuditLogPage() {
                         <>
                             <thead className={SIATC_THEME.TABLE.HEADER_ROW}>
                                 <tr className="border-b border-cb-border">
-                                    <th className={cn(SIATC_THEME.TABLE.HEADER_TH, "w-48")}><span className={SIATC_THEME.TYPOGRAPHY.TABLE_HEADER}>Fecha y Hora</span></th>
-                                    <th className={cn(SIATC_THEME.TABLE.HEADER_TH, "w-60")}><span className={SIATC_THEME.TYPOGRAPHY.TABLE_HEADER}>Usuario Responsable</span></th>
-                                    <th className={cn(SIATC_THEME.TABLE.HEADER_TH, "w-52")}><span className={SIATC_THEME.TYPOGRAPHY.TABLE_HEADER}>Operación</span></th>
-                                    <th className={cn(SIATC_THEME.TABLE.HEADER_TH, "w-64")}><span className={SIATC_THEME.TYPOGRAPHY.TABLE_HEADER}>Ref. Entidad</span></th>
+                                    <ResizableHeader columnId="fecha" width={widths.fecha} onResizeStart={onResizeStart}>
+                                        <span className={SIATC_THEME.TYPOGRAPHY.TABLE_HEADER}>Fecha y Hora</span>
+                                    </ResizableHeader>
+                                    <ResizableHeader columnId="usuario" width={widths.usuario} onResizeStart={onResizeStart}>
+                                        <span className={SIATC_THEME.TYPOGRAPHY.TABLE_HEADER}>Usuario Responsable</span>
+                                    </ResizableHeader>
+                                    <ResizableHeader columnId="operacion" width={widths.operacion} onResizeStart={onResizeStart}>
+                                        <span className={SIATC_THEME.TYPOGRAPHY.TABLE_HEADER}>Operación</span>
+                                    </ResizableHeader>
+                                    <ResizableHeader columnId="entidad" width={widths.entidad} onResizeStart={onResizeStart}>
+                                        <span className={SIATC_THEME.TYPOGRAPHY.TABLE_HEADER}>Ref. Entidad</span>
+                                    </ResizableHeader>
                                     <th className={SIATC_THEME.TABLE.HEADER_TH}><span className={SIATC_THEME.TYPOGRAPHY.TABLE_HEADER}>Payload / Detalle Técnico</span></th>
                                 </tr>
                             </thead>

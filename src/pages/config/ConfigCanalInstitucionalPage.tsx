@@ -158,14 +158,14 @@ export default function ConfigCanalInstitucionalPage() {
             </div>
 
             {/* Content Table */}
-            <div className={cn(SIATC_THEME.LAYOUT.CONTENT_CONTAINER, "dark:bg-cb-bg")}>
+            <div className={SIATC_THEME.LAYOUT.CONTENT_CONTAINER}>
                 <div className={SIATC_THEME.LAYOUT.SEARCH_BAR_WRAPPER}>
                     <div className="relative flex-1 max-w-md">
                         <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-cb-neutral/60" />
                         <input 
                             type="text" 
                             placeholder="Buscar por usuario o palabras clave..." 
-                            className={cn(SIATC_THEME.COMPONENTS.INPUT, "pl-11 pr-4 dark:bg-cb-bg text-cb-text-primary border-cb-border")}
+                            className={cn(SIATC_THEME.COMPONENTS.INPUT, "pl-11 pr-4")}
                             value={search}
                             onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
                         />
@@ -273,7 +273,7 @@ export default function ConfigCanalInstitucionalPage() {
                                 <input 
                                     type="text" 
                                     list="creators-list"
-                                    className={cn(SIATC_THEME.COMPONENTS.INPUT, "pl-11 pr-4 dark:bg-cb-bg text-cb-text-primary border-cb-border")}
+                                    className={cn(SIATC_THEME.COMPONENTS.INPUT, "pl-11 pr-4")}
                                     placeholder="Buscar o escribir nombre... Ej: Jose Perez"
                                     value={editingConfig?.usuario_creador || ''}
                                     onChange={(e) => setEditingConfig({...editingConfig, usuario_creador: e.target.value})}
@@ -289,7 +289,7 @@ export default function ConfigCanalInstitucionalPage() {
                             <label className="text-[10px] font-bold text-cb-text-secondary uppercase tracking-widest ml-1">Fecha Inicio</label>
                             <input 
                                 type="date" 
-                                className={cn(SIATC_THEME.COMPONENTS.INPUT, "px-4 dark:bg-cb-bg text-cb-text-primary border-cb-border")}
+                                className={cn(SIATC_THEME.COMPONENTS.INPUT, "px-4")}
                                 value={editingConfig?.fecha_inicio || ''}
                                 onChange={(e) => setEditingConfig({...editingConfig, fecha_inicio: e.target.value})}
                                 required
@@ -300,7 +300,7 @@ export default function ConfigCanalInstitucionalPage() {
                             <label className="text-[10px] font-bold text-cb-text-secondary uppercase tracking-widest ml-1">Fecha Fin</label>
                             <input 
                                 type="date" 
-                                className={cn(SIATC_THEME.COMPONENTS.INPUT, "px-4 dark:bg-cb-bg text-cb-text-primary border-cb-border")}
+                                className={cn(SIATC_THEME.COMPONENTS.INPUT, "px-4")}
                                 value={editingConfig?.fecha_fin || ''}
                                 onChange={(e) => setEditingConfig({...editingConfig, fecha_fin: e.target.value})}
                                 required
@@ -314,7 +314,7 @@ export default function ConfigCanalInstitucionalPage() {
                                 <input 
                                     type="number" 
                                     step="0.01"
-                                    className={cn(SIATC_THEME.COMPONENTS.INPUT, "pl-11 pr-4 dark:bg-cb-bg text-cb-text-primary border-cb-border")}
+                                    className={cn(SIATC_THEME.COMPONENTS.INPUT, "pl-11 pr-4")}
                                     value={editingConfig?.importe || 0}
                                     onChange={(e) => setEditingConfig({...editingConfig, importe: parseFloat(e.target.value)})}
                                     required

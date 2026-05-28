@@ -115,7 +115,7 @@ export default function SettingsPage() {
                                 min="0"
                                 value={diasMax}
                                 onChange={(e) => setDiasMax(e.target.value)}
-                                className={cn(SIATC_THEME.COMPONENTS.INPUT, "w-32 text-center text-cb-text-primary border-cb-border dark:bg-cb-bg font-mono")}
+                                className={cn(SIATC_THEME.COMPONENTS.INPUT, "w-32 text-center font-mono")}
                                 placeholder="Ej. 2"
                             />
                         </div>

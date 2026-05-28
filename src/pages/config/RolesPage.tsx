@@ -260,13 +260,14 @@ export default function RolesPage() {
                                 <AppWindow className="w-4 h-4 text-primary/60" />
                                 Ámbito del ecosistema SIATC
                             </label>
-                            <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+                            <div className="grid grid-cols-2 lg:grid-cols-6 gap-3">
                                 {[
-                                    { id: 'EBM', label: 'EBM' },
+                                    { id: 'EBM', label: 'EBM Central' },
                                     { id: 'FSM', label: 'Gestor FSM' },
                                     { id: 'TCtrl', label: 'Tablero' },
                                     { id: 'Liq', label: 'Liquidaciones' },
-                                    { id: 'VAL', label: 'Valorizaciones' }
+                                    { id: 'VAL', label: 'Valorizaciones' },
+                                    { id: 'CXG', label: 'Gestor NC-CxG' }
                                 ].map(app => {
                                     const isSelected = (formData.apps || '').split(',').map(a => a.trim()).includes(app.id);
                                     return (
