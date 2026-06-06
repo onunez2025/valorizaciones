@@ -29,6 +29,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setUser(null);
         StorageService.remove('current_user');
         StorageService.remove('auth_token');
+        
+        // Clear shared cookie
+        const isProd = window.location.hostname.endsWith('.siatc.cloud');
+        const cookieDomain = isProd ? '; domain=.siatc.cloud' : '';
+        document.cookie = `token=; path=/${cookieDomain}; max-age=0; SameSite=Lax; Secure=${isProd ? 'true' : 'false'}`;
+        
         window.location.href = '/login';
     }, []);
 
@@ -81,8 +87,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 } else {
                     if (localToken) {
                         logout();
-                        const consoleUrl = import.meta.env.VITE_CONSOLE_URL || (import.meta.env.PROD ? 'https://console.siatc.cloud' : 'http://localhost:3008');
-                        window.location.href = `${consoleUrl}/login?redirect=${encodeURIComponent(window.location.origin)}`;
+                        window.location.href = '/login?expired=true';
                         return;
                     }
                 }
@@ -102,8 +107,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                     StorageService.setCurrentUser(data.user);
                 } else {
                     logout();
-                    const consoleUrl = import.meta.env.VITE_CONSOLE_URL || (import.meta.env.PROD ? 'https://console.siatc.cloud' : 'http://localhost:3008');
-                    window.location.href = `${consoleUrl}/login?redirect=${encodeURIComponent(window.location.origin)}&expired=true`;
+                    window.location.href = '/login?expired=true';
                 }
             } catch (error) {
                 console.error("Session validation error:", error);
@@ -123,8 +127,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
         const resetTimer = () => {
             timeoutId = setTimeout(() => {
-                StorageService.remove('current_user');
-                StorageService.remove('auth_token');
+                logout();
                 window.location.href = '/login?expired=true';
             }, 5 * 60 * 1000); // 5 minutes
         };
@@ -148,7 +151,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 window.removeEventListener(event, handleActivity);
             });
         };
-    }, [user]);
+    }, [user, logout]);
     // ------------------------------------------
 
     const login = useCallback((newUser: User, token?: string, remember: boolean = true) => {
@@ -156,6 +159,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         StorageService.setCurrentUser(newUser, remember);
         if (token) {
             StorageService.setToken(token, remember);
+            
+            // Set shared cookie for SSO across subdomains
+            const isProd = window.location.hostname.endsWith('.siatc.cloud');
+            const cookieDomain = isProd ? '; domain=.siatc.cloud' : '';
+            document.cookie = `token=${token}; path=/${cookieDomain}; max-age=${24 * 60 * 60}; SameSite=Lax; Secure=${isProd ? 'true' : 'false'}`;
         }
     }, []);
 
