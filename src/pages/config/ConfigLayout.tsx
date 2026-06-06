@@ -8,23 +8,29 @@ export default function ConfigLayout() {
     const { hasPermission } = useAuth();
     const location = useLocation();
 
+    const consoleUrl = import.meta.env.VITE_CONSOLE_URL || (import.meta.env.PROD ? 'https://console.siatc.cloud' : 'http://localhost:3008');
+
     const configItems = [
         { to: '/config/settings', icon: Settings2, label: 'Ajustes Generales', permission: 'val.config.users' as const },
         { to: '/config/institucional', icon: Briefcase, label: 'Canal Institucional', permission: 'val.config.users' as const },
         { to: '/config/distritos', icon: MapPin, label: 'Adicionales por Distrito', permission: 'val.config.users' as const },
-        { to: '/config/users', icon: Users, label: 'Gestión de Usuarios', permission: 'val.config.users' as const },
-        { to: '/config/roles', icon: Shield, label: 'Perfiles y Permisos', permission: 'val.config.roles' as const },
+        { to: `${consoleUrl}/users`, icon: Users, label: 'Gestión de Usuarios', permission: 'val.config.users' as const, isExternal: true },
+        { to: `${consoleUrl}/roles`, icon: Shield, label: 'Perfiles y Permisos', permission: 'val.config.roles' as const, isExternal: true },
         { to: '/config/audit', icon: Terminal, label: 'Logs de Auditoría', permission: 'val.config.audit' as const },
     ];
 
     const filteredItems = configItems.filter(item =>
-        !item.permission || hasPermission(item.permission)
+        !item.permission || hasPermission(item.permission as any)
     );
 
     // If we are at the root /config, redirect to the first authorized item
     if (location.pathname === '/config' || location.pathname === '/config/') {
-        if (filteredItems.length > 0) {
-            return <Navigate to={filteredItems[0].to} replace />;
+        const firstLocalItem = filteredItems.find(item => !('isExternal' in item && item.isExternal));
+        if (firstLocalItem) {
+            return <Navigate to={firstLocalItem.to} replace />;
+        } else if (filteredItems.length > 0) {
+            window.location.href = filteredItems[0].to;
+            return null;
         }
     }
 
@@ -48,29 +54,40 @@ export default function ConfigLayout() {
 
                         <nav className="flex-1 p-3 space-y-1 overflow-y-auto custom-scrollbar">
                             <p className="text-[11px] font-bold text-cb-neutral tracking-wider px-4 py-3 opacity-60 uppercase">Control Administrativo</p>
-                            {filteredItems.map((item) => (
-                                <NavLink
-                                    key={item.to}
-                                    to={item.to}
-                                    className={({ isActive }) => cn(
-                                        isActive
-                                            ? SIATC_THEME.LAYOUT.SIDEBAR_ITEM_ACTIVE
-                                            : SIATC_THEME.LAYOUT.SIDEBAR_ITEM_INACTIVE
-                                    )}
-                                >
-                                    <div className="flex items-center gap-3 relative z-10">
-                                        <item.icon className={cn(
-                                            "w-5 h-5 transition-transform duration-500",
-                                            "group-hover/item:scale-110"
-                                        )} />
-                                        <span className="tracking-tight">{item.label}</span>
-                                    </div>
-                                    <ChevronRight className={cn(
-                                        "w-4 h-4 transition-all duration-300 opacity-0 -translate-x-2 relative z-10",
-                                        "group-hover/item:opacity-100 group-hover/item:translate-x-0"
-                                    )} />
-                                </NavLink>
-                            ))}
+                            {filteredItems.map((item) => {
+                                if ('isExternal' in item && item.isExternal) {
+                                    return (
+                                        <a
+                                            key={item.to}
+                                            href={item.to}
+                                            className={SIATC_THEME.LAYOUT.SIDEBAR_ITEM_INACTIVE}
+                                        >
+                                            <div className="flex items-center gap-3 relative z-10">
+                                                <item.icon className="w-5 h-5 transition-transform duration-500 group-hover/item:scale-110 shrink-0" />
+                                                <span className="tracking-tight">{item.label}</span>
+                                            </div>
+                                            <ChevronRight className="w-4 h-4 transition-all duration-300 opacity-0 -translate-x-2 relative z-10 group-hover/item:opacity-100 group-hover/item:translate-x-0" />
+                                        </a>
+                                    );
+                                }
+                                return (
+                                    <NavLink
+                                        key={item.to}
+                                        to={item.to}
+                                        className={({ isActive }) => cn(
+                                            isActive
+                                                ? SIATC_THEME.LAYOUT.SIDEBAR_ITEM_ACTIVE
+                                                : SIATC_THEME.LAYOUT.SIDEBAR_ITEM_INACTIVE
+                                        )}
+                                    >
+                                        <div className="flex items-center gap-3 relative z-10">
+                                            <item.icon className="w-5 h-5 transition-transform duration-500 group-hover/item:scale-110 shrink-0" />
+                                            <span className="tracking-tight">{item.label}</span>
+                                        </div>
+                                        <ChevronRight className="w-4 h-4 transition-all duration-300 opacity-0 -translate-x-2 relative z-10 group-hover/item:opacity-100 group-hover/item:translate-x-0" />
+                                    </NavLink>
+                                );
+                            })}
                         </nav>
 
                         {/* Sidebar Footer Info */}

@@ -15,9 +15,23 @@ const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 
 // Configuration Pages
 const ConfigLayout = lazy(() => import('./pages/config/ConfigLayout'));
-const UsersPage = lazy(() => import('./pages/config/UsersPage'));
-const RolesPage = lazy(() => import('./pages/config/RolesPage'));
 const AuditLogPage = lazy(() => import('./pages/config/AuditLogPage'));
+
+const consoleUrl = import.meta.env.VITE_CONSOLE_URL || (import.meta.env.PROD ? 'https://console.siatc.cloud' : 'http://localhost:3008');
+
+const ExternalRedirect = ({ url }: { url: string }) => {
+    React.useEffect(() => {
+        window.location.replace(url);
+    }, [url]);
+    return (
+        <div className="flex h-screen items-center justify-center bg-background">
+            <div className="flex flex-col items-center gap-6">
+                <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+                <p className="text-muted-foreground font-medium animate-pulse">Redirigiendo a la administración central...</p>
+            </div>
+        </div>
+    );
+};
 const SettingsPage = lazy(() => import('./pages/config/SettingsPage'));
 const ConfigDistritosPage = lazy(() => import('./pages/config/ConfigDistritosPage'));
 const ConfigCanalInstitucionalPage = lazy(() => import('./pages/config/ConfigCanalInstitucionalPage'));
@@ -52,8 +66,8 @@ function App() {
                 {/* Configuración */}
                 <Route path="/config" element={<ConfigLayout />}>
                     <Route path="settings" element={<SettingsPage />} />
-                    <Route path="users" element={<UsersPage />} />
-                    <Route path="roles" element={<RolesPage />} />
+                    <Route path="users" element={<ExternalRedirect url={`${consoleUrl}/users`} />} />
+                    <Route path="roles" element={<ExternalRedirect url={`${consoleUrl}/roles`} />} />
                     <Route path="audit" element={<AuditLogPage />} />
                     <Route path="distritos" element={<ConfigDistritosPage />} />
                     <Route path="institucional" element={<ConfigCanalInstitucionalPage />} />

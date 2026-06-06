@@ -100,6 +100,22 @@ const verifyToken = (req: Request, res: Response, next: NextFunction) => {
     } catch (err) { res.status(403).json({ error: 'Token inválido' }); }
 };
 
+app.get('/api/applications', verifyToken, async (req: Request, res: Response) => {
+    try {
+        const db = await getDb();
+        const activeOnly = req.query.activeOnly === 'true';
+        let query = 'SELECT Id as id, Code as code, Label as label, Url as url, LogoUrl as logo_url, CAST(IsActive AS BIT) as is_active, DisplayOrder as display_order FROM [dbo].[GAC_APP_TB_CONSOLE_APPLICATIONS]';
+        if (activeOnly) {
+            query += ' WHERE IsActive = 1';
+        }
+        query += ' ORDER BY DisplayOrder ASC';
+        const result = await db.request().query(query);
+        res.json(result.recordset);
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 const verifyPermission = (permission: string) => {
     return async (req: Request, res: Response, next: NextFunction) => {
         const user = (req as any).user;
