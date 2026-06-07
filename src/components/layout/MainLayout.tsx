@@ -128,7 +128,7 @@ export function MainLayout() {
                             </NavLink>
                         )}
 
-                        <AppSwitcher currentAppId="valorizaciones" />
+                        <AppSwitcher currentAppId="VAL" />
 
                         <div className="w-px h-6 bg-border/50 mx-1" />
 
