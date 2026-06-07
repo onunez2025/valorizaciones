@@ -5,6 +5,7 @@ import { Sidebar } from './Sidebar';
 import { AppSwitcher } from './AppSwitcher';
 import { useAuth } from '../../hooks/useAuth';
 import { useTheme } from '../../context/ThemeContext';
+import { useAppConfig } from '../../context/AppConfigContext';
 import { cn } from '../../utils/cn';
 import { SIATC_THEME } from '../../utils/siatc-theme';
 
@@ -12,6 +13,8 @@ export function MainLayout() {
     const { isAuthenticated, isLoading, user, hasPermission } = useAuth();
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const { theme, setTheme } = useTheme();
+    const appConfig = useAppConfig();
+    const logoUrl = appConfig?.logoUrl || '/logo.png';
 
     const toggleTheme = () => {
         setTheme(theme === 'dark' ? 'light' : 'dark');
@@ -21,6 +24,7 @@ export function MainLayout() {
         return (
             <div className="flex h-screen items-center justify-center bg-background">
                 <div className="flex flex-col items-center gap-6">
+                    <img src={logoUrl} alt="Valorizaciones Logo" className="w-16 h-16 object-contain animate-pulse" />
                     <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
                     <p className="text-muted-foreground font-medium animate-pulse">Cargando Valorizaciones...</p>
                 </div>
@@ -82,7 +86,7 @@ export function MainLayout() {
 
                         <div className="flex items-center gap-4 group cursor-default">
                             <div className="w-12 h-12 flex items-center justify-center group-hover:scale-110 transition-all duration-500">
-                                <img src="/logo.png" alt="Valorizaciones" className="w-10 h-10 object-contain" />
+                                <img src={logoUrl} alt="Valorizaciones" className="w-10 h-10 object-contain" />
                             </div>
                             <div className="flex flex-col">
                                 <span className="font-black text-sm tracking-tight text-foreground uppercase pt-1">Valorizaciones</span>

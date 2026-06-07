@@ -5,6 +5,8 @@ import { AuthProvider } from './hooks/useAuth';
 import { ThemeProvider } from './context/ThemeContext';
 import { DialogProvider } from './context/DialogContext';
 
+import { useAppConfig } from './context/AppConfigContext';
+
 // Pages - Lazy loaded
 const LoginPage = lazy(() => import('./pages/LoginPage'));
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
@@ -36,14 +38,19 @@ const SettingsPage = lazy(() => import('./pages/config/SettingsPage'));
 const ConfigDistritosPage = lazy(() => import('./pages/config/ConfigDistritosPage'));
 const ConfigCanalInstitucionalPage = lazy(() => import('./pages/config/ConfigCanalInstitucionalPage'));
 
-const LoadingFallback = () => (
+const LoadingFallback = () => {
+    const appConfig = useAppConfig();
+    const logoUrl = appConfig?.logoUrl || '/Logo.png';
+    return (
     <div className="flex h-screen items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-6">
+            <img src={logoUrl} alt="Valorizaciones Logo" className="w-16 h-16 object-contain animate-pulse" />
             <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
             <p className="text-muted-foreground font-medium animate-pulse">Cargando Valorizaciones...</p>
         </div>
     </div>
-);
+    );
+};
 
 function App() {
   return (

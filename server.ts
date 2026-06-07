@@ -9,6 +9,7 @@ import bcrypt from 'bcrypt';
 import path from 'path';
 import crypto from 'crypto';
 import axios from 'axios';
+import fs from 'fs';
 
 dotenv.config();
 
@@ -2081,11 +2082,56 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 app.use(express.static(path.join(__dirname, '..', 'dist')));
 
+interface AppMeta { label: string; logoUrl: string; url: string; }
+let appMeta: AppMeta | null = null;
+
+async function fetchAppMeta(): Promise<void> {
+    try {
+        const db = await getDb();
+        const code = process.env.APP_CODE || APP_IDENTIFIER;
+        const result = await db.request()
+            .input('code', code)
+            .query(`SELECT Label, LogoUrl, Url FROM [dbo].[GAC_APP_TB_CONSOLE_APPLICATIONS] WHERE UPPER(Code) = UPPER(@code)`);
+        if (result.recordset.length > 0) {
+            const row = result.recordset[0];
+            appMeta = { label: row.Label, logoUrl: row.LogoUrl, url: row.Url };
+            console.log(`[AppConfig] Loaded meta for ${code}: ${appMeta.label}`);
+        }
+    } catch (err: any) {
+        console.warn('[AppConfig] Could not fetch app meta from DB:', err.message);
+    }
+}
+
 // SPA Fallback: Serve index.html for any remaining routes
 app.use((req: Request, res: Response) => {
-    res.sendFile(path.join(__dirname, '..', 'dist', 'index.html'));
+    const indexPath = path.join(__dirname, '..', 'dist', 'index.html');
+    try {
+        let html = fs.readFileSync(indexPath, 'utf-8');
+        if (appMeta) {
+            const ogTags = [
+                `<meta property="og:type" content="website" />`,
+                `<meta property="og:title" content="${appMeta.label} - SIATC" />`,
+                `<meta property="og:description" content="${appMeta.label} - Plataforma de gestión SIATC." />`,
+                `<meta property="og:image" content="${appMeta.logoUrl}" />`,
+                `<meta property="og:url" content="${appMeta.url}" />`,
+                `<meta name="twitter:card" content="summary_large_image" />`,
+                `<meta name="twitter:title" content="${appMeta.label} - SIATC" />`,
+                `<meta name="twitter:image" content="${appMeta.logoUrl}" />`,
+                `<link rel="icon" type="image/png" href="${appMeta.logoUrl}" />`,
+            ].join('\n    ');
+            html = html.replace(/<meta property="og:[^"]+"[^>]*\/>/g, '');
+            html = html.replace(/<link rel="icon"[^>]*\/>/g, '');
+            html = html.replace('<title>', `${ogTags}\n  <title>`);
+        }
+        res.setHeader('Content-Type', 'text/html');
+        res.send(html);
+    } catch {
+        res.sendFile(indexPath);
+    }
 });
 
 app.listen(port, () => {
     console.log(`Server Valorizaciones running on http://localhost:${port}`);
+    // Fetch app metadata from DB for OG tags
+    fetchAppMeta();
 });

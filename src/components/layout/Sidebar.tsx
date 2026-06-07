@@ -9,11 +9,14 @@ import {
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { useAuth } from '../../hooks/useAuth';
+import { useAppConfig } from '../../context/AppConfigContext';
 import { SIATC_THEME } from '../../utils/siatc-theme';
 import { toTitleCase } from '../../utils/formatters';
 
 export function Sidebar({ className }: { className?: string }) {
     const { logout, hasPermission } = useAuth();
+    const appConfig = useAppConfig();
+    const logoUrl = appConfig?.logoUrl || '/logo.png';
 
     const navItems = [
         { 
@@ -54,7 +57,7 @@ export function Sidebar({ className }: { className?: string }) {
             {/* Header / Logo: SIATC High Density */}
             <div className="p-6 flex items-center gap-3 border-b border-border/50 bg-gradient-to-br from-primary/5 to-transparent">
                 <div className="w-12 h-12 flex items-center justify-center shrink-0 overflow-hidden transition-transform hover:scale-105">
-                    <img src="/logo.png" alt="Valorizaciones Logo" className="h-full w-full object-contain" />
+                    <img src={logoUrl} alt="Valorizaciones Logo" className="h-full w-full object-contain" />
                 </div>
                 <div className="flex flex-col min-w-0">
                     <h1 className="font-bold text-lg leading-none tracking-tight text-foreground uppercase truncate">Valorizaciones</h1>

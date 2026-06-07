@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../context/ThemeContext';
+import { useAppConfig } from '../context/AppConfigContext';
 import { User, Lock, Eye, EyeOff, Moon, Sun } from 'lucide-react';
 import { cn } from '../utils/cn';
 import { API_BASE_URL } from '../services/apiClient';
@@ -10,6 +11,8 @@ import { SIATC_THEME } from '../utils/siatc-theme';
 export default function LoginPage() {
     const { login } = useAuth();
     const { theme, setTheme } = useTheme();
+    const appConfig = useAppConfig();
+    const logoUrl = appConfig?.logoUrl || '/logo.png';
     const [searchParams] = useSearchParams();
     const isExpired = searchParams.get('expired') === 'true';
     const navigate = useNavigate();
@@ -68,7 +71,7 @@ export default function LoginPage() {
                 <div className="relative z-10">
                     <div className="flex items-center gap-3 mb-6">
                         <div className="w-12 h-12 flex items-center justify-center shrink-0 overflow-hidden">
-                            <img src="/logo.png" alt="Valorizaciones Logo" className="h-full w-full object-contain" />
+                            <img src={logoUrl} alt="Valorizaciones Logo" className="h-full w-full object-contain" />
                         </div>
                         <span className="text-2xl font-bold tracking-tight text-white">Valorizaciones</span>
                     </div>
