@@ -116,10 +116,12 @@ const verifyPermission = (permission) => {
         const user = req.user;
         if (!user)
             return res.status(401).json({ error: 'No autenticado' });
-        const roleName = (user.role || '').trim().toLowerCase();
+        // Handles both local and SSO token payloads
+        const roleName = (user.role || user.role_name || '').trim().toLowerCase();
         if (roleName === 'administrador')
             return next();
-        if (user.perms && user.perms.includes(permission))
+        const perms = user.perms || user.permissions || [];
+        if (perms.includes(permission))
             return next();
         await logAudit(req, 'ACCESO_DENEGADO', `Endpoint: ${req.method} ${req.path}`, permission, {
             ip: req.ip,
