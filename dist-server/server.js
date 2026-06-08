@@ -95,7 +95,7 @@ const verifyToken = (req, res, next) => {
         res.status(403).json({ error: 'Token inválido' });
     }
 };
-app.get('/api/applications', verifyToken, async (req, res) => {
+app.get('/api/applications', async (req, res) => {
     try {
         const db = await getDb();
         const activeOnly = req.query.activeOnly === 'true';
