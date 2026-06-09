@@ -158,7 +158,7 @@ export function MainLayout() {
                 </header>
 
                 {/* Content Viewport */}
-                <main className={SIATC_THEME.LAYOUT.VIEWPORT}>
+                <main className={cn(SIATC_THEME.LAYOUT.VIEWPORT, "px-4 lg:px-[calc(2rem*var(--padding-scale))]")}>
                     <div className="flex-1 w-full max-w-[1600px] mx-auto flex flex-col min-h-0">
                         <Outlet />
                     </div>

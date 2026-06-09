@@ -54,7 +54,7 @@ export const SIATC_THEME = {
 
     // 2. FUNDAMENTOS DE LAYOUT
     LAYOUT: {
-        PAGE_WRAPPER: "flex flex-col h-full bg-cb-bg min-h-0 animate-in fade-in duration-500 pt-[calc(1rem*var(--padding-scale))] px-[calc(1rem*var(--padding-scale))] pb-[calc(0.375rem*var(--padding-scale))] space-y-4 rounded-cb-card border-[var(--layout-border-width)] border-cb-border overflow-hidden shadow-[var(--layout-shadow)]",
+        PAGE_WRAPPER: "flex flex-col h-full bg-cb-bg min-h-0 animate-in fade-in duration-500 pt-[calc(1rem*var(--padding-scale))] px-0 lg:px-[calc(1rem*var(--padding-scale))] pb-[calc(0.375rem*var(--padding-scale))] space-y-4 lg:rounded-cb-card border-none lg:border-[var(--layout-border-width)] border-cb-border overflow-hidden lg:shadow-[var(--layout-shadow)]",
         PAGE_CONTAINER: "w-full flex-1 flex flex-col min-h-0 gap-6 max-w-7xl mx-auto",
         HEADER_WRAPPER: "flex flex-col md:flex-row md:items-center justify-between gap-4 shrink-0 px-1",
         CONTENT_CONTAINER: "flex-1 min-h-0 flex flex-col bg-card border border-cb-border rounded-cb-card shadow-cb-level-1 overflow-hidden",
