@@ -133,8 +133,26 @@ export const AppConfigProvider: React.FC<{ children: React.ReactNode }> = ({ chi
                                     ${theme.shadows.level1 ? `--shadow-level-1: ${theme.shadows.level1} !important;` : ''}
                                     ${theme.shadows.level2 ? `--shadow-level-2: ${theme.shadows.level2} !important;` : ''}
                                     ${theme.shadows.level3 ? `--shadow-level-3: ${theme.shadows.level3} !important;` : ''}
-                                }`;
+                                }\n`;
                             }
+
+                            // Responsive Rules (Tenant Branding v3.0)
+                            cssRules += `@media (min-width: 768px) {
+                                :root {
+                                    --padding-scale: 1.0 !important;
+                                }
+                            }\n`;
+
+                            cssRules += `@media (max-width: 767px) {
+                                :root {
+                                    ${theme.responsive?.mobileRadiusCard ? `--radius-card: ${theme.responsive.mobileRadiusCard} !important;` : ''}
+                                    ${theme.responsive?.mobileRadiusButton ? `--radius-button: ${theme.responsive.mobileRadiusButton} !important; --radius-input: ${theme.responsive.mobileRadiusButton} !important;` : ''}
+                                    --padding-scale: ${theme.responsive?.mobilePaddingScale || '1.0'} !important;
+                                }
+                                html {
+                                    ${theme.responsive?.mobileFontScale ? `font-size: calc(${theme.typography?.baseFontSize || '16px'} * ${theme.responsive.mobileFontScale}) !important;` : ''}
+                                }
+                            }\n`;
 
                             styleTag.innerHTML = cssRules;
 
