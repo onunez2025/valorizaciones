@@ -72,7 +72,7 @@ export const SIATC_THEME = {
     // 3. TIPOGRAFÍA Y TEXTO
     TYPOGRAPHY: {
         PAGE_TITLE: CRYPTO_BLUE_TOKENS.TYPOGRAPHY.H1,
-        PAGE_SUBTITLE: CRYPTO_BLUE_TOKENS.TYPOGRAPHY.BODY_SMALL,
+        PAGE_SUBTITLE: `${CRYPTO_BLUE_TOKENS.TYPOGRAPHY.BODY_SMALL} hidden sm:block`,
         SECTION_TITLE: "text-base font-bold text-cb-text-primary tracking-tight",
         TABLE_HEADER: "font-sans font-semibold text-[11px] leading-[1.5] uppercase tracking-[0.06em] text-cb-slate",
         BADGE_TEXT: "text-[10px] font-bold tracking-widest uppercase",

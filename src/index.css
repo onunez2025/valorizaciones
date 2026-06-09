@@ -329,3 +329,11 @@
     --layout-shadow: none !important;
   }
 }
+
+/* Responsividad: Ocultar breadcrumbs en móviles (< 640px) */
+@media (max-width: 639px) {
+  div:has(+ h1) {
+    display: none !important;
+  }
+}
+
