@@ -42,14 +42,13 @@ export function AppSwitcher({ currentAppId }: AppSwitcherProps) {
 
     useEffect(() => {
         function handleClickOutside(event: MouseEvent) {
-            if (isMobile) return;
             if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
                 setIsOpen(false);
             }
         }
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, [isMobile]);
+    }, []);
 
     // Filter apps:
     // 1. Omit the current app (e.g. CONSOLE or FLOW)
