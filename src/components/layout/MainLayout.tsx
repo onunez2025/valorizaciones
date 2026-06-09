@@ -73,26 +73,27 @@ export function MainLayout() {
             </aside>
 
             {/* Main Content Viewport */}
-            <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative pr-4 pb-4">
+            <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative lg:pr-4 lg:pb-4 pr-0 pb-0">
                 {/* SIATC PREMIUM HEADER — h-20 estandarizado */}
-                <header className="h-20 shrink-0 px-8 flex items-center justify-between sticky top-0 z-40">
+                <header className="h-16 lg:h-20 shrink-0 px-4 lg:px-8 flex items-center justify-between sticky top-0 z-40">
                     <div className="flex items-center gap-6">
                         <button
                             onClick={() => setSidebarOpen(true)}
-                            className="p-3 -ml-3 text-muted-foreground hover:bg-white dark:hover:bg-white/5 rounded-2xl lg:hidden shadow-sm transition-all border border-transparent hover:border-border/50"
+                            className="p-3 -ml-3 text-muted-foreground hover:bg-white dark:hover:bg-white/5 rounded-2xl lg:hidden shadow-sm transition-all border border-transparent hover:border-border/50 cursor-pointer"
                         >
                             <Menu className="w-6 h-6" />
                         </button>
 
-                        <div className="flex items-center gap-4 group cursor-default">
-                            <div className="w-12 h-12 flex items-center justify-center group-hover:scale-110 transition-all duration-500">
-                                <img src={logoUrl} alt="Valorizaciones" className="w-10 h-10 object-contain" />
+                        <div className="flex items-center gap-3 lg:gap-4 group cursor-default">
+                            <div className="w-10 h-10 lg:w-12 lg:h-12 rounded-[1.25rem] bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-white/10 shadow-lg shadow-slate-200/40 dark:shadow-none flex items-center justify-center group-hover:scale-110 transition-all duration-500">
+                                <img src={logoUrl} alt="Valorizaciones" className="w-6 h-6 lg:w-7 lg:h-7 object-contain" />
                             </div>
                             <div className="flex flex-col">
-                                <span className="font-black text-sm tracking-tight text-foreground uppercase pt-1">Valorizaciones</span>
+                                <span className="font-black text-xs lg:text-sm tracking-tight text-foreground uppercase pt-1">Valorizaciones</span>
                                 <div className="flex items-center gap-2">
                                     <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                                    <span className="text-[10px] font-black text-muted-foreground tracking-widest uppercase opacity-60">Liquidaciones & Canales</span>
+                                    <span className="text-[9px] lg:text-[10px] font-black text-muted-foreground tracking-widest uppercase opacity-60 hidden sm:inline">Liquidaciones & Canales</span>
+                                    <span className="text-[9px] lg:text-[10px] font-black text-muted-foreground tracking-widest uppercase opacity-60 inline sm:hidden">VAL</span>
                                 </div>
                             </div>
                         </div>
@@ -100,16 +101,16 @@ export function MainLayout() {
                     
                     {/* Header Actions: Glassmorphism Group — SIATC Platinum Standard */}
                     <div className={cn(
-                        "flex items-center p-1.5 gap-2 rounded-[2rem] border",
+                        "flex items-center p-1 lg:p-1.5 gap-1 lg:gap-2 rounded-[2rem] border",
                         SIATC_THEME.EFFECTS.GLASS_PANEL
                     )}>
                         {/* Theme Toggle */}
                         <button 
                             onClick={toggleTheme}
-                            className="w-11 h-11 flex items-center justify-center text-slate-400 hover:text-primary hover:bg-primary/10 rounded-full transition-all duration-300"
+                            className="w-9 h-9 lg:w-11 lg:h-11 flex items-center justify-center text-slate-400 hover:text-primary hover:bg-primary/10 rounded-full transition-all duration-300 cursor-pointer"
                             title="Alternar Tema"
                         >
-                            {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+                            {theme === 'dark' ? <Sun className="w-4.5 h-4.5 lg:w-5 lg:h-5" /> : <Moon className="w-4.5 h-4.5 lg:w-5 lg:h-5" />}
                         </button>
 
                         {/* Config (Gear Icon) */}

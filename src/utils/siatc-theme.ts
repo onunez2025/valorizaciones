@@ -54,7 +54,7 @@ export const SIATC_THEME = {
 
     // 2. FUNDAMENTOS DE LAYOUT
     LAYOUT: {
-        PAGE_WRAPPER: "flex flex-col h-full bg-cb-bg min-h-0 animate-in fade-in duration-500 pt-4 px-4 pb-1.5 space-y-4 rounded-[2rem] border border-cb-border overflow-hidden shadow-cb-level-1",
+        PAGE_WRAPPER: "flex flex-col h-full bg-cb-bg min-h-0 animate-in fade-in duration-500 pt-[calc(1rem*var(--padding-scale))] px-[calc(1rem*var(--padding-scale))] pb-[calc(0.375rem*var(--padding-scale))] space-y-4 rounded-cb-card border-[var(--layout-border-width)] border-cb-border overflow-hidden shadow-[var(--layout-shadow)]",
         PAGE_CONTAINER: "w-full flex-1 flex flex-col min-h-0 gap-6 max-w-7xl mx-auto",
         HEADER_WRAPPER: "flex flex-col md:flex-row md:items-center justify-between gap-4 shrink-0 px-1",
         CONTENT_CONTAINER: "flex-1 min-h-0 flex flex-col bg-card border border-cb-border rounded-cb-card shadow-cb-level-1 overflow-hidden",
@@ -66,7 +66,7 @@ export const SIATC_THEME = {
         SIDEBAR_ITEM_INACTIVE: "group/item flex items-center justify-between px-4 py-3 rounded-2xl text-sm font-bold transition-all duration-300 relative overflow-hidden text-muted-foreground hover:bg-muted hover:text-foreground hover:translate-x-1",
         METRIC_RIBBON: "bg-card border border-cb-border rounded-cb-card px-6 py-2 shadow-cb-level-1 flex items-center justify-between shrink-0 h-[55px]",
         SEARCH_BAR_WRAPPER: "p-4 border-b border-cb-border bg-cb-bg/30 flex items-center justify-between shrink-0",
-        VIEWPORT: "flex-1 overflow-y-auto px-8 pb-2.5 flex flex-col custom-scrollbar relative",
+        VIEWPORT: "flex-1 overflow-y-auto px-[calc(2rem*var(--padding-scale))] pb-[calc(0.625rem*var(--padding-scale))] flex flex-col custom-scrollbar relative",
     },
 
     // 3. TIPOGRAFÍA Y TEXTO
