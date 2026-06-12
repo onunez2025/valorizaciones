@@ -167,7 +167,7 @@ app.post('/api/auth/login', async (req: Request, res: Response) => {
         
         const token = jwt.sign({ id: user.Id, username: user.Username, role: user.RoleName, perms }, JWT_SECRET, { expiresIn: '12h' });
 
-        res.json({ token, user: { id: user.Id, username: user.Username, full_name: user.FullName, email: user.Email, role_name: user.RoleName, management_id: user.ManagementId, management_name: user.ManagementName, avatar_url: user.AvatarUrl, permissions: perms, requires_password_change: user.RequiresPasswordChange === 1 } });
+        res.json({ token, user: { id: user.Id, username: user.Username, full_name: user.FullName, email: user.Email, role_name: user.RoleName, management_id: user.ManagementId, management_name: user.ManagementName, avatar_url: user.AvatarUrl, permissions: perms, apps: user.Apps, requires_password_change: user.RequiresPasswordChange === 1 } });
     } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
@@ -185,7 +185,7 @@ app.get('/api/auth/me', verifyToken, async (req: Request, res: Response) => {
         if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
         
         const perms = (await db.request().input('rid', user.RoleId).input('app', APP_IDENTIFIER).query("SELECT Permission FROM EBM.RolePermissions WHERE RoleId = @rid AND (Permission LIKE @app + '.%' OR Permission LIKE 'ebm.%')")).recordset.map(p => p.Permission);
-        res.json({ user: { id: user.Id, username: user.Username, full_name: user.FullName, email: user.Email, role_name: user.RoleName, management_id: user.ManagementId, management_name: user.ManagementName, avatar_url: user.AvatarUrl, permissions: perms } });
+        res.json({ user: { id: user.Id, username: user.Username, full_name: user.FullName, email: user.Email, role_name: user.RoleName, management_id: user.ManagementId, management_name: user.ManagementName, avatar_url: user.AvatarUrl, permissions: perms, apps: user.Apps } });
     } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
