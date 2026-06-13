@@ -273,7 +273,16 @@ app.get('/api/auth/me', verifyToken, async (req: Request, res: Response) => {
 // --- CAS ---
 app.get('/api/cas', verifyToken, async (req: Request, res: Response) => {
     try {
+        const currentUser = (req as any).user as JwtUserPayload;
         const db = await getDb();
+
+        if (currentUser.casId !== null) {
+            const result = await db.request()
+                .input('casId', currentUser.casId)
+                .query("SELECT * FROM [dbo].[GAC_APP_TB_CAS] WHERE ID_CAS = @casId");
+            return res.json(result.recordset);
+        }
+
         const result = await db.request().query("SELECT * FROM [dbo].[GAC_APP_TB_CAS] ORDER BY Nombre_CAS");
         res.json(result.recordset);
     } catch (err: any) { res.status(500).json({ error: err.message }); }
@@ -288,7 +297,7 @@ app.get('/api/config', verifyToken, async (req: Request, res: Response) => {
     } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
-app.post('/api/config', verifyToken, async (req: Request, res: Response) => {
+app.post('/api/config', verifyToken, verifyPermission('val.config.admin'), async (req: Request, res: Response) => {
     try {
         const { clave, valor, descripcion } = req.body;
         const db = await getDb();
