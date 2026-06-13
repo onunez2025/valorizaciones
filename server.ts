@@ -165,7 +165,7 @@ const verifyToken = (req: Request, res: Response, next: NextFunction) => {
     } catch (err) { res.status(403).json({ error: 'Token inválido' }); }
 };
 
-app.get('/api/applications', async (req: Request, res: Response) => {
+app.get('/api/applications', verifyToken, async (req: Request, res: Response) => {
     try {
         const db = await getDb();
         const activeOnly = req.query.activeOnly === 'true';
@@ -708,8 +708,8 @@ app.put('/api/penalties/:id', verifyToken, async (req: Request, res: Response) =
 
         if (currentUser.casId !== null) {
             const ownerCheck = await db.request()
-                .input('id', id)
-                .input('casId', currentUser.casId)
+                .input('id', sql.VarChar(8), id)
+                .input('casId', sql.VarChar(50), currentUser.casId)
                 .query(`
                     SELECT 1
                     FROM [dbo].[GAC_APP_TB_TICKETS_DESCUENTOS] D
@@ -722,18 +722,18 @@ app.put('/api/penalties/:id', verifyToken, async (req: Request, res: Response) =
         }
 
         // Validation: Check if already in a closure
-        const check = await db.request().input('id', id).query(`
-            SELECT 1 FROM [dbo].[GAC_APP_TB_VALORIZACIONES_DETALLE] 
+        const check = await db.request().input('id', sql.VarChar(8), id).query(`
+            SELECT 1 FROM [dbo].[GAC_APP_TB_VALORIZACIONES_DETALLE]
             WHERE ID_Referencia = @id
         `);
         if (check.recordset.length > 0) {
             return res.status(403).json({ error: "No se puede editar una penalidad que ya ha sido cerrada en una valorización." });
         }
 
-        const existing = await db.request().input('id', id).query("SELECT * FROM [dbo].[GAC_APP_TB_TICKETS_DESCUENTOS] WHERE ID_Descuentos_CAS = @id");
-        
+        const existing = await db.request().input('id', sql.VarChar(8), id).query("SELECT * FROM [dbo].[GAC_APP_TB_TICKETS_DESCUENTOS] WHERE ID_Descuentos_CAS = @id");
+
         await db.request()
-            .input('id', id)
+            .input('id', sql.VarChar(8), id)
             .input('fecha', fecha)
             .input('motivo', motivo)
             .input('desc', descripcion)

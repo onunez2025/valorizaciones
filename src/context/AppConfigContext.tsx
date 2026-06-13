@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { StorageService } from '../services/storageService';
 
 const APP_CODE = import.meta.env.VITE_APP_CODE || 'VAL';
 const API_BASE_URL = '/api';
@@ -18,7 +19,9 @@ export const AppConfigProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     const [config, setConfig] = useState<AppConfig | null>(null);
 
     useEffect(() => {
-        fetch(`${API_BASE_URL}/applications?activeOnly=true`)
+        const token = StorageService.getToken();
+        const headers: HeadersInit = token ? { Authorization: `Bearer ${token}` } : {};
+        fetch(`${API_BASE_URL}/applications?activeOnly=true`, { headers })
             .then(r => r.ok ? r.json() : [])
             .then((apps: any[]) => {
                 const mine = apps.find((a: any) =>
