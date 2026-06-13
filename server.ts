@@ -333,7 +333,7 @@ app.post('/api/config-distritos', verifyToken, async (req: Request, res: Respons
 app.delete('/api/config-distritos/:id', verifyToken, async (req: Request, res: Response) => {
     try {
         const idNum = parseInt(req.params.id as string, 10);
-        if (isNaN(idNum)) return res.status(400).json({ error: 'ID inválido' });
+        if (isNaN(idNum) || idNum <= 0) return res.status(400).json({ error: 'ID inválido' });
         const user = (req as any).user;
         const db = await getDb();
         const existing = await db.request()
@@ -410,7 +410,8 @@ app.delete('/api/config-canal-institucional/:id', verifyToken, async (req: Reque
     try {
         const { id } = req.params;
         const db = await getDb();
-        const idNum = parseInt(id as string);
+        const idNum = parseInt(id, 10);
+        if (isNaN(idNum) || idNum <= 0) return res.status(400).json({ error: 'ID inválido' });
         console.log(`[CONFIG] Deleting rule ID: ${idNum}`);
         await db.request().input('id', sql.Int, idNum).query("DELETE FROM [dbo].[GAC_APP_TB_CONFIG_CANAL_INSTITUCIONAL] WHERE Id = @id");
         res.json({ success: true });
@@ -2209,6 +2210,10 @@ app.use((req: Request, res: Response) => {
 if (!process.env.JWT_SECRET) {
     console.error('CRITICAL: JWT_SECRET environment variable is missing. Server will not start.');
     process.exit(1);
+}
+
+if (process.env.NODE_ENV === 'production' && !(process.env.ALLOWED_ORIGINS || '').trim()) {
+    console.warn('⚠️  WARNING: ALLOWED_ORIGINS is not set. CORS will block all cross-origin requests in production.');
 }
 
 app.listen(port, () => {
