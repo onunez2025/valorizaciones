@@ -4,6 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "prepare": "bash install-hooks.sh || true",
     "dev": "vite",
     "build": "vite build && tsc -p tsconfig.server.json",
     "start": "node dist-server/server.js",
