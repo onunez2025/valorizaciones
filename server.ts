@@ -2,9 +2,12 @@ import express from 'express';
 import { fileURLToPath } from 'url';
 import type { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
 import sql from 'mssql';
 import jwt from 'jsonwebtoken';
+import { z } from 'zod';
 import bcrypt from 'bcrypt';
 import path from 'path';
 import crypto from 'crypto';
@@ -18,7 +21,7 @@ const port = process.env.PORT || 3000;
 const APP_IDENTIFIER = 'VAL';
 const C4C_BASE_URL = process.env.C4C_BASE_URL;
 const C4C_AUTH = Buffer.from(`${process.env.C4C_USER}:${process.env.C4C_PASSWORD}`).toString('base64');
-const JWT_SECRET = process.env.JWT_SECRET || 'tablero_control_secret_2026';
+const JWT_SECRET = process.env.JWT_SECRET || '';
 
 // MS Graph API Config
 const MS_GRAPH_TENANT_ID = process.env.MS_GRAPH_TENANT_ID;
@@ -62,9 +65,54 @@ async function logAudit(req: Request, action: string, entity: string, entityId: 
   }
 }
 
-app.use(cors());
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ limit: '10mb', extended: true }));
+app.set('trust proxy', 1);
+
+app.use(helmet({
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc: ["'self'"],
+            scriptSrc: ["'self'"],
+            styleSrc: ["'self'", "'unsafe-inline'"],
+            imgSrc: ["'self'", "data:", "https:"],
+            connectSrc: ["'self'"],
+            fontSrc: ["'self'", "data:"],
+            objectSrc: ["'none'"],
+            frameAncestors: ["'none'"],
+            formAction: ["'self'"],
+            baseUri: ["'self'"],
+        }
+    }
+}));
+
+const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 1000,
+    message: { error: 'Too many requests from this IP, please try again later.' }
+});
+app.use(limiter);
+
+const authLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000,
+    max: 50,
+    message: { error: 'Too many login attempts, please try again after an hour.' }
+});
+app.use('/api/auth/login', authLimiter);
+
+app.use(cors({
+    origin: (origin, callback) => {
+        if (process.env.NODE_ENV !== 'production') return callback(null, true);
+        const allowedOrigins = (process.env.ALLOWED_ORIGINS || '').split(',').map(s => s.trim());
+        if (!origin || allowedOrigins.includes(origin)) {
+            callback(null, true);
+        } else {
+            console.error(`Blocked CORS attempt from: ${origin}`);
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
+    credentials: true
+}));
+app.use(express.json({ limit: '2mb' }));
+app.use(express.urlencoded({ limit: '2mb', extended: true }));
 
 const dbConfig: sql.config = {
     user: process.env.DB_USER,
@@ -73,7 +121,7 @@ const dbConfig: sql.config = {
     server: process.env.DB_SERVER || '',
     port: 1433,
     pool: { max: 30, min: 0, idleTimeoutMillis: 30000 },
-    options: { encrypt: true, trustServerCertificate: true, requestTimeout: 60000 }
+    options: { encrypt: true, trustServerCertificate: false, requestTimeout: 60000 }
 };
 
 let pool: sql.ConnectionPool | null = null;
@@ -141,8 +189,17 @@ const verifyPermission = (permission: string) => {
 };
 
 // --- AUTH ---
+const loginSchema = z.object({
+    username: z.string().min(1, 'Usuario requerido').max(255),
+    password: z.string().min(1, 'Contraseña requerida').max(255),
+});
+
 app.post('/api/auth/login', async (req: Request, res: Response) => {
-    const { username, password } = req.body;
+    const parseResult = loginSchema.safeParse(req.body);
+    if (!parseResult.success) {
+        return res.status(400).json({ error: 'Datos de login inválidos', details: parseResult.error.issues });
+    }
+    const { username, password } = parseResult.data;
     try {
         const db = await getDb();
         const result = await db.request().input('u', username).input('app', APP_IDENTIFIER).query(`
@@ -2131,6 +2188,11 @@ app.use((req: Request, res: Response) => {
         res.sendFile(indexPath);
     }
 });
+
+if (!process.env.JWT_SECRET) {
+    console.error('CRITICAL: JWT_SECRET environment variable is missing. Server will not start.');
+    process.exit(1);
+}
 
 app.listen(port, () => {
     console.log(`Server Valorizaciones running on http://localhost:${port}`);
