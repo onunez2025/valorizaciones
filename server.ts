@@ -145,11 +145,22 @@ async function getDb() {
     return pool;
 }
 
+interface JwtUserPayload {
+    id: string;
+    username: string;
+    role: string;
+    perms: string[];
+    casId: string | null;
+    casRUC: string | null;
+    iat?: number;
+    exp?: number;
+}
+
 const verifyToken = (req: Request, res: Response, next: NextFunction) => {
     const token = req.headers.authorization?.split(' ')[1];
     if (!token) return res.status(401).json({ error: 'Token no encontrado' });
     try {
-        (req as any).user = jwt.verify(token, JWT_SECRET);
+        (req as any).user = jwt.verify(token, JWT_SECRET) as JwtUserPayload;
         next();
     } catch (err) { res.status(403).json({ error: 'Token inválido' }); }
 };
@@ -208,9 +219,13 @@ app.post('/api/auth/login', async (req: Request, res: Response) => {
     try {
         const db = await getDb();
         const result = await db.request().input('u', sql.NVarChar, username).input('app', sql.NVarChar, APP_IDENTIFIER).query(`
-            SELECT u.*, r.Name as RoleName, m.Name as ManagementName FROM EBM.Users u 
-            LEFT JOIN EBM.Roles r ON u.RoleId = r.Id 
+            SELECT u.*, r.Name as RoleName, m.Name as ManagementName,
+                uc.CASId as cas_id, TRIM(c.RUC) as cas_ruc
+            FROM EBM.Users u
+            LEFT JOIN EBM.Roles r ON u.RoleId = r.Id
             LEFT JOIN EBM.Managements m ON u.ManagementId = m.Id
+            LEFT JOIN EBM.UserCAS uc ON u.Id = uc.UserId
+            LEFT JOIN dbo.GAC_APP_TB_CAS c ON uc.CASId = c.ID_CAS
             WHERE (u.Username = @u OR u.Email = @u) AND u.IsActive = 1 AND (u.Apps LIKE '%' + @app + '%' OR u.Apps LIKE '%ADMIN%')
         `);
         const user = result.recordset[0];
@@ -227,7 +242,7 @@ app.post('/api/auth/login', async (req: Request, res: Response) => {
 
         const perms = (await db.request().input('rid', user.RoleId).input('app', sql.NVarChar, APP_IDENTIFIER).query("SELECT Permission FROM EBM.RolePermissions WHERE RoleId = @rid AND (Permission LIKE @app + '.%' OR Permission LIKE 'ebm.%')")).recordset.map(p => p.Permission);
         
-        const token = jwt.sign({ id: user.Id, username: user.Username, role: user.RoleName, perms }, JWT_SECRET, { expiresIn: '12h' });
+        const token = jwt.sign({ id: user.Id, username: user.Username, role: user.RoleName, perms, casId: user.cas_id || null, casRUC: user.cas_ruc || null }, JWT_SECRET, { expiresIn: '12h' });
 
         res.json({ token, user: { id: user.Id, username: user.Username, full_name: user.FullName, email: user.Email, role_name: user.RoleName, management_id: user.ManagementId, management_name: user.ManagementName, avatar_url: user.AvatarUrl, permissions: perms, apps: user.Apps, requires_password_change: user.RequiresPasswordChange === 1 } });
     } catch (err: any) { res.status(500).json({ error: err.message }); }
@@ -238,16 +253,20 @@ app.get('/api/auth/me', verifyToken, async (req: Request, res: Response) => {
         const { id } = (req as any).user;
         const db = await getDb();
         const result = await db.request().input('id', sql.UniqueIdentifier, id).query(`
-            SELECT u.*, r.Name as RoleName, m.Name as ManagementName FROM EBM.Users u
-            LEFT JOIN EBM.Roles r ON u.RoleId = r.Id 
+            SELECT u.*, r.Name as RoleName, m.Name as ManagementName,
+                uc.CASId as cas_id, TRIM(c.RUC) as cas_ruc
+            FROM EBM.Users u
+            LEFT JOIN EBM.Roles r ON u.RoleId = r.Id
             LEFT JOIN EBM.Managements m ON u.ManagementId = m.Id
+            LEFT JOIN EBM.UserCAS uc ON u.Id = uc.UserId
+            LEFT JOIN dbo.GAC_APP_TB_CAS c ON uc.CASId = c.ID_CAS
             WHERE u.Id = @id
         `);
         const user = result.recordset[0];
         if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
         
         const perms = (await db.request().input('rid', user.RoleId).input('app', sql.NVarChar, APP_IDENTIFIER).query("SELECT Permission FROM EBM.RolePermissions WHERE RoleId = @rid AND (Permission LIKE @app + '.%' OR Permission LIKE 'ebm.%')")).recordset.map(p => p.Permission);
-        res.json({ user: { id: user.Id, username: user.Username, full_name: user.FullName, email: user.Email, role_name: user.RoleName, management_id: user.ManagementId, management_name: user.ManagementName, avatar_url: user.AvatarUrl, permissions: perms, apps: user.Apps } });
+        res.json({ user: { id: user.Id, username: user.Username, full_name: user.FullName, email: user.Email, role_name: user.RoleName, management_id: user.ManagementId, management_name: user.ManagementName, avatar_url: user.AvatarUrl, permissions: perms, apps: user.Apps, casId: user.cas_id || null, casRUC: user.cas_ruc || null } });
     } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
@@ -475,7 +494,12 @@ app.get('/api/c4c-creators', verifyToken, async (req: Request, res: Response) =>
 // --- VALORIZACIONES ---
 app.get('/api/valuations/:ruc', verifyToken, async (req: Request, res: Response) => {
     const { ruc } = req.params;
-    const { start, end } = req.query; 
+    const currentUser = (req as any).user as JwtUserPayload;
+    if (currentUser.casId) {
+        if (!currentUser.casRUC) return res.status(403).json({ error: 'Usuario CAS sin empresa asignada' });
+        if (currentUser.casRUC !== String(ruc).trim()) return res.status(403).json({ error: 'Acceso denegado' });
+    }
+    const { start, end } = req.query;
 
     console.log(`[VALUATION] Starting request - RUC: ${ruc}, Range: ${start} to ${end}`);
 
@@ -985,6 +1009,11 @@ app.get('/api/tickets/find/:ticket', verifyToken, async (req: Request, res: Resp
 
 app.get('/api/tickets/search/:ruc', verifyToken, async (req: Request, res: Response) => {
     const { ruc } = req.params;
+    const currentUser = (req as any).user as JwtUserPayload;
+    if (currentUser.casId) {
+        if (!currentUser.casRUC) return res.status(403).json({ error: 'Usuario CAS sin empresa asignada' });
+        if (currentUser.casRUC !== String(ruc).trim()) return res.status(403).json({ error: 'Acceso denegado' });
+    }
     const { q } = req.query;
     try {
         const db = await getDb();
@@ -1275,6 +1304,11 @@ app.post('/api/valuations/send-email', verifyToken, async (req: Request, res: Re
 
 app.get('/api/penalties/:ruc', verifyToken, async (req: Request, res: Response) => {
     const { ruc } = req.params;
+    const currentUser = (req as any).user as JwtUserPayload;
+    if (currentUser.casId) {
+        if (!currentUser.casRUC) return res.status(403).json({ error: 'Usuario CAS sin empresa asignada' });
+        if (currentUser.casRUC !== String(ruc).trim()) return res.status(403).json({ error: 'Acceso denegado' });
+    }
     const { start, end } = req.query;
     try {
         const db = await getDb();
