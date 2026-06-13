@@ -429,7 +429,7 @@ app.delete('/api/config-canal-institucional/:id', verifyToken, async (req: Reque
     try {
         const { id } = req.params;
         const db = await getDb();
-        const idNum = parseInt(id, 10);
+        const idNum = parseInt(String(id), 10);
         if (isNaN(idNum) || idNum <= 0) return res.status(400).json({ error: 'ID inválido' });
         console.log(`[CONFIG] Deleting rule ID: ${idNum}`);
         await db.request().input('id', sql.Int, idNum).query("DELETE FROM [dbo].[GAC_APP_TB_CONFIG_CANAL_INSTITUCIONAL] WHERE Id = @id");
