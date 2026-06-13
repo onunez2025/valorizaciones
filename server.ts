@@ -332,7 +332,7 @@ app.post('/api/config-distritos', verifyToken, async (req: Request, res: Respons
 
 app.delete('/api/config-distritos/:id', verifyToken, async (req: Request, res: Response) => {
     try {
-        const idNum = parseInt(req.params.id, 10);
+        const idNum = parseInt(req.params.id as string, 10);
         if (isNaN(idNum)) return res.status(400).json({ error: 'ID inválido' });
         const user = (req as any).user;
         const db = await getDb();
