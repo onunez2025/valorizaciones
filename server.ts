@@ -671,10 +671,17 @@ app.get('/api/penalty-motives', verifyToken, async (req: Request, res: Response)
 
 app.post('/api/penalties', verifyToken, async (req: Request, res: Response) => {
     const { ticket, fecha, motivo, descripcion, importe, ruc } = req.body;
-    const userId = (req as any).user.username;
+    const currentUser = (req as any).user as JwtUserPayload;
+    const userId = currentUser.username;
     const penaltyId = crypto.randomBytes(4).toString('hex');
     try {
         const db = await getDb();
+
+        if (currentUser.casId !== null) {
+            if (!currentUser.casRUC || String(ruc).trim() !== String(currentUser.casRUC).trim()) {
+                return res.status(403).json({ error: 'No puede crear penalidades para otra empresa.' });
+            }
+        }
         await db.request()
             .input('id', penaltyId)
             .input('ticket', ticket)
@@ -695,9 +702,25 @@ app.post('/api/penalties', verifyToken, async (req: Request, res: Response) => {
 app.put('/api/penalties/:id', verifyToken, async (req: Request, res: Response) => {
     const { id } = req.params;
     const { fecha, motivo, descripcion, importe } = req.body;
+    const currentUser = (req as any).user as JwtUserPayload;
     try {
         const db = await getDb();
-        
+
+        if (currentUser.casId !== null) {
+            const ownerCheck = await db.request()
+                .input('id', id)
+                .input('casId', currentUser.casId)
+                .query(`
+                    SELECT 1
+                    FROM [dbo].[GAC_APP_TB_TICKETS_DESCUENTOS] D
+                    INNER JOIN [dbo].[GAC_PAGOS_CACHE] PC ON PC.Ticket_Original = D.Ticket
+                    WHERE D.ID_Descuentos_CAS = @id AND PC.ID_cas = @casId
+                `);
+            if (ownerCheck.recordset.length === 0) {
+                return res.status(403).json({ error: 'La penalidad no pertenece a su empresa.' });
+            }
+        }
+
         // Validation: Check if already in a closure
         const check = await db.request().input('id', id).query(`
             SELECT 1 FROM [dbo].[GAC_APP_TB_VALORIZACIONES_DETALLE] 
