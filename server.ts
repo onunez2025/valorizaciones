@@ -22,6 +22,10 @@ const APP_IDENTIFIER = 'VAL';
 const C4C_BASE_URL = process.env.C4C_BASE_URL;
 const C4C_AUTH = Buffer.from(`${process.env.C4C_USER}:${process.env.C4C_PASSWORD}`).toString('base64');
 const JWT_SECRET = process.env.JWT_SECRET || '';
+if (process.env.NODE_ENV === 'production' && !JWT_SECRET) {
+    console.error('CRITICAL FATAL ERROR: JWT_SECRET environment variable is not set. Server cannot start securely.');
+    process.exit(1);
+}
 
 // MS Graph API Config
 const MS_GRAPH_TENANT_ID = process.env.MS_GRAPH_TENANT_ID;
@@ -77,6 +81,7 @@ app.use(helmet({
             connectSrc: ["'self'"],
             fontSrc: ["'self'", "data:", "https://fonts.gstatic.com"],
             objectSrc: ["'none'"],
+            upgradeInsecureRequests: [],
             frameAncestors: ["'none'"],
             formAction: ["'self'"],
             baseUri: ["'self'"],
@@ -101,7 +106,7 @@ app.use('/api/auth/login', authLimiter);
 app.use(cors({
     origin: (origin, callback) => {
         if (process.env.NODE_ENV !== 'production') return callback(null, true);
-        const allowedOrigins = (process.env.ALLOWED_ORIGINS || '').split(',').map(s => s.trim());
+        const allowedOrigins = (process.env.ALLOWED_ORIGINS || '').split(',').map(s => s.trim()).filter(Boolean);
         if (!origin || allowedOrigins.includes(origin)) {
             callback(null, true);
         } else {
@@ -202,7 +207,7 @@ app.post('/api/auth/login', async (req: Request, res: Response) => {
     const { username, password } = parseResult.data;
     try {
         const db = await getDb();
-        const result = await db.request().input('u', username).input('app', APP_IDENTIFIER).query(`
+        const result = await db.request().input('u', sql.NVarChar, username).input('app', sql.NVarChar, APP_IDENTIFIER).query(`
             SELECT u.*, r.Name as RoleName, m.Name as ManagementName FROM EBM.Users u 
             LEFT JOIN EBM.Roles r ON u.RoleId = r.Id 
             LEFT JOIN EBM.Managements m ON u.ManagementId = m.Id
@@ -220,7 +225,7 @@ app.post('/api/auth/login', async (req: Request, res: Response) => {
             return res.status(403).json({ error: 'Sin acceso a la aplicación de Valorizaciones' });
         }
 
-        const perms = (await db.request().input('rid', user.RoleId).input('app', APP_IDENTIFIER).query("SELECT Permission FROM EBM.RolePermissions WHERE RoleId = @rid AND (Permission LIKE @app + '.%' OR Permission LIKE 'ebm.%')")).recordset.map(p => p.Permission);
+        const perms = (await db.request().input('rid', sql.Int, user.RoleId).input('app', sql.NVarChar, APP_IDENTIFIER).query("SELECT Permission FROM EBM.RolePermissions WHERE RoleId = @rid AND (Permission LIKE @app + '.%' OR Permission LIKE 'ebm.%')")).recordset.map(p => p.Permission);
         
         const token = jwt.sign({ id: user.Id, username: user.Username, role: user.RoleName, perms }, JWT_SECRET, { expiresIn: '12h' });
 
@@ -232,8 +237,8 @@ app.get('/api/auth/me', verifyToken, async (req: Request, res: Response) => {
     try {
         const { id } = (req as any).user;
         const db = await getDb();
-        const result = await db.request().input('id', id).query(`
-            SELECT u.*, r.Name as RoleName, m.Name as ManagementName FROM EBM.Users u 
+        const result = await db.request().input('id', sql.UniqueIdentifier, id).query(`
+            SELECT u.*, r.Name as RoleName, m.Name as ManagementName FROM EBM.Users u
             LEFT JOIN EBM.Roles r ON u.RoleId = r.Id 
             LEFT JOIN EBM.Managements m ON u.ManagementId = m.Id
             WHERE u.Id = @id
@@ -241,7 +246,7 @@ app.get('/api/auth/me', verifyToken, async (req: Request, res: Response) => {
         const user = result.recordset[0];
         if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
         
-        const perms = (await db.request().input('rid', user.RoleId).input('app', APP_IDENTIFIER).query("SELECT Permission FROM EBM.RolePermissions WHERE RoleId = @rid AND (Permission LIKE @app + '.%' OR Permission LIKE 'ebm.%')")).recordset.map(p => p.Permission);
+        const perms = (await db.request().input('rid', sql.Int, user.RoleId).input('app', sql.NVarChar, APP_IDENTIFIER).query("SELECT Permission FROM EBM.RolePermissions WHERE RoleId = @rid AND (Permission LIKE @app + '.%' OR Permission LIKE 'ebm.%')")).recordset.map(p => p.Permission);
         res.json({ user: { id: user.Id, username: user.Username, full_name: user.FullName, email: user.Email, role_name: user.RoleName, management_id: user.ManagementId, management_name: user.ManagementName, avatar_url: user.AvatarUrl, permissions: perms, apps: user.Apps } });
     } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
@@ -327,9 +332,21 @@ app.post('/api/config-distritos', verifyToken, async (req: Request, res: Respons
 
 app.delete('/api/config-distritos/:id', verifyToken, async (req: Request, res: Response) => {
     try {
-        const { id } = req.params;
+        const idNum = parseInt(req.params.id, 10);
+        if (isNaN(idNum)) return res.status(400).json({ error: 'ID inválido' });
+        const user = (req as any).user;
         const db = await getDb();
-        await db.request().input('id', id).query("DELETE FROM [dbo].[GAC_APP_TB_CONFIG_VALORIZACION_DISTRITO] WHERE Id = @id");
+        const existing = await db.request()
+            .input('id', sql.Int, idNum)
+            .query("SELECT Creado_Por FROM [dbo].[GAC_APP_TB_CONFIG_VALORIZACION_DISTRITO] WHERE Id = @id");
+        if (!existing.recordset[0]) return res.status(404).json({ error: 'Registro no encontrado' });
+        const isAdmin = (user.role || '').toLowerCase() === 'administrador';
+        if (!isAdmin && existing.recordset[0].Creado_Por !== user.username) {
+            return res.status(403).json({ error: 'Sin permiso para eliminar este registro' });
+        }
+        await db.request()
+            .input('id', sql.Int, idNum)
+            .query("DELETE FROM [dbo].[GAC_APP_TB_CONFIG_VALORIZACION_DISTRITO] WHERE Id = @id");
         res.json({ success: true });
     } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
