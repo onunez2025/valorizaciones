@@ -225,7 +225,7 @@ app.post('/api/auth/login', async (req: Request, res: Response) => {
             return res.status(403).json({ error: 'Sin acceso a la aplicación de Valorizaciones' });
         }
 
-        const perms = (await db.request().input('rid', sql.Int, Number(user.RoleId)).input('app', sql.NVarChar, APP_IDENTIFIER).query("SELECT Permission FROM EBM.RolePermissions WHERE RoleId = @rid AND (Permission LIKE @app + '.%' OR Permission LIKE 'ebm.%')")).recordset.map(p => p.Permission);
+        const perms = (await db.request().input('rid', user.RoleId).input('app', sql.NVarChar, APP_IDENTIFIER).query("SELECT Permission FROM EBM.RolePermissions WHERE RoleId = @rid AND (Permission LIKE @app + '.%' OR Permission LIKE 'ebm.%')")).recordset.map(p => p.Permission);
         
         const token = jwt.sign({ id: user.Id, username: user.Username, role: user.RoleName, perms }, JWT_SECRET, { expiresIn: '12h' });
 
@@ -246,7 +246,7 @@ app.get('/api/auth/me', verifyToken, async (req: Request, res: Response) => {
         const user = result.recordset[0];
         if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
         
-        const perms = (await db.request().input('rid', sql.Int, Number(user.RoleId)).input('app', sql.NVarChar, APP_IDENTIFIER).query("SELECT Permission FROM EBM.RolePermissions WHERE RoleId = @rid AND (Permission LIKE @app + '.%' OR Permission LIKE 'ebm.%')")).recordset.map(p => p.Permission);
+        const perms = (await db.request().input('rid', user.RoleId).input('app', sql.NVarChar, APP_IDENTIFIER).query("SELECT Permission FROM EBM.RolePermissions WHERE RoleId = @rid AND (Permission LIKE @app + '.%' OR Permission LIKE 'ebm.%')")).recordset.map(p => p.Permission);
         res.json({ user: { id: user.Id, username: user.Username, full_name: user.FullName, email: user.Email, role_name: user.RoleName, management_id: user.ManagementId, management_name: user.ManagementName, avatar_url: user.AvatarUrl, permissions: perms, apps: user.Apps } });
     } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
