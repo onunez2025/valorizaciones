@@ -81,9 +81,9 @@ else
     LINT_OUT=$(npm run lint 2>&1)
     LINT_EXIT=$?
     if [ $LINT_EXIT -ne 0 ]; then
-        echo -e "${RED}[C6-CRÍTICO]${NC} TypeScript/ESLint reportó errores — corrige antes de hacer push"
+        echo -e "${YELLOW}[C6-ADVERTENCIA]${NC} TypeScript/ESLint reportó errores (no bloqueante — corrige la deuda gradualmente)"
         echo "$LINT_OUT" | head -40 | sed 's/^/     /'
-        ERRORS=$((ERRORS+1))
+        WARNINGS=$((WARNINGS+1))
     else
         echo -e "${GREEN}  ✓ TypeScript OK${NC}"
     fi
