@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react';
 import { ApiClient } from '../services/apiClient';
-import { 
-    Package, Search, Filter, Plus, Edit2, 
-    Trash2, ExternalLink, Box, Tag, Activity,
-    ChevronRight, CheckCircle2, AlertCircle
+import {
+    Package, Search, Filter, Plus, Edit2,
+    Box, Activity
 } from 'lucide-react';
 import { Modal } from '../components/common/Modal';
 import { useDialog } from '../context/DialogContext';
@@ -20,7 +19,7 @@ export default function MaterialsPage() {
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [editingMaterial, setEditingMaterial] = useState<Material | null>(null);
     const [isManualCategory, setIsManualCategory] = useState(false);
-    const { alert, confirm } = useDialog();
+    const { alert } = useDialog();
 
     useEffect(() => {
         fetchMaterials();
@@ -31,8 +30,8 @@ export default function MaterialsPage() {
         try {
             const data = await ApiClient.request('/materials');
             setMaterials(data);
-        } catch (error: any) {
-            if (error.message === 'AUTH_EXPIRED') return;
+        } catch (error: unknown) {
+            if (error instanceof Error && error.message === 'AUTH_EXPIRED') return;
             console.error("Error fetching materials:", error);
             alert({ message: "No se pudo cargar el maestro de materiales." });
         } finally {
@@ -67,8 +66,8 @@ export default function MaterialsPage() {
             alert({ title: "¡Éxito!", message: "Material actualizado correctamente.", type: 'success' });
             setIsEditModalOpen(false);
             fetchMaterials();
-        } catch (error: any) {
-            if (error.message === 'AUTH_EXPIRED') return;
+        } catch (error: unknown) {
+            if (error instanceof Error && error.message === 'AUTH_EXPIRED') return;
             alert({ message: "No se pudo actualizar el material." });
         }
     };

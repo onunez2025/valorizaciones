@@ -10,7 +10,7 @@ export class PreferencesService {
     }
   }
 
-  static async savePreference(key: string, value: any) {
+  static async savePreference(key: string, value: unknown) {
     try {
       return await ApiClient.request('/config/preferences', {
         method: 'POST',

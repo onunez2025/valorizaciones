@@ -50,8 +50,8 @@ export default function TarifarioModal({ isOpen, onClose, onSuccess, initialData
             alert({ title: "¡Éxito!", message: "La tarifa ha sido creada y aplicada.", type: 'success' });
             onSuccess();
             onClose();
-        } catch (e: any) {
-            alert({ title: "Error", message: e.message || "No se pudo crear la tarifa.", type: 'error' });
+        } catch (e: unknown) {
+            alert({ title: "Error", message: e instanceof Error ? e.message : "No se pudo crear la tarifa.", type: 'error' });
         } finally {
             setLoading(false);
         }

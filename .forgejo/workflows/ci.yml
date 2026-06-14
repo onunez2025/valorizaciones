@@ -24,9 +24,8 @@ jobs:
       - name: Instalar dependencias
         run: npm ci
 
-      - name: C6 — TypeScript / ESLint (advertencia)
+      - name: C6 — TypeScript / ESLint
         run: npm run lint
-        continue-on-error: true
 
       - name: Build (verifica compilación)
         run: npm run build

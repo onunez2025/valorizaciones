@@ -23,18 +23,21 @@ interface AuditLog {
     created_at: string;
 }
 
-const normalizeLogs = (data: any[]): AuditLog[] => {
+const normalizeLogs = (data: unknown[]): AuditLog[] => {
     if (!Array.isArray(data)) return [];
-    return data.map((item, index) => ({
-        id: item.id ?? item.Id ?? index,
-        created_at: item.created_at ?? item.Fecha ?? item.fecha ?? new Date().toISOString(),
-        user_id: item.user_id ?? item.UsuarioID ?? item.usuario_id ?? '',
-        user_name: item.user_name ?? item.UsuarioNombre ?? item.usuario_nombre ?? item.user_id ?? item.UsuarioID ?? 'Sistema',
-        action: item.action ?? item.Accion ?? item.accion ?? 'Operación',
-        entity: item.entity ?? item.Entidad ?? item.entidad ?? 'General',
-        entity_id: item.entity_id ?? item.EntidadID ?? item.entidad_id ?? '',
-        details: item.details ?? item.Detalle ?? item.detalle ?? ''
-    }));
+    return data.map((raw, index) => {
+        const item = raw as Record<string, unknown>;
+        return {
+            id: (item.id ?? item.Id ?? index) as number,
+            created_at: (item.created_at ?? item.Fecha ?? item.fecha ?? new Date().toISOString()) as string,
+            user_id: (item.user_id ?? item.UsuarioID ?? item.usuario_id ?? '') as string,
+            user_name: (item.user_name ?? item.UsuarioNombre ?? item.usuario_nombre ?? item.user_id ?? item.UsuarioID ?? 'Sistema') as string,
+            action: (item.action ?? item.Accion ?? item.accion ?? 'Operación') as string,
+            entity: (item.entity ?? item.Entidad ?? item.entidad ?? 'General') as string,
+            entity_id: (item.entity_id ?? item.EntidadID ?? item.entidad_id ?? '') as string,
+            details: (item.details ?? item.Detalle ?? item.detalle ?? '') as string
+        };
+    });
 };
 
 export default function AuditLogPage() {

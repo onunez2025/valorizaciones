@@ -10,7 +10,7 @@ export function useTableResizer(prefKey: string, initialWidths: ColumnWidths) {
   const widthsRef = useRef<ColumnWidths>(initialWidths);
   const [isResizing, setIsResizing] = useState(false);
   
-  const saveTimeoutRef = useRef<any>(null);
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     PreferencesService.getPreferences().then(prefs => {

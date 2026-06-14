@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { ApiClient } from '../../services/apiClient';
 import { Modal } from '../common/Modal';
-import { Save, Package, AlertCircle, ChevronDown, Check } from 'lucide-react';
+import { Save, Package, ChevronDown, Check } from 'lucide-react';
 import { useDialog } from '../../context/DialogContext';
 import { cn } from '../../utils/cn';
 import { SIATC_THEME } from '../../utils/siatc-theme';
@@ -56,8 +56,8 @@ export default function MaterialRegisterModal({ isOpen, onClose, onSuccess, init
             alert({ title: "¡Registrado!", message: "El producto ha sido añadido al maestro de materiales.", type: 'success' });
             onSuccess();
             onClose();
-        } catch (e: any) {
-            alert({ title: "Error", message: e.message || "No se pudo registrar el material.", type: 'error' });
+        } catch (e: unknown) {
+            alert({ title: "Error", message: e instanceof Error ? e.message : "No se pudo registrar el material.", type: 'error' });
         } finally {
             setLoading(false);
         }

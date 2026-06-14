@@ -11,8 +11,17 @@ interface AppConfig {
     url: string;
 }
 
+interface AppApiResponse {
+    code: string;
+    label: string;
+    logo_url?: string;
+    url: string;
+    theme_config?: Record<string, unknown>;
+}
+
 const AppConfigContext = createContext<AppConfig | null>(null);
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useAppConfig = () => useContext(AppConfigContext);
 
 export const AppConfigProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -23,8 +32,8 @@ export const AppConfigProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         const headers: HeadersInit = token ? { Authorization: `Bearer ${token}` } : {};
         fetch(`${API_BASE_URL}/applications?activeOnly=true`, { headers })
             .then(r => r.ok ? r.json() : [])
-            .then((apps: any[]) => {
-                const mine = apps.find((a: any) =>
+            .then((apps: AppApiResponse[]) => {
+                const mine = apps.find((a: AppApiResponse) =>
                     a.code?.toUpperCase() === APP_CODE.toUpperCase()
                 );
                 if (mine) {
@@ -55,7 +64,8 @@ export const AppConfigProvider: React.FC<{ children: React.ReactNode }> = ({ chi
                     // Dynamic branding injection (Tenant Branding v2.0)
                     if (mine.theme_config) {
                         try {
-                            const theme = mine.theme_config;
+                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                            const theme = mine.theme_config as any;
                             const root = document.documentElement;
 
                             // 1. Load Google Fonts dynamically

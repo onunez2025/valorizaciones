@@ -25,7 +25,7 @@ export class StorageService {
         try {
             const user = localStorage.getItem('current_user') || sessionStorage.getItem('current_user');
             return user ? JSON.parse(user) : null;
-        } catch (e) {
+        } catch (_e) {
             return null;
         }
     }

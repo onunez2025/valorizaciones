@@ -49,9 +49,9 @@ export default function LoginPage() {
                 navigate('/dashboard');
             }
 
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error('Login error:', err);
-            setError(err.message || 'Credenciales inválidas');
+            setError(err instanceof Error ? err.message : 'Credenciales inválidas');
         } finally {
             setLoading(false);
         }

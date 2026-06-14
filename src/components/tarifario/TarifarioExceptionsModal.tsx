@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
-import { 
-    X, Plus, Trash2, MapPin, Tag, DollarSign, AlertCircle, 
-    ChevronDown, Save, Map, Globe, Search
+import React, { useState, useEffect } from 'react';
+import {
+    X, Plus, Trash2, MapPin, Tag, DollarSign, AlertCircle,
+    Save, Map, Globe, Search
 } from 'lucide-react';
+import type { LucideProps } from 'lucide-react';
 import { ApiClient } from '../../services/apiClient';
 import { cn } from '../../utils/cn';
 import { useDialog } from '../../context/DialogContext';
@@ -48,7 +49,7 @@ export default function TarifarioExceptionsModal({ cas, isOpen, onClose }: Props
         setLoading(true);
         try {
             const data = await ApiClient.request(`/tarifarios/exceptions/${cas.ID_CAS}`);
-            setExceptions(data.map((ex: any) => ({
+            setExceptions(data.map((ex: Exception) => ({
                 ...ex,
                 Zonas_Incluidas: typeof ex.Zonas_Incluidas === 'string' ? JSON.parse(ex.Zonas_Incluidas) : ex.Zonas_Incluidas,
                 Zonas_Excluidas: typeof ex.Zonas_Excluidas === 'string' ? JSON.parse(ex.Zonas_Excluidas) : ex.Zonas_Excluidas,
@@ -75,7 +76,7 @@ export default function TarifarioExceptionsModal({ cas, isOpen, onClose }: Props
         try {
             const data = await ApiClient.request('/distritos');
             // Data is [{Ciudad: '...', Distrito: '...'}, ...]
-            const zones = Array.from(new Set(data.flatMap((d: any) => [d.Ciudad, d.Distrito]))).sort() as string[];
+            const zones = Array.from(new Set(data.flatMap((d: { Ciudad: string; Distrito: string }) => [d.Ciudad, d.Distrito]))).sort() as string[];
             setAvailableDistritos(zones);
         } catch (err) {
             console.error("Error fetching distritos:", err);
@@ -117,7 +118,7 @@ export default function TarifarioExceptionsModal({ cas, isOpen, onClose }: Props
             });
             alert({ title: "Guardado", message: "Regla actualizada correctamente.", type: 'success' });
             fetchExceptions();
-        } catch (err) {
+        } catch (_err) {
             alert({ message: "Error al guardar la regla." });
         } finally {
             setSaving(false);
@@ -133,7 +134,7 @@ export default function TarifarioExceptionsModal({ cas, isOpen, onClose }: Props
         try {
             await ApiClient.request(`/tarifarios/exceptions/${id}`, { method: 'DELETE' });
             fetchExceptions();
-        } catch (err) {
+        } catch (_err) {
             alert({ message: "Error al eliminar la regla." });
         }
     };
@@ -330,19 +331,18 @@ export default function TarifarioExceptionsModal({ cas, isOpen, onClose }: Props
     );
 }
 
-function ZoneSelector({ 
-    label, 
-    icon: Icon, 
-    selected, 
-    options, 
-    onChange 
-}: { 
-    label: string, 
-    icon: any, 
-    selected: string[], 
-    options: string[], 
-    onChange: (val: string[]) => void 
-    onChange: (val: string[]) => void 
+function ZoneSelector({
+    label,
+    icon: Icon,
+    selected,
+    options,
+    onChange
+}: {
+    label: string,
+    icon: React.ComponentType<LucideProps>,
+    selected: string[],
+    options: string[],
+    onChange: (val: string[]) => void
 }) {
     const [search, setSearch] = useState('');
     const [isOpen, setIsOpen] = useState(false);

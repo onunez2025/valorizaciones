@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react';
 import { ApiClient } from '../../services/apiClient';
-import { 
-    MapPin, Plus, Edit2, Trash2, Search, 
-    Filter, Calendar, DollarSign, Check, 
-    ChevronDown, X, Building2, Activity,
-    AlertCircle, CheckCircle2, Clock
+import {
+    MapPin, Plus, Edit2, Trash2, Search,
+    Filter, Calendar, DollarSign, Check,
+    ChevronDown, X, Building2, Activity
 } from 'lucide-react';
 import { Modal } from '../../components/common/Modal';
 import { useDialog } from '../../context/DialogContext';
@@ -49,7 +48,7 @@ export default function ConfigDistritosPage() {
     const [search, setSearch] = useState('');
     const [selectedCity, setSelectedCity] = useState('');
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-    const [editingConfig, setEditingConfig] = useState<any>(null);
+    const [editingConfig, setEditingConfig] = useState<Partial<ConfigDistrito> & { cas_ids?: string[]; distritos?: string[]; importe?: number; fecha_inicio?: string; fecha_fin?: string; activo?: boolean } | null>(null);
     const { alert, confirm } = useDialog();
     const [currentPage, setCurrentPage] = useState(1);
     const recordsPerPage = 10;
@@ -75,7 +74,7 @@ export default function ConfigDistritosPage() {
             setDistritosRepo(distritosData);
             setCasList(casData);
             if (distritosData.length > 0) setSelectedCity(distritosData[0].Ciudad);
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error("Error fetching data:", error);
             alert({ message: "No se pudo cargar la configuración." });
         } finally {
@@ -94,7 +93,7 @@ export default function ConfigDistritosPage() {
                 await ApiClient.request(`/config-distritos/${id}`, { method: 'DELETE' });
                 alert({ title: "Eliminado", message: "La regla ha sido eliminada.", type: 'success' });
                 fetchData();
-            } catch (error: any) {
+            } catch (_error: unknown) {
                 alert({ message: "Error al eliminar." });
             }
         }
@@ -118,7 +117,7 @@ export default function ConfigDistritosPage() {
             alert({ title: "Guardado", message: "Configuración actualizada correctamente.", type: 'success' });
             setIsEditModalOpen(false);
             fetchData();
-        } catch (error: any) {
+        } catch (_error: unknown) {
             alert({ message: "No se pudo guardar la configuración." });
         }
     };
@@ -246,7 +245,7 @@ export default function ConfigDistritosPage() {
                                         <SIATCTableRow key={c.Id}>
                                             <SIATCTableCell className="max-w-[300px]">
                                                 <div className="flex flex-wrap gap-1">
-                                                    {cDist.map((d: any) => (
+                                                    {cDist.map((d: string) => (
                                                         <span key={d} className={cn(SIATC_THEME.STATES.BADGE_BASE, SIATC_THEME.STATES.SECONDARY, "h-[22px] normal-case tracking-normal")}>
                                                             {d}
                                                         </span>

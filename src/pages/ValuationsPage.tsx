@@ -1,10 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, Filter, Calendar, ChevronRight, Calculator, Download, AlertTriangle, CheckCircle2, FileText, X, ChevronDown, Briefcase, Building2, Check, Activity, AlertCircle, Info, Lock, ArrowUpDown, Package, History, BarChart2, Eye, PlusCircle, Trash2, DollarSign, Mail, RotateCcw, Pencil, Loader2 } from 'lucide-react';
-import * as XLSX from 'xlsx';
+import { Search, Calendar, ChevronRight, Calculator, Download, AlertTriangle, CheckCircle2, FileText, X, ChevronDown, Briefcase, Building2, Check, Activity, AlertCircle, Info, Lock, ArrowUpDown, Package, History, BarChart2, Eye, PlusCircle, Trash2, DollarSign, Mail, RotateCcw, Pencil, Loader2 } from 'lucide-react';
 import ExcelJS from 'exceljs';
 import { ApiClient } from '../services/apiClient';
 import { StorageService } from '../services/storageService';
-import type { CAS, ValuationTicket, Penalty } from '../types';
+import type { CAS, ValuationTicket, Penalty, ValuationAdicional, PenaltyMotive } from '../types';
 import { cn } from '../utils/cn';
 import { toTitleCase } from '../utils/formatters';
 import { useDialog } from '../context/DialogContext';
@@ -35,25 +34,25 @@ export default function ValuationsPage() {
     const [tickets, setTickets] = useState<ValuationTicket[]>([]);
     const [penalties, setPenalties] = useState<Penalty[]>([]);
     const [loadingData, setLoadingData] = useState(false);
-    const [showPenaltyModal, setShowPenaltyModal] = useState<{show: boolean, type: 'penalty' | 'additional', ticket?: string, date?: string, existingData?: any}>({show: false, type: 'penalty'});
+    const [showPenaltyModal, setShowPenaltyModal] = useState<{show: boolean, type: 'penalty' | 'additional', ticket?: string, date?: string, existingData?: Penalty}>({show: false, type: 'penalty'});
     const [expandedDates, setExpandedDates] = useState<string[]>([]);
-    const [showTarifarioModal, setShowTarifarioModal] = useState<{show: boolean, data: any}>({show: false, data: null});
-    const [showMaterialModal, setShowMaterialModal] = useState<{show: boolean, data: any}>({show: false, data: null});
+    const [showTarifarioModal, setShowTarifarioModal] = useState<{show: boolean, data: { casId: string; casNombre: string; categoria: string; servicio: string; servicioNombre: string } | null}>({show: false, data: null});
+    const [showMaterialModal, setShowMaterialModal] = useState<{show: boolean, data: { codigo: string; nombre: string } | null}>({show: false, data: null});
     const [showCloseModal, setShowCloseModal] = useState(false);
     const [isClosing, setIsClosing] = useState(false);
     const [activeTab, setActiveTab] = useState<'services' | 'penalties'>('services');
     const [globalSearch, setGlobalSearch] = useState('');
-    const [globalSearchResult, setGlobalSearchResult] = useState<any>(null);
+    const [globalSearchResult, setGlobalSearchResult] = useState<{ error?: string; Ticket?: string; CAS_Nombre?: string; Fecha?: string; RUC?: string } | null>(null);
     const [isSearchingGlobal, setIsSearchingGlobal] = useState(false);
     
     // Historial de Cierres
     const [viewMode, setViewMode] = useState<'current' | 'history'>('current');
-    const [currentDraft, setCurrentDraft] = useState<any>(null); // State for the draft being edited
-    const [closures, setClosures] = useState<any[]>([]);
+    const [currentDraft, setCurrentDraft] = useState<{ IdCierre: number; Codigo_Valorizacion: string; Estado: string } | null>(null); // State for the draft being edited
+    const [closures, setClosures] = useState<Record<string, unknown>[]>([]);
     const [loadingHistory, setLoadingHistory] = useState(false);
-    const [selectedClosure, setSelectedClosure] = useState<any | null>(null);
+    const [selectedClosure, setSelectedClosure] = useState<Record<string, unknown> | null>(null);
     const [loadingPdf, setLoadingPdf] = useState<string | null>(null);
-    const [closureDetails, setClosureDetails] = useState<any[]>([]);
+    const [closureDetails, setClosureDetails] = useState<Record<string, unknown>[]>([]);
     const [loadingDetails, setLoadingDetails] = useState(false);
     const [detailSearchQuery, setDetailSearchQuery] = useState('');
     const [detailActiveTab, setDetailActiveTab] = useState<'services' | 'penalties'>('services');
@@ -93,7 +92,7 @@ export default function ValuationsPage() {
     };
 
     // Adicionales popover
-    const [adicionalesPopover, setAdicionalesPopover] = useState<{ticket: string, items: any[], loading: boolean} | null>(null);
+    const [adicionalesPopover, setAdicionalesPopover] = useState<{ticket: string, items: ValuationAdicional[], loading: boolean} | null>(null);
 
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
@@ -111,8 +110,8 @@ export default function ValuationsPage() {
         if (!detailSort.key || !detailSort.direction) return tickets;
 
         return [...tickets].sort((a, b) => {
-            let valA: any = a[detailSort.key as keyof ValuationTicket];
-            let valB: any = b[detailSort.key as keyof ValuationTicket];
+            let valA: number | string = a[detailSort.key as keyof ValuationTicket] as number | string;
+            let valB: number | string = b[detailSort.key as keyof ValuationTicket] as number | string;
 
             if (detailSort.key === 'Ticket') {
                 valA = Number(valA);
@@ -143,7 +142,7 @@ export default function ValuationsPage() {
         const fetchConfig = async () => {
             try {
                 const config = await ApiClient.request('/config');
-                const diasMax = config.find((c: any) => c.Clave === 'DIAS_MAX_CIERRE');
+                const diasMax = config.find((c: { Clave: string; Valor: string }) => c.Clave === 'DIAS_MAX_CIERRE');
                 if (diasMax && !isNaN(Number(diasMax.Valor))) {
                     setDiasMaxCierre(Number(diasMax.Valor));
                 }
@@ -184,10 +183,10 @@ export default function ValuationsPage() {
         try {
             const result = await ApiClient.request(`/tickets/find/${globalSearch.trim()}`);
             setGlobalSearchResult(result);
-        } catch (err) { 
-            setGlobalSearchResult({ error: 'Ticket no encontrado' }); 
-        } finally { 
-            setIsSearchingGlobal(false); 
+        } catch (_err) {
+            setGlobalSearchResult({ error: 'Ticket no encontrado' });
+        } finally {
+            setIsSearchingGlobal(false);
         }
     };
 
@@ -213,24 +212,24 @@ export default function ValuationsPage() {
             setPenalties(penaltiesData);
 
             // Check if there is an active draft for this period and CAS
-            const draft = closuresData.find((c: any) => {
+            const draft = closuresData.find((c: Record<string, unknown>) => {
                 if (c.Estado !== 'BORRADOR') return false;
-                if (c.RUC?.trim() !== selectedCas.RUC?.trim()) return false;
-                
-                const cStart = c.Fecha_Inicio ? (typeof c.Fecha_Inicio === 'string' ? c.Fecha_Inicio.split('T')[0] : new Date(c.Fecha_Inicio).toISOString().split('T')[0]) : '';
-                const cEnd = c.Fecha_Fin ? (typeof c.Fecha_Fin === 'string' ? c.Fecha_Fin.split('T')[0] : new Date(c.Fecha_Fin).toISOString().split('T')[0]) : '';
-                
+                if ((c.RUC as string)?.trim() !== selectedCas.RUC?.trim()) return false;
+
+                const cStart = c.Fecha_Inicio ? (typeof c.Fecha_Inicio === 'string' ? c.Fecha_Inicio.split('T')[0] : new Date(c.Fecha_Inicio as string).toISOString().split('T')[0]) : '';
+                const cEnd = c.Fecha_Fin ? (typeof c.Fecha_Fin === 'string' ? c.Fecha_Fin.split('T')[0] : new Date(c.Fecha_Fin as string).toISOString().split('T')[0]) : '';
+
                 return cStart === startDate && cEnd === endDate;
             });
             if (draft) {
-                setCurrentDraft(draft);
+                setCurrentDraft({ IdCierre: draft.IdCierre as number, Codigo_Valorizacion: draft.Codigo_Valorizacion as string, Estado: draft.Estado as string });
                 // Si hay un borrador, CARGAR los datos congelados (tickets y penalidades del momento del guardado)
                 // Esto garantiza que NO aparezcan tickets nuevos que no estaban en la pre-valorización
                 const detailResult = await ApiClient.request(`/valuations/details/${draft.IdCierre}`);
                 if (detailResult && detailResult.tickets) {
                     const savedTickets = detailResult.tickets
-                        .filter((t: any) => t.Tipo === 'SERVICIO')
-                        .map((t: any) => ({
+                        .filter((t: Record<string, unknown>) => t.Tipo === 'SERVICIO')
+                        .map((t: Record<string, unknown>) => ({
                             ...t,
                             Ticket: t.Ticket,
                             Fecha: t.Fecha_Ticket,
@@ -246,13 +245,13 @@ export default function ValuationsPage() {
                             Departamento: t.Departamento,
                             NombreEquipo: t.Nombre_Equipo
                         }));
-                    
+
                     const savedPenalties = detailResult.tickets
-                        .filter((t: any) => t.Tipo === 'PENALIDAD')
-                        .map((p: any) => ({
+                        .filter((t: Record<string, unknown>) => t.Tipo === 'PENALIDAD')
+                        .map((p: Record<string, unknown>) => ({
                             Id: p.ID_Referencia,
                             Ticket: p.Ticket === 'G-DESCUENTO' ? null : p.Ticket,
-                            Importe: Math.abs(p.Monto),
+                            Importe: Math.abs(p.Monto as number),
                             Fecha: p.Fecha_Ticket,
                             Motivo: p.Servicio_Nombre
                         }));
@@ -261,8 +260,8 @@ export default function ValuationsPage() {
                     setPenalties(savedPenalties);
                 }
             }
-        } catch (error: any) {
-            if (error.message === 'AUTH_EXPIRED') return;
+        } catch (error: unknown) {
+            if (error instanceof Error && error.message === 'AUTH_EXPIRED') return;
             console.error("Error fetching valuation:", error);
             alert({ message: "No se pudo cargar la información de la valorización." });
         } finally {
@@ -299,8 +298,8 @@ export default function ValuationsPage() {
             setShowBatchDiscountModal(false);
             setBatchTickets('');
             handleFetchValuation(); // Refrescar los datos para ver los cambios
-        } catch (err: any) {
-            alert({ title: 'Error', message: err.message || 'Error al aplicar el ajuste masivo.' });
+        } catch (err: unknown) {
+            alert({ title: 'Error', message: err instanceof Error ? err.message : 'Error al aplicar el ajuste masivo.' });
         } finally {
             setIsApplyingBatch(false);
         }
@@ -358,8 +357,8 @@ export default function ValuationsPage() {
             setDiscountMotivo('');
             setDiscountDescripcion('');
             handleFetchValuation(); // Refrescar los datos
-        } catch (err: any) {
-            alert({ title: 'Error', message: err.message || 'Error al aplicar el descuento masivo.' });
+        } catch (err: unknown) {
+            alert({ title: 'Error', message: err instanceof Error ? err.message : 'Error al aplicar el descuento masivo.' });
         } finally {
             setIsApplyingDiscount(false);
         }
@@ -385,8 +384,8 @@ export default function ValuationsPage() {
             setShowEmailModal(false);
             setPendingEmailData(null);
             setEmailTo('');
-        } catch (err: any) {
-            alert({ title: 'Error', message: err.message || 'No se pudo enviar el correo.' });
+        } catch (err: unknown) {
+            alert({ title: 'Error', message: err instanceof Error ? err.message : 'No se pudo enviar el correo.' });
         } finally {
             setIsSendingEmail(false);
         }
@@ -557,8 +556,8 @@ export default function ValuationsPage() {
 
         const workbook = new ExcelJS.Workbook();
         const sheetResumen = workbook.addWorksheet('Resumen');
-        const sheetDetalle = workbook.addWorksheet('Historial Servicios');
-        const sheetPenalties = workbook.addWorksheet('Historial Penalidades');
+        const _sheetDetalle = workbook.addWorksheet('Historial Servicios');
+        const _sheetPenalties = workbook.addWorksheet('Historial Penalidades');
 
         // --- HOJA RESUMEN ---
         sheetResumen.columns = [{ width: 35 }, { width: 15 }, { width: 25 }];
@@ -625,7 +624,7 @@ export default function ValuationsPage() {
         const buffer = await workbook.xlsx.writeBuffer();
         const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
         
-        const subject = `Cierre de Valorización - ${selectedClosure.Codigo_Valorizacion} - ${selectedClosure.Nombre_CAS}`;
+        const _subject = `Cierre de Valorización - ${selectedClosure.Codigo_Valorizacion} - ${selectedClosure.Nombre_CAS}`;
         const bodyContent = `
             <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #f8fafc; font-family: 'Segoe UI', Arial, sans-serif;">
                 <tr>
@@ -736,7 +735,7 @@ export default function ValuationsPage() {
         }
     };
 
-    const handleViewClosureDetails = async (closure: any) => {
+    const handleViewClosureDetails = async (closure: Record<string, unknown>) => {
         setSelectedClosure(closure);
         setLoadingDetails(true);
         try {
@@ -771,8 +770,8 @@ export default function ValuationsPage() {
                         })
                     });
                     handleFetchValuation();
-                } catch (error: any) {
-                    alert({ title: 'Error', message: `No se pudo ${actionLabel} la penalidad: ${error.message}`, type: 'error' });
+                } catch (error: unknown) {
+                    alert({ title: 'Error', message: `No se pudo ${actionLabel} la penalidad: ${error instanceof Error ? error.message : String(error)}`, type: 'error' });
                 }
             }
         });
@@ -803,12 +802,12 @@ export default function ValuationsPage() {
             }
         }
         return acc;
-    }, {} as Record<string, any>);
+    }, {} as Record<string, Penalty>);
 
     const effectivePenaltyIds = new Set(Object.values(effectivePenaltiesMap).map(p => p.Id));
 
     const totalTickets = tickets.reduce((sum, t) => sum + (isValuable(t.CodigoEquipo) ? (t.TarifaBase + (t.Adicionales || 0)) : 0), 0);
-    const totalPenalties = Object.values(effectivePenaltiesMap).reduce((sum: number, p: any) => sum + p.Importe, 0);
+    const totalPenalties = Object.values(effectivePenaltiesMap).reduce((sum: number, p: Penalty) => sum + p.Importe, 0);
     const grandTotal = totalTickets - totalPenalties;
 
     const handleCloseFortnightCurrent = async () => {
@@ -958,15 +957,15 @@ export default function ValuationsPage() {
             });
             
             return result;
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error("Error saving draft:", error);
-            alert({ message: "No se pudo guardar el borrador: " + error.message });
+            alert({ message: "No se pudo guardar el borrador: " + (error instanceof Error ? error.message : String(error)) });
         } finally {
             setIsClosing(false);
         }
     };
 
-    const handleFinalizeDraft = async (closure: any) => {
+    const handleFinalizeDraft = async (closure: Record<string, unknown>) => {
         confirm({
             title: 'Cerrar Valorización',
             message: `¿Está seguro que desea cerrar definitivamente la valorización ${closure.Codigo_Valorizacion}? Una vez cerrada, ya no podrá modificarse.`,
@@ -979,23 +978,23 @@ export default function ValuationsPage() {
                     if (currentDraft?.IdCierre === closure.IdCierre) {
                         setCurrentDraft(null);
                     }
-                } catch (err: any) {
-                    alert({ title: 'Error', message: err.message || 'No se pudo finalizar.' });
+                } catch (err: unknown) {
+                    alert({ title: 'Error', message: err instanceof Error ? err.message : 'No se pudo finalizar.' });
                 }
             }
         });
     };
 
-    const handlePrepareClosureEmailFromResult = async (closure: any, details: any[]) => {
+    const handlePrepareClosureEmailFromResult = async (closure: Record<string, unknown>, details: Record<string, unknown>[]) => {
         // This is a variation of handlePrepareClosureEmail but for a freshly created closure
         // logic similar to handlePrepareClosureEmail but mapping from result
-        const services = details.filter(d => d.tipo === 'SERVICIO');
-        const penaltiesList = details.filter(d => d.tipo === 'PENALIDAD');
+        const _services = details.filter(d => d.tipo === 'SERVICIO');
+        const _penaltiesList = details.filter(d => d.tipo === 'PENALIDAD');
 
         const workbook = new ExcelJS.Workbook();
-        const sheetResumen = workbook.addWorksheet('Resumen');
-        const sheetDetalle = workbook.addWorksheet('Detalle Servicios');
-        const sheetPenalties = workbook.addWorksheet('Detalle Penalidades');
+        const _sheetResumen = workbook.addWorksheet('Resumen');
+        const _sheetDetalle = workbook.addWorksheet('Detalle Servicios');
+        const _sheetPenalties = workbook.addWorksheet('Detalle Penalidades');
 
         // Reuse existing excel logic from handlePreparePreValuationEmail but with OFFICIAL closure headers
         // [Simplified for now, but in production I would refactor to a common generator]
@@ -1047,8 +1046,8 @@ export default function ValuationsPage() {
                     await ApiClient.request(`/valuations/reopen/${idCierre}`, { method: 'POST' });
                     alert({ title: 'Éxito', message: 'La quincena ha sido reabierta.', type: 'success' });
                     handleFetchClosures();
-                } catch (err: any) {
-                    alert({ title: 'Error', message: err.message || 'No se pudo reabrir.' });
+                } catch (err: unknown) {
+                    alert({ title: 'Error', message: err instanceof Error ? err.message : 'No se pudo reabrir.' });
                 }
             }
         });
@@ -1076,11 +1075,11 @@ export default function ValuationsPage() {
             
             // Cleanup after some time
             setTimeout(() => window.URL.revokeObjectURL(url), 60000);
-        } catch (err: any) {
-            alert({ 
-                title: 'Error de Reporte', 
-                message: err.message, 
-                type: 'error' 
+        } catch (err: unknown) {
+            alert({
+                title: 'Error de Reporte',
+                message: err instanceof Error ? err.message : 'Error al generar reporte.',
+                type: 'error'
             });
         } finally {
             setLoadingPdf(null);
@@ -2093,7 +2092,7 @@ export default function ValuationsPage() {
                                                                                                                             <p className="text-xs text-muted-foreground text-center py-3 opacity-50 font-bold">Sin pagos adicionales registrados</p>
                                                                                                                         ) : (
                                                                                                                             <div className="space-y-2">
-                                                                                                                                {adicionalesPopover.items.map((item: any) => (
+                                                                                                                                {adicionalesPopover.items.map((item: ValuationAdicional) => (
                                                                                                                                     <div key={item.Id} className="flex items-center justify-between p-2.5 bg-muted/20 rounded-xl border border-border/30 group/item hover:border-red-200 transition-all">
                                                                                                                                         <div className="flex flex-col min-w-0 flex-1">
                                                                                                                                             <span className="text-xs font-bold text-foreground truncate">{item.Motivo}</span>
@@ -2102,11 +2101,11 @@ export default function ValuationsPage() {
                                                                                                                                         <button
                                                                                                                                             onClick={(e) => {
                                                                                                                                                 e.stopPropagation();
-                                                                                                                                                setShowPenaltyModal({ 
-                                                                                                                                                    show: true, 
-                                                                                                                                                    type: 'additional', 
+                                                                                                                                                setShowPenaltyModal({
+                                                                                                                                                    show: true,
+                                                                                                                                                    type: 'additional',
                                                                                                                                                     ticket: ticket.Ticket,
-                                                                                                                                                    existingData: item
+                                                                                                                                                    existingData: item as unknown as Penalty
                                                                                                                                                 });
                                                                                                                                             }}
                                                                                                                                             className="p-1.5 text-indigo-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all opacity-0 group-hover/item:opacity-100 ml-2 flex-shrink-0"
@@ -2536,7 +2535,7 @@ export default function ValuationsPage() {
                                     <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1 opacity-40">Cerrado por</p>
                                     <div className="flex items-center gap-2">
                                         <div className="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-600">
-                                            {selectedClosure.Cerrado_Por?.split(' ').map((n: any) => n[0]).join('')}
+                                            {(selectedClosure.Cerrado_Por as string)?.split(' ').map((n: string) => n[0]).join('')}
                                         </div>
                                         <p className="text-sm font-extrabold text-slate-800">{selectedClosure.Cerrado_Por}</p>
                                     </div>
@@ -2683,7 +2682,19 @@ export default function ValuationsPage() {
     );
 }
 
-function BatchAdjustmentModal({ isOpen, onClose, onApply, tickets, setTickets, targetAmount, setTargetAmount, motivo, setMotivo, isApplying }: any) {
+interface BatchAdjustmentModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+    onApply: () => void;
+    tickets: string;
+    setTickets: (v: string) => void;
+    targetAmount: string;
+    setTargetAmount: (v: string) => void;
+    motivo: string;
+    setMotivo: (v: string) => void;
+    isApplying: boolean;
+}
+function BatchAdjustmentModal({ isOpen, onClose, onApply, tickets, setTickets, targetAmount, setTargetAmount, motivo, setMotivo, isApplying }: BatchAdjustmentModalProps) {
     if (!isOpen) return null;
     return (
         <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
@@ -2754,8 +2765,15 @@ function BatchAdjustmentModal({ isOpen, onClose, onApply, tickets, setTickets, t
     );
 }
 
-function StatCard({ title, value, subtitle, icon, color }: any) {
-    const colorClasses: any = { blue: "bg-blue-500", red: "bg-red-500", emerald: "bg-emerald-500", amber: "bg-amber-500" };
+interface StatCardProps {
+    title: string;
+    value: string | number;
+    subtitle?: string;
+    icon?: React.ReactNode;
+    color?: 'blue' | 'red' | 'emerald' | 'amber';
+}
+function _StatCard({ title, value, subtitle, icon, color }: StatCardProps) {
+    const colorClasses: Record<string, string> = { blue: "bg-blue-500", red: "bg-red-500", emerald: "bg-emerald-500", amber: "bg-amber-500" };
     return (
         <div className="bg-card border border-border rounded-2xl p-6 shadow-sm hover:translate-y-[-4px] transition-all group overflow-hidden relative">
             <div className={`absolute top-0 right-0 w-32 h-32 ${colorClasses[color]} opacity-[0.05] rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-700`} />
@@ -2768,7 +2786,15 @@ function StatCard({ title, value, subtitle, icon, color }: any) {
     );
 }
 
-function EmailModal({ isOpen, onClose, onSend, emailTo, setEmailTo, isSending }: any) {
+interface EmailModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+    onSend: () => void;
+    emailTo: string;
+    setEmailTo: (v: string) => void;
+    isSending: boolean;
+}
+function EmailModal({ isOpen, onClose, onSend, emailTo, setEmailTo, isSending }: EmailModalProps) {
     if (!isOpen) return null;
     return (
         <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
@@ -2827,7 +2853,22 @@ function EmailModal({ isOpen, onClose, onSend, emailTo, setEmailTo, isSending }:
     );
 }
 
-function BatchDiscountModal({ isOpen, onClose, onApply, tickets, setTickets, amount, setAmount, motivo, setMotivo, descripcion, setDescripcion, isApplying, motivos }: any) {
+interface BatchDiscountModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+    onApply: () => void;
+    tickets: string;
+    setTickets: (v: string) => void;
+    amount: string;
+    setAmount: (v: string) => void;
+    motivo: string;
+    setMotivo: (v: string) => void;
+    descripcion: string;
+    setDescripcion: (v: string) => void;
+    isApplying: boolean;
+    motivos: PenaltyMotive[];
+}
+function BatchDiscountModal({ isOpen, onClose, onApply, tickets, setTickets, amount, setAmount, motivo, setMotivo, descripcion, setDescripcion, isApplying, motivos }: BatchDiscountModalProps) {
     if (!isOpen) return null;
     return (
         <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
@@ -2878,7 +2919,7 @@ function BatchDiscountModal({ isOpen, onClose, onApply, tickets, setTickets, amo
                                 className="w-full px-4 py-3.5 bg-muted/20 border border-border/50 rounded-xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all appearance-none cursor-pointer"
                             >
                                 <option value="">Seleccione un motivo...</option>
-                                {motivos.map((m: any) => (
+                                {motivos.map((m: PenaltyMotive) => (
                                     <option key={m.IdMotivo} value={m.Motivo}>{m.Motivo}</option>
                                 ))}
                             </select>

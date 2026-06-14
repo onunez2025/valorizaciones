@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
     TrendingUp, TrendingDown, DollarSign, Activity, 
     ArrowUpRight, ArrowDownRight, Calendar, AlertCircle, Building2, Search, ChevronDown, Check
@@ -396,15 +396,25 @@ export default function DashboardPage() {
     );
 }
 
-function StatCard({ title, value, subtitle, icon, trend, trendUp, color }: any) {
-    const colorClasses: any = {
+interface StatCardProps {
+    title: string;
+    value: string | number;
+    subtitle?: string;
+    icon?: React.ReactNode;
+    trend?: string | number;
+    trendUp?: boolean;
+    color?: 'blue' | 'red' | 'emerald' | 'amber';
+}
+
+function StatCard({ title, value, subtitle, icon, trend, trendUp, color }: StatCardProps) {
+    const colorClasses: Record<string, string> = {
         blue: "text-blue-600",
         red: "text-red-600",
         emerald: "text-emerald-600",
         amber: "text-amber-600"
     };
 
-    const bgClasses: any = {
+    const bgClasses: Record<string, string> = {
         blue: "bg-blue-500/10",
         red: "bg-red-500/10",
         emerald: "bg-emerald-500/10",

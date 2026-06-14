@@ -1,4 +1,5 @@
 import { NavLink, Outlet, useLocation, Navigate } from 'react-router-dom';
+import { useEffect } from 'react';
 import { Users, Shield, Terminal, ChevronRight, Settings2, MapPin, Briefcase } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { useAuth } from '../../hooks/useAuth';
@@ -20,16 +21,24 @@ export default function ConfigLayout() {
     ];
 
     const filteredItems = configItems.filter(item =>
-        !item.permission || hasPermission(item.permission as any)
+        !item.permission || hasPermission(item.permission)
     );
 
+    const isAtRoot = location.pathname === '/config' || location.pathname === '/config/';
+    const firstLocalItem = isAtRoot ? filteredItems.find(item => !('isExternal' in item && item.isExternal)) : null;
+    const externalFallback = isAtRoot && !firstLocalItem && filteredItems.length > 0 ? filteredItems[0].to : null;
+
+    useEffect(() => {
+        if (externalFallback) {
+            window.location.href = externalFallback;
+        }
+    }, [externalFallback]);
+
     // If we are at the root /config, redirect to the first authorized item
-    if (location.pathname === '/config' || location.pathname === '/config/') {
-        const firstLocalItem = filteredItems.find(item => !('isExternal' in item && item.isExternal));
+    if (isAtRoot) {
         if (firstLocalItem) {
             return <Navigate to={firstLocalItem.to} replace />;
-        } else if (filteredItems.length > 0) {
-            window.location.href = filteredItems[0].to;
+        } else if (externalFallback) {
             return null;
         }
     }

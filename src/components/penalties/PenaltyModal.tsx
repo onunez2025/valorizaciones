@@ -16,7 +16,14 @@ interface PenaltyModalProps {
     type: 'penalty' | 'additional';
     initialTicket?: string;
     initialDate?: string;
-    existingData?: any;
+    existingData?: {
+        Id: string;
+        Ticket?: string;
+        Motivo?: string;
+        Descripcion?: string;
+        Importe: number;
+        Fecha?: string;
+    };
 }
 
 export default function PenaltyModal({ isOpen, onClose, onSuccess, ruc, tickets, type, initialTicket, initialDate, existingData }: PenaltyModalProps) {
