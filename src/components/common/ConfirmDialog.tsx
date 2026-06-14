@@ -1,4 +1,3 @@
-import React from 'react';
 import { Modal } from './Modal';
 import { AlertCircle, Info } from 'lucide-react';
 import { cn } from '../../utils/cn';

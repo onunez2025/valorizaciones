@@ -57,7 +57,7 @@ export function AppSwitcher({ currentAppId }: AppSwitcherProps) {
     // Filter apps:
     // 1. Omit the current app (e.g. CONSOLE or FLOW)
     // 2. Filter by user allowed apps list (smart switcher)
-    const allowedAppsCodes = (user?.apps || '').split(',').map(a => a.trim().toUpperCase()).filter(Boolean);
+    const allowedAppsCodes = (user?.apps || '').split(',').map((a: string) => a.trim().toUpperCase()).filter(Boolean);
     
     const filteredApps = apps.filter(app => {
         const appCode = app.code.toUpperCase();

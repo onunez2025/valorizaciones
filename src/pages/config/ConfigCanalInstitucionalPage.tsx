@@ -27,6 +27,14 @@ interface ConfigInstitucional {
     Activo: boolean;
     Creado_Por: string;
     Creado_El: string;
+    // Aliases used by the edit form (lowercase)
+    usuario_creador?: string;
+    fecha_inicio?: string;
+    fecha_fin?: string;
+    importe?: number;
+    keywords?: string;
+    validacion_tipo?: 'CONTIENE' | 'NO_CONTIENE';
+    activo?: boolean;
 }
 
 const formatDateUTC = (dateStr: string) => {
@@ -82,21 +90,22 @@ export default function ConfigCanalInstitucionalPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    const handleDelete = async (id: number) => {
-        if (await confirm({ 
-            title: "¿Eliminar regla?", 
+    const handleDelete = (id: number) => {
+        confirm({
+            title: "¿Eliminar regla?",
             message: "Esta acción afectará los cálculos de valorización futuros.",
             confirmText: "Si, eliminar",
-            type: 'danger'
-        })) {
-            try {
-                await ApiClient.request(`/config-canal-institucional/${id}`, { method: 'DELETE' });
-                alert({ title: "Eliminado", message: "La regla ha sido eliminada.", type: 'success' });
-                fetchData();
-            } catch {
-                alert({ message: "Error al eliminar." });
+            type: 'danger',
+            onConfirm: async () => {
+                try {
+                    await ApiClient.request(`/config-canal-institucional/${id}`, { method: 'DELETE' });
+                    alert({ title: "Eliminado", message: "La regla ha sido eliminada.", type: 'success' });
+                    fetchData();
+                } catch {
+                    alert({ message: "Error al eliminar." });
+                }
             }
-        }
+        });
     };
 
     const handleSave = async (e: React.FormEvent) => {

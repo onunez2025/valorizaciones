@@ -1,4 +1,3 @@
-import React from 'react';
 import { SIATC_THEME } from '../utils/siatc-theme';
 import { cn } from '../utils/cn';
 

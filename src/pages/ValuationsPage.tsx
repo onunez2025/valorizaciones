@@ -556,8 +556,8 @@ export default function ValuationsPage() {
 
         const workbook = new ExcelJS.Workbook();
         const sheetResumen = workbook.addWorksheet('Resumen');
-        const _sheetDetalle = workbook.addWorksheet('Historial Servicios');
-        const _sheetPenalties = workbook.addWorksheet('Historial Penalidades');
+        workbook.addWorksheet('Historial Servicios');
+        workbook.addWorksheet('Historial Penalidades');
 
         // --- HOJA RESUMEN ---
         sheetResumen.columns = [{ width: 35 }, { width: 15 }, { width: 25 }];
@@ -569,10 +569,10 @@ export default function ValuationsPage() {
         headerRow.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E3A8A' } };
         sheetResumen.mergeCells('A1:C1');
 
-        const info = [
-            ['CÓDIGO:', selectedClosure.Codigo_Valorizacion],
-            ['CAS:', selectedClosure.Nombre_CAS],
-            ['Periodo:', `${new Date(selectedClosure.Fecha_Inicio).toLocaleDateString('es-PE', { timeZone: 'UTC' })} al ${new Date(selectedClosure.Fecha_Fin).toLocaleDateString('es-PE', { timeZone: 'UTC' })}`]
+        const info: [string, string][] = [
+            ['CÓDIGO:', selectedClosure.Codigo_Valorizacion as string],
+            ['CAS:', selectedClosure.Nombre_CAS as string],
+            ['Periodo:', `${new Date(selectedClosure.Fecha_Inicio as string).toLocaleDateString('es-PE', { timeZone: 'UTC' })} al ${new Date(selectedClosure.Fecha_Fin as string).toLocaleDateString('es-PE', { timeZone: 'UTC' })}`]
         ];
 
         info.forEach((row, i) => {
@@ -597,11 +597,11 @@ export default function ValuationsPage() {
             c.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
         });
 
-        const summaryData = [
-            ['Servicios Realizados', services.length, selectedClosure.Subtotal_Servicios],
-            ['Penalidades y Descuentos', penaltiesList.length, -selectedClosure.Subtotal_Penalidades],
+        const summaryData: [string, number | string, number | string][] = [
+            ['Servicios Realizados', services.length, selectedClosure.Subtotal_Servicios as number],
+            ['Penalidades y Descuentos', penaltiesList.length, -(selectedClosure.Subtotal_Penalidades as number)],
             ['', '', ''],
-            ['TOTAL A FACTURAR', '', selectedClosure.Total_Final]
+            ['TOTAL A FACTURAR', '', selectedClosure.Total_Final as number]
         ];
 
         summaryData.forEach((row, i) => {
@@ -624,7 +624,7 @@ export default function ValuationsPage() {
         const buffer = await workbook.xlsx.writeBuffer();
         const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
         
-        const _subject = `Cierre de Valorización - ${selectedClosure.Codigo_Valorizacion} - ${selectedClosure.Nombre_CAS}`;
+        // subject built inline below
         const bodyContent = `
             <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #f8fafc; font-family: 'Segoe UI', Arial, sans-serif;">
                 <tr>
@@ -652,7 +652,7 @@ export default function ValuationsPage() {
                                         </tr>
                                         <tr>
                                             <td style="border-bottom: 1px solid #e2e8f0; color: #64748b; font-size: 14px;">Periodo Liquidado</td>
-                                            <td align="right" style="border-bottom: 1px solid #e2e8f0; font-weight: 700; color: #1e293b; font-size: 14px;">${new Date(selectedClosure.Fecha_Inicio).toLocaleDateString('es-PE', { timeZone: 'UTC' })} al ${new Date(selectedClosure.Fecha_Fin).toLocaleDateString('es-PE', { timeZone: 'UTC' })}</td>
+                                            <td align="right" style="border-bottom: 1px solid #e2e8f0; font-weight: 700; color: #1e293b; font-size: 14px;">${new Date(selectedClosure.Fecha_Inicio as string).toLocaleDateString('es-PE', { timeZone: 'UTC' })} al ${new Date(selectedClosure.Fecha_Fin as string).toLocaleDateString('es-PE', { timeZone: 'UTC' })}</td>
                                         </tr>
                                         <tr>
                                             <td style="color: #64748b; font-size: 14px;">Servicios Procesados</td>
@@ -667,7 +667,7 @@ export default function ValuationsPage() {
                                                 <table width="100%" border="0" cellspacing="0" cellpadding="0">
                                                     <tr>
                                                         <td style="color: #64748b; font-size: 14px;">Subtotal por Servicios</td>
-                                                        <td align="right" style="font-weight: 600; color: #1e293b; font-size: 14px;">S/ ${selectedClosure.Subtotal_Servicios.toLocaleString('es-PE', { minimumFractionDigits: 2 })}</td>
+                                                        <td align="right" style="font-weight: 600; color: #1e293b; font-size: 14px;">S/ ${(selectedClosure.Subtotal_Servicios as number).toLocaleString('es-PE', { minimumFractionDigits: 2 })}</td>
                                                     </tr>
                                                 </table>
                                             </td>
@@ -677,7 +677,7 @@ export default function ValuationsPage() {
                                                 <table width="100%" border="0" cellspacing="0" cellpadding="0">
                                                     <tr>
                                                         <td style="color: #be123c; font-size: 14px;">Penalidades Aplicadas</td>
-                                                        <td align="right" style="font-weight: 700; color: #be123c; font-size: 14px;">- S/ ${selectedClosure.Subtotal_Penalidades.toLocaleString('es-PE', { minimumFractionDigits: 2 })}</td>
+                                                        <td align="right" style="font-weight: 700; color: #be123c; font-size: 14px;">- S/ ${(selectedClosure.Subtotal_Penalidades as number).toLocaleString('es-PE', { minimumFractionDigits: 2 })}</td>
                                                     </tr>
                                                 </table>
                                             </td>
@@ -687,7 +687,7 @@ export default function ValuationsPage() {
                                                 <table width="100%" border="0" cellspacing="0" cellpadding="0">
                                                     <tr>
                                                         <td style="font-weight: 700; color: #065f46; font-size: 18px;">Total Neto a Facturar</td>
-                                                        <td align="right" style="font-weight: 800; color: #059669; font-size: 22px;">S/ ${selectedClosure.Total_Final.toLocaleString('es-PE', { minimumFractionDigits: 2 })}</td>
+                                                        <td align="right" style="font-weight: 800; color: #059669; font-size: 22px;">S/ ${(selectedClosure.Total_Final as number).toLocaleString('es-PE', { minimumFractionDigits: 2 })}</td>
                                                     </tr>
                                                 </table>
                                             </td>
@@ -715,7 +715,7 @@ export default function ValuationsPage() {
 
         setPendingEmailData({
             blob,
-            filename: `Cierre_${selectedClosure.Codigo_Valorizacion}_${selectedClosure.Nombre_CAS.replace(/\s/g, '_')}.xlsx`,
+            filename: `Cierre_${selectedClosure.Codigo_Valorizacion}_${(selectedClosure.Nombre_CAS as string).replace(/\s/g, '_')}.xlsx`,
             subject: `CIERRE OFICIAL: ${selectedClosure.Codigo_Valorizacion} - ${selectedClosure.Nombre_CAS}`,
             body: bodyContent
         });
@@ -796,7 +796,7 @@ export default function ValuationsPage() {
                 acc[ticketKey] = p;
             } else if (p.Importe === currentMax.Importe) {
                 // Tie-breaker: latest CreadoEl
-                if (new Date(p.CreadoEl) > new Date(currentMax.CreadoEl)) {
+                if (new Date(p.CreadoEl!) > new Date(currentMax.CreadoEl!)) {
                     acc[ticketKey] = p;
                 }
             }
@@ -988,13 +988,10 @@ export default function ValuationsPage() {
     const handlePrepareClosureEmailFromResult = async (closure: Record<string, unknown>, details: Record<string, unknown>[]) => {
         // This is a variation of handlePrepareClosureEmail but for a freshly created closure
         // logic similar to handlePrepareClosureEmail but mapping from result
-        const _services = details.filter(d => d.tipo === 'SERVICIO');
-        const _penaltiesList = details.filter(d => d.tipo === 'PENALIDAD');
-
         const workbook = new ExcelJS.Workbook();
-        const _sheetResumen = workbook.addWorksheet('Resumen');
-        const _sheetDetalle = workbook.addWorksheet('Detalle Servicios');
-        const _sheetPenalties = workbook.addWorksheet('Detalle Penalidades');
+        workbook.addWorksheet('Resumen');
+        workbook.addWorksheet('Detalle Servicios');
+        workbook.addWorksheet('Detalle Penalidades');
 
         // Reuse existing excel logic from handlePreparePreValuationEmail but with OFFICIAL closure headers
         // [Simplified for now, but in production I would refactor to a common generator]
@@ -1036,11 +1033,10 @@ export default function ValuationsPage() {
     };
 
     const handleReopenFortnight = async (idCierre: string, code: string) => {
-        alert({
+        confirm({
             title: '¿Reabrir Quincena?',
             message: `Esta acción eliminará el registro de cierre ${code} y los tickets volverán a estar activos para edición. ¿Está seguro?`,
             type: 'warning',
-            showCancel: true,
             onConfirm: async () => {
                 try {
                     await ApiClient.request(`/valuations/reopen/${idCierre}`, { method: 'POST' });
@@ -1251,7 +1247,7 @@ export default function ValuationsPage() {
                 t.CodigoEquipo || '-',
                 t.NombreEquipo || '-',
                 t.Categoria,
-                (t.EsInstitucional === true || t.EsInstitucional === 'true') ? "OBRAS" : "-",
+                t.EsInstitucional ? "OBRAS" : "-",
                 t.Distrito || '-',
                 t.Departamento || '-',
                 t.TarifaBase ?? (t.TarifaBase + (t.Adicionales || 0)), // Si TarifaBase es null, usar el total
@@ -1335,10 +1331,10 @@ export default function ValuationsPage() {
         headerRow.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E3A8A' } };
         sheetResumen.mergeCells('A1:C1');
 
-        const info = [
-            ['CÓDIGO:', selectedClosure.Codigo_Valorizacion],
-            ['CAS:', selectedClosure.Nombre_CAS],
-            ['Periodo:', `${new Date(selectedClosure.Fecha_Inicio).toLocaleDateString()} al ${new Date(selectedClosure.Fecha_Fin).toLocaleDateString()}`]
+        const info: [string, string][] = [
+            ['CÓDIGO:', selectedClosure.Codigo_Valorizacion as string],
+            ['CAS:', selectedClosure.Nombre_CAS as string],
+            ['Periodo:', `${new Date(selectedClosure.Fecha_Inicio as string).toLocaleDateString()} al ${new Date(selectedClosure.Fecha_Fin as string).toLocaleDateString()}`]
         ];
 
         info.forEach((row, i) => {
@@ -1363,11 +1359,11 @@ export default function ValuationsPage() {
             c.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
         });
 
-        const summaryData = [
-            ['Servicios Realizados', services.length, selectedClosure.Subtotal_Servicios],
-            ['Penalidades y Descuentos (Aplicadas)', penalties.filter(p => p.Monto !== 0).length, -selectedClosure.Subtotal_Penalidades],
+        const summaryData: [string, number | string, number | string][] = [
+            ['Servicios Realizados', services.length, selectedClosure.Subtotal_Servicios as number],
+            ['Penalidades y Descuentos (Aplicadas)', penalties.filter(p => p.Monto !== 0).length, -(selectedClosure.Subtotal_Penalidades as number)],
             ['', '', ''],
-            ['TOTAL A FACTURAR', '', selectedClosure.Total_Final]
+            ['TOTAL A FACTURAR', '', selectedClosure.Total_Final as number]
         ];
 
         summaryData.forEach((row, i) => {
@@ -1395,7 +1391,7 @@ export default function ValuationsPage() {
 
         const breakdownMap = new Map<string, { count: number, total: number }>();
         services.forEach(s => {
-            const dateVal = s.FechaCierre || s.Fecha;
+            const dateVal = (s.FechaCierre || s.Fecha) as string | undefined;
             if (!dateVal) return;
             const d = new Date(dateVal);
             // Fix: Use UTC timezone to match web grouping and prevent date shifting
@@ -1403,7 +1399,7 @@ export default function ValuationsPage() {
             const current = breakdownMap.get(dateStr) || { count: 0, total: 0 };
             breakdownMap.set(dateStr, {
                 count: current.count + 1,
-                total: current.total + s.Monto
+                total: current.total + (s.Monto as number)
             });
         });
 
@@ -1422,7 +1418,7 @@ export default function ValuationsPage() {
         });
 
         const footerRow = sheetResumen.getRow(dateBreakdownStartRow + 1 + sortedDates.length);
-        footerRow.values = ['Total general', services.length, selectedClosure.Subtotal_Servicios];
+        footerRow.values = ['Total general', services.length, selectedClosure.Subtotal_Servicios as number];
         footerRow.eachCell(c => {
             c.font = { bold: true, color: { argb: 'FFFFFFFF' } };
             c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E3A8A' } };
@@ -1436,25 +1432,26 @@ export default function ValuationsPage() {
         sheetDetalle.getRow(1).eachCell(c => { c.font = { bold: true, color: { argb: 'FFFFFFFF' } }; c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E3A8A' } }; });
         
         services.forEach(s => {
-            const isObras = (s.Categoria || '').includes('[OBRAS]');
-            const cleanCategoria = isObras ? s.Categoria.replace(' [OBRAS]', '') : (s.Categoria || '');
+            const sCategoria = (s.Categoria as string) || '';
+            const isObras = sCategoria.includes('[OBRAS]');
+            const cleanCategoria = isObras ? sCategoria.replace(' [OBRAS]', '') : sCategoria;
             const row = sheetDetalle.addRow([
-                s.Ticket, 
-                s.Fecha_Visita ? new Date(s.Fecha_Visita) : null, 
-                s.Fecha_Cierre ? new Date(s.Fecha_Cierre) : null, 
-                s.Dias_Diferencia ?? '-', 
-                s.Servicio_Nombre, 
-                `${s.NombreTecnico || ''} ${s.ApellidoTecnico || ''}`.trim() || '-',
-                s.ComentarioTecnico || '-',
-                s.Codigo_Externo || '-', 
-                s.NombreEquipo || s.Nombre_Equipo || '-',
-                cleanCategoria, 
+                s.Ticket as string,
+                s.Fecha_Visita ? new Date(s.Fecha_Visita as string) : null,
+                s.Fecha_Cierre ? new Date(s.Fecha_Cierre as string) : null,
+                (s.Dias_Diferencia as number | undefined) ?? '-',
+                s.Servicio_Nombre as string,
+                `${(s.NombreTecnico as string) || ''} ${(s.ApellidoTecnico as string) || ''}`.trim() || '-',
+                (s.ComentarioTecnico as string) || '-',
+                (s.Codigo_Externo as string) || '-',
+                (s.NombreEquipo as string) || (s.Nombre_Equipo as string) || '-',
+                cleanCategoria,
                 isObras ? "OBRAS" : "-",
-                s.Distrito || '-',
-                s.Departamento || '-',
-                s.Tarifa_Base ?? s.Monto, // Fallback para cierres antiguos
-                s.Adicionales ?? 0, 
-                s.Monto
+                (s.Distrito as string) || '-',
+                (s.Departamento as string) || '-',
+                (s.Tarifa_Base as number | undefined) ?? (s.Monto as number), // Fallback para cierres antiguos
+                (s.Adicionales as number | undefined) ?? 0,
+                s.Monto as number
             ]);
             row.getCell(2).numFmt = 'dd/mm/yyyy';
             row.getCell(3).numFmt = 'dd/mm/yyyy';
@@ -1472,14 +1469,14 @@ export default function ValuationsPage() {
         sheetPenalties.getRow(1).eachCell(c => { c.font = { bold: true, color: { argb: 'FFFFFFFF' } }; c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E3A8A' } }; });
         
         penalties.forEach(p => {
-            const isEffective = p.Monto !== 0;
+            const isEffective = (p.Monto as number) !== 0;
             const row = sheetPenalties.addRow([
-                p.Ticket, 
-                new Date(p.Fecha_Ticket), 
-                p.Servicio_Nombre, 
-                p.Categoria, 
+                p.Ticket as string,
+                new Date(p.Fecha_Ticket as string),
+                p.Servicio_Nombre as string,
+                p.Categoria as string,
                 isEffective ? 'APLICADO' : 'IGNORADO',
-                -p.Monto
+                -(p.Monto as number)
             ]);
             row.getCell(2).numFmt = 'dd/mm/yyyy';
             row.getCell(6).numFmt = '"S/" #,##0.00';
@@ -1561,8 +1558,8 @@ export default function ValuationsPage() {
             {/* Banner Global Search Result */}
             {/* Modal de Envío de Correo */}
             <Modal
-                show={showEmailModal}
-                onClose={() => !isSendingEmail && setShowEmailModal(false)}
+                isOpen={showEmailModal}
+                onClose={() => { if (!isSendingEmail) setShowEmailModal(false); }}
                 title="Compartir Valorización por Correo"
             >
                 <div className="space-y-6">
@@ -1648,13 +1645,13 @@ export default function ValuationsPage() {
                             <div className="h-8 w-px bg-primary/10" />
                             <div className="flex flex-col">
                                 <span className="text-[10px] font-bold opacity-40">Fecha</span>
-                                <span className="text-sm font-bold">{new Date(globalSearchResult.Fecha).toLocaleDateString('es-PE', { timeZone: 'UTC' })}</span>
+                                <span className="text-sm font-bold">{new Date(globalSearchResult.Fecha!).toLocaleDateString('es-PE', { timeZone: 'UTC' })}</span>
                             </div>
-                            <button 
+                            <button
                                 onClick={() => {
                                     const cas = casList.find(c => c.RUC === globalSearchResult.RUC);
                                     if (cas) setSelectedCas(cas);
-                                    setShowPenaltyModal({ show: true, type: 'penalty', ticket: globalSearchResult.Ticket, date: globalSearchResult.Fecha.split('T')[0] });
+                                    setShowPenaltyModal({ show: true, type: 'penalty', ticket: globalSearchResult.Ticket, date: globalSearchResult.Fecha?.split('T')[0] });
                                 }}
                                 className="bg-red-600 text-white px-5 py-2.5 rounded-xl text-xs font-black hover:bg-red-700 transition-all shadow-lg shadow-red-600/20 flex items-center gap-2"
                             >
@@ -2273,9 +2270,9 @@ export default function ValuationsPage() {
                         ) : (
                             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                                 {closures.map((closure) => (
-                                    <div key={closure.IdCierre} className="p-6 crypto-card hover:border-primary/50 transition-all group">
+                                    <div key={closure.IdCierre as string} className="p-6 crypto-card hover:border-primary/50 transition-all group">
                                         <div className="flex items-center justify-between mb-4">
-                                            <span className="text-sm font-data text-primary bg-primary/5 px-2.5 py-1 rounded-lg">{closure.Codigo_Valorizacion || `ID-${closure.IdCierre}`}</span>
+                                            <span className="text-sm font-data text-primary bg-primary/5 px-2.5 py-1 rounded-lg">{(closure.Codigo_Valorizacion as string) || `ID-${closure.IdCierre}`}</span>
                                             <span className={cn(
                                                 "text-[10px] font-black px-2 py-0.5 rounded uppercase",
                                                 closure.Estado === 'BORRADOR' ? "bg-amber-100 text-amber-700" : "bg-muted text-muted-foreground"
@@ -2284,27 +2281,27 @@ export default function ValuationsPage() {
                                             </span>
                                         </div>
                                         <div className="space-y-1 mb-4">
-                                            <h4 className="font-black text-slate-800 text-lg">{closure.Nombre_CAS}</h4>
-                                            <p className="text-xs font-bold text-muted-foreground opacity-60">Periodo: {new Date(closure.Fecha_Inicio).toLocaleDateString('es-PE', { timeZone: 'UTC' })} al {new Date(closure.Fecha_Fin).toLocaleDateString('es-PE', { timeZone: 'UTC' })}</p>
+                                            <h4 className="font-black text-slate-800 text-lg">{closure.Nombre_CAS as string}</h4>
+                                            <p className="text-xs font-bold text-muted-foreground opacity-60">Periodo: {new Date(closure.Fecha_Inicio as string).toLocaleDateString('es-PE', { timeZone: 'UTC' })} al {new Date(closure.Fecha_Fin as string).toLocaleDateString('es-PE', { timeZone: 'UTC' })}</p>
                                         </div>
                                         <div className="flex gap-6 mb-6 border-t border-border/30 pt-4">
                                             <div className="flex flex-col">
                                                 <span className="text-[9px] font-black text-muted-foreground opacity-40 uppercase tracking-widest">Servicios</span>
-                                                <span className="text-xs font-black">{closure.Total_Servicios || 0} items</span>
+                                                <span className="text-xs font-black">{((closure.Total_Servicios as number) || 0)} items</span>
                                             </div>
                                             <div className="flex flex-col">
                                                 <span className="text-[9px] font-black text-muted-foreground opacity-40 uppercase tracking-widest">Penalidades</span>
-                                                <span className="text-xs font-black text-red-500">{closure.Total_Penalidades || 0} aplicadas</span>
+                                                <span className="text-xs font-black text-red-500">{((closure.Total_Penalidades as number) || 0)} aplicadas</span>
                                             </div>
                                         </div>
                                         <div className="flex justify-between items-end">
                                             <div>
                                                 <p className="text-[10px] font-bold text-muted-foreground mb-1 uppercase opacity-30">Total Neto</p>
-                                                <p className="text-2xl font-data text-emerald-600">S/ {closure.Total_Final.toLocaleString('es-PE', { minimumFractionDigits: 2 })}</p>
+                                                <p className="text-2xl font-data text-emerald-600">S/ {(closure.Total_Final as number).toLocaleString('es-PE', { minimumFractionDigits: 2 })}</p>
                                             </div>
                                             <div className="flex gap-2">
-                                                <button 
-                                                    onClick={() => handleReopenFortnight(closure.IdCierre, closure.Codigo_Valorizacion)}
+                                                <button
+                                                    onClick={() => handleReopenFortnight(closure.IdCierre as string, closure.Codigo_Valorizacion as string)}
                                                     className="p-3 bg-red-50 text-red-600 rounded-xl hover:bg-red-600 hover:text-white transition-all shadow-sm border border-red-100"
                                                     title="Reabrir Quincena"
                                                 >
@@ -2347,9 +2344,9 @@ export default function ValuationsPage() {
                                 <div>
                                     <h2 className="text-xl font-black text-cb-text-primary flex items-center gap-3">
                                         Detalle del Cierre
-                                        <span className="text-xs font-black text-primary bg-primary/5 border border-primary/20 px-3 py-1 rounded-full">{selectedClosure.Codigo_Valorizacion}</span>
+                                        <span className="text-xs font-black text-primary bg-primary/5 border border-primary/20 px-3 py-1 rounded-full">{selectedClosure.Codigo_Valorizacion as string}</span>
                                     </h2>
-                                    <p className="text-xs font-bold text-muted-foreground mt-0.5">{selectedClosure.Nombre_CAS} • {new Date(selectedClosure.Fecha_Inicio).toLocaleDateString('es-PE', { timeZone: 'UTC' })} al {new Date(selectedClosure.Fecha_Fin).toLocaleDateString('es-PE', { timeZone: 'UTC' })}</p>
+                                    <p className="text-xs font-bold text-muted-foreground mt-0.5">{selectedClosure.Nombre_CAS as string} • {new Date(selectedClosure.Fecha_Inicio as string).toLocaleDateString('es-PE', { timeZone: 'UTC' })} al {new Date(selectedClosure.Fecha_Fin as string).toLocaleDateString('es-PE', { timeZone: 'UTC' })}</p>
                                 </div>
                             </div>
                             
@@ -2387,9 +2384,9 @@ export default function ValuationsPage() {
                                 <button 
                                     onClick={() => {
                                         if (selectedClosure) {
-                                            const id = selectedClosure.IdCierre;
-                                            const code = selectedClosure.Codigo_Valorizacion;
-                                            setSelectedClosure(null); 
+                                            const id = selectedClosure.IdCierre as string;
+                                            const code = selectedClosure.Codigo_Valorizacion as string;
+                                            setSelectedClosure(null);
                                             handleReopenFortnight(id, code);
                                         }
                                     }}
@@ -2472,40 +2469,40 @@ export default function ValuationsPage() {
                                     <tbody className="divide-y divide-border/10">
                                         {closureDetails
                                             .filter(d => detailActiveTab === 'services' ? d.Tipo === 'SERVICIO' : d.Tipo === 'PENALIDAD')
-                                            .filter(d => 
-                                                (d.Ticket?.toString() || '').includes(detailSearchQuery) || 
-                                                (d.Servicio_Nombre || '').toLowerCase().includes(detailSearchQuery.toLowerCase())
+                                            .filter(d =>
+                                                (d.Ticket?.toString() || '').includes(detailSearchQuery) ||
+                                                ((d.Servicio_Nombre as string) || '').toLowerCase().includes(detailSearchQuery.toLowerCase())
                                             ).map((det) => (
-                                            <tr key={det.IdDetalle} className="hover:bg-muted/30 transition-all group/det">
-                                                <td className="px-8 py-4 font-bold text-sm text-primary">{det.Ticket}</td>
-                                                <td className="px-4 py-4 text-xs font-medium">{new Date(det.Fecha_Ticket).toLocaleDateString('es-PE', { timeZone: 'UTC' })}</td>
+                                            <tr key={det.IdDetalle as string} className="hover:bg-muted/30 transition-all group/det">
+                                                <td className="px-8 py-4 font-bold text-sm text-primary">{det.Ticket as string}</td>
+                                                <td className="px-4 py-4 text-xs font-medium">{new Date(det.Fecha_Ticket as string).toLocaleDateString('es-PE', { timeZone: 'UTC' })}</td>
                                                 <td className="px-4 py-4 text-center">
                                                     <span className={cn("px-2 py-0.5 rounded text-[10px] font-black uppercase", det.Tipo === 'SERVICIO' ? "bg-blue-100 text-blue-700" : "bg-red-500 text-white shadow-sm")}>
-                                                        {det.Tipo}
+                                                        {det.Tipo as string}
                                                     </span>
                                                 </td>
                                                 <td className="px-4 py-4">
-                                                    <p className="text-xs font-bold truncate max-w-[400px]" title={det.Servicio_Nombre}>{det.Servicio_Nombre}</p>
+                                                    <p className="text-xs font-bold truncate max-w-[400px]" title={det.Servicio_Nombre as string | undefined}>{det.Servicio_Nombre as string}</p>
                                                     <p className="text-[10px] text-muted-foreground font-medium">
-                                                        {det.Categoria}{det.Tipo === 'PENALIDAD' && ` • Registrado por: ${det.CreadoPor || 'N/D'}`}
+                                                        {det.Categoria as string}{det.Tipo === 'PENALIDAD' && ` • Registrado por: ${(det.CreadoPor as string) || 'N/D'}`}
                                                     </p>
 
                                                 </td>
                                                 <td className="px-8 py-4 text-right">
-                                                    <span className={cn("text-sm font-black tracking-tight", det.Monto < 0 ? "text-red-600" : "text-slate-800")}>
-                                                        {det.Monto < 0 ? '-' : ''} S/ {Math.abs(det.Monto).toLocaleString('es-PE', { minimumFractionDigits: 2 })}
+                                                    <span className={cn("text-sm font-black tracking-tight", (det.Monto as number) < 0 ? "text-red-600" : "text-slate-800")}>
+                                                        {(det.Monto as number) < 0 ? '-' : ''} S/ {Math.abs(det.Monto as number).toLocaleString('es-PE', { minimumFractionDigits: 2 })}
                                                     </span>
                                                 </td>
                                                 <td className="px-4 py-4 text-center">
                                                     {det.Tipo === 'SERVICIO' && (
-                                                        <button 
-                                                            onClick={() => setShowPenaltyModal({ 
-                                                                show: true, 
-                                                                type: 'penalty', 
-                                                                ticket: det.Ticket, 
-                                                                date: det.Fecha_Ticket.split('T')[0] 
+                                                        <button
+                                                            onClick={() => setShowPenaltyModal({
+                                                                show: true,
+                                                                type: 'penalty',
+                                                                ticket: det.Ticket as string | undefined,
+                                                                date: (det.Fecha_Ticket as string).split('T')[0]
                                                             })}
-                                                            className="p-2 bg-red-500/10 text-red-600 rounded-lg hover:bg-red-600 hover:text-white transition-all opacity-0 group-hover/det:opacity-100 shadow-sm flex items-center justify-center mx-auto" 
+                                                            className="p-2 bg-red-500/10 text-red-600 rounded-lg hover:bg-red-600 hover:text-white transition-all opacity-0 group-hover/det:opacity-100 shadow-sm flex items-center justify-center mx-auto"
                                                             title="Penalizar Ticket"
                                                         >
                                                             <AlertTriangle className="w-3.5 h-3.5" />
@@ -2516,7 +2513,7 @@ export default function ValuationsPage() {
                                         ))}
                                         {closureDetails
                                             .filter(d => detailActiveTab === 'services' ? d.Tipo === 'SERVICIO' : d.Tipo === 'PENALIDAD')
-                                            .filter(d => (d.Ticket?.toString() || '').includes(detailSearchQuery) || (d.Servicio_Nombre || '').toLowerCase().includes(detailSearchQuery.toLowerCase())).length === 0 && (
+                                            .filter(d => (d.Ticket?.toString() || '').includes(detailSearchQuery) || ((d.Servicio_Nombre as string) || '').toLowerCase().includes(detailSearchQuery.toLowerCase())).length === 0 && (
                                             <tr>
                                                 <td colSpan={5} className="py-20 text-center text-muted-foreground opacity-40">
                                                     <Search className="w-10 h-10 mx-auto mb-3" />
@@ -2537,14 +2534,14 @@ export default function ValuationsPage() {
                                         <div className="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-600">
                                             {(selectedClosure.Cerrado_Por as string)?.split(' ').map((n: string) => n[0]).join('')}
                                         </div>
-                                        <p className="text-sm font-extrabold text-slate-800">{selectedClosure.Cerrado_Por}</p>
+                                        <p className="text-sm font-extrabold text-slate-800">{selectedClosure.Cerrado_Por as string}</p>
                                     </div>
                                 </div>
                                 <div className="flex flex-col">
                                     <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1 opacity-40">Fecha de Registro</p>
                                     <div className="flex items-center gap-2 text-slate-600">
                                         <Calendar className="w-3.5 h-3.5" />
-                                        <p className="text-sm font-bold">{new Date(selectedClosure.Cerrado_El).toLocaleString()}</p>
+                                        <p className="text-sm font-bold">{new Date(selectedClosure.Cerrado_El as string).toLocaleString()}</p>
                                     </div>
                                 </div>
                             </div>
@@ -2553,7 +2550,7 @@ export default function ValuationsPage() {
                                 <div className="flex items-center gap-3">
                                     <span className="text-xl font-bold text-emerald-600/40">S/</span>
                                     <p className="text-4xl font-black text-emerald-600 tracking-tighter drop-shadow-sm">
-                                        {selectedClosure.Total_Final.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                        {(selectedClosure.Total_Final as number).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                     </p>
                                 </div>
                             </div>
@@ -2760,27 +2757,6 @@ function BatchAdjustmentModal({ isOpen, onClose, onApply, tickets, setTickets, t
                         {isApplying ? "Aplicando ajustes..." : "Aplicar Ajuste a Tickets"}
                     </button>
                 </div>
-            </div>
-        </div>
-    );
-}
-
-interface StatCardProps {
-    title: string;
-    value: string | number;
-    subtitle?: string;
-    icon?: React.ReactNode;
-    color?: 'blue' | 'red' | 'emerald' | 'amber';
-}
-function _StatCard({ title, value, subtitle, icon, color }: StatCardProps) {
-    const colorClasses: Record<string, string> = { blue: "bg-blue-500", red: "bg-red-500", emerald: "bg-emerald-500", amber: "bg-amber-500" };
-    return (
-        <div className="bg-card border border-border rounded-2xl p-6 shadow-sm hover:translate-y-[-4px] transition-all group overflow-hidden relative">
-            <div className={`absolute top-0 right-0 w-32 h-32 ${colorClasses[color]} opacity-[0.05] rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-700`} />
-            <div className="flex flex-col gap-5">
-                <div className="flex items-center justify-between"><div className={`p-3 rounded-xl ${colorClasses[color]}/10 text-${color}-600 shadow-sm border border-${color}-500/10`}>{icon}</div></div>
-                <div className="space-y-1"><p className="text-[10px] font-bold text-muted-foreground/60">{title}</p><p className="text-2xl font-black tracking-tight text-foreground">{value}</p></div>
-                <p className="text-[10px] font-bold text-muted-foreground opacity-60 flex items-center gap-2"><AlertCircle className="w-3.5 h-3.5" />{subtitle}</p>
             </div>
         </div>
     );

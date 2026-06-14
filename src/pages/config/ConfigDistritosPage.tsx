@@ -82,25 +82,27 @@ export default function ConfigDistritosPage() {
         }
     };
 
-    const handleDelete = async (id: number) => {
-        if (await confirm({ 
-            title: "¿Eliminar configuración?", 
+    const handleDelete = (id: number) => {
+        confirm({
+            title: "¿Eliminar configuración?",
             message: "Esta acción no se puede deshacer y afectará los cálculos futuros.",
             confirmText: "Si, eliminar",
-            type: 'danger'
-        })) {
-            try {
-                await ApiClient.request(`/config-distritos/${id}`, { method: 'DELETE' });
-                alert({ title: "Eliminado", message: "La regla ha sido eliminada.", type: 'success' });
-                fetchData();
-            } catch (_error: unknown) {
-                alert({ message: "Error al eliminar." });
+            type: 'danger',
+            onConfirm: async () => {
+                try {
+                    await ApiClient.request(`/config-distritos/${id}`, { method: 'DELETE' });
+                    alert({ title: "Eliminado", message: "La regla ha sido eliminada.", type: 'success' });
+                    fetchData();
+                } catch (_error: unknown) {
+                    alert({ message: "Error al eliminar." });
+                }
             }
-        }
+        });
     };
 
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (!editingConfig) return;
         try {
             await ApiClient.request('/config-distritos', {
                 method: 'POST',
@@ -348,9 +350,9 @@ export default function ConfigDistritosPage() {
                             {/* CAS MultiSelect */}
                             <div className="flex flex-col gap-2">
                                 <label className="text-[11px] font-bold text-cb-neutral uppercase tracking-wider ml-1">Seleccionar CAS</label>
-                                <MultiSelect 
+                                <MultiSelect
                                     options={casList.map(cas => ({ value: cas.ID_CAS, label: cas.Nombre_CAS, badge: cas.Abrev_nombre_colaboradores }))}
-                                    selected={editingConfig.cas_ids}
+                                    selected={editingConfig.cas_ids ?? []}
                                     onChange={(vals) => setEditingConfig({...editingConfig, cas_ids: vals})}
                                     placeholder="Buscar CAS..."
                                 />
@@ -371,9 +373,9 @@ export default function ConfigDistritosPage() {
                                 </div>
                                 <div className="flex flex-col gap-2">
                                     <label className="text-[11px] font-bold text-cb-neutral uppercase tracking-wider ml-1">Seleccionar Distritos ({selectedCity || 'Todos'})</label>
-                                    <MultiSelect 
+                                    <MultiSelect
                                         options={availableDistrictsForCity.map(d => ({ value: d, label: d }))}
-                                        selected={editingConfig.distritos}
+                                        selected={editingConfig.distritos ?? []}
                                         onChange={(vals) => setEditingConfig({...editingConfig, distritos: vals})}
                                         placeholder="Buscar distritos..."
                                     />

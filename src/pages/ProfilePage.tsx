@@ -227,7 +227,7 @@ export function ProfilePage() {
                                     </div>
                                     <div className={t.INFO_ITEM_DETAILS}>
                                         <p className={t.INFO_ITEM_LABEL}>Gerencia</p>
-                                        <p className={t.INFO_ITEM_VALUE}>{(user as Record<string, unknown>).management_name as string || user.management_id || 'Sin gerencia'}</p>
+                                        <p className={t.INFO_ITEM_VALUE}>{user.management_name || user.management_id || 'Sin gerencia'}</p>
                                     </div>
                                 </div>
 

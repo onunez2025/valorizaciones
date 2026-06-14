@@ -80,8 +80,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                                 permissions: (payload.permissions as string[]) || [],
                                 apps: payload.apps as string
                             };
-                            setUser(preHydratedUser as User);
-                            StorageService.setCurrentUser(preHydratedUser as User);
+                            setUser(preHydratedUser as unknown as User);
+                            StorageService.setCurrentUser(preHydratedUser as unknown as User);
                         }
                     }
                 } else {

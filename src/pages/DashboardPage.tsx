@@ -425,7 +425,7 @@ function StatCard({ title, value, subtitle, icon, trend, trendUp, color }: StatC
         <div className={SIATC_THEME.COMPONENTS.KPI_CARD_CONTAINER}>
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                    <div className={cn("p-1.5 rounded-lg transition-transform group-hover:scale-110", bgClasses[color], colorClasses[color])}>
+                    <div className={cn("p-1.5 rounded-lg transition-transform group-hover:scale-110", bgClasses[color ?? 'blue'], colorClasses[color ?? 'blue'])}>
                         {icon}
                     </div>
                     <span className={SIATC_THEME.COMPONENTS.KPI_CARD_LABEL}>{title}</span>

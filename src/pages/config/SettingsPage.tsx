@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Save, Loader2, Settings2, ChevronRight } from 'lucide-react';
 import { ApiClient } from '../../services/apiClient';
 import { useDialog } from '../../context/DialogContext';

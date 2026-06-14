@@ -27,6 +27,8 @@ export interface User {
   theme: string;
   permissions?: Permission[];
   requires_password_change?: boolean;
+  avatar_url?: string;
+  apps?: string;
 }
 
 export interface CAS {
@@ -57,6 +59,7 @@ export interface ValuationTicket {
   ComentarioTecnico?: string;
   Distrito?: string;
   Departamento?: string;
+  EsInstitucional?: boolean;
 }
 
 export interface Material {
@@ -79,6 +82,8 @@ export interface Penalty {
   CreadoPor?: string;
   Sustento_CAS?: string;
   Respuesta_Analista?: string;
+  Categoria?: string;
+  CreadoEl?: string;
 }
 
 
