@@ -137,7 +137,7 @@ async function getDb() {
             pool = await new sql.ConnectionPool(dbConfig).connect();
             console.log('✅ Conectado a Azure SQL: ' + dbConfig.database);
         } catch (err: unknown) {
-            console.error('❌ Error de conexión DB:', err.message);
+            console.error('❌ Error de conexión DB:', err instanceof Error ? err.message : String(err));
             pool = null;
             throw err;
         }
@@ -502,7 +502,7 @@ app.get('/api/c4c-creators', verifyToken, async (req: Request, res: Response) =>
         const creators = Array.from(new Set(items.map((item: { CreatedBy: string }) => item.CreatedBy))).sort();
         res.json(creators);
     } catch (err: unknown) {
-        console.error('C4C Creators Error:', err.message);
+        console.error('C4C Creators Error:', err instanceof Error ? err.message : String(err));
         res.status(500).json({ error: "No se pudieron obtener los creadores de C4C." });
     }
 });
@@ -1337,8 +1337,9 @@ app.post('/api/valuations/send-email', verifyToken, async (req: Request, res: Re
         await logAudit(req, 'EMAIL_SENT', 'VALUATION', attachmentName, { recipients: to });
         res.json({ success: true, message: 'Email enviado correctamente' });
     } catch (err: unknown) {
-        console.error('Error enviando email:', err.response?.data || err.message);
-        res.status(500).json({ error: 'No se pudo enviar el correo: ' + (err.response?.data?.error?.message || err.message) });
+        const axiosErr = err as { response?: { data?: { error?: { message?: string } } }; message?: string };
+        console.error('Error enviando email:', axiosErr.response?.data || (err instanceof Error ? err.message : String(err)));
+        res.status(500).json({ error: 'No se pudo enviar el correo: ' + (axiosErr.response?.data?.error?.message || (err instanceof Error ? err.message : String(err))) });
     }
 });
 
@@ -2018,10 +2019,11 @@ app.get('/api/c4c/report/:ticketId', verifyToken, async (req: Request, res: Resp
         res.send(pdfResponse.data);
 
     } catch (err: unknown) {
-        console.error('C4C Proxy Error:', err.response?.data || err.message);
-        res.status(err.response?.status || 500).json({ 
+        const axiosErr = err as { response?: { data?: { error?: { message?: { value?: string } } }; status?: number }; message?: string };
+        console.error('C4C Proxy Error:', axiosErr.response?.data || (err instanceof Error ? err.message : String(err)));
+        res.status(axiosErr.response?.status || 500).json({
             error: 'Failed to retrieve report from C4C',
-            details: err.response?.data?.error?.message?.value || err.message
+            details: axiosErr.response?.data?.error?.message?.value || (err instanceof Error ? err.message : String(err))
         });
     }
 });
@@ -2249,7 +2251,7 @@ async function fetchAppMeta(): Promise<void> {
             console.log(`[AppConfig] Loaded meta for ${code}: ${appMeta.label}`);
         }
     } catch (err: unknown) {
-        console.warn('[AppConfig] Could not fetch app meta from DB:', err.message);
+        console.warn('[AppConfig] Could not fetch app meta from DB:', err instanceof Error ? err.message : String(err));
     }
 }
 

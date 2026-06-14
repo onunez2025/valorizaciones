@@ -1,9 +1,12 @@
 import express from 'express';
 import { fileURLToPath } from 'url';
 import cors from 'cors';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
 import sql from 'mssql';
 import jwt from 'jsonwebtoken';
+import { z } from 'zod';
 import bcrypt from 'bcrypt';
 import path from 'path';
 import crypto from 'crypto';
@@ -15,7 +18,11 @@ const port = process.env.PORT || 3000;
 const APP_IDENTIFIER = 'VAL';
 const C4C_BASE_URL = process.env.C4C_BASE_URL;
 const C4C_AUTH = Buffer.from(`${process.env.C4C_USER}:${process.env.C4C_PASSWORD}`).toString('base64');
-const JWT_SECRET = process.env.JWT_SECRET || 'tablero_control_secret_2026';
+const JWT_SECRET = process.env.JWT_SECRET || '';
+if (process.env.NODE_ENV === 'production' && !JWT_SECRET) {
+    console.error('CRITICAL FATAL ERROR: JWT_SECRET environment variable is not set. Server cannot start securely.');
+    process.exit(1);
+}
 // MS Graph API Config
 const MS_GRAPH_TENANT_ID = process.env.MS_GRAPH_TENANT_ID;
 const MS_GRAPH_CLIENT_ID = process.env.MS_GRAPH_CLIENT_ID;
@@ -56,9 +63,53 @@ async function logAudit(req, action, entity, entityId, details) {
         console.error('❌ Falla en Log de Auditoría VAL:', err);
     }
 }
-app.use(cors());
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ limit: '10mb', extended: true }));
+app.set('trust proxy', 1);
+app.use(helmet({
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc: ["'self'"],
+            scriptSrc: ["'self'"],
+            styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+            imgSrc: ["'self'", "data:", "https:"],
+            connectSrc: ["'self'"],
+            fontSrc: ["'self'", "data:", "https://fonts.gstatic.com"],
+            objectSrc: ["'none'"],
+            upgradeInsecureRequests: [],
+            frameAncestors: ["'none'"],
+            formAction: ["'self'"],
+            baseUri: ["'self'"],
+        }
+    }
+}));
+const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 1000,
+    message: { error: 'Too many requests from this IP, please try again later.' }
+});
+app.use(limiter);
+const authLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000,
+    max: 50,
+    message: { error: 'Too many login attempts, please try again after an hour.' }
+});
+app.use('/api/auth/login', authLimiter);
+app.use(cors({
+    origin: (origin, callback) => {
+        if (process.env.NODE_ENV !== 'production')
+            return callback(null, true);
+        const allowedOrigins = (process.env.ALLOWED_ORIGINS || '').split(',').map(s => s.trim()).filter(Boolean);
+        if (!origin || allowedOrigins.includes(origin)) {
+            callback(null, true);
+        }
+        else {
+            console.error(`Blocked CORS attempt from: ${origin}`);
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
+    credentials: true
+}));
+app.use(express.json({ limit: '2mb' }));
+app.use(express.urlencoded({ limit: '2mb', extended: true }));
 const dbConfig = {
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
@@ -66,7 +117,7 @@ const dbConfig = {
     server: process.env.DB_SERVER || '',
     port: 1433,
     pool: { max: 30, min: 0, idleTimeoutMillis: 30000 },
-    options: { encrypt: true, trustServerCertificate: true, requestTimeout: 60000 }
+    options: { encrypt: true, trustServerCertificate: false, requestTimeout: 60000 }
 };
 let pool = null;
 async function getDb() {
@@ -76,7 +127,7 @@ async function getDb() {
             console.log('✅ Conectado a Azure SQL: ' + dbConfig.database);
         }
         catch (err) {
-            console.error('❌ Error de conexión DB:', err.message);
+            console.error('❌ Error de conexión DB:', err instanceof Error ? err.message : String(err));
             pool = null;
             throw err;
         }
@@ -91,11 +142,11 @@ const verifyToken = (req, res, next) => {
         req.user = jwt.verify(token, JWT_SECRET);
         next();
     }
-    catch (err) {
+    catch (_err) {
         res.status(403).json({ error: 'Token inválido' });
     }
 };
-app.get('/api/applications', async (req, res) => {
+app.get('/api/applications', verifyToken, async (req, res) => {
     try {
         const db = await getDb();
         const activeOnly = req.query.activeOnly === 'true';
@@ -108,7 +159,7 @@ app.get('/api/applications', async (req, res) => {
         res.json(result.recordset);
     }
     catch (err) {
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
     }
 });
 const verifyPermission = (permission) => {
@@ -133,14 +184,26 @@ const verifyPermission = (permission) => {
     };
 };
 // --- AUTH ---
+const loginSchema = z.object({
+    username: z.string().min(1, 'Usuario requerido').max(255),
+    password: z.string().min(1, 'Contraseña requerida').max(255),
+});
 app.post('/api/auth/login', async (req, res) => {
-    const { username, password } = req.body;
+    const parseResult = loginSchema.safeParse(req.body);
+    if (!parseResult.success) {
+        return res.status(400).json({ error: 'Datos de login inválidos', details: parseResult.error.issues });
+    }
+    const { username, password } = parseResult.data;
     try {
         const db = await getDb();
-        const result = await db.request().input('u', username).input('app', APP_IDENTIFIER).query(`
-            SELECT u.*, r.Name as RoleName, m.Name as ManagementName FROM EBM.Users u 
-            LEFT JOIN EBM.Roles r ON u.RoleId = r.Id 
+        const result = await db.request().input('u', sql.NVarChar, username).input('app', sql.NVarChar, APP_IDENTIFIER).query(`
+            SELECT u.*, r.Name as RoleName, m.Name as ManagementName,
+                uc.CASId as cas_id, TRIM(c.RUC) as cas_ruc
+            FROM EBM.Users u
+            LEFT JOIN EBM.Roles r ON u.RoleId = r.Id
             LEFT JOIN EBM.Managements m ON u.ManagementId = m.Id
+            LEFT JOIN EBM.UserCAS uc ON u.Id = uc.UserId
+            LEFT JOIN dbo.GAC_APP_TB_CAS c ON uc.CASId = c.ID_CAS
             WHERE (u.Username = @u OR u.Email = @u) AND u.IsActive = 1 AND (u.Apps LIKE '%' + @app + '%' OR u.Apps LIKE '%ADMIN%')
         `);
         const user = result.recordset[0];
@@ -153,43 +216,54 @@ app.post('/api/auth/login', async (req, res) => {
         if (!isAdmin && !apps.includes('VAL')) {
             return res.status(403).json({ error: 'Sin acceso a la aplicación de Valorizaciones' });
         }
-        const perms = (await db.request().input('rid', user.RoleId).input('app', APP_IDENTIFIER).query("SELECT Permission FROM EBM.RolePermissions WHERE RoleId = @rid AND (Permission LIKE @app + '.%' OR Permission LIKE 'ebm.%')")).recordset.map(p => p.Permission);
-        const token = jwt.sign({ id: user.Id, username: user.Username, role: user.RoleName, perms }, JWT_SECRET, { expiresIn: '12h' });
-        res.json({ token, user: { id: user.Id, username: user.Username, full_name: user.FullName, email: user.Email, role_name: user.RoleName, management_id: user.ManagementId, management_name: user.ManagementName, avatar_url: user.AvatarUrl, permissions: perms, requires_password_change: user.RequiresPasswordChange === 1 } });
+        const perms = (await db.request().input('rid', user.RoleId).input('app', sql.NVarChar, APP_IDENTIFIER).query("SELECT Permission FROM EBM.RolePermissions WHERE RoleId = @rid AND (Permission LIKE @app + '.%' OR Permission LIKE 'ebm.%')")).recordset.map(p => p.Permission);
+        const token = jwt.sign({ id: user.Id, username: user.Username, role: user.RoleName, perms, casId: user.cas_id || null, casRUC: user.cas_ruc || null }, JWT_SECRET, { expiresIn: '12h' });
+        res.json({ token, user: { id: user.Id, username: user.Username, full_name: user.FullName, email: user.Email, role_name: user.RoleName, management_id: user.ManagementId, management_name: user.ManagementName, avatar_url: user.AvatarUrl, permissions: perms, apps: user.Apps, requires_password_change: user.RequiresPasswordChange === 1 } });
     }
     catch (err) {
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
     }
 });
 app.get('/api/auth/me', verifyToken, async (req, res) => {
     try {
         const { id } = req.user;
         const db = await getDb();
-        const result = await db.request().input('id', id).query(`
-            SELECT u.*, r.Name as RoleName, m.Name as ManagementName FROM EBM.Users u 
-            LEFT JOIN EBM.Roles r ON u.RoleId = r.Id 
+        const result = await db.request().input('id', sql.UniqueIdentifier, id).query(`
+            SELECT u.*, r.Name as RoleName, m.Name as ManagementName,
+                uc.CASId as cas_id, TRIM(c.RUC) as cas_ruc
+            FROM EBM.Users u
+            LEFT JOIN EBM.Roles r ON u.RoleId = r.Id
             LEFT JOIN EBM.Managements m ON u.ManagementId = m.Id
+            LEFT JOIN EBM.UserCAS uc ON u.Id = uc.UserId
+            LEFT JOIN dbo.GAC_APP_TB_CAS c ON uc.CASId = c.ID_CAS
             WHERE u.Id = @id
         `);
         const user = result.recordset[0];
         if (!user)
             return res.status(404).json({ error: 'Usuario no encontrado' });
-        const perms = (await db.request().input('rid', user.RoleId).input('app', APP_IDENTIFIER).query("SELECT Permission FROM EBM.RolePermissions WHERE RoleId = @rid AND (Permission LIKE @app + '.%' OR Permission LIKE 'ebm.%')")).recordset.map(p => p.Permission);
-        res.json({ user: { id: user.Id, username: user.Username, full_name: user.FullName, email: user.Email, role_name: user.RoleName, management_id: user.ManagementId, management_name: user.ManagementName, avatar_url: user.AvatarUrl, permissions: perms } });
+        const perms = (await db.request().input('rid', user.RoleId).input('app', sql.NVarChar, APP_IDENTIFIER).query("SELECT Permission FROM EBM.RolePermissions WHERE RoleId = @rid AND (Permission LIKE @app + '.%' OR Permission LIKE 'ebm.%')")).recordset.map(p => p.Permission);
+        res.json({ user: { id: user.Id, username: user.Username, full_name: user.FullName, email: user.Email, role_name: user.RoleName, management_id: user.ManagementId, management_name: user.ManagementName, avatar_url: user.AvatarUrl, permissions: perms, apps: user.Apps, casId: user.cas_id || null, casRUC: user.cas_ruc || null } });
     }
     catch (err) {
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
     }
 });
 // --- CAS ---
 app.get('/api/cas', verifyToken, async (req, res) => {
     try {
+        const currentUser = req.user;
         const db = await getDb();
+        if (currentUser.casId !== null) {
+            const result = await db.request()
+                .input('casId', currentUser.casId)
+                .query("SELECT * FROM [dbo].[GAC_APP_TB_CAS] WHERE ID_CAS = @casId");
+            return res.json(result.recordset);
+        }
         const result = await db.request().query("SELECT * FROM [dbo].[GAC_APP_TB_CAS] ORDER BY Nombre_CAS");
         res.json(result.recordset);
     }
     catch (err) {
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
     }
 });
 // --- CONFIGURATION ---
@@ -200,10 +274,10 @@ app.get('/api/config', verifyToken, async (req, res) => {
         res.json(result.recordset);
     }
     catch (err) {
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
     }
 });
-app.post('/api/config', verifyToken, async (req, res) => {
+app.post('/api/config', verifyToken, verifyPermission('val.config.admin'), async (req, res) => {
     try {
         const { clave, valor, descripcion } = req.body;
         const db = await getDb();
@@ -224,7 +298,7 @@ app.post('/api/config', verifyToken, async (req, res) => {
         res.json({ message: 'Config updated' });
     }
     catch (err) {
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
     }
 });
 // --- CONFIG ADICIONAL POR DISTRITO ---
@@ -235,7 +309,7 @@ app.get('/api/config-distritos', verifyToken, async (req, res) => {
         res.json(result.recordset);
     }
     catch (err) {
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
     }
 });
 app.post('/api/config-distritos', verifyToken, async (req, res) => {
@@ -267,18 +341,32 @@ app.post('/api/config-distritos', verifyToken, async (req, res) => {
         res.json({ success: true });
     }
     catch (err) {
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
     }
 });
 app.delete('/api/config-distritos/:id', verifyToken, async (req, res) => {
     try {
-        const { id } = req.params;
+        const idNum = parseInt(req.params.id, 10);
+        if (isNaN(idNum) || idNum <= 0)
+            return res.status(400).json({ error: 'ID inválido' });
+        const user = req.user;
         const db = await getDb();
-        await db.request().input('id', id).query("DELETE FROM [dbo].[GAC_APP_TB_CONFIG_VALORIZACION_DISTRITO] WHERE Id = @id");
+        const existing = await db.request()
+            .input('id', sql.Int, idNum)
+            .query("SELECT Creado_Por FROM [dbo].[GAC_APP_TB_CONFIG_VALORIZACION_DISTRITO] WHERE Id = @id");
+        if (!existing.recordset[0])
+            return res.status(404).json({ error: 'Registro no encontrado' });
+        const isAdmin = (user.role || '').toLowerCase() === 'administrador';
+        if (!isAdmin && existing.recordset[0].Creado_Por !== user.username) {
+            return res.status(403).json({ error: 'Sin permiso para eliminar este registro' });
+        }
+        await db.request()
+            .input('id', sql.Int, idNum)
+            .query("DELETE FROM [dbo].[GAC_APP_TB_CONFIG_VALORIZACION_DISTRITO] WHERE Id = @id");
         res.json({ success: true });
     }
     catch (err) {
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
     }
 });
 app.get('/api/distritos', verifyToken, async (req, res) => {
@@ -288,7 +376,7 @@ app.get('/api/distritos', verifyToken, async (req, res) => {
         res.json(result.recordset);
     }
     catch (err) {
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
     }
 });
 // --- CONFIG CANAL INSTITUCIONAL ---
@@ -299,7 +387,7 @@ app.get('/api/config-canal-institucional', verifyToken, async (req, res) => {
         res.json(result.recordset);
     }
     catch (err) {
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
     }
 });
 app.post('/api/config-canal-institucional', verifyToken, async (req, res) => {
@@ -336,21 +424,23 @@ app.post('/api/config-canal-institucional', verifyToken, async (req, res) => {
     }
     catch (err) {
         console.error('[CONFIG] Error saving rule:', err);
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
     }
 });
 app.delete('/api/config-canal-institucional/:id', verifyToken, async (req, res) => {
     try {
         const { id } = req.params;
         const db = await getDb();
-        const idNum = parseInt(id);
+        const idNum = parseInt(String(id), 10);
+        if (isNaN(idNum) || idNum <= 0)
+            return res.status(400).json({ error: 'ID inválido' });
         console.log(`[CONFIG] Deleting rule ID: ${idNum}`);
         await db.request().input('id', sql.Int, idNum).query("DELETE FROM [dbo].[GAC_APP_TB_CONFIG_CANAL_INSTITUCIONAL] WHERE Id = @id");
         res.json({ success: true });
     }
     catch (err) {
         console.error('[CONFIG] Error deleting rule:', err);
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
     }
 });
 // --- VALORIZACIONES ---
@@ -395,13 +485,20 @@ app.get('/api/c4c-creators', verifyToken, async (req, res) => {
         res.json(creators);
     }
     catch (err) {
-        console.error('C4C Creators Error:', err.message);
+        console.error('C4C Creators Error:', err instanceof Error ? err.message : String(err));
         res.status(500).json({ error: "No se pudieron obtener los creadores de C4C." });
     }
 });
 // --- VALORIZACIONES ---
 app.get('/api/valuations/:ruc', verifyToken, async (req, res) => {
     const { ruc } = req.params;
+    const currentUser = req.user;
+    if (currentUser.casId) {
+        if (!currentUser.casRUC)
+            return res.status(403).json({ error: 'Usuario CAS sin empresa asignada' });
+        if (currentUser.casRUC !== String(ruc).trim())
+            return res.status(403).json({ error: 'Acceso denegado' });
+    }
     const { start, end } = req.query;
     console.log(`[VALUATION] Starting request - RUC: ${ruc}, Range: ${start} to ${end}`);
     try {
@@ -539,8 +636,8 @@ app.get('/api/valuations/:ruc', verifyToken, async (req, res) => {
         res.json(tickets);
     }
     catch (err) {
-        console.error('[VALUATION] Server Error:', err.message);
-        res.status(500).json({ error: err.message });
+        console.error('[VALUATION] Server Error:', err instanceof Error ? err.message : String(err));
+        res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
     }
 });
 app.get('/api/penalty-motives', verifyToken, async (req, res) => {
@@ -550,15 +647,21 @@ app.get('/api/penalty-motives', verifyToken, async (req, res) => {
         res.json(result.recordset);
     }
     catch (err) {
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
     }
 });
 app.post('/api/penalties', verifyToken, async (req, res) => {
     const { ticket, fecha, motivo, descripcion, importe, ruc } = req.body;
-    const userId = req.user.username;
+    const currentUser = req.user;
+    const userId = currentUser.username;
     const penaltyId = crypto.randomBytes(4).toString('hex');
     try {
         const db = await getDb();
+        if (currentUser.casId !== null) {
+            if (!currentUser.casRUC || String(ruc).trim() !== String(currentUser.casRUC).trim()) {
+                return res.status(403).json({ error: 'No puede crear penalidades para otra empresa.' });
+            }
+        }
         await db.request()
             .input('id', penaltyId)
             .input('ticket', ticket)
@@ -575,25 +678,40 @@ app.post('/api/penalties', verifyToken, async (req, res) => {
         res.status(201).json({ id: penaltyId });
     }
     catch (err) {
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
     }
 });
 app.put('/api/penalties/:id', verifyToken, async (req, res) => {
     const { id } = req.params;
     const { fecha, motivo, descripcion, importe } = req.body;
+    const currentUser = req.user;
     try {
         const db = await getDb();
+        if (currentUser.casId !== null) {
+            const ownerCheck = await db.request()
+                .input('id', sql.VarChar(8), id)
+                .input('casId', sql.VarChar(50), currentUser.casId)
+                .query(`
+                    SELECT 1
+                    FROM [dbo].[GAC_APP_TB_TICKETS_DESCUENTOS] D
+                    INNER JOIN [dbo].[GAC_PAGOS_CACHE] PC ON PC.Ticket_Original = D.Ticket
+                    WHERE D.ID_Descuentos_CAS = @id AND PC.ID_cas = @casId
+                `);
+            if (ownerCheck.recordset.length === 0) {
+                return res.status(403).json({ error: 'La penalidad no pertenece a su empresa.' });
+            }
+        }
         // Validation: Check if already in a closure
-        const check = await db.request().input('id', id).query(`
-            SELECT 1 FROM [dbo].[GAC_APP_TB_VALORIZACIONES_DETALLE] 
+        const check = await db.request().input('id', sql.VarChar(8), id).query(`
+            SELECT 1 FROM [dbo].[GAC_APP_TB_VALORIZACIONES_DETALLE]
             WHERE ID_Referencia = @id
         `);
         if (check.recordset.length > 0) {
             return res.status(403).json({ error: "No se puede editar una penalidad que ya ha sido cerrada en una valorización." });
         }
-        const existing = await db.request().input('id', id).query("SELECT * FROM [dbo].[GAC_APP_TB_TICKETS_DESCUENTOS] WHERE ID_Descuentos_CAS = @id");
+        const existing = await db.request().input('id', sql.VarChar(8), id).query("SELECT * FROM [dbo].[GAC_APP_TB_TICKETS_DESCUENTOS] WHERE ID_Descuentos_CAS = @id");
         await db.request()
-            .input('id', id)
+            .input('id', sql.VarChar(8), id)
             .input('fecha', fecha)
             .input('motivo', motivo)
             .input('desc', descripcion)
@@ -610,7 +728,7 @@ app.put('/api/penalties/:id', verifyToken, async (req, res) => {
         res.json({ success: true });
     }
     catch (err) {
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
     }
 });
 app.post('/api/adicionales', verifyToken, async (req, res) => {
@@ -632,7 +750,7 @@ app.post('/api/adicionales', verifyToken, async (req, res) => {
         res.status(201).json({ id });
     }
     catch (err) {
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
     }
 });
 app.put('/api/adicionales/:id', verifyToken, async (req, res) => {
@@ -657,7 +775,7 @@ app.put('/api/adicionales/:id', verifyToken, async (req, res) => {
         res.json({ success: true });
     }
     catch (err) {
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
     }
 });
 app.get('/api/adicionales/:ticket', verifyToken, async (req, res) => {
@@ -675,7 +793,7 @@ app.get('/api/adicionales/:ticket', verifyToken, async (req, res) => {
         res.json(result.recordset);
     }
     catch (err) {
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
     }
 });
 app.delete('/api/adicionales/:id', verifyToken, async (req, res) => {
@@ -690,7 +808,7 @@ app.delete('/api/adicionales/:id', verifyToken, async (req, res) => {
         res.json({ success: true });
     }
     catch (err) {
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
     }
 });
 app.post('/api/valuations/batch-adjustment', verifyToken, async (req, res) => {
@@ -779,7 +897,7 @@ app.post('/api/valuations/batch-adjustment', verifyToken, async (req, res) => {
     }
     catch (err) {
         console.error("Batch Adjustment Error:", err);
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
     }
 });
 app.get('/api/discount-motivos', verifyToken, async (req, res) => {
@@ -847,7 +965,7 @@ app.post('/api/penalties/:id/status', verifyToken, async (req, res) => {
     const { status, observation, isCas } = req.body;
     try {
         const db = await getDb();
-        const field = isCas ? 'Adjunto_motivo' : 'Adjunto_motivo'; // Usaremos el mismo campo para simplificar la traza de texto
+        const _field = isCas ? 'Adjunto_motivo' : 'Adjunto_motivo'; // Usaremos el mismo campo para simplificar la traza de texto
         await db.request()
             .input('id', id)
             .input('status', status)
@@ -856,7 +974,7 @@ app.post('/api/penalties/:id/status', verifyToken, async (req, res) => {
         res.json({ success: true });
     }
     catch (err) {
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
     }
 });
 app.get('/api/tickets/find/:ticket', verifyToken, async (req, res) => {
@@ -882,11 +1000,18 @@ app.get('/api/tickets/find/:ticket', verifyToken, async (req, res) => {
     }
     catch (err) {
         console.error('Error in ticket find:', err);
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
     }
 });
 app.get('/api/tickets/search/:ruc', verifyToken, async (req, res) => {
     const { ruc } = req.params;
+    const currentUser = req.user;
+    if (currentUser.casId) {
+        if (!currentUser.casRUC)
+            return res.status(403).json({ error: 'Usuario CAS sin empresa asignada' });
+        if (currentUser.casRUC !== String(ruc).trim())
+            return res.status(403).json({ error: 'Acceso denegado' });
+    }
     const { q } = req.query;
     try {
         const db = await getDb();
@@ -907,7 +1032,7 @@ app.get('/api/tickets/search/:ruc', verifyToken, async (req, res) => {
         res.json(result.recordset);
     }
     catch (err) {
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
     }
 });
 app.post('/api/valuations/close', verifyToken, async (req, res) => {
@@ -1039,7 +1164,7 @@ app.post('/api/valuations/close', verifyToken, async (req, res) => {
     }
     catch (err) {
         console.error("Error en operación de valorización:", err);
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
     }
 });
 app.post('/api/valuations/finalize/:id', verifyToken, async (req, res) => {
@@ -1053,7 +1178,7 @@ app.post('/api/valuations/finalize/:id', verifyToken, async (req, res) => {
         res.json({ success: true, message: "Valorización cerrada correctamente." });
     }
     catch (err) {
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
     }
 });
 app.post('/api/valuations/reopen/:id', verifyToken, verifyPermission('VAL.REOPEN'), async (req, res) => {
@@ -1085,7 +1210,7 @@ app.post('/api/valuations/reopen/:id', verifyToken, verifyPermission('VAL.REOPEN
     }
     catch (err) {
         console.error("Error reopening valuation:", err);
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
     }
 });
 app.post('/api/valuations/send-email', verifyToken, async (req, res) => {
@@ -1123,12 +1248,20 @@ app.post('/api/valuations/send-email', verifyToken, async (req, res) => {
         res.json({ success: true, message: 'Email enviado correctamente' });
     }
     catch (err) {
-        console.error('Error enviando email:', err.response?.data || err.message);
-        res.status(500).json({ error: 'No se pudo enviar el correo: ' + (err.response?.data?.error?.message || err.message) });
+        const axiosErr = err;
+        console.error('Error enviando email:', axiosErr.response?.data || (err instanceof Error ? err.message : String(err)));
+        res.status(500).json({ error: 'No se pudo enviar el correo: ' + (axiosErr.response?.data?.error?.message || (err instanceof Error ? err.message : String(err))) });
     }
 });
 app.get('/api/penalties/:ruc', verifyToken, async (req, res) => {
     const { ruc } = req.params;
+    const currentUser = req.user;
+    if (currentUser.casId) {
+        if (!currentUser.casRUC)
+            return res.status(403).json({ error: 'Usuario CAS sin empresa asignada' });
+        if (currentUser.casRUC !== String(ruc).trim())
+            return res.status(403).json({ error: 'Acceso denegado' });
+    }
     const { start, end } = req.query;
     try {
         const db = await getDb();
@@ -1162,7 +1295,7 @@ app.get('/api/penalties/:ruc', verifyToken, async (req, res) => {
         res.json(result.recordset);
     }
     catch (err) {
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
     }
 });
 app.get('/api/closures', verifyToken, async (req, res) => {
@@ -1192,7 +1325,7 @@ app.get('/api/closures', verifyToken, async (req, res) => {
         res.json(result.recordset);
     }
     catch (err) {
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
     }
 });
 app.get('/api/valuations/details/:id', verifyToken, async (req, res) => {
@@ -1226,7 +1359,7 @@ app.get('/api/valuations/details/:id', verifyToken, async (req, res) => {
         res.json({ tickets: result.recordset });
     }
     catch (err) {
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
     }
 });
 app.get('/api/tarifarios/:casId', verifyToken, async (req, res) => {
@@ -1253,7 +1386,7 @@ app.get('/api/tarifarios/:casId', verifyToken, async (req, res) => {
         res.json(result.recordset);
     }
     catch (err) {
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
     }
 });
 app.post('/api/tarifarios/create', verifyToken, async (req, res) => {
@@ -1282,7 +1415,7 @@ app.post('/api/tarifarios/create', verifyToken, async (req, res) => {
         res.json({ success: true, id: newId });
     }
     catch (err) {
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
     }
 });
 // --- MATERIALES ---
@@ -1293,7 +1426,7 @@ app.get('/api/materials', verifyToken, async (req, res) => {
         res.json(result.recordset);
     }
     catch (err) {
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
     }
 });
 app.get('/api/materials/categories', verifyToken, async (req, res) => {
@@ -1303,7 +1436,7 @@ app.get('/api/materials/categories', verifyToken, async (req, res) => {
         res.json(result.recordset.map(r => r.Categoria));
     }
     catch (err) {
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
     }
 });
 app.post('/api/materials', verifyToken, async (req, res) => {
@@ -1334,7 +1467,7 @@ app.post('/api/materials', verifyToken, async (req, res) => {
         }
     }
     catch (err) {
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
     }
 });
 app.post('/api/tarifarios/update', verifyToken, async (req, res) => {
@@ -1353,7 +1486,7 @@ app.post('/api/tarifarios/update', verifyToken, async (req, res) => {
         res.json({ success: true });
     }
     catch (err) {
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
     }
 });
 app.post('/api/tarifarios/batch', verifyToken, async (req, res) => {
@@ -1398,7 +1531,7 @@ app.post('/api/tarifarios/batch', verifyToken, async (req, res) => {
         }
     }
     catch (err) {
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
     }
 });
 // --- TARIFARIO EXCEPCIONES ---
@@ -1412,7 +1545,7 @@ app.get('/api/tarifarios/exceptions/:casId', verifyToken, async (req, res) => {
         res.json(result.recordset);
     }
     catch (err) {
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
     }
 });
 app.post('/api/tarifarios/exceptions/save', verifyToken, async (req, res) => {
@@ -1450,7 +1583,7 @@ app.post('/api/tarifarios/exceptions/save', verifyToken, async (req, res) => {
         res.json({ success: true, id: finalId });
     }
     catch (err) {
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
     }
 });
 app.delete('/api/tarifarios/exceptions/:id', verifyToken, async (req, res) => {
@@ -1461,7 +1594,7 @@ app.delete('/api/tarifarios/exceptions/:id', verifyToken, async (req, res) => {
         res.json({ success: true });
     }
     catch (err) {
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
     }
 });
 // --- DASHBOARD ANALYTICS ---
@@ -1590,7 +1723,7 @@ app.get('/api/dashboard/stats', verifyToken, async (req, res) => {
         });
     }
     catch (err) {
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
     }
 });
 app.get('/api/dashboard/trends', verifyToken, async (req, res) => {
@@ -1683,7 +1816,7 @@ app.get('/api/dashboard/trends', verifyToken, async (req, res) => {
         res.json(trends.recordset);
     }
     catch (err) {
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
     }
 });
 app.get('/api/dashboard/top-cas', verifyToken, async (req, res) => {
@@ -1729,7 +1862,7 @@ app.get('/api/dashboard/top-cas', verifyToken, async (req, res) => {
         res.json(top.recordset);
     }
     catch (err) {
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
     }
 });
 // --- C4C INTEGRATION ---
@@ -1795,10 +1928,11 @@ app.get('/api/c4c/report/:ticketId', verifyToken, async (req, res) => {
         res.send(pdfResponse.data);
     }
     catch (err) {
-        console.error('C4C Proxy Error:', err.response?.data || err.message);
-        res.status(err.response?.status || 500).json({
+        const axiosErr = err;
+        console.error('C4C Proxy Error:', axiosErr.response?.data || (err instanceof Error ? err.message : String(err)));
+        res.status(axiosErr.response?.status || 500).json({
             error: 'Failed to retrieve report from C4C',
-            details: err.response?.data?.error?.message?.value || err.message
+            details: axiosErr.response?.data?.error?.message?.value || (err instanceof Error ? err.message : String(err))
         });
     }
 });
@@ -1811,7 +1945,7 @@ app.get('/api/managements', verifyToken, async (req, res) => {
         res.json(result.recordset);
     }
     catch (err) {
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
     }
 });
 // PREFERENCES
@@ -1835,7 +1969,7 @@ app.get('/api/users', verifyToken, verifyPermission('val.config.users'), async (
         res.json(result.recordset);
     }
     catch (err) {
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
     }
 });
 app.post('/api/users', verifyToken, verifyPermission('val.config.users'), async (req, res) => {
@@ -1875,7 +2009,7 @@ app.post('/api/users', verifyToken, verifyPermission('val.config.users'), async 
         res.status(201).json(result.recordset[0]);
     }
     catch (err) {
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
     }
 });
 app.put('/api/users/:id', verifyToken, verifyPermission('val.config.users'), async (req, res) => {
@@ -1893,7 +2027,7 @@ app.put('/api/users/:id', verifyToken, verifyPermission('val.config.users'), asy
         res.json({ success: true });
     }
     catch (err) {
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
     }
 });
 app.delete('/api/users/:id', verifyToken, verifyPermission('val.config.users'), async (req, res) => {
@@ -1905,7 +2039,7 @@ app.delete('/api/users/:id', verifyToken, verifyPermission('val.config.users'), 
         res.status(204).send();
     }
     catch (err) {
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
     }
 });
 // ROLES
@@ -1921,7 +2055,7 @@ app.get('/api/roles', verifyToken, verifyPermission('val.config.roles'), async (
         res.json(result);
     }
     catch (err) {
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
     }
 });
 app.post('/api/roles', verifyToken, verifyPermission('val.config.roles'), async (req, res) => {
@@ -1944,7 +2078,7 @@ app.post('/api/roles', verifyToken, verifyPermission('val.config.roles'), async 
         res.status(201).json({ id: roleId, name, permissions });
     }
     catch (err) {
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
     }
 });
 app.put('/api/roles/:id', verifyToken, verifyPermission('val.config.roles'), async (req, res) => {
@@ -1968,7 +2102,7 @@ app.put('/api/roles/:id', verifyToken, verifyPermission('val.config.roles'), asy
         res.json({ id, name, permissions });
     }
     catch (err) {
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
     }
 });
 app.delete('/api/roles/:id', verifyToken, verifyPermission('val.config.roles'), async (req, res) => {
@@ -1986,7 +2120,7 @@ app.delete('/api/roles/:id', verifyToken, verifyPermission('val.config.roles'), 
         res.status(204).send();
     }
     catch (err) {
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
     }
 });
 // AUDIT LOGS
@@ -2002,7 +2136,7 @@ app.get('/api/config/audit-logs', verifyToken, verifyPermission('val.config.audi
         res.json(result.recordset);
     }
     catch (err) {
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
     }
 });
 // --- SERVE STATIC FILES (PROD) ---
@@ -2024,7 +2158,7 @@ async function fetchAppMeta() {
         }
     }
     catch (err) {
-        console.warn('[AppConfig] Could not fetch app meta from DB:', err.message);
+        console.warn('[AppConfig] Could not fetch app meta from DB:', err instanceof Error ? err.message : String(err));
     }
 }
 // SPA Fallback: Serve index.html for any remaining routes
@@ -2055,6 +2189,13 @@ app.use((req, res) => {
         res.sendFile(indexPath);
     }
 });
+if (!process.env.JWT_SECRET) {
+    console.error('CRITICAL: JWT_SECRET environment variable is missing. Server will not start.');
+    process.exit(1);
+}
+if (process.env.NODE_ENV === 'production' && !(process.env.ALLOWED_ORIGINS || '').trim()) {
+    console.warn('⚠️  WARNING: ALLOWED_ORIGINS is not set. CORS will block all cross-origin requests in production.');
+}
 app.listen(port, () => {
     console.log(`Server Valorizaciones running on http://localhost:${port}`);
     // Fetch app metadata from DB for OG tags
