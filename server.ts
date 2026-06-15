@@ -282,7 +282,13 @@ app.get('/api/auth/me', verifyToken, async (req: Request, res: Response) => {
         addInput(permsReqMe, 'rid', sql.UniqueIdentifier, user.RoleId);
         addInput(permsReqMe, 'app', sql.NVarChar(20), APP_IDENTIFIER);
         const perms = (await permsReqMe.query("SELECT Permission FROM EBM.RolePermissions WHERE RoleId = @rid AND (Permission LIKE @app + '.%' OR Permission LIKE 'ebm.%')")).recordset.map(p => p.Permission);
-        res.json({ user: { id: user.Id, username: user.Username, full_name: user.FullName, email: user.Email, role_name: user.RoleName, management_id: user.ManagementId, management_name: user.ManagementName, avatar_url: user.AvatarUrl, permissions: perms, apps: user.Apps, casId: user.cas_id || null, casRUC: user.cas_ruc || null } });
+        // Emitir token fresco con casRUC para soporte SSO cross-app
+        const freshToken = jwt.sign(
+            { id: user.Id, username: user.Username, role: user.RoleName, perms, casId: user.cas_id || null, casRUC: user.cas_ruc || null },
+            JWT_SECRET,
+            { expiresIn: '12h' }
+        );
+        res.json({ token: freshToken, user: { id: user.Id, username: user.Username, full_name: user.FullName, email: user.Email, role_name: user.RoleName, management_id: user.ManagementId, management_name: user.ManagementName, avatar_url: user.AvatarUrl, permissions: perms, apps: user.Apps, casId: user.cas_id || null, casRUC: user.cas_ruc || null } });
     } catch (err: unknown) { res.status(500).json({ error: err instanceof Error ? err.message : String(err) }); }
 });
 

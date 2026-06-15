@@ -15,7 +15,7 @@ export interface CasUser {
  * Uso: if (!assertCasRuc(currentUser, ruc, res)) return;
  */
 export function assertCasRuc(user: CasUser, ruc: string, res: Response): boolean {
-    if (user.casId === null) return true;
+    if (!user.casId) return true;
     if (!user.casRUC) {
         res.status(403).json({ error: 'Usuario CAS sin empresa asignada' });
         return false;
@@ -39,7 +39,7 @@ export function applyCasIdFilter(
     user: CasUser,
     _type?: (() => ISqlType) | ISqlType,
 ): string {
-    if (user.casId === null) return '';
+    if (!user.casId) return '';
     req.input('casId', sql.VarChar(50), user.casId);
     return ' AND ID_cas = @casId';
 }
@@ -52,6 +52,6 @@ export function applyCasIdFilter(
  * Uso: const rucEfectivo = enforceCasRuc(currentUser, req.query.ruc as string);
  */
 export function enforceCasRuc(user: CasUser, requestedRuc?: string): string | null {
-    if (user.casId !== null) return user.casRUC;
+    if (user.casId) return user.casRUC ?? null;
     return requestedRuc ?? null;
 }

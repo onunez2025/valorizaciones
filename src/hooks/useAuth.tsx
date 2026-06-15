@@ -105,6 +105,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                     const data = await response.json();
                     setUser(data.user);
                     StorageService.setCurrentUser(data.user);
+                    // Almacenar token fresco del servidor (incluye casRUC para RLS cross-app SSO)
+                    if (data.token) {
+                        StorageService.setToken(data.token);
+                        const isProd = window.location.hostname.endsWith('.siatc.cloud');
+                        const cookieDomain = isProd ? '; domain=.siatc.cloud' : '';
+                        document.cookie = `token=${data.token}; path=/${cookieDomain}; max-age=${24 * 60 * 60}; SameSite=Lax; Secure=${isProd ? 'true' : 'false'}`;
+                    }
                 } else {
                     logout();
                     window.location.href = '/login?expired=true';
