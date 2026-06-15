@@ -60,6 +60,27 @@ check_file() {
         echo "$sql_hit" | sed 's/^/     /'
         WARNINGS=$((WARNINGS+1))
     fi
+
+    # C9: .input() sin tipo SQL explícito (evitar type confusion — CLAUDE.md regla 3)
+    if [[ "$f" != *"lib/db"* ]]; then
+        local sql9_hit
+        sql9_hit=$(grep -nP "\.input\(['\"][^'\"]+['\"]\s*,\s*(?!sql\.)" "$f" 2>/dev/null | grep -v "^\s*//" || true)
+        if [ -n "$sql9_hit" ]; then
+            echo -e "${YELLOW}[C9-ADVERTENCIA]${NC} .input() sin tipo SQL — usar addInput() de lib/db.ts → $f"
+            echo "$sql9_hit" | sed 's/^/     /'
+            WARNINGS=$((WARNINGS+1))
+        fi
+    fi
+
+    # C10: server.ts con endpoints pero sin importar casFilter (verificar RLS)
+    if [[ "$f" == *"server.ts" ]]; then
+        if grep -qE "app\.(get|post|put|delete|patch)\(" "$f" 2>/dev/null; then
+            if ! grep -qE "from ['\"].*casFilter" "$f" 2>/dev/null; then
+                echo -e "${YELLOW}[C10-ADVERTENCIA]${NC} server.ts tiene endpoints pero no importa casFilter — verificar RLS → $f"
+                WARNINGS=$((WARNINGS+1))
+            fi
+        fi
+    fi
 }
 
 while IFS= read -r -d '' f; do
@@ -86,6 +107,23 @@ else
         ERRORS=$((ERRORS+1))
     else
         echo -e "${GREEN}  ✓ TypeScript OK${NC}"
+    fi
+fi
+
+# C8: Build TypeScript + Vite (verifica que el proyecto compila correctamente)
+echo -e "\n🔨 Verificando build..."
+if [ ! -f "node_modules/.bin/tsc" ] && [ ! -f "node_modules/.bin/tsc.cmd" ]; then
+    echo -e "${YELLOW}  ⚠ Dependencias no instaladas — omitiendo build (ejecuta npm install)${NC}"
+    WARNINGS=$((WARNINGS+1))
+else
+    BUILD_OUT=$(npm run build 2>&1)
+    BUILD_EXIT=$?
+    if [ $BUILD_EXIT -ne 0 ]; then
+        echo -e "${RED}[C8-CRÍTICO]${NC} npm run build falló — corrige antes de hacer push"
+        echo "$BUILD_OUT" | tail -20 | sed 's/^/     /'
+        ERRORS=$((ERRORS+1))
+    else
+        echo -e "${GREEN}  ✓ Build OK${NC}"
     fi
 fi
 
