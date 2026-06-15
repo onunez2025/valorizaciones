@@ -292,7 +292,7 @@ app.get('/api/cas', verifyToken, async (req: Request, res: Response) => {
         const currentUser = (req as AuthRequest).user as JwtUserPayload;
         const db = await getDb();
 
-        if (currentUser.casId !== null) {
+        if (currentUser.casId) {
             const casReq = db.request();
             addInput(casReq, 'casId', sql.VarChar(50), currentUser.casId);
             const result = await casReq.query("SELECT * FROM [dbo].[GAC_APP_TB_CAS] WHERE ID_CAS = @casId");
@@ -708,7 +708,7 @@ app.post('/api/penalties', verifyToken, validateBody(crearPenalidadSchema), asyn
     try {
         const db = await getDb();
 
-        if (currentUser.casId !== null) {
+        if (currentUser.casId) {
             if (!currentUser.casRUC || String(ruc).trim() !== String(currentUser.casRUC).trim()) {
                 return res.status(403).json({ error: 'No puede crear penalidades para otra empresa.' });
             }
@@ -737,7 +737,7 @@ app.put('/api/penalties/:id', verifyToken, async (req: Request, res: Response) =
     try {
         const db = await getDb();
 
-        if (currentUser.casId !== null) {
+        if (currentUser.casId) {
             const ownerCheck = await db.request()
                 .input('id', sql.VarChar(8), id)
                 .input('casId', sql.VarChar(50), currentUser.casId)
@@ -844,7 +844,7 @@ app.get('/api/adicionales/:ticket', verifyToken, async (req: Request, res: Respo
         const db = await getDb();
 
         // Verificar que el ticket pertenece al CAS del usuario
-        if (currentUser.casId !== null) {
+        if (currentUser.casId) {
             const ticketCheck = await db.request()
                 .input('ticket', sql.NVarChar(50), ticket)
                 .input('casRUC', sql.VarChar(20), currentUser.casRUC || '')
@@ -1310,7 +1310,7 @@ app.post('/api/valuations/finalize/:id', verifyToken, async (req: Request, res: 
         const db = await getDb();
 
         // Verificar ownership para usuarios CAS
-        if (currentUser.casId !== null) {
+        if (currentUser.casId) {
             const closureResult = await db.request()
                 .input('id', sql.Int, Number(id))
                 .query("SELECT RUC FROM [dbo].[GAC_APP_TB_VALORIZACIONES_CIERRES] WHERE IdCierre = @id");
@@ -1340,7 +1340,7 @@ app.post('/api/valuations/reopen/:id', verifyToken, verifyPermission('VAL.REOPEN
         const db = await getDb();
 
         // Verificar ownership para usuarios CAS antes de abrir la transacción
-        if (currentUser.casId !== null) {
+        if (currentUser.casId) {
             const ownerCheck = await db.request()
                 .input('id', sql.Int, Number(id))
                 .query("SELECT RUC FROM [dbo].[GAC_APP_TB_VALORIZACIONES_CIERRES] WHERE IdCierre = @id");
@@ -1514,7 +1514,7 @@ app.get('/api/valuations/details/:id', verifyToken, async (req: Request, res: Re
         const db = await getDb();
 
         // Verificar ownership del cierre para usuarios CAS
-        if (currentUser.casId !== null) {
+        if (currentUser.casId) {
             const closureCheck = await db.request()
                 .input('id', sql.Int, Number(id))
                 .query("SELECT RUC FROM [dbo].[GAC_APP_TB_VALORIZACIONES_CIERRES] WHERE IdCierre = @id");
