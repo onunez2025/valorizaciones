@@ -26,8 +26,7 @@ export function validateBody<T>(schema: ZodSchema<T>) {
             });
             return;
         }
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (req as any).body = result.data;
+        (req as unknown as { body: T }).body = result.data;
         next();
     };
 }
