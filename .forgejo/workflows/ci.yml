@@ -27,9 +27,8 @@ jobs:
       - name: C6 — TypeScript / ESLint
         run: npm run lint
 
-      - name: Build (verifica compilación)
+      - name: C8 — Build (CRÍTICO)
         run: npm run build
-        continue-on-error: true
 
       - name: C7 — npm audit high/critical (advertencia)
         run: npm audit --audit-level=high
