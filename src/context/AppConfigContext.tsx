@@ -28,7 +28,8 @@ export const AppConfigProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     const [config, setConfig] = useState<AppConfig | null>(null);
 
     useEffect(() => {
-        const token = StorageService.getToken();
+        const getSsoToken = () => { const m = document.cookie.match(/(?:^|;\s*)token=([^;]+)/); return m ? decodeURIComponent(m[1]) : null; };
+        const token = StorageService.getToken() || getSsoToken();
         const headers: HeadersInit = token ? { Authorization: `Bearer ${token}` } : {};
         fetch(`${API_BASE_URL}/applications?activeOnly=true`, { headers })
             .then(r => r.ok ? r.json() : [])
