@@ -11,5 +11,5 @@
     "outDir": "dist-server",
     "allowSyntheticDefaultImports": true
   },
-  "include": ["server.ts"]
+  "include": ["server.ts", "lib/**/*.ts"]
 }
