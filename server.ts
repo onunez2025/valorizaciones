@@ -1781,15 +1781,30 @@ app.delete('/api/tarifarios/exceptions/:id', verifyToken, async (req: Request, r
 });
 
 // --- TARIFARIO IMPORT ---
+interface TarifarioImportRow {
+    CAS_Nombre: string;
+    Categoria: string;
+    Servicio: string;
+    Fecha_inicio: string;
+    Fecha_fin: string;
+    Importe: string;
+    Estado?: string;
+    CAS_ID?: number;
+    Status?: string;
+    Message?: string;
+    Importe_Actual?: number | null;
+    ID_Tarifario?: string;
+}
+
 app.post('/api/tarifarios/import/preview', verifyToken, async (req: Request, res: Response) => {
-    const { rows } = req.body as { rows: any[] };
+    const { rows } = req.body as { rows: TarifarioImportRow[] };
     try {
         const db = await getDb();
         const casResult = await db.request().query("SELECT ID_CAS, Nombre_CAS FROM [dbo].[GAC_APP_TB_CAS]");
         const casMap = new Map<string, number>();
-        casResult.recordset.forEach((c: any) => casMap.set(c.Nombre_CAS.toUpperCase().trim(), c.ID_CAS));
+        casResult.recordset.forEach((c: { Nombre_CAS: string; ID_CAS: number }) => casMap.set(c.Nombre_CAS.toUpperCase().trim(), c.ID_CAS));
 
-        const preview: any[] = [];
+        const preview: TarifarioImportRow[] = [];
         for (const row of rows) {
             const casName = (row.CAS_Nombre || '').trim().toUpperCase();
             const casId = casMap.get(casName);
@@ -1832,11 +1847,11 @@ app.post('/api/tarifarios/import/preview', verifyToken, async (req: Request, res
             }
         }
         res.json({ preview });
-    } catch (err: any) { res.status(500).json({ error: err.message }); }
+    } catch (err: unknown) { res.status(500).json({ error: err instanceof Error ? err.message : String(err) }); }
 });
 
 app.post('/api/tarifarios/import/confirm', verifyToken, async (req: Request, res: Response) => {
-    const { rows } = req.body as { rows: any[] };
+    const { rows } = req.body as { rows: TarifarioImportRow[] };
     try {
         const db = await getDb();
         const transaction = new sql.Transaction(db);
@@ -1881,7 +1896,7 @@ app.post('/api/tarifarios/import/confirm', verifyToken, async (req: Request, res
             await transaction.rollback();
             throw err;
         }
-    } catch (err: any) { res.status(500).json({ error: err.message }); }
+    } catch (err: unknown) { res.status(500).json({ error: err instanceof Error ? err.message : String(err) }); }
 });
 
 // --- DASHBOARD ANALYTICS ---

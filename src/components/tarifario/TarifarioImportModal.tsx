@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { X, Upload, Download, CheckCircle, AlertCircle, RefreshCw, FileSpreadsheet, ArrowRight } from 'lucide-react';
+import { X, Upload, Download, CheckCircle, RefreshCw, FileSpreadsheet, ArrowRight } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { ApiClient } from '../../services/apiClient';
 import { cn } from '../../utils/cn';
@@ -33,7 +33,7 @@ const STATUS_CONFIG = {
     ERROR:   { label: 'ERROR',       bg: 'bg-red-50',      text: 'text-red-700',      border: 'border-red-200',      dot: 'bg-red-500'      },
 };
 
-function parseExcelDate(value: any): string {
+function parseExcelDate(value: unknown): string {
     if (!value && value !== 0) return '';
     if (value instanceof Date) return value.toISOString().split('T')[0];
     if (typeof value === 'number') {
@@ -93,7 +93,7 @@ export default function TarifarioImportModal({ isOpen, onClose, onSuccess }: Pro
             const buffer = await file.arrayBuffer();
             const wb = XLSX.read(buffer, { type: 'array', cellDates: false });
             const ws = wb.Sheets[wb.SheetNames[0]];
-            const raw: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+            const raw = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' }) as unknown[][];
 
             if (raw.length < 2) {
                 alert({ message: 'El archivo está vacío o solo tiene encabezados.' });
@@ -101,7 +101,7 @@ export default function TarifarioImportModal({ isOpen, onClose, onSuccess }: Pro
                 return;
             }
 
-            const headerRow = raw[0].map((h: any) => String(h).trim());
+            const headerRow = (raw[0] as unknown[]).map((h) => String(h).trim());
             const required = ['CAS_Nombre', 'Categoria', 'Servicio', 'Fecha_inicio', 'Fecha_fin', 'Importe'];
             const missing = required.filter(r => !headerRow.includes(r));
             if (missing.length > 0) {
@@ -111,26 +111,26 @@ export default function TarifarioImportModal({ isOpen, onClose, onSuccess }: Pro
             }
 
             const idx = (name: string) => headerRow.indexOf(name);
-            const rows = raw.slice(1)
-                .filter(r => r.some((c: any) => c !== ''))
-                .map((r: any[]) => ({
-                    CAS_Nombre:   String(r[idx('CAS_Nombre')] || '').trim(),
-                    Categoria:    String(r[idx('Categoria')]  || '').trim().toUpperCase(),
-                    Servicio:     String(r[idx('Servicio')]   || '').trim(),
+            const rows = (raw.slice(1) as unknown[][])
+                .filter(r => r.some((c) => c !== ''))
+                .map((r) => ({
+                    CAS_Nombre:   String(r[idx('CAS_Nombre')] ?? '').trim(),
+                    Categoria:    String(r[idx('Categoria')]  ?? '').trim().toUpperCase(),
+                    Servicio:     String(r[idx('Servicio')]   ?? '').trim(),
                     Fecha_inicio: parseExcelDate(r[idx('Fecha_inicio')]),
                     Fecha_fin:    parseExcelDate(r[idx('Fecha_fin')]),
-                    Importe:      String(r[idx('Importe')]    || '').trim(),
-                    Estado:       String(r[idx('Estado')]     || 'A').trim().toUpperCase() || 'A',
+                    Importe:      String(r[idx('Importe')]    ?? '').trim(),
+                    Estado:       (String(r[idx('Estado')] ?? 'A').trim().toUpperCase()) || 'A',
                 }));
 
             const { preview: data } = await ApiClient.request('/tarifarios/import/preview', {
                 method: 'POST',
                 body: JSON.stringify({ rows }),
-            });
+            }) as { preview: PreviewRow[] };
             setPreview(data);
             setStep('preview');
-        } catch (err: any) {
-            if (err.message !== 'AUTH_EXPIRED')
+        } catch (err: unknown) {
+            if (err instanceof Error && err.message !== 'AUTH_EXPIRED')
                 alert({ message: 'Error al procesar el archivo: ' + err.message });
         } finally {
             setLoading(false);
@@ -148,12 +148,12 @@ export default function TarifarioImportModal({ isOpen, onClose, onSuccess }: Pro
             const data = await ApiClient.request('/tarifarios/import/confirm', {
                 method: 'POST',
                 body: JSON.stringify({ rows: toApply }),
-            });
+            }) as { inserted: number; updated: number };
             setResult({ inserted: data.inserted, updated: data.updated });
             setStep('done');
             onSuccess();
-        } catch (err: any) {
-            if (err.message !== 'AUTH_EXPIRED')
+        } catch (err: unknown) {
+            if (err instanceof Error && err.message !== 'AUTH_EXPIRED')
                 alert({ message: 'Error al confirmar la importación: ' + err.message });
         } finally {
             setConfirming(false);
