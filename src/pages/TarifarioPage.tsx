@@ -1,13 +1,14 @@
 import { useState, useEffect, useRef } from 'react';
-import { 
-    Search, Plus, Save, Trash2, History, DollarSign, Building2, 
-    ChevronDown, Check, Target, AlertCircle, FileText, Activity
+import {
+    Search, Plus, Save, Trash2, History, DollarSign, Building2,
+    ChevronDown, Check, Target, AlertCircle, FileText, Activity, Upload
 } from 'lucide-react';
 import { ApiClient } from '../services/apiClient';
 import { cn } from '../utils/cn';
 import { toTitleCase } from '../utils/formatters';
 import { useDialog } from '../context/DialogContext';
 import TarifarioExceptionsModal from '../components/tarifario/TarifarioExceptionsModal';
+import TarifarioImportModal from '../components/tarifario/TarifarioImportModal';
 import { SIATC_THEME } from '../utils/siatc-theme';
 
 interface CAS {
@@ -38,7 +39,7 @@ export default function TarifarioPage() {
     const [rates, setRates] = useState<Rate[]>([]);
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
-    
+
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const dropdownRef = useRef<HTMLDivElement>(null);
@@ -48,6 +49,7 @@ export default function TarifarioPage() {
     const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
 
     const [isExceptionsModalOpen, setIsExceptionsModalOpen] = useState(false);
+    const [isImportModalOpen, setIsImportModalOpen] = useState(false);
 
     useEffect(() => {
         const fetchCas = async () => {
@@ -83,7 +85,7 @@ export default function TarifarioPage() {
         setLoading(true);
         try {
             // RUTA PLURALIZADA CORRECTA
-            const data = await ApiClient.request(`/tarifarios/${cas.ID_CAS}`); 
+            const data = await ApiClient.request(`/tarifarios/${cas.ID_CAS}`);
             // Mapeamos para que 'Servicio' contenga el código y ID_TARIFARIO el id correcto
             const mappedData = data.map((r: Rate) => ({
                 ...r,
@@ -92,7 +94,7 @@ export default function TarifarioPage() {
             }));
             setRates(mappedData);
             setEditRates(mappedData);
-            
+
             // Expandir todas al cargar por defecto si el usuario lo prefiere, o dejarlas contraídas.
             // Por el requerimiento "ver todas las categorías primero", las dejaremos contraídas.
         } catch (err: unknown) {
@@ -161,8 +163,8 @@ export default function TarifarioPage() {
 
     const categories = Object.keys(groupedRates).sort();
 
-    const filteredCasList = casList.filter(cas => 
-        cas.Nombre_CAS.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    const filteredCasList = casList.filter(cas =>
+        cas.Nombre_CAS.toLowerCase().includes(searchQuery.toLowerCase()) ||
         cas.RUC.includes(searchQuery)
     );
 
@@ -173,10 +175,16 @@ export default function TarifarioPage() {
                     <h1 className={SIATC_THEME.TYPOGRAPHY.PAGE_TITLE}>Tarifario de Servicios</h1>
                     <p className={SIATC_THEME.TYPOGRAPHY.PAGE_SUBTITLE}>Configuración dinámica de precios por centro de atención.</p>
                 </div>
+                <button
+                    onClick={() => setIsImportModalOpen(true)}
+                    className="h-10 px-5 bg-blue-600 text-white rounded-lg font-bold text-[10px] shadow-lg flex items-center gap-2 transition-all hover:opacity-90 active:scale-95 self-start md:self-auto"
+                >
+                    <Upload className="w-3.5 h-3.5" /> Importar desde Excel
+                </button>
             </div>
 
             <div className="relative" ref={dropdownRef}>
-                <div 
+                <div
                     className={cn(
                         "p-0.5 shadow-sm flex items-center gap-2 transition-all group hover:border-primary/40",
                         SIATC_THEME.COMPONENTS.CARD_CONTAINER,
@@ -186,8 +194,8 @@ export default function TarifarioPage() {
                     <div className="p-2.5 bg-primary/10 rounded-xl text-primary transition-transform group-hover:scale-105">
                         <Building2 className="w-5 h-5" />
                     </div>
-                    
-                    <button 
+
+                    <button
                         onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                         className="flex-1 text-left px-3 py-1"
                     >
@@ -211,9 +219,9 @@ export default function TarifarioPage() {
                         <div className="p-4 border-b border-border/40">
                             <div className="relative group">
                                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
-                                <input 
+                                <input
                                     autoFocus
-                                    type="text" 
+                                    type="text"
                                     placeholder="Buscar por sede o identificador..."
                                     className="w-full bg-muted/30 border border-transparent rounded-lg pl-11 pr-5 py-3 text-sm font-bold focus:bg-background focus:ring-4 focus:ring-primary/5 focus:border-primary/20 outline-none transition-all"
                                     value={searchQuery}
@@ -223,13 +231,13 @@ export default function TarifarioPage() {
                         </div>
                         <div className="max-h-[380px] overflow-y-auto p-4 custom-scrollbar space-y-1.5 bg-muted/5">
                             {filteredCasList.map(cas => (
-                                <button 
+                                <button
                                     key={cas.RUC}
                                     onClick={() => handleSelectCas(cas)}
                                     className={cn(
                                         "w-full flex items-center justify-between px-5 py-3.5 rounded-lg transition-all group",
-                                        selectedCas?.RUC === cas.RUC 
-                                            ? "bg-primary text-white shadow-lg" 
+                                        selectedCas?.RUC === cas.RUC
+                                            ? "bg-primary text-white shadow-lg"
                                             : "hover:bg-primary/5 text-foreground/80 hover:translate-x-1"
                                     )}
                                 >
@@ -285,13 +293,13 @@ export default function TarifarioPage() {
                             <div className="flex items-center gap-3">
                                 {isEditing ? (
                                     <div className="flex items-center gap-3 animate-in zoom-in-95">
-                                        <button 
+                                        <button
                                             onClick={() => { setIsEditing(false); setEditRates(rates); }}
                                             className="px-5 py-2.5 bg-muted rounded-lg font-bold text-[10px] text-muted-foreground hover:bg-muted/80 transition-all"
                                         >
                                             Descartar
                                         </button>
-                                        <button 
+                                        <button
                                             onClick={handleSave}
                                             disabled={saving}
                                             className="px-6 py-2.5 bg-emerald-600 text-white rounded-lg font-bold text-[10px] shadow-lg flex items-center gap-2"
@@ -300,14 +308,14 @@ export default function TarifarioPage() {
                                         </button>
                                     </div>
                                 ) : (
-                                    <button 
+                                    <button
                                         onClick={handleAddRow}
                                         className="h-10 px-6 bg-foreground text-background rounded-lg font-bold text-[10px] shadow-lg flex items-center gap-2 transition-all hover:opacity-90 active:scale-95"
                                     >
                                         <Plus className="w-3.5 h-3.5" /> Agregar tarifa
                                     </button>
                                 )}
-                                <button 
+                                <button
                                     onClick={() => setIsExceptionsModalOpen(true)}
                                     className="h-10 px-6 border border-amber-500/20 bg-amber-500/5 text-amber-600 rounded-lg font-bold text-[10px] shadow-sm flex items-center gap-2 transition-all hover:bg-amber-500/10 active:scale-95"
                                 >
@@ -327,7 +335,7 @@ export default function TarifarioPage() {
                                          const isExpanded = expandedCategories.has(category);
                                          return (
                                              <div key={category} className="bg-muted/5 rounded-xl border border-border/40 overflow-hidden transition-all duration-300">
-                                                 <button 
+                                                 <button
                                                      onClick={() => toggleCategory(category)}
                                                      className={cn(
                                                          "w-full px-6 py-4 flex items-center justify-between transition-colors",
@@ -366,7 +374,7 @@ export default function TarifarioPage() {
                                                                              <td className="px-6 py-4">
                                                                                  <div className="flex flex-col gap-1.5">
                                                                                      <div className="flex items-center gap-3">
-                                                                                         <input 
+                                                                                         <input
                                                                                              type="text"
                                                                                              value={rate.Servicio}
                                                                                              onChange={(e) => {
@@ -385,7 +393,7 @@ export default function TarifarioPage() {
                                                                                      </div>
                                                                                      <div className="flex items-center gap-2">
                                                                                          <span className="text-[8px] font-black uppercase text-muted-foreground/30 tracking-widest">Cat:</span>
-                                                                                         <input 
+                                                                                         <input
                                                                                              type="text"
                                                                                              value={rate.Categoria}
                                                                                              onChange={(e) => {
@@ -401,7 +409,7 @@ export default function TarifarioPage() {
                                                                              </td>
                                                                              <td className="px-6 py-4">
                                                                                  <div className="flex items-center justify-center gap-2">
-                                                                                     <input 
+                                                                                     <input
                                                                                          type="date"
                                                                                          value={rate.Fecha_inicio ? rate.Fecha_inicio.split('T')[0] : ''}
                                                                                          onChange={(e) => {
@@ -413,7 +421,7 @@ export default function TarifarioPage() {
                                                                                          className="bg-muted/30 px-2 py-1.5 rounded border border-transparent focus:border-primary/20 text-[10px] font-bold outline-none"
                                                                                      />
                                                                                      <span className="text-muted-foreground/30 text-[10px]">—</span>
-                                                                                     <input 
+                                                                                     <input
                                                                                          type="date"
                                                                                          value={rate.Fecha_fin ? rate.Fecha_fin.split('T')[0] : ''}
                                                                                          onChange={(e) => {
@@ -429,7 +437,7 @@ export default function TarifarioPage() {
                                                                              <td className="px-6 py-4 text-right">
                                                                                  <div className="flex items-center justify-end gap-2">
                                                                                      <span className="text-[11px] font-bold text-primary/40">S/ </span>
-                                                                                     <input 
+                                                                                     <input
                                                                                          type="number"
                                                                                          value={rate.Importe}
                                                                                          onChange={(e) => {
@@ -443,7 +451,7 @@ export default function TarifarioPage() {
                                                                                  </div>
                                                                              </td>
                                                                              <td className="px-6 py-4 text-right opacity-0 group-hover:opacity-100 transition-all">
-                                                                                 <button 
+                                                                                 <button
                                                                                      onClick={() => {
                                                                                          const newRates = editRates.filter((_, i) => i !== globalIdx);
                                                                                          setEditRates(newRates);
@@ -477,7 +485,7 @@ export default function TarifarioPage() {
                                 </div>
                             )}
                         </div>
-                        
+
                         {!isEditing && (
                             <div className="p-8 border-t border-border/40 bg-muted/5 flex items-center justify-between">
                                 <span className="text-[10px] font-black text-muted-foreground opacity-30 flex items-center gap-2">
@@ -494,13 +502,18 @@ export default function TarifarioPage() {
             </div>
 
             {selectedCas && (
-                <TarifarioExceptionsModal 
+                <TarifarioExceptionsModal
                     cas={selectedCas}
                     isOpen={isExceptionsModalOpen}
                     onClose={() => setIsExceptionsModalOpen(false)}
                 />
             )}
+
+            <TarifarioImportModal
+                isOpen={isImportModalOpen}
+                onClose={() => setIsImportModalOpen(false)}
+                onSuccess={() => { if (selectedCas) fetchRates(selectedCas); }}
+            />
         </div>
     );
 }
-

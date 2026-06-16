@@ -1780,6 +1780,110 @@ app.delete('/api/tarifarios/exceptions/:id', verifyToken, async (req: Request, r
     } catch (err: unknown) { res.status(500).json({ error: err instanceof Error ? err.message : String(err) }); }
 });
 
+// --- TARIFARIO IMPORT ---
+app.post('/api/tarifarios/import/preview', verifyToken, async (req: Request, res: Response) => {
+    const { rows } = req.body as { rows: any[] };
+    try {
+        const db = await getDb();
+        const casResult = await db.request().query("SELECT ID_CAS, Nombre_CAS FROM [dbo].[GAC_APP_TB_CAS]");
+        const casMap = new Map<string, number>();
+        casResult.recordset.forEach((c: any) => casMap.set(c.Nombre_CAS.toUpperCase().trim(), c.ID_CAS));
+
+        const preview: any[] = [];
+        for (const row of rows) {
+            const casName = (row.CAS_Nombre || '').trim().toUpperCase();
+            const casId = casMap.get(casName);
+            if (!casId) {
+                preview.push({ ...row, Status: 'ERROR', Message: `CAS "${row.CAS_Nombre}" no encontrado en la BD` });
+                continue;
+            }
+            const fi = new Date(row.Fecha_inicio);
+            if (isNaN(fi.getTime())) {
+                preview.push({ ...row, CAS_ID: casId, Status: 'ERROR', Message: `Fecha_inicio inválida: "${row.Fecha_inicio}"` });
+                continue;
+            }
+            const importe = parseFloat(row.Importe);
+            if (isNaN(importe)) {
+                preview.push({ ...row, CAS_ID: casId, Status: 'ERROR', Message: `Importe inválido: "${row.Importe}"` });
+                continue;
+            }
+            const existing = await db.request()
+                .input('casId', casId)
+                .input('cat', (row.Categoria || '').trim())
+                .input('serv', (row.Servicio || '').trim())
+                .input('fi', fi)
+                .query(`
+                    SELECT TOP 1 ID_Tarifario, CAST(Importe AS FLOAT) as Importe
+                    FROM [dbo].[GAC_APP_TB_TARIFARIO]
+                    WHERE Empresa = @casId
+                      AND TRIM(Categoria) = TRIM(@cat)
+                      AND TRIM(Servicio) = TRIM(@serv)
+                      AND Fecha_inicio = @fi
+                `);
+            if (existing.recordset.length === 0) {
+                preview.push({ ...row, CAS_ID: casId, Status: 'INSERT', Message: 'Nueva tarifa', Importe_Actual: null });
+            } else {
+                const cur = existing.recordset[0];
+                if (Math.abs(parseFloat(cur.Importe) - importe) < 0.001) {
+                    preview.push({ ...row, CAS_ID: casId, Status: 'OK', Message: 'Sin cambios', Importe_Actual: cur.Importe, ID_Tarifario: cur.ID_Tarifario });
+                } else {
+                    preview.push({ ...row, CAS_ID: casId, Status: 'UPDATE', Message: `${cur.Importe} → ${importe}`, Importe_Actual: cur.Importe, ID_Tarifario: cur.ID_Tarifario });
+                }
+            }
+        }
+        res.json({ preview });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+app.post('/api/tarifarios/import/confirm', verifyToken, async (req: Request, res: Response) => {
+    const { rows } = req.body as { rows: any[] };
+    try {
+        const db = await getDb();
+        const transaction = new sql.Transaction(db);
+        await transaction.begin();
+        let inserted = 0, updated = 0;
+        try {
+            for (const row of rows) {
+                if (row.Status === 'INSERT') {
+                    const newId = crypto.randomBytes(4).toString('hex');
+                    await new sql.Request(transaction)
+                        .input('id', newId)
+                        .input('casId', row.CAS_ID)
+                        .input('cat', row.Categoria.trim())
+                        .input('serv', row.Servicio.trim())
+                        .input('imp', sql.Decimal(18, 2), parseFloat(row.Importe))
+                        .input('fi', new Date(row.Fecha_inicio))
+                        .input('ff', row.Fecha_fin ? new Date(row.Fecha_fin) : null)
+                        .input('est', row.Estado || 'A')
+                        .query(`
+                            INSERT INTO [dbo].[GAC_APP_TB_TARIFARIO]
+                            (ID_Tarifario, Empresa, Categoria, Servicio, Importe, Fecha_inicio, Fecha_fin, Estado)
+                            VALUES (@id, @casId, @cat, @serv, @imp, @fi, @ff, @est)
+                        `);
+                    inserted++;
+                } else if (row.Status === 'UPDATE') {
+                    await new sql.Request(transaction)
+                        .input('id', row.ID_Tarifario)
+                        .input('imp', sql.Decimal(18, 2), parseFloat(row.Importe))
+                        .input('ff', row.Fecha_fin ? new Date(row.Fecha_fin) : null)
+                        .input('est', row.Estado || 'A')
+                        .query(`
+                            UPDATE [dbo].[GAC_APP_TB_TARIFARIO]
+                            SET Importe = @imp, Fecha_fin = @ff, Estado = @est
+                            WHERE ID_Tarifario = @id
+                        `);
+                    updated++;
+                }
+            }
+            await transaction.commit();
+            res.json({ success: true, inserted, updated });
+        } catch (err) {
+            await transaction.rollback();
+            throw err;
+        }
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
 // --- DASHBOARD ANALYTICS ---
 app.get('/api/dashboard/stats', verifyToken, async (req: Request, res: Response) => {
     try {
