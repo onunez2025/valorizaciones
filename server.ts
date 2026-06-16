@@ -797,9 +797,26 @@ const crearAdicionalSchema = z.object({
 });
 app.post('/api/adicionales', verifyToken, validateBody(crearAdicionalSchema), async (req: Request, res: Response) => {
     const { ticket, motivo, importe } = req.body;
+    const currentUser = (req as AuthRequest).user as JwtUserPayload;
     const id = crypto.randomBytes(4).toString('hex');
     try {
         const db = await getDb();
+
+        if (currentUser.casId) {
+            if (!currentUser.casRUC) return res.status(403).json({ error: 'Usuario CAS sin empresa asignada.' });
+            const ticketCheck = await db.request()
+                .input('ticket', sql.NVarChar(50), ticket)
+                .input('casRUC', sql.VarChar(20), currentUser.casRUC)
+                .query(`
+                    SELECT 1
+                    FROM [APPGAC].[ServiciosViewSQL] s
+                    JOIN [dbo].[GAC_APP_TB_CAS] cas ON s.IdCAS = cas.ID_CAS
+                    WHERE TRIM(s.Ticket) = @ticket AND TRIM(cas.RUC) = TRIM(@casRUC)
+                `);
+            if (ticketCheck.recordset.length === 0)
+                return res.status(403).json({ error: 'El ticket no pertenece a su empresa.' });
+        }
+
         const addReq = db.request();
         addInput(addReq, 'id', sql.VarChar(8), id);
         addInput(addReq, 'ticket', sql.VarChar(50), ticket);
@@ -818,8 +835,26 @@ app.post('/api/adicionales', verifyToken, validateBody(crearAdicionalSchema), as
 app.put('/api/adicionales/:id', verifyToken, async (req: Request, res: Response) => {
     const { id } = req.params;
     const { motivo, importe } = req.body;
+    const currentUser = (req as AuthRequest).user as JwtUserPayload;
     try {
         const db = await getDb();
+
+        if (currentUser.casId) {
+            if (!currentUser.casRUC) return res.status(403).json({ error: 'Usuario CAS sin empresa asignada.' });
+            const ownerCheck = await db.request()
+                .input('id', sql.VarChar(8), id)
+                .input('casRUC', sql.VarChar(20), currentUser.casRUC)
+                .query(`
+                    SELECT 1
+                    FROM [dbo].[GAC_APP_TB_TICKETS_VALORIZACION_ADICIONAL] a
+                    JOIN [APPGAC].[ServiciosViewSQL] s ON TRIM(s.Ticket) = TRIM(a.Ticket)
+                    JOIN [dbo].[GAC_APP_TB_CAS] cas ON s.IdCAS = cas.ID_CAS
+                    WHERE a.ID_valorizacion_adicional = @id AND TRIM(cas.RUC) = TRIM(@casRUC)
+                `);
+            if (ownerCheck.recordset.length === 0)
+                return res.status(403).json({ error: 'El adicional no pertenece a su empresa.' });
+        }
+
         const existing = await db.request()
             .input('id', sql.VarChar(8), id)
             .query("SELECT * FROM [dbo].[GAC_APP_TB_TICKETS_VALORIZACION_ADICIONAL] WHERE ID_valorizacion_adicional = @id");
@@ -879,8 +914,26 @@ app.get('/api/adicionales/:ticket', verifyToken, async (req: Request, res: Respo
 
 app.delete('/api/adicionales/:id', verifyToken, async (req: Request, res: Response) => {
     const { id } = req.params;
+    const currentUser = (req as AuthRequest).user as JwtUserPayload;
     try {
         const db = await getDb();
+
+        if (currentUser.casId) {
+            if (!currentUser.casRUC) return res.status(403).json({ error: 'Usuario CAS sin empresa asignada.' });
+            const ownerCheck = await db.request()
+                .input('id', sql.VarChar(8), id)
+                .input('casRUC', sql.VarChar(20), currentUser.casRUC)
+                .query(`
+                    SELECT 1
+                    FROM [dbo].[GAC_APP_TB_TICKETS_VALORIZACION_ADICIONAL] a
+                    JOIN [APPGAC].[ServiciosViewSQL] s ON TRIM(s.Ticket) = TRIM(a.Ticket)
+                    JOIN [dbo].[GAC_APP_TB_CAS] cas ON s.IdCAS = cas.ID_CAS
+                    WHERE a.ID_valorizacion_adicional = @id AND TRIM(cas.RUC) = TRIM(@casRUC)
+                `);
+            if (ownerCheck.recordset.length === 0)
+                return res.status(403).json({ error: 'El adicional no pertenece a su empresa.' });
+        }
+
         const existing = await db.request()
             .input('id', sql.VarChar(8), id)
             .query("SELECT Ticket, Motivo, Importe FROM [dbo].[GAC_APP_TB_TICKETS_VALORIZACION_ADICIONAL] WHERE ID_valorizacion_adicional = @id");
@@ -1067,9 +1120,25 @@ app.post('/api/valuations/batch-discount', verifyToken, async (req: Request, res
 app.post('/api/penalties/:id/status', verifyToken, async (req: Request, res: Response) => {
     const { id } = req.params;
     const { status, observation, isCas } = req.body;
+    const currentUser = (req as AuthRequest).user as JwtUserPayload;
     try {
         const db = await getDb();
-        const _field = isCas ? 'Adjunto_motivo' : 'Adjunto_motivo'; // Usaremos el mismo campo para simplificar la traza de texto
+
+        if (currentUser.casId) {
+            const ownerCheck = await db.request()
+                .input('id', sql.VarChar(8), id)
+                .input('casId', sql.VarChar(50), currentUser.casId)
+                .query(`
+                    SELECT 1
+                    FROM [dbo].[GAC_APP_TB_TICKETS_DESCUENTOS] D
+                    INNER JOIN [dbo].[GAC_PAGOS_CACHE] PC ON PC.Ticket_Original = D.Ticket
+                    WHERE D.ID_Descuentos_CAS = @id AND PC.ID_cas = @casId
+                `);
+            if (ownerCheck.recordset.length === 0)
+                return res.status(403).json({ error: 'La penalidad no pertenece a su empresa.' });
+        }
+
+        const _field = isCas ? 'Adjunto_motivo' : 'Adjunto_motivo';
         const statusReq = db.request();
         addInput(statusReq, 'id', sql.VarChar(8), id);
         addInput(statusReq, 'status', sql.NVarChar(50), status);
