@@ -101,16 +101,43 @@ export default function TarifarioImportModal({ isOpen, onClose, onSuccess }: Pro
                 return;
             }
 
-            const headerRow = (raw[0] as unknown[]).map((h) => String(h).trim());
+            // Normaliza encabezados: sin BOM, sin tildes, minúsculas, espacios→guión_bajo
+            const normalize = (s: unknown) =>
+                String(s).replace(/^﻿/, '').trim()
+                    .toLowerCase()
+                    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+                    .replace(/[\s\-]/g, '_');
+
+            const rawHeaders = (raw[0] as unknown[]).map(normalize);
+
+            // Mapa flexible: variantes aceptadas para cada columna canónica
+            const COLUMN_MAP: Record<string, string[]> = {
+                CAS_Nombre:   ['cas_nombre', 'cas', 'nombre_cas', 'empresa'],
+                Categoria:    ['categoria', 'categoría', 'category'],
+                Servicio:     ['servicio', 'service', 'tipo_servicio'],
+                Fecha_inicio: ['fecha_inicio', 'fecha_ini', 'inicio', 'fechainicio', 'fecha_de_inicio'],
+                Fecha_fin:    ['fecha_fin', 'fecha_final', 'fin', 'fechafin', 'fecha_de_fin'],
+                Importe:      ['importe', 'precio', 'valor', 'monto', 'importe_nuevo', 'valor_servicio_nuevo'],
+                Estado:       ['estado', 'status', 'state'],
+            };
+
+            const idx = (canonical: string): number => {
+                const variants = COLUMN_MAP[canonical] ?? [canonical.toLowerCase()];
+                for (const v of variants) {
+                    const i = rawHeaders.indexOf(v);
+                    if (i !== -1) return i;
+                }
+                return -1;
+            };
+
             const required = ['CAS_Nombre', 'Categoria', 'Servicio', 'Fecha_inicio', 'Fecha_fin', 'Importe'];
-            const missing = required.filter(r => !headerRow.includes(r));
+            const missing = required.filter(col => idx(col) === -1);
             if (missing.length > 0) {
-                alert({ message: `Columnas faltantes en el Excel: ${missing.join(', ')}. Descarga la plantilla para ver el formato correcto.` });
+                alert({ message: `Columnas no reconocidas: ${missing.join(', ')}.\n\nEncabezados detectados: ${rawHeaders.join(', ')}.\n\nDescarga la plantilla para ver el formato correcto.` });
                 setLoading(false);
                 return;
             }
 
-            const idx = (name: string) => headerRow.indexOf(name);
             const rows = (raw.slice(1) as unknown[][])
                 .filter(r => r.some((c) => c !== ''))
                 .map((r) => ({
