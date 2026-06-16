@@ -342,14 +342,14 @@ export default function TarifarioImportModal({ isOpen, onClose, onSuccess }: Pro
                                         {preview.map((row, i) => {
                                             const cfg = STATUS_CONFIG[row.Status];
                                             return (
-                                                <tr key={i} className={cn('transition-colors', cfg.bg)}>
+                                                <tr key={i} className={cn('transition-colors', cfg.bg, cfg.text)}>
                                                     <td className="px-4 py-2.5 font-bold">{row.CAS_Nombre}</td>
-                                                    <td className="px-4 py-2.5 font-bold text-foreground/70">{row.Categoria}</td>
-                                                    <td className="px-4 py-2.5 text-foreground/60">{row.Servicio}</td>
-                                                    <td className="px-4 py-2.5 text-center text-foreground/50 whitespace-nowrap">
+                                                    <td className="px-4 py-2.5 font-bold opacity-80">{row.Categoria}</td>
+                                                    <td className="px-4 py-2.5 opacity-70">{row.Servicio}</td>
+                                                    <td className="px-4 py-2.5 text-center opacity-60 whitespace-nowrap">
                                                         {row.Fecha_inicio} — {row.Fecha_fin}
                                                     </td>
-                                                    <td className="px-4 py-2.5 text-right font-bold text-muted-foreground/60">
+                                                    <td className="px-4 py-2.5 text-right font-bold opacity-60">
                                                         {row.Importe_Actual != null ? `S/ ${Number(row.Importe_Actual).toFixed(2)}` : '—'}
                                                     </td>
                                                     <td className="px-4 py-2.5 text-right font-black">
