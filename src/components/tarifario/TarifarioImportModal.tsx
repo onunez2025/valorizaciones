@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+﻿import { useState, useRef } from 'react';
 import { X, Upload, Download, CheckCircle, RefreshCw, FileSpreadsheet, ArrowRight } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { ApiClient } from '../../services/apiClient';
@@ -101,12 +101,8 @@ export default function TarifarioImportModal({ isOpen, onClose, onSuccess }: Pro
                 return;
             }
 
-            // Normaliza encabezados: sin BOM, sin tildes, minúsculas, espacios→guión_bajo
             const normalize = (s: unknown) =>
-                String(s).replace(/^﻿/, '').trim()
-                    .toLowerCase()
-                    .normalize('NFD').replace(/[̀-ͯ]/g, '')
-                    .replace(/[\s\-]/g, '_');
+                String(s).trim().toLowerCase().replace(/\s+/g, '_').replace(/-/g, '_');
 
             const rawHeaders = (raw[0] as unknown[]).map(normalize);
 
