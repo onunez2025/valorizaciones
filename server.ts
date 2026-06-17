@@ -1892,10 +1892,10 @@ app.post('/api/tarifarios/import/preview', verifyToken, async (req: Request, res
                 continue;
             }
             const existing = await db.request()
-                .input('casId', casId)
-                .input('cat', (row.Categoria || '').trim())
-                .input('serv', (row.Servicio || '').trim())
-                .input('fi', fi)
+                .input('casId', sql.VarChar(50), casId)
+                .input('cat', sql.VarChar(100), (row.Categoria || '').trim())
+                .input('serv', sql.VarChar(100), (row.Servicio || '').trim())
+                .input('fi', sql.Date, fi)
                 .query(`
                     SELECT TOP 1 ID_Tarifario, CAST(Importe AS FLOAT) as Importe
                     FROM [dbo].[GAC_APP_TB_TARIFARIO]
@@ -1931,14 +1931,14 @@ app.post('/api/tarifarios/import/confirm', verifyToken, async (req: Request, res
                 if (row.Status === 'INSERT') {
                     const newId = crypto.randomBytes(4).toString('hex');
                     await new sql.Request(transaction)
-                        .input('id', newId)
-                        .input('casId', row.CAS_ID)
-                        .input('cat', row.Categoria.trim())
-                        .input('serv', row.Servicio.trim())
+                        .input('id', sql.VarChar(8), newId)
+                        .input('casId', sql.VarChar(50), row.CAS_ID)
+                        .input('cat', sql.VarChar(100), row.Categoria.trim())
+                        .input('serv', sql.VarChar(100), row.Servicio.trim())
                         .input('imp', sql.Decimal(18, 2), parseFloat(row.Importe))
-                        .input('fi', new Date(row.Fecha_inicio))
-                        .input('ff', row.Fecha_fin ? new Date(row.Fecha_fin) : null)
-                        .input('est', row.Estado || 'A')
+                        .input('fi', sql.Date, new Date(row.Fecha_inicio))
+                        .input('ff', sql.Date, row.Fecha_fin ? new Date(row.Fecha_fin) : null)
+                        .input('est', sql.VarChar(10), row.Estado || 'A')
                         .query(`
                             INSERT INTO [dbo].[GAC_APP_TB_TARIFARIO]
                             (ID_Tarifario, Empresa, Categoria, Servicio, Importe, Fecha_inicio, Fecha_fin, Estado)
@@ -1947,10 +1947,10 @@ app.post('/api/tarifarios/import/confirm', verifyToken, async (req: Request, res
                     inserted++;
                 } else if (row.Status === 'UPDATE') {
                     await new sql.Request(transaction)
-                        .input('id', row.ID_Tarifario)
+                        .input('id', sql.VarChar(8), row.ID_Tarifario)
                         .input('imp', sql.Decimal(18, 2), parseFloat(row.Importe))
-                        .input('ff', row.Fecha_fin ? new Date(row.Fecha_fin) : null)
-                        .input('est', row.Estado || 'A')
+                        .input('ff', sql.Date, row.Fecha_fin ? new Date(row.Fecha_fin) : null)
+                        .input('est', sql.VarChar(10), row.Estado || 'A')
                         .query(`
                             UPDATE [dbo].[GAC_APP_TB_TARIFARIO]
                             SET Importe = @imp, Fecha_fin = @ff, Estado = @est
