@@ -513,11 +513,14 @@ async function getC4CDetails(ticketIds: string[]) {
             })
             .then(resp => {
                 const items = resp.data.d.results;
-                items.forEach((item: { ID: string; CreatedBy: string; Name: string; ZIDRegistroCupoArea?: string }) => {
+                if (i === 0 && items.length > 0) {
+                    console.log('[C4C DEBUG] Campos disponibles en ServiceRequest:', Object.keys(items[0]).join(', '));
+                }
+                items.forEach((item: Record<string, string>) => {
                     results[item.ID] = {
-                        creator: item.CreatedBy,
-                        subject: item.Name,
-                        cupoArea: item.ZIDRegistroCupoArea || ''
+                        creator: item.CreatedBy || '',
+                        subject: item.Name || '',
+                        cupoArea: item.ZIDRegistroCupoArea || item.ZzIDRegistroCupoArea || item.ZIDRegistrocupoArea || ''
                     };
                 });
             })
