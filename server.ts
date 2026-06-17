@@ -257,6 +257,14 @@ app.post('/api/auth/login', async (req: Request, res: Response) => {
 
         const token = jwt.sign({ id: user.Id, username: user.Username, role: user.RoleName, perms, casId: user.cas_id || null, casRUC: user.cas_ruc || null }, JWT_SECRET, { expiresIn: '12h' });
 
+        const ssoToken = jwt.sign(
+            { id: user.Id, role: user.RoleName, role_name: user.RoleName, username: user.Username, apps: user.Apps || '', casId: user.cas_id || null },
+            JWT_SECRET, { expiresIn: '12h' }
+        );
+        if (process.env.NODE_ENV === 'production') {
+            res.cookie('token', ssoToken, { domain: '.siatc.cloud', maxAge: 12 * 60 * 60 * 1000, httpOnly: false, secure: true, sameSite: 'lax', path: '/' });
+        }
+
         res.json({ token, user: { id: user.Id, username: user.Username, full_name: user.FullName, email: user.Email, role_name: user.RoleName, management_id: user.ManagementId, management_name: user.ManagementName, avatar_url: user.AvatarUrl, permissions: perms, apps: user.Apps, requires_password_change: user.RequiresPasswordChange === 1 } });
     } catch (err: unknown) { res.status(500).json({ error: err instanceof Error ? err.message : String(err) }); }
 });
@@ -288,6 +296,13 @@ app.get('/api/auth/me', verifyToken, async (req: Request, res: Response) => {
             JWT_SECRET,
             { expiresIn: '12h' }
         );
+        const ssoTokenMe = jwt.sign(
+            { id: user.Id, role: user.RoleName, role_name: user.RoleName, username: user.Username, apps: user.Apps || '', casId: user.cas_id || null },
+            JWT_SECRET, { expiresIn: '12h' }
+        );
+        if (process.env.NODE_ENV === 'production') {
+            res.cookie('token', ssoTokenMe, { domain: '.siatc.cloud', maxAge: 12 * 60 * 60 * 1000, httpOnly: false, secure: true, sameSite: 'lax', path: '/' });
+        }
         res.json({ token: freshToken, user: { id: user.Id, username: user.Username, full_name: user.FullName, email: user.Email, role_name: user.RoleName, management_id: user.ManagementId, management_name: user.ManagementName, avatar_url: user.AvatarUrl, permissions: perms, apps: user.Apps, casId: user.cas_id || null, casRUC: user.cas_ruc || null } });
     } catch (err: unknown) { res.status(500).json({ error: err instanceof Error ? err.message : String(err) }); }
 });
