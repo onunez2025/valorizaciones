@@ -1928,34 +1928,70 @@ app.post('/api/tarifarios/import/confirm', verifyToken, async (req: Request, res
         let inserted = 0, updated = 0;
         try {
             for (const row of rows) {
+                const cat = row.Categoria.trim();
+                const serv = row.Servicio.trim();
+                const casId = row.CAS_ID;
+
                 if (row.Status === 'INSERT') {
-                    const newId = crypto.randomBytes(4).toString('hex');
-                    await new sql.Request(transaction)
-                        .input('id', newId)
-                        .input('casId', row.CAS_ID)
-                        .input('cat', row.Categoria.trim())
-                        .input('serv', row.Servicio.trim())
-                        .input('imp', sql.Decimal(18, 2), parseFloat(row.Importe))
-                        .input('fi', new Date(row.Fecha_inicio))
-                        .input('ff', row.Fecha_fin ? new Date(row.Fecha_fin) : null)
-                        .input('est', row.Estado || 'A')
-                        .query(`
-                            INSERT INTO [dbo].[GAC_APP_TB_TARIFARIO]
-                            (ID_Tarifario, Empresa, Categoria, Servicio, Importe, Fecha_inicio, Fecha_fin, Estado)
-                            VALUES (@id, @casId, @cat, @serv, @imp, @fi, @ff, @est)
+                    // Inactivar registros anteriores con la misma combinación (Empresa + Categoria + Servicio)
+                    if (casId != null) {
+                        const deacReq = new sql.Request(transaction);
+                        addInput(deacReq, 'casId', sql.Int, casId);
+                        addInput(deacReq, 'cat', sql.NVarChar(200), cat);
+                        addInput(deacReq, 'serv', sql.NVarChar(200), serv);
+                        await deacReq.query(`
+                            UPDATE [dbo].[GAC_APP_TB_TARIFARIO]
+                            SET Estado = 'I'
+                            WHERE Empresa = @casId
+                              AND TRIM(Categoria) = TRIM(@cat)
+                              AND TRIM(Servicio) = TRIM(@serv)
+                              AND Estado = 'A'
                         `);
+                    }
+                    const newId = crypto.randomBytes(4).toString('hex');
+                    const insReq = new sql.Request(transaction);
+                    addInput(insReq, 'id', sql.VarChar(8), newId);
+                    addInput(insReq, 'casId', sql.Int, casId);
+                    addInput(insReq, 'cat', sql.NVarChar(200), cat);
+                    addInput(insReq, 'serv', sql.NVarChar(200), serv);
+                    addInput(insReq, 'imp', sql.Decimal(18, 2), parseFloat(row.Importe));
+                    addInput(insReq, 'fi', sql.DateTime, new Date(row.Fecha_inicio));
+                    addInput(insReq, 'ff', sql.DateTime, row.Fecha_fin ? new Date(row.Fecha_fin) : null);
+                    addInput(insReq, 'est', sql.VarChar(1), row.Estado || 'A');
+                    await insReq.query(`
+                        INSERT INTO [dbo].[GAC_APP_TB_TARIFARIO]
+                        (ID_Tarifario, Empresa, Categoria, Servicio, Importe, Fecha_inicio, Fecha_fin, Estado)
+                        VALUES (@id, @casId, @cat, @serv, @imp, @fi, @ff, @est)
+                    `);
                     inserted++;
                 } else if (row.Status === 'UPDATE') {
-                    await new sql.Request(transaction)
-                        .input('id', row.ID_Tarifario)
-                        .input('imp', sql.Decimal(18, 2), parseFloat(row.Importe))
-                        .input('ff', row.Fecha_fin ? new Date(row.Fecha_fin) : null)
-                        .input('est', row.Estado || 'A')
-                        .query(`
+                    // Inactivar otros registros activos con la misma combinación (no el que se va a actualizar)
+                    if (casId != null && row.ID_Tarifario) {
+                        const deacReq = new sql.Request(transaction);
+                        addInput(deacReq, 'casId', sql.Int, casId);
+                        addInput(deacReq, 'cat', sql.NVarChar(200), cat);
+                        addInput(deacReq, 'serv', sql.NVarChar(200), serv);
+                        addInput(deacReq, 'id', sql.VarChar(8), row.ID_Tarifario);
+                        await deacReq.query(`
                             UPDATE [dbo].[GAC_APP_TB_TARIFARIO]
-                            SET Importe = @imp, Fecha_fin = @ff, Estado = @est
-                            WHERE ID_Tarifario = @id
+                            SET Estado = 'I'
+                            WHERE Empresa = @casId
+                              AND TRIM(Categoria) = TRIM(@cat)
+                              AND TRIM(Servicio) = TRIM(@serv)
+                              AND Estado = 'A'
+                              AND ID_Tarifario != @id
                         `);
+                    }
+                    const updReq = new sql.Request(transaction);
+                    addInput(updReq, 'id', sql.VarChar(8), row.ID_Tarifario);
+                    addInput(updReq, 'imp', sql.Decimal(18, 2), parseFloat(row.Importe));
+                    addInput(updReq, 'ff', sql.DateTime, row.Fecha_fin ? new Date(row.Fecha_fin) : null);
+                    addInput(updReq, 'est', sql.VarChar(1), row.Estado || 'A');
+                    await updReq.query(`
+                        UPDATE [dbo].[GAC_APP_TB_TARIFARIO]
+                        SET Importe = @imp, Fecha_fin = @ff, Estado = @est
+                        WHERE ID_Tarifario = @id
+                    `);
                     updated++;
                 }
             }
