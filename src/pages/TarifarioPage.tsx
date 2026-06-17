@@ -30,6 +30,7 @@ interface Rate {
     Fecha_fin?: string;
     Nombre_CAS?: string;
     RUC?: string;
+    Estado?: string;
 }
 
 export default function TarifarioPage() {
@@ -50,6 +51,7 @@ export default function TarifarioPage() {
 
     const [isExceptionsModalOpen, setIsExceptionsModalOpen] = useState(false);
     const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+    const [showInactive, setShowInactive] = useState(false);
 
     useEffect(() => {
         const fetchCas = async () => {
@@ -153,8 +155,12 @@ export default function TarifarioPage() {
         }
     };
 
-    // Agrupar por categoría
-    const groupedRates = editRates.reduce((acc, rate) => {
+    const activeCount = editRates.filter(r => (r.Estado || 'A') === 'A').length;
+    const inactiveCount = editRates.length - activeCount;
+
+    // Agrupar por categoría (filtrar inactivos si el toggle está apagado)
+    const visibleRates = showInactive ? editRates : editRates.filter(r => (r.Estado || 'A') === 'A');
+    const groupedRates = visibleRates.reduce((acc, rate) => {
         const cat = rate.Categoria || 'SIN CATEGORÍA';
         if (!acc[cat]) acc[cat] = [];
         acc[cat].push(rate);
@@ -287,7 +293,25 @@ export default function TarifarioPage() {
                                 </div>
                                 <div>
                                     <h3 className="text-[9px] font-bold text-muted-foreground/60 mb-0.5">Precios configurados</h3>
-                                    <p className="text-xl font-bold tracking-tight">{rates.length} Items en lista</p>
+                                    <div className="flex items-center gap-3">
+                                        <p className="text-xl font-bold tracking-tight">
+                                            <span className="text-emerald-600">{activeCount}</span>
+                                            <span className="text-muted-foreground/40 text-sm font-bold"> activos</span>
+                                        </p>
+                                        {inactiveCount > 0 && (
+                                            <button
+                                                onClick={() => setShowInactive(v => !v)}
+                                                className={cn(
+                                                    "text-[9px] font-black px-2.5 py-1 rounded-full border transition-all",
+                                                    showInactive
+                                                        ? "bg-muted/60 border-border text-muted-foreground"
+                                                        : "bg-muted/20 border-border/40 text-muted-foreground/50 hover:bg-muted/40"
+                                                )}
+                                            >
+                                                {showInactive ? `Ocultar ${inactiveCount} inactivos` : `+ ${inactiveCount} inactivos`}
+                                            </button>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                             <div className="flex items-center gap-3">
@@ -370,10 +394,11 @@ export default function TarifarioPage() {
                                                                  {groupedRates[category].map((rate, idx) => {
                                                                      const globalIdx = editRates.findIndex(r => r === rate);
                                                                      return (
-                                                                         <tr key={`${category}-${idx}`} className="group hover:bg-primary/[0.02] transition-colors">
+                                                                         <tr key={`${category}-${idx}`} className={cn("group hover:bg-primary/[0.02] transition-colors", (rate.Estado || 'A') !== 'A' && "opacity-40")}>
                                                                              <td className="px-6 py-4">
                                                                                  <div className="flex flex-col gap-1.5">
                                                                                      <div className="flex items-center gap-3">
+                                                                                         <div title={(rate.Estado || 'A') === 'A' ? 'Activo' : 'Inactivo'} className={cn("w-1.5 h-1.5 rounded-full shrink-0", (rate.Estado || 'A') === 'A' ? "bg-emerald-500" : "bg-muted-foreground/30")} />
                                                                                          <input
                                                                                              type="text"
                                                                                              value={rate.Servicio}
