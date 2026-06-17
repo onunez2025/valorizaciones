@@ -497,26 +497,27 @@ app.delete('/api/config-canal-institucional/:id', verifyToken, async (req: Reque
 // --- VALORIZACIONES HELPERS ---
 async function getC4CDetails(ticketIds: string[]) {
     if (ticketIds.length === 0) return {};
-    const results: Record<string, { creator: string; subject: string }> = {};
+    const results: Record<string, { creator: string; subject: string; cupoArea: string }> = {};
     const chunkSize = 60; // Increased chunk size for better performance
     const promises = [];
 
     for (let i = 0; i < ticketIds.length; i += chunkSize) {
         const chunk = ticketIds.slice(i, i + chunkSize);
         const filter = chunk.map(id => `ID eq '${id}'`).join(' or ');
-        const url = `${C4C_BASE_URL}/ServiceRequestCollection?$filter=${encodeURIComponent(filter)}&$select=ID,CreatedBy,Name`;
-        
+        const url = `${C4C_BASE_URL}/ServiceRequestCollection?$filter=${encodeURIComponent(filter)}&$select=ID,CreatedBy,Name,ZIDRegistroCupoArea`;
+
         promises.push(
-            axios.get(url, { 
+            axios.get(url, {
                 headers: { 'Authorization': `Basic ${C4C_AUTH}` },
                 timeout: 15000 // 15s timeout per chunk
             })
             .then(resp => {
                 const items = resp.data.d.results;
-                items.forEach((item: { ID: string; CreatedBy: string; Name: string }) => {
+                items.forEach((item: { ID: string; CreatedBy: string; Name: string; ZIDRegistroCupoArea?: string }) => {
                     results[item.ID] = {
                         creator: item.CreatedBy,
-                        subject: item.Name
+                        subject: item.Name,
+                        cupoArea: item.ZIDRegistroCupoArea || ''
                     };
                 });
             })
@@ -688,7 +689,8 @@ app.get('/api/valuations/:ruc', verifyToken, async (req: Request, res: Response)
                     TarifaBase: finalTarifaBase,
                     UsuarioCreador: details?.creator || 'N/D',
                     C4CSubject: details?.subject || '',
-                    EsInstitucional: esInstitucional
+                    EsInstitucional: esInstitucional,
+                    CupoArea: details?.cupoArea || ''
                 };
             });
         } else {

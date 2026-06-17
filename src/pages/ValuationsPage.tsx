@@ -1953,6 +1953,7 @@ export default function ValuationsPage() {
                                                                                             <th onClick={() => handleDetailSort('Categoria')} className="px-6 py-3 text-left cursor-pointer hover:text-primary transition-colors">
                                                                                                 <div className="flex items-center gap-1">Categoría <ArrowUpDown className="w-3 h-3 opacity-40" /></div>
                                                                                             </th>
+                                                                                            <th className="px-4 py-3 text-center">Cupo Área</th>
                                                                                             <th onClick={() => handleDetailSort('Subtotal')} className="px-6 py-3 text-right cursor-pointer hover:text-primary transition-colors">
                                                                                                 <div className="flex items-center gap-1 justify-end">Subtotal <ArrowUpDown className="w-3 h-3 opacity-40" /></div>
                                                                                             </th>
@@ -1991,6 +1992,15 @@ export default function ValuationsPage() {
                                                                                                             {toTitleCase(ticket.Categoria)}
                                                                                                         </span>
                                                                                                     </div>
+                                                                                                </td>
+                                                                                                <td className="px-4 py-4 text-center">
+                                                                                                    {ticket.CupoArea ? (
+                                                                                                        <span className="px-2 py-1 bg-violet-500/10 text-violet-700 rounded text-[10px] font-black tracking-tight">
+                                                                                                            {ticket.CupoArea}
+                                                                                                        </span>
+                                                                                                    ) : (
+                                                                                                        <span className="text-muted-foreground/30 text-[10px]">—</span>
+                                                                                                    )}
                                                                                                 </td>
                                                                                                 <td className="px-6 py-4 text-right">
                                                                                                     {!isValuable(ticket.CodigoEquipo) ? (
