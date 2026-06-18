@@ -2686,6 +2686,11 @@ if (process.env.NODE_ENV === 'production' && !(process.env.ALLOWED_ORIGINS || ''
     console.warn('⚠️  WARNING: ALLOWED_ORIGINS is not set. CORS will block all cross-origin requests in production.');
 }
 
+app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
+    console.error(`[ERROR] ${req.method} ${req.path}:`, err);
+    res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Error interno del servidor' : err.message });
+});
+
 app.listen(port, () => {
     console.log(`Server Valorizaciones running on http://localhost:${port}`);
     // Fetch app metadata from DB for OG tags
