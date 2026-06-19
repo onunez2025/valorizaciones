@@ -276,7 +276,7 @@ app.post('/api/auth/login', async (req: Request, res: Response) => {
     const { username, password } = parseResult.data;
     try {
         const db = await getDb();
-        const result = await db.request().input('u', sql.NVarChar, username).input('app', sql.NVarChar, APP_IDENTIFIER).query(`
+        const result = await db.request().input('u', sql.NVarChar(sql.MAX), username).input('app', sql.NVarChar(sql.MAX), APP_IDENTIFIER).query(`
             SELECT u.*, r.Name as RoleName, m.Name as ManagementName,
                 uc.CASId as cas_id, TRIM(c.RUC) as cas_ruc
             FROM EBM.Users u
@@ -1159,13 +1159,13 @@ app.post('/api/valuations/batch-discount', verifyToken, async (req: Request, res
                 const fecha = new Date().toISOString().split('T')[0];
 
                 await transaction.request()
-                    .input('id', sql.VarChar, penaltyId)
-                    .input('ticket', sql.VarChar, ticketId)
+                    .input('id', sql.VarChar(255), penaltyId)
+                    .input('ticket', sql.VarChar(255), ticketId)
                     .input('fecha', sql.Date, fecha)
-                    .input('motivo', sql.VarChar, motivo)
-                    .input('desc', sql.VarChar, descripcion)
+                    .input('motivo', sql.VarChar(255), motivo)
+                    .input('desc', sql.VarChar(255), descripcion)
                     .input('importe', sql.Decimal(10, 2), ticketAmount)
-                    .input('user', sql.VarChar, user.username)
+                    .input('user', sql.VarChar(255), user.username)
                     .query(`
                         INSERT INTO [dbo].[GAC_APP_TB_TICKETS_DESCUENTOS] 
                         (ID_Descuentos_CAS, Ticket, Fecha, Motivo, Descripcion, Importe, Creado_por, Creado_el, Estado)
@@ -1231,7 +1231,7 @@ app.get('/api/tickets/find/:ticket', verifyToken, async (req: Request, res: Resp
     try {
         const db = await getDb();
         const result = await db.request()
-            .input('ticket', sql.NVarChar, ticket)
+            .input('ticket', sql.NVarChar(sql.MAX), ticket)
             .query(`
                 SELECT TOP 1
                     s.Ticket, s.CheckOut as Fecha, s.Servicio as ServicioNombre,
@@ -1635,15 +1635,15 @@ app.get('/api/closures', verifyToken, async (req: Request, res: Response) => {
         const conditions: string[] = [];
         if (efectiveRuc !== null) {
             conditions.push(`TRIM(RUC) = TRIM(@ruc)`);
-            request.input('ruc', sql.VarChar, efectiveRuc);
+            request.input('ruc', sql.VarChar(255), efectiveRuc);
         }
         if (start) {
             conditions.push(`Fecha_Inicio = @start`);
-            request.input('start', sql.VarChar, start as string);
+            request.input('start', sql.VarChar(255), start as string);
         }
         if (end) {
             conditions.push(`Fecha_Fin = @end`);
-            request.input('end', sql.VarChar, end as string);
+            request.input('end', sql.VarChar(255), end as string);
         }
         
         if (conditions.length > 0) {
@@ -2114,7 +2114,7 @@ app.get('/api/dashboard/stats', verifyToken, async (req: Request, res: Response)
 
         if (efectiveRuc !== null && efectiveRuc !== 'all') {
             query += ` AND cas.RUC = @ruc `;
-            request.input('ruc', sql.VarChar, efectiveRuc);
+            request.input('ruc', sql.VarChar(255), efectiveRuc);
         }
 
         query += `
@@ -2244,7 +2244,7 @@ app.get('/api/dashboard/trends', verifyToken, async (req: Request, res: Response
 
         if (efectiveRuc !== null && efectiveRuc !== 'all') {
             query += ` AND cas.RUC = @ruc `;
-            request.input('ruc', sql.VarChar, efectiveRuc);
+            request.input('ruc', sql.VarChar(255), efectiveRuc);
         }
 
         query += `
@@ -2344,7 +2344,7 @@ app.get('/api/dashboard/top-cas', verifyToken, async (req: Request, res: Respons
 
         if (efectiveRuc !== null && efectiveRuc !== 'all') {
             query += ` AND cas.RUC = @ruc `;
-            request.input('ruc', sql.VarChar, efectiveRuc);
+            request.input('ruc', sql.VarChar(255), efectiveRuc);
         }
 
         query += `
