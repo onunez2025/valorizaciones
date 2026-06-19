@@ -4,6 +4,9 @@ import type { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
+import Redis from 'ioredis';
+import { createHash } from 'crypto';
+import { RedisStore } from 'rate-limit-redis';
 import dotenv from 'dotenv';
 import sql from 'mssql';
 import jwt from 'jsonwebtoken';
@@ -95,14 +98,16 @@ app.use(helmet({
 const limiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 1000,
-    message: { error: 'Too many requests from this IP, please try again later.' }
+    message: { error: 'Too many requests from this IP, please try again later.' },
+    store: new RedisStore({ sendCommand: (...args: string[]) => (getRedisClient() as any).call(...args) as any, prefix: 'rl:val:' }),
 });
 app.use(limiter);
 
 const authLimiter = rateLimit({
     windowMs: 60 * 60 * 1000,
     max: 50,
-    message: { error: 'Too many login attempts, please try again after an hour.' }
+    message: { error: 'Too many login attempts, please try again after an hour.' },
+    store: new RedisStore({ sendCommand: (...args: string[]) => (getRedisClient() as any).call(...args) as any, prefix: 'rl:val:auth:' }),
 });
 app.use('/api/auth/login', authLimiter);
 
@@ -166,11 +171,44 @@ interface AuthRequest extends Request {
     user?: JwtUserPayload;
 }
 
-const verifyToken = (req: Request, res: Response, next: NextFunction) => {
+// --- REDIS CLIENT ---
+let _redis: Redis | null = null;
+function getRedisClient(): Redis {
+    if (!_redis) {
+        _redis = new Redis({
+            host: process.env.REDIS_HOST || 'localhost',
+            port: parseInt(process.env.REDIS_PORT || '6379'),
+            password: process.env.REDIS_PASSWORD,
+            lazyConnect: true,
+            retryStrategy: (times) => Math.min(times * 100, 3000),
+        });
+        _redis.on('error', (err) => console.error('[Redis] Error:', err.message));
+    }
+    return _redis;
+}
+async function isTokenBlacklisted(token: string): Promise<boolean> {
+    try {
+        const hash = createHash('sha256').update(token).digest('hex');
+        return (await getRedisClient().exists(`bl:${hash}`)) === 1;
+    } catch { return false; }
+}
+async function blacklistToken(token: string, exp: number): Promise<void> {
+    try {
+        const hash = createHash('sha256').update(token).digest('hex');
+        const ttl = Math.max(exp - Math.floor(Date.now() / 1000), 0);
+        if (ttl > 0) await getRedisClient().set(`bl:${hash}`, '1', 'EX', ttl);
+    } catch (err) { console.error('[Redis] Error al blacklistear token:', err); }
+}
+
+const verifyToken = async (req: Request, res: Response, next: NextFunction) => {
     const token = req.headers.authorization?.split(' ')[1];
     if (!token) return res.status(401).json({ error: 'Token no encontrado' });
     try {
-        (req as AuthRequest).user = jwt.verify(token, JWT_SECRET) as JwtUserPayload;
+        const decoded = jwt.verify(token, JWT_SECRET) as JwtUserPayload;
+        if (await isTokenBlacklisted(token)) {
+            return res.status(401).json({ error: 'Sesión cerrada. Inicia sesión nuevamente.' });
+        }
+        (req as AuthRequest).user = decoded;
         next();
     } catch (_err) { res.status(403).json({ error: 'Token inválido' }); }
 };
@@ -267,6 +305,12 @@ app.post('/api/auth/login', async (req: Request, res: Response) => {
 
         res.json({ token, user: { id: user.Id, username: user.Username, full_name: user.FullName, email: user.Email, role_name: user.RoleName, management_id: user.ManagementId, management_name: user.ManagementName, avatar_url: user.AvatarUrl, permissions: perms, apps: user.Apps, requires_password_change: user.RequiresPasswordChange === 1 } });
     } catch (err: unknown) { res.status(500).json({ error: err instanceof Error ? err.message : String(err) }); }
+});
+
+app.post('/api/auth/logout', verifyToken, async (req: any, res: any) => {
+    const token = req.headers['authorization']!.split(' ')[1];
+    await blacklistToken(token, (req.user as any).exp ?? 0);
+    res.json({ message: 'Sesión cerrada correctamente.' });
 });
 
 app.get('/api/auth/me', verifyToken, async (req: Request, res: Response) => {
