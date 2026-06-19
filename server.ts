@@ -559,7 +559,7 @@ async function getC4CDetails(ticketIds: string[]) {
     for (let i = 0; i < ticketIds.length; i += chunkSize) {
         const chunk = ticketIds.slice(i, i + chunkSize);
         const filter = chunk.map(id => `ID eq '${id}'`).join(' or ');
-        const url = `${C4C_BASE_URL}/ServiceRequestCollection?$filter=${encodeURIComponent(filter)}&$select=ID,CreatedBy,Name,zIDRegistroCupoArea&$format=json`;
+        const url = `${C4C_BASE_URL}/ServiceRequestCollection?$filter=${encodeURIComponent(filter)}&$select=ID,CreatedBy,Name,CupoTomado_SDK,zTicketArea_SDK&$format=json`;
 
         if (i === 0) console.log('[C4C] URL base:', url.split('?')[0]);
 
@@ -577,7 +577,7 @@ async function getC4CDetails(ticketIds: string[]) {
                     results[item.ID] = {
                         creator: item.CreatedBy || '',
                         subject: item.Name || '',
-                        cupoArea: item.zIDRegistroCupoArea || ''
+                        cupoArea: item.zTicketArea_SDK ? String(parseInt(item.zTicketArea_SDK, 10) || '') : ''
                     };
                 });
             })
