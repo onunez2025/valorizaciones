@@ -550,6 +550,14 @@ app.delete('/api/config-canal-institucional/:id', verifyToken, async (req: Reque
 
 // --- VALORIZACIONES ---
 // --- VALORIZACIONES HELPERS ---
+
+// Mapeo de códigos de área C4C → nombre legible
+// Agregar nuevos códigos según se identifiquen en el sistema C4C
+const C4C_AREA_NAMES: Record<number, string> = {
+    8:  'TALLER',
+    11: 'OBRAS',
+};
+
 async function getC4CDetails(ticketIds: string[]) {
     if (ticketIds.length === 0) return {};
     const results: Record<string, { creator: string; subject: string; cupoArea: string }> = {};
@@ -577,7 +585,11 @@ async function getC4CDetails(ticketIds: string[]) {
                     results[item.ID] = {
                         creator: item.CreatedBy || '',
                         subject: item.Name || '',
-                        cupoArea: item.zTicketArea_SDK ? String(parseInt(item.zTicketArea_SDK, 10) || '') : ''
+                        cupoArea: (() => {
+                            const code = parseInt(item.zTicketArea_SDK, 10);
+                            if (!code) return '';
+                            return C4C_AREA_NAMES[code] ?? String(code);
+                        })()
                     };
                 });
             })
