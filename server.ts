@@ -4,7 +4,7 @@ import type { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
-import Redis from 'ioredis';
+import { Redis } from 'ioredis';
 import { createHash } from 'crypto';
 import { RedisStore } from 'rate-limit-redis';
 import dotenv from 'dotenv';
@@ -99,7 +99,7 @@ const limiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 1000,
     message: { error: 'Too many requests from this IP, please try again later.' },
-    store: new RedisStore({ sendCommand: (...args: string[]) => (getRedisClient() as any).call(...args) as any, prefix: 'rl:val:' }),
+    store: new RedisStore({ sendCommand: (...args: string[]) => (getRedisClient() as any).call(...args) as any, prefix: 'rl:val:' }), // eslint-disable-line @typescript-eslint/no-explicit-any
 });
 app.use(limiter);
 
@@ -107,7 +107,7 @@ const authLimiter = rateLimit({
     windowMs: 60 * 60 * 1000,
     max: 50,
     message: { error: 'Too many login attempts, please try again after an hour.' },
-    store: new RedisStore({ sendCommand: (...args: string[]) => (getRedisClient() as any).call(...args) as any, prefix: 'rl:val:auth:' }),
+    store: new RedisStore({ sendCommand: (...args: string[]) => (getRedisClient() as any).call(...args) as any, prefix: 'rl:val:auth:' }), // eslint-disable-line @typescript-eslint/no-explicit-any
 });
 app.use('/api/auth/login', authLimiter);
 
@@ -180,9 +180,9 @@ function getRedisClient(): Redis {
             port: parseInt(process.env.REDIS_PORT || '6379'),
             password: process.env.REDIS_PASSWORD,
             lazyConnect: true,
-            retryStrategy: (times) => Math.min(times * 100, 3000),
+            retryStrategy: (times: number) => Math.min(times * 100, 3000),
         });
-        _redis.on('error', (err) => console.error('[Redis] Error:', err.message));
+        _redis.on('error', (err: Error) => console.error('[Redis] Error:', err.message));
     }
     return _redis;
 }
@@ -206,8 +206,8 @@ const safeError = (err: unknown): string =>
         ? 'Error interno del servidor'
         : safeError(err);
 
-const sanitizeLog = (val: unknown, maxLen = 200): string =>
-    String(val ?? '').replace(/[\r\n\t\x00-\x1F\x7F]/g, ' ').slice(0, maxLen);
+const sanitizeLog = (val: unknown, maxLen = 200): string => // eslint-disable-line @typescript-eslint/no-unused-vars
+    String(val ?? '').replace(/[\r\n\t\x00-\x1F\x7F]/g, ' ').slice(0, maxLen); // eslint-disable-line no-control-regex
 
 const verifyToken = async (req: Request, res: Response, next: NextFunction) => {
     const token = req.headers.authorization?.split(' ')[1];
@@ -316,9 +316,9 @@ app.post('/api/auth/login', async (req: Request, res: Response) => {
     } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
 
-app.post('/api/auth/logout', verifyToken, async (req: any, res: any) => {
+app.post('/api/auth/logout', verifyToken, async (req: any, res: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
     const token = req.headers['authorization']!.split(' ')[1];
-    await blacklistToken(token, (req.user as any).exp ?? 0);
+    await blacklistToken(token, (req.user as any).exp ?? 0); // eslint-disable-line @typescript-eslint/no-explicit-any
     res.json({ message: 'Sesión cerrada correctamente.' });
 });
 
