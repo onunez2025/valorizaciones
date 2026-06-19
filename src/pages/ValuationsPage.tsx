@@ -1994,9 +1994,17 @@ export default function ValuationsPage() {
                                                                                                     </div>
                                                                                                 </td>
                                                                                                 <td className="px-4 py-4 text-center">
-                                                                                                    {ticket.CupoArea ? (
-                                                                                                        <span className="px-2 py-1 bg-violet-500/10 text-violet-700 rounded text-[10px] font-black tracking-tight">
-                                                                                                            {ticket.CupoArea}
+                                                                                                    {ticket.CupoArea === 'OBRAS' ? (
+                                                                                                        <span className="px-2 py-1 bg-orange-500/10 text-orange-600 dark:text-orange-400 rounded text-[10px] font-black tracking-tight">
+                                                                                                            OBRAS
+                                                                                                        </span>
+                                                                                                    ) : ticket.CupoArea === 'TALLER' ? (
+                                                                                                        <span className="px-2 py-1 bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded text-[10px] font-black tracking-tight">
+                                                                                                            TALLER
+                                                                                                        </span>
+                                                                                                    ) : ticket.CupoArea ? (
+                                                                                                        <span className="px-2 py-1 bg-muted text-muted-foreground rounded text-[10px] font-black tracking-tight">
+                                                                                                            GENERAL
                                                                                                         </span>
                                                                                                     ) : (
                                                                                                         <span className="text-muted-foreground/30 text-[10px]">—</span>

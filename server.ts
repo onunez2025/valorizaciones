@@ -556,6 +556,7 @@ app.delete('/api/config-canal-institucional/:id', verifyToken, async (req: Reque
 const C4C_AREA_NAMES: Record<number, string> = {
     8:  'TALLER',
     11: 'OBRAS',
+    // Cualquier otro código no listado aquí se muestra como 'GENERAL'
 };
 
 async function getC4CDetails(ticketIds: string[]) {
@@ -587,8 +588,8 @@ async function getC4CDetails(ticketIds: string[]) {
                         subject: item.Name || '',
                         cupoArea: (() => {
                             const code = parseInt(item.zTicketArea_SDK, 10);
-                            if (!code) return '';
-                            return C4C_AREA_NAMES[code] ?? String(code);
+                            if (!code) return 'GENERAL';
+                            return C4C_AREA_NAMES[code] ?? 'GENERAL';
                         })()
                     };
                 });
