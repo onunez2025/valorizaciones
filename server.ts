@@ -542,8 +542,8 @@ app.post('/api/config-canal-institucional', verifyToken, async (req: Request, re
         } else {
             await request.query(`
                 INSERT INTO [dbo].[GAC_APP_TB_CONFIG_CANAL_INSTITUCIONAL]
-                (Cupo_Area, Fecha_Inicio, Fecha_Fin, Importe, Activo, Creado_Por)
-                VALUES (@ca, @fi, @ff, @imp, @act, @usr)
+                (Cupo_Area, Usuario_Creador, Keywords, Validacion_Tipo, Fecha_Inicio, Fecha_Fin, Importe, Activo, Creado_Por)
+                VALUES (@ca, '', '', 'CONTIENE', @fi, @ff, @imp, @act, @usr)
             `);
         }
         res.json({ success: true });
