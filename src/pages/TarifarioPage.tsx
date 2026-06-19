@@ -158,14 +158,16 @@ export default function TarifarioPage() {
     const activeCount = editRates.filter(r => (r.Estado || 'A') === 'A').length;
     const inactiveCount = editRates.length - activeCount;
 
-    // Agrupar por categoría (filtrar inactivos si el toggle está apagado)
+    // Agrupar Categoría → Servicio → periodos
     const visibleRates = showInactive ? editRates : editRates.filter(r => (r.Estado || 'A') === 'A');
-    const groupedRates = visibleRates.reduce((acc, rate) => {
+    const groupedRates = visibleRates.reduce((acc: Record<string, Record<string, Rate[]>>, rate) => {
         const cat = rate.Categoria || 'SIN CATEGORÍA';
-        if (!acc[cat]) acc[cat] = [];
-        acc[cat].push(rate);
+        const svc = rate.ServicioNombre || rate.Servicio || 'SIN SERVICIO';
+        if (!acc[cat]) acc[cat] = {};
+        if (!acc[cat][svc]) acc[cat][svc] = [];
+        acc[cat][svc].push(rate);
         return acc;
-    }, {} as Record<string, Rate[]>);
+    }, {});
 
     const categories = Object.keys(groupedRates).sort();
 
@@ -357,8 +359,15 @@ export default function TarifarioPage() {
                                 <div className="space-y-4">
                                      {categories.map(category => {
                                          const isExpanded = expandedCategories.has(category);
+                                         const serviceMap = groupedRates[category];
+                                         const serviceNames = Object.keys(serviceMap).sort();
+                                         const totalPeriods = serviceNames.reduce((sum, s) => sum + serviceMap[s].length, 0);
+                                         const today = new Date();
+                                         today.setHours(0, 0, 0, 0);
+
                                          return (
                                              <div key={category} className="bg-muted/5 rounded-xl border border-border/40 overflow-hidden transition-all duration-300">
+                                                 {/* Cabecera de categoría */}
                                                  <button
                                                      onClick={() => toggleCategory(category)}
                                                      className={cn(
@@ -367,128 +376,191 @@ export default function TarifarioPage() {
                                                      )}
                                                  >
                                                      <div className="flex items-center gap-4">
-                                                         <div className={cn(
-                                                             "w-2 h-2 rounded-full transition-all duration-500",
-                                                             isExpanded ? "bg-primary scale-125" : "bg-muted-foreground/30"
-                                                         )} />
+                                                         <div className={cn("w-2 h-2 rounded-full transition-all duration-500", isExpanded ? "bg-primary scale-125" : "bg-muted-foreground/30")} />
                                                          <h4 className="text-[12px] font-black uppercase tracking-[0.2em] text-foreground/80">{category}</h4>
                                                      </div>
                                                      <div className="flex items-center gap-6">
-                                                         <span className="text-[10px] font-bold text-muted-foreground opacity-40 uppercase tracking-widest">{groupedRates[category].length} Servicios</span>
+                                                         <span className="text-[10px] font-bold text-muted-foreground opacity-40 uppercase tracking-widest">
+                                                             {serviceNames.length} servicios · {totalPeriods} periodos
+                                                         </span>
                                                          <ChevronDown className={cn("w-4 h-4 text-muted-foreground/30 transition-transform duration-500", isExpanded && "rotate-180 text-primary")} />
                                                      </div>
                                                  </button>
 
                                                  {isExpanded && (
                                                      <div className="animate-in slide-in-from-top-2 duration-300">
-                                                          <table className="w-full text-left">
+                                                         <table className="w-full text-left">
                                                              <thead>
-                                                                 <tr className="border-b border-border/20">
-                                                                     <th className="px-6 py-3 font-bold text-[9px] uppercase tracking-widest text-muted-foreground/60 w-1/3">Servicio / Descripción</th>
-                                                                     <th className="px-6 py-3 font-bold text-[9px] uppercase tracking-widest text-muted-foreground/60 text-center">Vigencia (Inicio - Fin)</th>
-                                                                     <th className="px-6 py-3 font-bold text-[9px] uppercase tracking-widest text-muted-foreground/60 text-right">Importe Unitario</th>
-                                                                     <th className="px-6 py-3 text-right"></th>
+                                                                 <tr className="border-b border-border/20 bg-muted/5">
+                                                                     <th className="px-6 py-2.5 font-bold text-[9px] uppercase tracking-widest text-muted-foreground/50 w-[35%]">Servicio</th>
+                                                                     <th className="px-4 py-2.5 font-bold text-[9px] uppercase tracking-widest text-muted-foreground/50">Fecha Inicio</th>
+                                                                     <th className="px-4 py-2.5 font-bold text-[9px] uppercase tracking-widest text-muted-foreground/50">Fecha Fin</th>
+                                                                     <th className="px-4 py-2.5 font-bold text-[9px] uppercase tracking-widest text-muted-foreground/50 text-right">Importe</th>
+                                                                     <th className="px-4 py-2.5 font-bold text-[9px] uppercase tracking-widest text-muted-foreground/50 text-center">Estado</th>
+                                                                     <th className="px-3 py-2.5 w-8"></th>
                                                                  </tr>
                                                              </thead>
-                                                             <tbody className="divide-y divide-border/20">
-                                                                 {groupedRates[category].map((rate, idx) => {
-                                                                     const globalIdx = editRates.findIndex(r => r === rate);
-                                                                     return (
-                                                                         <tr key={`${category}-${idx}`} className={cn("group hover:bg-primary/[0.02] transition-colors", (rate.Estado || 'A') !== 'A' && "opacity-40")}>
-                                                                             <td className="px-6 py-4">
-                                                                                 <div className="flex flex-col gap-1.5">
-                                                                                     <div className="flex items-center gap-3">
-                                                                                         <div title={(rate.Estado || 'A') === 'A' ? 'Activo' : 'Inactivo'} className={cn("w-1.5 h-1.5 rounded-full shrink-0", (rate.Estado || 'A') === 'A' ? "bg-emerald-500" : "bg-muted-foreground/30")} />
+                                                             <tbody>
+                                                                 {serviceNames.map(serviceName => {
+                                                                     const serviceRates = serviceMap[serviceName];
+                                                                     return serviceRates.map((rate, periodIdx) => {
+                                                                         const globalIdx = editRates.findIndex(r => r === rate);
+                                                                         const isFirst = periodIdx === 0;
+                                                                         const isInactive = (rate.Estado || 'A') !== 'A';
+                                                                         const fi = rate.Fecha_inicio ? new Date(rate.Fecha_inicio) : null;
+                                                                         const ff = rate.Fecha_fin ? new Date(rate.Fecha_fin) : null;
+                                                                         const isVigente = fi && fi <= today && (!ff || ff >= today);
+                                                                         const isVencida = ff && ff < today && !isInactive;
+
+                                                                         return (
+                                                                             <tr
+                                                                                 key={`${category}-${serviceName}-${periodIdx}`}
+                                                                                 className={cn(
+                                                                                     "group transition-colors border-t border-border/[0.07]",
+                                                                                     isFirst && "border-t-border/20",
+                                                                                     isInactive ? "opacity-40" : "hover:bg-primary/[0.02]"
+                                                                                 )}
+                                                                             >
+                                                                                 {/* Servicio — solo primera fila del grupo */}
+                                                                                 <td className="px-6 py-2.5">
+                                                                                     {isFirst ? (
+                                                                                         <div className="flex items-center gap-2.5">
+                                                                                             <div className={cn("w-[3px] h-5 rounded-full shrink-0", isInactive ? "bg-muted-foreground/20" : "bg-primary/40")} />
+                                                                                             {isEditing ? (
+                                                                                                 <input
+                                                                                                     type="text"
+                                                                                                     value={rate.Servicio}
+                                                                                                     onChange={(e) => {
+                                                                                                         const newRates = [...editRates];
+                                                                                                         newRates[globalIdx] = { ...newRates[globalIdx], Servicio: e.target.value.toUpperCase() };
+                                                                                                         setEditRates(newRates);
+                                                                                                         setIsEditing(true);
+                                                                                                     }}
+                                                                                                     className="bg-transparent outline-none font-bold text-[12px] uppercase w-full focus:ring-1 focus:ring-primary/20 rounded px-1 border border-transparent focus:border-primary/30"
+                                                                                                     title="Código SAP (ej: CA_1)"
+                                                                                                 />
+                                                                                             ) : (
+                                                                                                 <span className="font-bold text-[12px] text-foreground/80">
+                                                                                                     {rate.ServicioNombre || rate.Servicio}
+                                                                                                 </span>
+                                                                                             )}
+                                                                                         </div>
+                                                                                     ) : (
+                                                                                         <div className="pl-[22px] flex items-center gap-0">
+                                                                                             <div className="w-px h-3 bg-border/25 ml-[1px]" />
+                                                                                         </div>
+                                                                                     )}
+                                                                                 </td>
+                                                                                 {/* Fecha inicio */}
+                                                                                 <td className="px-4 py-2.5">
+                                                                                     {isEditing ? (
                                                                                          <input
-                                                                                             type="text"
-                                                                                             value={rate.Servicio}
+                                                                                             type="date"
+                                                                                             value={rate.Fecha_inicio ? rate.Fecha_inicio.split('T')[0] : ''}
                                                                                              onChange={(e) => {
                                                                                                  const newRates = [...editRates];
-                                                                                                 newRates[globalIdx] = { ...newRates[globalIdx], Servicio: e.target.value.toUpperCase() };
+                                                                                                 newRates[globalIdx] = { ...newRates[globalIdx], Fecha_inicio: e.target.value };
                                                                                                  setEditRates(newRates);
                                                                                                  setIsEditing(true);
                                                                                              }}
-                                                                                             placeholder="CÓDIGO"
-                                                                                             className="bg-transparent border-none outline-none font-bold text-[13px] tracking-tight uppercase placeholder:opacity-20 w-24 shrink-0 focus:ring-1 focus:ring-primary/20 rounded"
+                                                                                             className="bg-muted/30 px-2 py-1 rounded border border-transparent focus:border-primary/20 text-[10px] font-bold outline-none"
                                                                                          />
-                                                                                         <div className="h-4 w-[1px] bg-border/40" />
-                                                                                         <span className="text-[11px] font-bold text-foreground/80 truncate">
-                                                                                             {rate.ServicioNombre || (rate.Servicio ? "DESCRIPCIÓN NO DISPONIBLE" : "NUEVO SERVICIO")}
+                                                                                     ) : (
+                                                                                         <span className="text-[11px] font-bold text-foreground/50 tabular-nums">
+                                                                                             {fi ? fi.toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—'}
                                                                                          </span>
-                                                                                     </div>
-                                                                                     <div className="flex items-center gap-2">
-                                                                                         <span className="text-[8px] font-black uppercase text-muted-foreground/30 tracking-widest">Cat:</span>
+                                                                                     )}
+                                                                                 </td>
+                                                                                 {/* Fecha fin */}
+                                                                                 <td className="px-4 py-2.5">
+                                                                                     {isEditing ? (
                                                                                          <input
-                                                                                             type="text"
-                                                                                             value={rate.Categoria}
+                                                                                             type="date"
+                                                                                             value={rate.Fecha_fin ? rate.Fecha_fin.split('T')[0] : ''}
                                                                                              onChange={(e) => {
                                                                                                  const newRates = [...editRates];
-                                                                                                 newRates[globalIdx] = { ...newRates[globalIdx], Categoria: e.target.value.toUpperCase() };
+                                                                                                 newRates[globalIdx] = { ...newRates[globalIdx], Fecha_fin: e.target.value };
                                                                                                  setEditRates(newRates);
                                                                                                  setIsEditing(true);
                                                                                              }}
-                                                                                             className="text-[9px] bg-muted/30 px-2 py-0.5 rounded border border-transparent focus:border-primary/20 outline-none w-auto font-black uppercase text-muted-foreground/60 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                                                             className="bg-muted/30 px-2 py-1 rounded border border-transparent focus:border-primary/20 text-[10px] font-bold outline-none"
                                                                                          />
-                                                                                     </div>
-                                                                                 </div>
-                                                                             </td>
-                                                                             <td className="px-6 py-4">
-                                                                                 <div className="flex items-center justify-center gap-2">
-                                                                                     <input
-                                                                                         type="date"
-                                                                                         value={rate.Fecha_inicio ? rate.Fecha_inicio.split('T')[0] : ''}
-                                                                                         onChange={(e) => {
-                                                                                             const newRates = [...editRates];
-                                                                                             newRates[globalIdx] = { ...newRates[globalIdx], Fecha_inicio: e.target.value };
+                                                                                     ) : (
+                                                                                         <span className={cn("text-[11px] font-bold tabular-nums", isVencida ? "text-amber-500/70" : "text-foreground/50")}>
+                                                                                             {ff ? ff.toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '∞'}
+                                                                                         </span>
+                                                                                     )}
+                                                                                 </td>
+                                                                                 {/* Importe */}
+                                                                                 <td className="px-4 py-2.5 text-right">
+                                                                                     {isEditing ? (
+                                                                                         <div className="flex items-center justify-end gap-1">
+                                                                                             <span className="text-[10px] font-bold text-primary/40">S/</span>
+                                                                                             <input
+                                                                                                 type="number"
+                                                                                                 value={rate.Importe}
+                                                                                                 onChange={(e) => {
+                                                                                                     const newRates = [...editRates];
+                                                                                                     newRates[globalIdx] = { ...newRates[globalIdx], Importe: e.target.value };
+                                                                                                     setEditRates(newRates);
+                                                                                                     setIsEditing(true);
+                                                                                                 }}
+                                                                                                 className="bg-primary/5 px-2 py-1 rounded border border-transparent focus:border-primary/20 text-right font-bold text-[12px] w-20 outline-none"
+                                                                                             />
+                                                                                         </div>
+                                                                                     ) : (
+                                                                                         <span className="font-black text-[13px] text-foreground tabular-nums">
+                                                                                             S/ {Number(rate.Importe).toFixed(2)}
+                                                                                         </span>
+                                                                                     )}
+                                                                                 </td>
+                                                                                 {/* Estado */}
+                                                                                 <td className="px-4 py-2.5 text-center">
+                                                                                     {isEditing ? (
+                                                                                         <button
+                                                                                             onClick={() => {
+                                                                                                 const newRates = [...editRates];
+                                                                                                 newRates[globalIdx] = { ...newRates[globalIdx], Estado: isInactive ? 'A' : 'I' };
+                                                                                                 setEditRates(newRates);
+                                                                                                 setIsEditing(true);
+                                                                                             }}
+                                                                                             className={cn(
+                                                                                                 "text-[8px] font-black px-2 py-0.5 rounded-full border transition-all",
+                                                                                                 isInactive
+                                                                                                     ? "bg-muted/40 border-border/40 text-muted-foreground/50 hover:bg-emerald-500/10 hover:border-emerald-500/20 hover:text-emerald-600"
+                                                                                                     : "bg-emerald-500/10 border-emerald-500/20 text-emerald-600 hover:bg-red-500/10 hover:border-red-500/20 hover:text-red-600"
+                                                                                             )}
+                                                                                         >
+                                                                                             {isInactive ? 'INACTIVO' : 'ACTIVO'}
+                                                                                         </button>
+                                                                                     ) : (
+                                                                                         <span className={cn(
+                                                                                             "text-[8px] font-black px-2 py-0.5 rounded-full",
+                                                                                             isInactive ? "bg-muted/40 text-muted-foreground/40"
+                                                                                                 : isVencida ? "bg-amber-500/10 text-amber-600"
+                                                                                                 : isVigente ? "bg-emerald-500/10 text-emerald-600"
+                                                                                                 : "bg-blue-500/10 text-blue-600"
+                                                                                         )}>
+                                                                                             {isInactive ? 'INACTIVO' : isVencida ? 'VENCIDO' : isVigente ? 'VIGENTE' : 'FUTURO'}
+                                                                                         </span>
+                                                                                     )}
+                                                                                 </td>
+                                                                                 {/* Acciones */}
+                                                                                 <td className="px-3 py-2.5 text-right opacity-0 group-hover:opacity-100 transition-all">
+                                                                                     <button
+                                                                                         onClick={() => {
+                                                                                             const newRates = editRates.filter((_, i) => i !== globalIdx);
                                                                                              setEditRates(newRates);
                                                                                              setIsEditing(true);
                                                                                          }}
-                                                                                         className="bg-muted/30 px-2 py-1.5 rounded border border-transparent focus:border-primary/20 text-[10px] font-bold outline-none"
-                                                                                     />
-                                                                                     <span className="text-muted-foreground/30 text-[10px]">—</span>
-                                                                                     <input
-                                                                                         type="date"
-                                                                                         value={rate.Fecha_fin ? rate.Fecha_fin.split('T')[0] : ''}
-                                                                                         onChange={(e) => {
-                                                                                             const newRates = [...editRates];
-                                                                                             newRates[globalIdx] = { ...newRates[globalIdx], Fecha_fin: e.target.value };
-                                                                                             setEditRates(newRates);
-                                                                                             setIsEditing(true);
-                                                                                         }}
-                                                                                         className="bg-muted/30 px-2 py-1.5 rounded border border-transparent focus:border-primary/20 text-[10px] font-bold outline-none"
-                                                                                     />
-                                                                                 </div>
-                                                                             </td>
-                                                                             <td className="px-6 py-4 text-right">
-                                                                                 <div className="flex items-center justify-end gap-2">
-                                                                                     <span className="text-[11px] font-bold text-primary/40">S/ </span>
-                                                                                     <input
-                                                                                         type="number"
-                                                                                         value={rate.Importe}
-                                                                                         onChange={(e) => {
-                                                                                             const newRates = [...editRates];
-                                                                                             newRates[globalIdx] = { ...newRates[globalIdx], Importe: e.target.value };
-                                                                                             setEditRates(newRates);
-                                                                                             setIsEditing(true);
-                                                                                         }}
-                                                                                         className="bg-primary/5 px-3 py-1.5 rounded-lg border border-transparent focus:border-primary/20 text-right font-bold text-[13px] tracking-tight w-24 outline-none transition-all group-hover:bg-primary/10"
-                                                                                     />
-                                                                                 </div>
-                                                                             </td>
-                                                                             <td className="px-6 py-4 text-right opacity-0 group-hover:opacity-100 transition-all">
-                                                                                 <button
-                                                                                     onClick={() => {
-                                                                                         const newRates = editRates.filter((_, i) => i !== globalIdx);
-                                                                                         setEditRates(newRates);
-                                                                                         setIsEditing(true);
-                                                                                     }}
-                                                                                     className="p-2 text-red-400 hover:bg-red-50 hover:text-red-600 rounded-lg transition-all"
-                                                                                 >
-                                                                                     <Trash2 className="w-4 h-4" />
-                                                                                 </button>
-                                                                             </td>
-                                                                         </tr>
-                                                                     );
+                                                                                         className="p-1.5 text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 rounded-lg transition-all"
+                                                                                     >
+                                                                                         <Trash2 className="w-3.5 h-3.5" />
+                                                                                     </button>
+                                                                                 </td>
+                                                                             </tr>
+                                                                         );
+                                                                     });
                                                                  })}
                                                              </tbody>
                                                          </table>
@@ -511,17 +583,28 @@ export default function TarifarioPage() {
                             )}
                         </div>
 
-                        {!isEditing && (
-                            <div className="p-8 border-t border-border/40 bg-muted/5 flex items-center justify-between">
-                                <span className="text-[10px] font-black text-muted-foreground opacity-30 flex items-center gap-2">
-                                    <FileText className="w-4 h-4" /> Auditoría de precios activa
-                                </span>
-                                <div className="text-right">
-                                    <p className="text-[9px] font-black text-muted-foreground opacity-40 mb-1">Última actualización</p>
-                                    <p className="text-xs font-bold">{new Date().toLocaleDateString('es-PE', { day: '2-digit', month: 'long', year: 'numeric'})}</p>
+                        {!isEditing && (() => {
+                            const lastDate = rates.reduce<string | null>((max, r) => {
+                                if (!r.Fecha_inicio) return max;
+                                return !max || r.Fecha_inicio > max ? r.Fecha_inicio : max;
+                            }, null);
+                            return (
+                                <div className="p-8 border-t border-border/40 bg-muted/5 flex items-center justify-between">
+                                    <span className="text-[10px] font-black text-muted-foreground opacity-30 flex items-center gap-2">
+                                        <FileText className="w-4 h-4" /> Auditoría de precios activa
+                                    </span>
+                                    <div className="text-right">
+                                        <p className="text-[9px] font-black text-muted-foreground opacity-40 mb-1">Última actualización</p>
+                                        <p className="text-xs font-bold">
+                                            {lastDate
+                                                ? new Date(lastDate).toLocaleDateString('es-PE', { day: '2-digit', month: 'long', year: 'numeric' })
+                                                : '—'
+                                            }
+                                        </p>
+                                    </div>
                                 </div>
-                            </div>
-                        )}
+                            );
+                        })()}
                     </>
                 )}
             </div>

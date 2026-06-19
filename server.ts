@@ -205,7 +205,7 @@ async function blacklistToken(token: string, exp: number): Promise<void> {
 const safeError = (err: unknown): string =>
     process.env.NODE_ENV === 'production'
         ? 'Error interno del servidor'
-        : safeError(err);
+        : (err instanceof Error ? err.message : String(err));
 
 const sanitizeLog = (val: unknown, maxLen = 200): string => // eslint-disable-line @typescript-eslint/no-unused-vars
     String(val ?? '').replace(/[\r\n\t\x00-\x1F\x7F]/g, ' ').slice(0, maxLen); // eslint-disable-line no-control-regex
@@ -1122,14 +1122,13 @@ app.post('/api/valuations/batch-adjustment', verifyToken, async (req: Request, r
     }
 });
 
-app.get('/api/discount-motivos', verifyToken, async (req, res) => {
+app.get('/api/discount-motivos', verifyToken, async (req: Request, res: Response) => {
     try {
-        const pool = await sql.connect(dbConfig);
-        const result = await pool.request().query('SELECT * FROM [dbo].[GAC_APP_TB_TICKETS_DESCUENTOS_MOTIVOS] ORDER BY Motivo ASC');
+        const db = await getDb();
+        const result = await db.request().query('SELECT * FROM [dbo].[GAC_APP_TB_TICKETS_DESCUENTOS_MOTIVOS] ORDER BY Motivo ASC');
         res.json(result.recordset);
-    } catch (error) {
-        console.error("Error fetching discount motivos:", error);
-        res.status(500).json({ message: "Error al obtener motivos de descuento" });
+    } catch (err: unknown) {
+        res.status(500).json({ error: safeError(err) });
     }
 });
 
@@ -1728,7 +1727,7 @@ app.get('/api/tarifarios/:casId', verifyToken, async (req: Request, res: Respons
     } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
 
-app.post('/api/tarifarios/create', verifyToken, async (req: Request, res: Response) => {
+app.post('/api/tarifarios/create', verifyToken, verifyPermission('val.tarifario.edit'), async (req: Request, res: Response) => {
     const { empresa, categoria, servicio, importe, fecha_inicio, fecha_fin, estado } = req.body;
     try {
         const db = await getDb();
@@ -1803,7 +1802,7 @@ app.post('/api/materials', verifyToken, async (req: Request, res: Response) => {
     } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
 
-app.post('/api/tarifarios/update', verifyToken, async (req: Request, res: Response) => {
+app.post('/api/tarifarios/update', verifyToken, verifyPermission('val.tarifario.edit'), async (req: Request, res: Response) => {
     const { id, importe, estado } = req.body;
     try {
         const db = await getDb();
@@ -1820,7 +1819,7 @@ app.post('/api/tarifarios/update', verifyToken, async (req: Request, res: Respon
     } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
 
-app.post('/api/tarifarios/batch', verifyToken, async (req: Request, res: Response) => {
+app.post('/api/tarifarios/batch', verifyToken, verifyPermission('val.tarifario.edit'), async (req: Request, res: Response) => {
     const { casId, rates } = req.body;
     try {
         const db = await getDb();
@@ -1838,18 +1837,19 @@ app.post('/api/tarifarios/batch', verifyToken, async (req: Request, res: Respons
                 addInput(batchReq, 'imp', sql.Decimal(18, 2), rate.Importe);
                 addInput(batchReq, 'f_ini', sql.DateTime, rate.Fecha_inicio ? new Date(rate.Fecha_inicio) : new Date());
                 addInput(batchReq, 'f_fin', sql.DateTime, rate.Fecha_fin ? new Date(rate.Fecha_fin) : null);
+                addInput(batchReq, 'est', sql.VarChar(1), rate.Estado || 'A');
                 await batchReq.query(`
                         IF EXISTS (SELECT 1 FROM [dbo].[GAC_APP_TB_TARIFARIO] WHERE ID_Tarifario = @id)
                         BEGIN
-                            UPDATE [dbo].[GAC_APP_TB_TARIFARIO] 
+                            UPDATE [dbo].[GAC_APP_TB_TARIFARIO]
                             SET Importe = @imp, Categoria = @cat, Servicio = @serv,
-                                Fecha_inicio = @f_ini, Fecha_fin = @f_fin
+                                Fecha_inicio = @f_ini, Fecha_fin = @f_fin, Estado = @est
                             WHERE ID_Tarifario = @id
                         END
                         ELSE
                         BEGIN
                             INSERT INTO [dbo].[GAC_APP_TB_TARIFARIO] (ID_Tarifario, Empresa, Categoria, Servicio, Importe, Fecha_inicio, Fecha_fin, Estado)
-                            VALUES (@id, @casId, @cat, @serv, @imp, @f_ini, @f_fin, 'A')
+                            VALUES (@id, @casId, @cat, @serv, @imp, @f_ini, @f_fin, @est)
                         END
                     `);
             }
@@ -1875,7 +1875,7 @@ app.get('/api/tarifarios/exceptions/:casId', verifyToken, async (req: Request, r
     } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
 
-app.post('/api/tarifarios/exceptions/save', verifyToken, async (req: Request, res: Response) => {
+app.post('/api/tarifarios/exceptions/save', verifyToken, verifyPermission('val.tarifario.edit'), async (req: Request, res: Response) => {
     const { id, empresa, nombre, zonasIncluidas, zonasExcluidas, categorias, servicios, importe, prioridad, estado } = req.body;
     try {
         const db = await getDb();
@@ -1912,7 +1912,7 @@ app.post('/api/tarifarios/exceptions/save', verifyToken, async (req: Request, re
     } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
 
-app.delete('/api/tarifarios/exceptions/:id', verifyToken, async (req: Request, res: Response) => {
+app.delete('/api/tarifarios/exceptions/:id', verifyToken, verifyPermission('val.tarifario.edit'), async (req: Request, res: Response) => {
     const { id } = req.params;
     try {
         const db = await getDb();

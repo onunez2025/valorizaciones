@@ -739,7 +739,7 @@ export default function ValuationsPage() {
         setSelectedClosure(closure);
         setLoadingDetails(true);
         try {
-            const data = await ApiClient.request(`/closures/${closure.IdCierre}/details`);
+            const data = await ApiClient.request(`/valuations/details/${closure.IdCierre}`);
             setClosureDetails(data);
         } catch (error) {
             console.error("Error fetching closure details:", error);

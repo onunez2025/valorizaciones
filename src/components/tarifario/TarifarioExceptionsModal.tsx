@@ -29,7 +29,7 @@ interface Props {
 }
 
 export default function TarifarioExceptionsModal({ cas, isOpen, onClose }: Props) {
-    const { alert } = useDialog();
+    const { alert, confirm } = useDialog();
     const [exceptions, setExceptions] = useState<Exception[]>([]);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -38,7 +38,6 @@ export default function TarifarioExceptionsModal({ cas, isOpen, onClose }: Props
 
     useEffect(() => {
         if (isOpen) {
-            fetchExceptions();
             fetchExceptions();
             fetchCategories();
             fetchDistritos();
@@ -125,18 +124,25 @@ export default function TarifarioExceptionsModal({ cas, isOpen, onClose }: Props
         }
     };
 
-    const handleDelete = async (id?: string) => {
+    const handleDelete = (id?: string) => {
         if (!id) {
-            setExceptions(exceptions.filter(e => e.IdExcepcion));
+            setExceptions(exceptions.filter((e: Exception) => e.IdExcepcion));
             return;
         }
-        if (!confirm("¿Está seguro de eliminar esta regla?")) return;
-        try {
-            await ApiClient.request(`/tarifarios/exceptions/${id}`, { method: 'DELETE' });
-            fetchExceptions();
-        } catch (_err) {
-            alert({ message: "Error al eliminar la regla." });
-        }
+        confirm({
+            title: 'Eliminar regla',
+            message: '¿Está seguro de eliminar esta regla?',
+            type: 'warning',
+            confirmText: 'Sí, eliminar',
+            onConfirm: async () => {
+                try {
+                    await ApiClient.request(`/tarifarios/exceptions/${id}`, { method: 'DELETE' });
+                    fetchExceptions();
+                } catch (_err) {
+                    alert({ message: "Error al eliminar la regla." });
+                }
+            }
+        });
     };
 
     if (!isOpen) return null;
@@ -184,12 +190,12 @@ export default function TarifarioExceptionsModal({ cas, isOpen, onClose }: Props
                                     <div className="flex items-start justify-between gap-6">
                                         <div className="flex-1 space-y-4">
                                             <div className="flex items-center gap-4">
-                                                <input 
-                                                    type="text" 
+                                                <input
+                                                    type="text"
                                                     value={ex.Nombre}
                                                     onChange={e => {
                                                         const newEx = [...exceptions];
-                                                        newEx[idx].Nombre = e.target.value;
+                                                        newEx[idx] = { ...newEx[idx], Nombre: e.target.value };
                                                         setExceptions(newEx);
                                                     }}
                                                     className={cn(SIATC_THEME.COMPONENTS.INPUT, "flex-1 dark:bg-cb-bg text-cb-text-primary border-cb-border")}
@@ -197,12 +203,12 @@ export default function TarifarioExceptionsModal({ cas, isOpen, onClose }: Props
                                                 />
                                                 <div className="flex items-center gap-2 bg-white dark:bg-cb-bg border border-cb-border rounded-cb-btn px-3 h-[36px]">
                                                     <DollarSign className="w-4 h-4 text-emerald-500" />
-                                                    <input 
-                                                        type="number" 
+                                                    <input
+                                                        type="number"
                                                         value={ex.Importe}
                                                         onChange={e => {
                                                             const newEx = [...exceptions];
-                                                            newEx[idx].Importe = Number(e.target.value);
+                                                            newEx[idx] = { ...newEx[idx], Importe: Number(e.target.value) };
                                                             setExceptions(newEx);
                                                         }}
                                                         className="w-20 bg-transparent border-none outline-none font-bold text-sm text-right text-cb-text-primary"
@@ -211,25 +217,25 @@ export default function TarifarioExceptionsModal({ cas, isOpen, onClose }: Props
                                             </div>
 
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                <ZoneSelector 
+                                                <ZoneSelector
                                                     label="Zonas Excluidas (Ej: PIURA, LAMBAYEQUE)"
                                                     icon={Globe}
                                                     selected={ex.Zonas_Excluidas || []}
                                                     options={availableDistritos}
                                                     onChange={val => {
                                                         const newEx = [...exceptions];
-                                                        newEx[idx].Zonas_Excluidas = val;
+                                                        newEx[idx] = { ...newEx[idx], Zonas_Excluidas: val };
                                                         setExceptions(newEx);
                                                     }}
                                                 />
-                                                <ZoneSelector 
+                                                <ZoneSelector
                                                     label="Zonas Incluidas (Ej: JAEN)"
                                                     icon={MapPin}
                                                     selected={ex.Zonas_Incluidas || []}
                                                     options={availableDistritos}
                                                     onChange={val => {
                                                         const newEx = [...exceptions];
-                                                        newEx[idx].Zonas_Incluidas = val;
+                                                        newEx[idx] = { ...newEx[idx], Zonas_Incluidas: val };
                                                         setExceptions(newEx);
                                                     }}
                                                 />
@@ -241,33 +247,34 @@ export default function TarifarioExceptionsModal({ cas, isOpen, onClose }: Props
                                                 </label>
                                                 <div className="flex flex-wrap gap-2">
                                                     {availableCategories.map(cat => (
-                                                        <button 
+                                                        <button
                                                             key={cat}
                                                             type="button"
                                                             onClick={() => {
                                                                 const newEx = [...exceptions];
                                                                 const current = newEx[idx].Categorias || [];
-                                                                if (current.includes(cat)) {
-                                                                    newEx[idx].Categorias = current.filter(c => c !== cat);
-                                                                } else {
-                                                                    newEx[idx].Categorias = [...current, cat];
-                                                                }
+                                                                newEx[idx] = {
+                                                                    ...newEx[idx],
+                                                                    Categorias: current.includes(cat)
+                                                                        ? current.filter(c => c !== cat)
+                                                                        : [...current, cat]
+                                                                };
                                                                 setExceptions(newEx);
                                                             }}
                                                             className={cn(
-                                                                ex.Categorias?.includes(cat) 
-                                                                    ? cn(SIATC_THEME.STATES.BADGE_BASE, SIATC_THEME.STATES.PRIMARY, "cursor-pointer") 
+                                                                ex.Categorias?.includes(cat)
+                                                                    ? cn(SIATC_THEME.STATES.BADGE_BASE, SIATC_THEME.STATES.PRIMARY, "cursor-pointer")
                                                                     : cn(SIATC_THEME.STATES.BADGE_BASE, "bg-transparent border-dashed border-cb-border text-cb-neutral hover:border-primary/40 cursor-pointer")
                                                             )}
                                                         >
                                                             {cat}
                                                         </button>
                                                     ))}
-                                                    <button 
+                                                    <button
                                                         type="button"
                                                         onClick={() => {
                                                             const newEx = [...exceptions];
-                                                            newEx[idx].Categorias = [];
+                                                            newEx[idx] = { ...newEx[idx], Categorias: [] };
                                                             setExceptions(newEx);
                                                         }}
                                                         className={cn(SIATC_THEME.STATES.BADGE_BASE, "bg-transparent border-dashed border-cb-border text-cb-neutral/60 cursor-pointer")}
@@ -296,12 +303,12 @@ export default function TarifarioExceptionsModal({ cas, isOpen, onClose }: Props
                                             </button>
                                             <div className="mt-4 flex flex-col items-center">
                                                 <span className="text-[8px] font-bold text-cb-neutral uppercase mb-1">Prio</span>
-                                                <input 
-                                                    type="number" 
+                                                <input
+                                                    type="number"
                                                     value={ex.Prioridad}
                                                     onChange={e => {
                                                         const newEx = [...exceptions];
-                                                        newEx[idx].Prioridad = Number(e.target.value);
+                                                        newEx[idx] = { ...newEx[idx], Prioridad: Number(e.target.value) };
                                                         setExceptions(newEx);
                                                     }}
                                                     className={cn(SIATC_THEME.COMPONENTS.INPUT, "w-12 h-8 text-center text-xs dark:bg-cb-bg text-cb-text-primary border-cb-border px-1")}
