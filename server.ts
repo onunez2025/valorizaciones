@@ -161,6 +161,7 @@ async function getDb() {
         try {
             pool = await new sql.ConnectionPool(dbConfig).connect();
             console.log('✅ Conectado a Azure SQL: ' + dbConfig.database);
+            runMigrations(pool);
         } catch (err: unknown) {
             console.error('❌ Error de conexión DB:', safeError(err));
             pool = null;
@@ -168,6 +169,31 @@ async function getDb() {
         }
     }
     return pool;
+}
+
+let _migrationsRan = false;
+async function runMigrations(db: sql.ConnectionPool) {
+    if (_migrationsRan) return;
+    _migrationsRan = true;
+    try {
+        // Migración: Canal Institucional pasa de Usuario_Creador a Cupo_Area
+        await db.request().query(`
+            IF NOT EXISTS (
+                SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
+                WHERE TABLE_NAME = 'GAC_APP_TB_CONFIG_CANAL_INSTITUCIONAL'
+                AND COLUMN_NAME = 'Cupo_Area'
+            )
+            BEGIN
+                ALTER TABLE [dbo].[GAC_APP_TB_CONFIG_CANAL_INSTITUCIONAL]
+                    ADD Cupo_Area NVARCHAR(50) NULL;
+                DELETE FROM [dbo].[GAC_APP_TB_CONFIG_CANAL_INSTITUCIONAL];
+                PRINT 'Migración Canal Institucional completada';
+            END
+        `);
+        console.log('[Migration] Canal Institucional → Cupo_Area OK');
+    } catch (err) {
+        console.error('[Migration] Error:', err);
+    }
 }
 
 interface JwtUserPayload {
@@ -496,39 +522,33 @@ app.get('/api/config-canal-institucional', verifyToken, async (req: Request, res
 
 app.post('/api/config-canal-institucional', verifyToken, async (req: Request, res: Response) => {
     try {
-        const { id, usuario_creador, fecha_inicio, fecha_fin, importe, keywords, validacion_tipo, activo } = req.body;
+        const { id, cupo_area, fecha_inicio, fecha_fin, importe, activo } = req.body;
         const user = (req as AuthRequest).user!.username;
         const db = await getDb();
         const request = db.request();
-        addInput(request, 'uc', sql.NVarChar(255), usuario_creador);
+        addInput(request, 'ca', sql.NVarChar(50), cupo_area);
         addInput(request, 'fi', sql.DateTime, fecha_inicio);
         addInput(request, 'ff', sql.DateTime, fecha_fin ?? null);
         addInput(request, 'imp', sql.Decimal(18, 2), importe);
-        addInput(request, 'key', sql.NVarChar(500), keywords || '');
-        addInput(request, 'type', sql.NVarChar(50), validacion_tipo || 'CONTIENE');
         addInput(request, 'act', sql.Bit, activo ? 1 : 0);
         addInput(request, 'usr', sql.NVarChar(255), user);
-
-        console.log(`[CONFIG] Saving rule for ${usuario_creador}, ID: ${id || 'NEW'}`);
 
         if (id) {
             await request.input('id', sql.Int, Number(id)).query(`
                 UPDATE [dbo].[GAC_APP_TB_CONFIG_CANAL_INSTITUCIONAL]
-                SET Usuario_Creador = @uc, Fecha_Inicio = @fi, Fecha_Fin = @ff, Importe = @imp, 
-                    Keywords = @key, Validacion_Tipo = @type, Activo = @act
+                SET Cupo_Area = @ca, Fecha_Inicio = @fi, Fecha_Fin = @ff, Importe = @imp, Activo = @act
                 WHERE Id = @id
             `);
         } else {
             await request.query(`
-                INSERT INTO [dbo].[GAC_APP_TB_CONFIG_CANAL_INSTITUCIONAL] 
-                (Usuario_Creador, Fecha_Inicio, Fecha_Fin, Importe, Keywords, Validacion_Tipo, Activo, Creado_Por)
-                VALUES (@uc, @fi, @ff, @imp, @key, @type, @act, @usr)
+                INSERT INTO [dbo].[GAC_APP_TB_CONFIG_CANAL_INSTITUCIONAL]
+                (Cupo_Area, Fecha_Inicio, Fecha_Fin, Importe, Activo, Creado_Por)
+                VALUES (@ca, @fi, @ff, @imp, @act, @usr)
             `);
         }
         res.json({ success: true });
-    } catch (err: unknown) { 
-        console.error('[CONFIG] Error saving rule:', err);
-        res.status(500).json({ error: safeError(err) }); 
+    } catch (err: unknown) {
+        res.status(500).json({ error: safeError(err) });
     }
 });
 
@@ -739,20 +759,18 @@ app.get('/api/valuations/:ruc', verifyToken, async (req: Request, res: Response)
                 let finalTarifaBase = t.TarifaBaseCalculada;
                 let esInstitucional = false;
 
-                if (details && rules.length > 0) {
+                if (rules.length > 0) {
+                    const cupoArea = (details?.cupoArea || 'GENERAL').trim().toUpperCase();
                     const matchingRule = rules.find(r => {
                         const tDate = new Date(t.FechaCierre);
                         const rStart = new Date(r.Fecha_Inicio);
                         const rEnd = new Date(r.Fecha_Fin);
-
                         tDate.setHours(0, 0, 0, 0);
                         rStart.setHours(0, 0, 0, 0);
                         rEnd.setHours(23, 59, 59, 999);
-
-                        const dateMatch = tDate.getTime() >= rStart.getTime() && tDate.getTime() <= rEnd.getTime();
-                        const userMatch = details.creator && r.Usuario_Creador &&
-                            details.creator.trim().toUpperCase() === r.Usuario_Creador.trim().toUpperCase();
-                        return dateMatch && userMatch;
+                        const dateMatch = tDate >= rStart && tDate <= rEnd;
+                        const areaMatch = r.Cupo_Area?.trim().toUpperCase() === cupoArea;
+                        return dateMatch && areaMatch;
                     });
 
                     if (matchingRule) {
