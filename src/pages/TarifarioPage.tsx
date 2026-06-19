@@ -51,7 +51,7 @@ export default function TarifarioPage() {
 
     const [isExceptionsModalOpen, setIsExceptionsModalOpen] = useState(false);
     const [isImportModalOpen, setIsImportModalOpen] = useState(false);
-    const [showInactive, setShowInactive] = useState(false);
+    const [togglingId, setTogglingId] = useState<string | null>(null);
 
     useEffect(() => {
         const fetchCas = async () => {
@@ -168,9 +168,31 @@ export default function TarifarioPage() {
     const activeCount = editRates.filter(r => (r.Estado || 'A') === 'A').length;
     const inactiveCount = editRates.length - activeCount;
 
-    // Agrupar Categoría → Servicio → periodos
-    const visibleRates = showInactive ? editRates : editRates.filter(r => (r.Estado || 'A') === 'A');
-    const groupedRates = visibleRates.reduce((acc: Record<string, Record<string, Rate[]>>, rate) => {
+    const handleToggleEstado = async (rate: Rate, globalIdx: number) => {
+        const id = rate.ID_TARIFARIO;
+        if (!id) return;
+        const newEstado = (rate.Estado || 'A') === 'A' ? 'I' : 'A';
+        setTogglingId(id);
+        const prev = [...editRates];
+        const updated = [...editRates];
+        updated[globalIdx] = { ...updated[globalIdx], Estado: newEstado };
+        setEditRates(updated);
+        try {
+            await ApiClient.request('/tarifarios/update', {
+                method: 'POST',
+                body: JSON.stringify({ id, importe: Number(rate.Importe) || 0, estado: newEstado })
+            });
+            setRates(r => r.map((x, i) => i === globalIdx ? { ...x, Estado: newEstado } : x));
+        } catch (_err) {
+            setEditRates(prev);
+            alert({ message: 'No se pudo cambiar el estado de la tarifa.' });
+        } finally {
+            setTogglingId(null);
+        }
+    };
+
+    // Agrupar Categoría → Servicio → periodos (siempre todos los registros, sin filtro de Estado)
+    const groupedRates = editRates.reduce((acc: Record<string, Record<string, Rate[]>>, rate) => {
         const cat = rate.Categoria || 'SIN CATEGORÍA';
         const svc = rate.ServicioNombre || rate.Servicio || 'SIN SERVICIO';
         if (!acc[cat]) acc[cat] = {};
@@ -311,17 +333,9 @@ export default function TarifarioPage() {
                                             <span className="text-muted-foreground/40 text-sm font-bold"> activos</span>
                                         </p>
                                         {inactiveCount > 0 && (
-                                            <button
-                                                onClick={() => setShowInactive(v => !v)}
-                                                className={cn(
-                                                    "text-[9px] font-black px-2.5 py-1 rounded-full border transition-all",
-                                                    showInactive
-                                                        ? "bg-muted/60 border-border text-muted-foreground"
-                                                        : "bg-muted/20 border-border/40 text-muted-foreground/50 hover:bg-muted/40"
-                                                )}
-                                            >
-                                                {showInactive ? `Ocultar ${inactiveCount} inactivos` : `+ ${inactiveCount} inactivos`}
-                                            </button>
+                                            <span className="text-[9px] font-black px-2.5 py-1 rounded-full border bg-muted/20 border-border/40 text-muted-foreground/50">
+                                                {inactiveCount} inactivos
+                                            </span>
                                         )}
                                     </div>
                                 </div>
@@ -522,36 +536,42 @@ export default function TarifarioPage() {
                                                                                          </span>
                                                                                      )}
                                                                                  </td>
-                                                                                 {/* Estado */}
+                                                                                 {/* Estado — toggle siempre visible */}
                                                                                  <td className="px-4 py-2.5 text-center">
-                                                                                     {isEditing ? (
+                                                                                     <div className="flex items-center justify-center gap-1.5">
+                                                                                         {!isEditing && (
+                                                                                             <span className={cn(
+                                                                                                 "text-[8px] font-black px-2 py-0.5 rounded-full",
+                                                                                                 isInactive ? "bg-muted/40 text-muted-foreground/40"
+                                                                                                     : isVencida ? "bg-amber-500/10 text-amber-600"
+                                                                                                     : isVigente ? "bg-emerald-500/10 text-emerald-600"
+                                                                                                     : "bg-blue-500/10 text-blue-600"
+                                                                                             )}>
+                                                                                                 {isInactive ? 'INACTIVO' : isVencida ? 'VENCIDO' : isVigente ? 'VIGENTE' : 'FUTURO'}
+                                                                                             </span>
+                                                                                         )}
                                                                                          <button
-                                                                                             onClick={() => {
-                                                                                                 const newRates = [...editRates];
-                                                                                                 newRates[globalIdx] = { ...newRates[globalIdx], Estado: isInactive ? 'A' : 'I' };
-                                                                                                 setEditRates(newRates);
-                                                                                                 setIsEditing(true);
-                                                                                             }}
+                                                                                             disabled={togglingId === (rate.ID_TARIFARIO ?? '')}
+                                                                                             onClick={() => isEditing
+                                                                                                 ? (() => {
+                                                                                                     const newRates = [...editRates];
+                                                                                                     newRates[globalIdx] = { ...newRates[globalIdx], Estado: isInactive ? 'A' : 'I' };
+                                                                                                     setEditRates(newRates);
+                                                                                                     setIsEditing(true);
+                                                                                                 })()
+                                                                                                 : handleToggleEstado(rate, globalIdx)
+                                                                                             }
+                                                                                             title={isInactive ? 'Activar tarifa' : 'Inactivar tarifa'}
                                                                                              className={cn(
-                                                                                                 "text-[8px] font-black px-2 py-0.5 rounded-full border transition-all",
+                                                                                                 "text-[8px] font-black px-2 py-0.5 rounded-full border transition-all disabled:opacity-40 disabled:cursor-not-allowed",
                                                                                                  isInactive
                                                                                                      ? "bg-muted/40 border-border/40 text-muted-foreground/50 hover:bg-emerald-500/10 hover:border-emerald-500/20 hover:text-emerald-600"
-                                                                                                     : "bg-emerald-500/10 border-emerald-500/20 text-emerald-600 hover:bg-red-500/10 hover:border-red-500/20 hover:text-red-600"
+                                                                                                     : "bg-muted/10 border-border/30 text-muted-foreground/40 hover:bg-red-500/10 hover:border-red-500/20 hover:text-red-500"
                                                                                              )}
                                                                                          >
-                                                                                             {isInactive ? 'INACTIVO' : 'ACTIVO'}
+                                                                                             {togglingId === (rate.ID_TARIFARIO ?? '') ? '...' : isInactive ? 'Activar' : 'Inactivar'}
                                                                                          </button>
-                                                                                     ) : (
-                                                                                         <span className={cn(
-                                                                                             "text-[8px] font-black px-2 py-0.5 rounded-full",
-                                                                                             isInactive ? "bg-muted/40 text-muted-foreground/40"
-                                                                                                 : isVencida ? "bg-amber-500/10 text-amber-600"
-                                                                                                 : isVigente ? "bg-emerald-500/10 text-emerald-600"
-                                                                                                 : "bg-blue-500/10 text-blue-600"
-                                                                                         )}>
-                                                                                             {isInactive ? 'INACTIVO' : isVencida ? 'VENCIDO' : isVigente ? 'VIGENTE' : 'FUTURO'}
-                                                                                         </span>
-                                                                                     )}
+                                                                                     </div>
                                                                                  </td>
                                                                                  {/* Acciones */}
                                                                                  <td className="px-3 py-2.5 text-right opacity-0 group-hover:opacity-100 transition-all">
