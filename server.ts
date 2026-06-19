@@ -145,7 +145,7 @@ async function getDb() {
             pool = await new sql.ConnectionPool(dbConfig).connect();
             console.log('✅ Conectado a Azure SQL: ' + dbConfig.database);
         } catch (err: unknown) {
-            console.error('❌ Error de conexión DB:', err instanceof Error ? err.message : String(err));
+            console.error('❌ Error de conexión DB:', safeError(err));
             pool = null;
             throw err;
         }
@@ -204,7 +204,7 @@ async function blacklistToken(token: string, exp: number): Promise<void> {
 const safeError = (err: unknown): string =>
     process.env.NODE_ENV === 'production'
         ? 'Error interno del servidor'
-        : err instanceof Error ? err.message : String(err);
+        : safeError(err);
 
 const sanitizeLog = (val: unknown, maxLen = 200): string =>
     String(val ?? '').replace(/[\r\n\t\x00-\x1F\x7F]/g, ' ').slice(0, maxLen);
@@ -234,7 +234,7 @@ app.get('/api/applications', verifyToken, async (req: Request, res: Response) =>
         const result = await db.request().query(query);
         res.json(result.recordset);
     } catch (err: unknown) {
-        res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
+        res.status(500).json({ error: safeError(err) });
     }
 });
 
@@ -313,7 +313,7 @@ app.post('/api/auth/login', async (req: Request, res: Response) => {
         }
 
         res.json({ token, user: { id: user.Id, username: user.Username, full_name: user.FullName, email: user.Email, role_name: user.RoleName, management_id: user.ManagementId, management_name: user.ManagementName, avatar_url: user.AvatarUrl, permissions: perms, apps: user.Apps, requires_password_change: user.RequiresPasswordChange === 1 } });
-    } catch (err: unknown) { res.status(500).json({ error: err instanceof Error ? err.message : String(err) }); }
+    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
 
 app.post('/api/auth/logout', verifyToken, async (req: any, res: any) => {
@@ -357,7 +357,7 @@ app.get('/api/auth/me', verifyToken, async (req: Request, res: Response) => {
             res.cookie('token', ssoTokenMe, { domain: '.siatc.cloud', maxAge: 12 * 60 * 60 * 1000, httpOnly: false, secure: true, sameSite: 'lax', path: '/' });
         }
         res.json({ token: freshToken, user: { id: user.Id, username: user.Username, full_name: user.FullName, email: user.Email, role_name: user.RoleName, management_id: user.ManagementId, management_name: user.ManagementName, avatar_url: user.AvatarUrl, permissions: perms, apps: user.Apps, casId: user.cas_id || null, casRUC: user.cas_ruc || null } });
-    } catch (err: unknown) { res.status(500).json({ error: err instanceof Error ? err.message : String(err) }); }
+    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
 
 // --- CAS ---
@@ -375,7 +375,7 @@ app.get('/api/cas', verifyToken, async (req: Request, res: Response) => {
 
         const result = await db.request().query("SELECT * FROM [dbo].[GAC_APP_TB_CAS] ORDER BY Nombre_CAS");
         res.json(result.recordset);
-    } catch (err: unknown) { res.status(500).json({ error: err instanceof Error ? err.message : String(err) }); }
+    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
 
 // --- CONFIGURATION ---
@@ -384,7 +384,7 @@ app.get('/api/config', verifyToken, async (req: Request, res: Response) => {
         const db = await getDb();
         const result = await db.request().query("SELECT * FROM [dbo].[GAC_APP_TB_VALORIZACIONES_CONFIG]");
         res.json(result.recordset);
-    } catch (err: unknown) { res.status(500).json({ error: err instanceof Error ? err.message : String(err) }); }
+    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
 
 const crearConfigSchema = z.object({
@@ -411,7 +411,7 @@ app.post('/api/config', verifyToken, verifyPermission('val.config.admin'), valid
                 END
             `);
         res.json({ message: 'Config updated' });
-    } catch (err: unknown) { res.status(500).json({ error: err instanceof Error ? err.message : String(err) }); }
+    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
 
 // --- CONFIG ADICIONAL POR DISTRITO ---
@@ -420,7 +420,7 @@ app.get('/api/config-distritos', verifyToken, async (req: Request, res: Response
         const db = await getDb();
         const result = await db.request().query("SELECT * FROM [dbo].[GAC_APP_TB_CONFIG_VALORIZACION_DISTRITO] ORDER BY Creado_El DESC");
         res.json(result.recordset);
-    } catch (err: unknown) { res.status(500).json({ error: err instanceof Error ? err.message : String(err) }); }
+    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
 
 app.post('/api/config-distritos', verifyToken, async (req: Request, res: Response) => {
@@ -451,7 +451,7 @@ app.post('/api/config-distritos', verifyToken, async (req: Request, res: Respons
             `);
         }
         res.json({ success: true });
-    } catch (err: unknown) { res.status(500).json({ error: err instanceof Error ? err.message : String(err) }); }
+    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
 
 app.delete('/api/config-distritos/:id', verifyToken, async (req: Request, res: Response) => {
@@ -472,7 +472,7 @@ app.delete('/api/config-distritos/:id', verifyToken, async (req: Request, res: R
             .input('id', sql.Int, idNum)
             .query("DELETE FROM [dbo].[GAC_APP_TB_CONFIG_VALORIZACION_DISTRITO] WHERE Id = @id");
         res.json({ success: true });
-    } catch (err: unknown) { res.status(500).json({ error: err instanceof Error ? err.message : String(err) }); }
+    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
 
 app.get('/api/distritos', verifyToken, async (req: Request, res: Response) => {
@@ -480,7 +480,7 @@ app.get('/api/distritos', verifyToken, async (req: Request, res: Response) => {
         const db = await getDb();
         const result = await db.request().query('SELECT DISTINCT Ciudad, Distrito FROM APPGAC.ServiciosViewSQL WHERE Ciudad IS NOT NULL AND Distrito IS NOT NULL ORDER BY Ciudad, Distrito');
         res.json(result.recordset);
-    } catch (err: unknown) { res.status(500).json({ error: err instanceof Error ? err.message : String(err) }); }
+    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
 
 // --- CONFIG CANAL INSTITUCIONAL ---
@@ -489,7 +489,7 @@ app.get('/api/config-canal-institucional', verifyToken, async (req: Request, res
         const db = await getDb();
         const result = await db.request().query("SELECT * FROM [dbo].[GAC_APP_TB_CONFIG_CANAL_INSTITUCIONAL] ORDER BY Creado_El DESC");
         res.json(result.recordset);
-    } catch (err: unknown) { res.status(500).json({ error: err instanceof Error ? err.message : String(err) }); }
+    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
 
 app.post('/api/config-canal-institucional', verifyToken, async (req: Request, res: Response) => {
@@ -526,7 +526,7 @@ app.post('/api/config-canal-institucional', verifyToken, async (req: Request, re
         res.json({ success: true });
     } catch (err: unknown) { 
         console.error('[CONFIG] Error saving rule:', err);
-        res.status(500).json({ error: err instanceof Error ? err.message : String(err) }); 
+        res.status(500).json({ error: safeError(err) }); 
     }
 });
 
@@ -541,7 +541,7 @@ app.delete('/api/config-canal-institucional/:id', verifyToken, async (req: Reque
         res.json({ success: true });
     } catch (err: unknown) { 
         console.error('[CONFIG] Error deleting rule:', err);
-        res.status(500).json({ error: err instanceof Error ? err.message : String(err) }); 
+        res.status(500).json({ error: safeError(err) }); 
     }
 });
 
@@ -595,7 +595,7 @@ app.get('/api/c4c-creators', verifyToken, async (req: Request, res: Response) =>
         const creators = Array.from(new Set(items.map((item: { CreatedBy: string }) => item.CreatedBy))).sort();
         res.json(creators);
     } catch (err: unknown) {
-        console.error('C4C Creators Error:', err instanceof Error ? err.message : String(err));
+        console.error('C4C Creators Error:', safeError(err));
         res.status(500).json({ error: "No se pudieron obtener los creadores de C4C." });
     }
 });
@@ -758,8 +758,8 @@ app.get('/api/valuations/:ruc', verifyToken, async (req: Request, res: Response)
 
         res.json(tickets);
     } catch (err: unknown) {
-        console.error('[VALUATION] Server Error:', err instanceof Error ? err.message : String(err));
-        res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
+        console.error('[VALUATION] Server Error:', safeError(err));
+        res.status(500).json({ error: safeError(err) });
     }
 });
 
@@ -768,7 +768,7 @@ app.get('/api/penalty-motives', verifyToken, async (req: Request, res: Response)
         const db = await getDb();
         const result = await db.request().query('SELECT IdMotivo, Motivo FROM [dbo].[GAC_APP_TB_TICKETS_DESCUENTOS_MOTIVOS] ORDER BY Motivo');
         res.json(result.recordset);
-    } catch (err: unknown) { res.status(500).json({ error: err instanceof Error ? err.message : String(err) }); }
+    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
 
 const crearPenalidadSchema = z.object({
@@ -806,7 +806,7 @@ app.post('/api/penalties', verifyToken, validateBody(crearPenalidadSchema), asyn
                 VALUES (@id, @ticket, @fecha, @motivo, @desc, @importe, @user, GETDATE(), 'Pendiente')
             `);
         res.status(201).json({ id: penaltyId });
-    } catch (err: unknown) { res.status(500).json({ error: err instanceof Error ? err.message : String(err) }); }
+    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
 
 app.put('/api/penalties/:id', verifyToken, async (req: Request, res: Response) => {
@@ -860,7 +860,7 @@ app.put('/api/penalties/:id', verifyToken, async (req: Request, res: Response) =
         });
         
         res.json({ success: true });
-    } catch (err: unknown) { res.status(500).json({ error: err instanceof Error ? err.message : String(err) }); }
+    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
 
 const crearAdicionalSchema = z.object({
@@ -902,7 +902,7 @@ app.post('/api/adicionales', verifyToken, validateBody(crearAdicionalSchema), as
             `);
         await logAudit(req, 'CREATE', 'ADICIONAL', ticket, { id, motivo, importe });
         res.status(201).json({ id });
-    } catch (err: unknown) { res.status(500).json({ error: err instanceof Error ? err.message : String(err) }); }
+    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
 
 app.put('/api/adicionales/:id', verifyToken, async (req: Request, res: Response) => {
@@ -948,7 +948,7 @@ app.put('/api/adicionales/:id', verifyToken, async (req: Request, res: Response)
         });
         
         res.json({ success: true });
-    } catch (err: unknown) { res.status(500).json({ error: err instanceof Error ? err.message : String(err) }); }
+    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
 
 app.get('/api/adicionales/:ticket', verifyToken, async (req: Request, res: Response) => {
@@ -982,7 +982,7 @@ app.get('/api/adicionales/:ticket', verifyToken, async (req: Request, res: Respo
                 ORDER BY ID_valorizacion_adicional
             `);
         res.json(result.recordset);
-    } catch (err: unknown) { res.status(500).json({ error: err instanceof Error ? err.message : String(err) }); }
+    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
 
 app.delete('/api/adicionales/:id', verifyToken, async (req: Request, res: Response) => {
@@ -1015,7 +1015,7 @@ app.delete('/api/adicionales/:id', verifyToken, async (req: Request, res: Respon
             .query("DELETE FROM [dbo].[GAC_APP_TB_TICKETS_VALORIZACION_ADICIONAL] WHERE ID_valorizacion_adicional = @id");
         await logAudit(req, 'DELETE', 'ADICIONAL', id as string, existing.recordset[0] || {});
         res.json({ success: true });
-    } catch (err: unknown) { res.status(500).json({ error: err instanceof Error ? err.message : String(err) }); }
+    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
 
 app.post('/api/valuations/batch-adjustment', verifyToken, async (req: Request, res: Response) => {
@@ -1117,7 +1117,7 @@ app.post('/api/valuations/batch-adjustment', verifyToken, async (req: Request, r
         }
     } catch (err: unknown) {
         console.error("Batch Adjustment Error:", err);
-        res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
+        res.status(500).json({ error: safeError(err) });
     }
 });
 
@@ -1218,7 +1218,7 @@ app.post('/api/penalties/:id/status', verifyToken, async (req: Request, res: Res
         addInput(statusReq, 'obs', sql.NVarChar(1000), observation ?? null);
         await statusReq.query(`UPDATE [dbo].[GAC_APP_TB_TICKETS_DESCUENTOS] SET Estado = @status, Adjunto_motivo = @obs WHERE ID_Descuentos_CAS = @id`);
         res.json({ success: true });
-    } catch (err: unknown) { res.status(500).json({ error: err instanceof Error ? err.message : String(err) }); }
+    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
 
 
@@ -1246,7 +1246,7 @@ app.get('/api/tickets/find/:ticket', verifyToken, async (req: Request, res: Resp
         res.json(result.recordset[0]);
     } catch (err: unknown) { 
         console.error('Error in ticket find:', err);
-        res.status(500).json({ error: err instanceof Error ? err.message : String(err) }); 
+        res.status(500).json({ error: safeError(err) }); 
     }
 });
 
@@ -1275,7 +1275,7 @@ app.get('/api/tickets/search/:ruc', verifyToken, async (req: Request, res: Respo
                 ORDER BY s.CheckOut DESC
             `);
         res.json(result.recordset);
-    } catch (err: unknown) { res.status(500).json({ error: err instanceof Error ? err.message : String(err) }); }
+    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
 
 app.post('/api/valuations/close', verifyToken, async (req: Request, res: Response) => {
@@ -1447,7 +1447,7 @@ app.post('/api/valuations/close', verifyToken, async (req: Request, res: Respons
         }
     } catch (err: unknown) { 
         console.error("Error en operación de valorización:", err);
-        res.status(500).json({ error: err instanceof Error ? err.message : String(err) }); 
+        res.status(500).json({ error: safeError(err) }); 
     }
 });
 
@@ -1476,7 +1476,7 @@ app.post('/api/valuations/finalize/:id', verifyToken, async (req: Request, res: 
         await logAudit(req, 'FINALIZE_DRAFT', 'VALUATION', id as string, { status: 'CERRADO' });
         res.json({ success: true, message: "Valorización cerrada correctamente." });
     } catch (err: unknown) {
-        res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
+        res.status(500).json({ error: safeError(err) });
     }
 });
 
@@ -1534,7 +1534,7 @@ app.post('/api/valuations/reopen/:id', verifyToken, verifyPermission('VAL.REOPEN
         }
     } catch (err: unknown) {
         console.error("Error reopening valuation:", err);
-        res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
+        res.status(500).json({ error: safeError(err) });
     }
 });
 
@@ -1577,8 +1577,8 @@ app.post('/api/valuations/send-email', verifyToken, async (req: Request, res: Re
         res.json({ success: true, message: 'Email enviado correctamente' });
     } catch (err: unknown) {
         const axiosErr = err as { response?: { data?: { error?: { message?: string } } }; message?: string };
-        console.error('Error enviando email:', axiosErr.response?.data || (err instanceof Error ? err.message : String(err)));
-        res.status(500).json({ error: 'No se pudo enviar el correo: ' + (axiosErr.response?.data?.error?.message || (err instanceof Error ? err.message : String(err))) });
+        console.error('Error enviando email:', axiosErr.response?.data || (safeError(err)));
+        res.status(500).json({ error: 'No se pudo enviar el correo: ' + (axiosErr.response?.data?.error?.message || (safeError(err))) });
     }
 });
 
@@ -1619,7 +1619,7 @@ app.get('/api/penalties/:ruc', verifyToken, async (req: Request, res: Response) 
                   )
             `);
         res.json(result.recordset);
-    } catch (err: unknown) { res.status(500).json({ error: err instanceof Error ? err.message : String(err) }); }
+    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
 
 app.get('/api/closures', verifyToken, async (req: Request, res: Response) => {
@@ -1652,7 +1652,7 @@ app.get('/api/closures', verifyToken, async (req: Request, res: Response) => {
         query += ` ORDER BY Cerrado_El DESC`;
         const result = await request.query(query);
         res.json(result.recordset);
-    } catch (err: unknown) { res.status(500).json({ error: err instanceof Error ? err.message : String(err) }); }
+    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
 
 app.get('/api/valuations/details/:id', verifyToken, async (req: Request, res: Response) => {
@@ -1698,7 +1698,7 @@ app.get('/api/valuations/details/:id', verifyToken, async (req: Request, res: Re
                 WHERE d.IdCierre = @id
             `);
         res.json({ tickets: result.recordset });
-    } catch (err: unknown) { res.status(500).json({ error: err instanceof Error ? err.message : String(err) }); }
+    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
 
 
@@ -1724,7 +1724,7 @@ app.get('/api/tarifarios/:casId', verifyToken, async (req: Request, res: Respons
                 ORDER BY t.Categoria, t.Servicio, t.Fecha_inicio DESC
             `);
         res.json(result.recordset);
-    } catch (err: unknown) { res.status(500).json({ error: err instanceof Error ? err.message : String(err) }); }
+    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
 
 app.post('/api/tarifarios/create', verifyToken, async (req: Request, res: Response) => {
@@ -1751,7 +1751,7 @@ app.post('/api/tarifarios/create', verifyToken, async (req: Request, res: Respon
                 )
             `);
         res.json({ success: true, id: newId });
-    } catch (err: unknown) { res.status(500).json({ error: err instanceof Error ? err.message : String(err) }); }
+    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
 
 // --- MATERIALES ---
@@ -1760,7 +1760,7 @@ app.get('/api/materials', verifyToken, async (req: Request, res: Response) => {
         const db = await getDb();
         const result = await db.request().query("SELECT ID_Material, ID_Externo, Nombre, Categoria, Estado, Sector FROM [dbo].[GAC_APP_TB_MATERIALES] ORDER BY Categoria, Nombre");
         res.json(result.recordset);
-    } catch (err: unknown) { res.status(500).json({ error: err instanceof Error ? err.message : String(err) }); }
+    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
 
 app.get('/api/materials/categories', verifyToken, async (req: Request, res: Response) => {
@@ -1768,7 +1768,7 @@ app.get('/api/materials/categories', verifyToken, async (req: Request, res: Resp
         const db = await getDb();
         const result = await db.request().query("SELECT DISTINCT Categoria FROM [dbo].[GAC_APP_TB_MATERIALES] WHERE Categoria IS NOT NULL AND Categoria != '' ORDER BY Categoria");
         res.json(result.recordset.map(r => r.Categoria));
-    } catch (err: unknown) { res.status(500).json({ error: err instanceof Error ? err.message : String(err) }); }
+    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
 
 app.post('/api/materials', verifyToken, async (req: Request, res: Response) => {
@@ -1799,7 +1799,7 @@ app.post('/api/materials', verifyToken, async (req: Request, res: Response) => {
             await matInsReq.query(`INSERT INTO [dbo].[GAC_APP_TB_MATERIALES] (ID_Material, ID_Externo, Nombre, Categoria, Sector, Estado, EstadoEnCatalogo) VALUES (@id, @ext, @nombre, @cat, @sec, 'Activo', 'Publicado')`);
             res.json({ success: true, id: newId, action: 'created' });
         }
-    } catch (err: unknown) { res.status(500).json({ error: err instanceof Error ? err.message : String(err) }); }
+    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
 
 app.post('/api/tarifarios/update', verifyToken, async (req: Request, res: Response) => {
@@ -1816,7 +1816,7 @@ app.post('/api/tarifarios/update', verifyToken, async (req: Request, res: Respon
                 WHERE ID_Tarifario = @id
             `);
         res.json({ success: true });
-    } catch (err: unknown) { res.status(500).json({ error: err instanceof Error ? err.message : String(err) }); }
+    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
 
 app.post('/api/tarifarios/batch', verifyToken, async (req: Request, res: Response) => {
@@ -1859,7 +1859,7 @@ app.post('/api/tarifarios/batch', verifyToken, async (req: Request, res: Respons
             await transaction.rollback();
             throw error;
         }
-    } catch (err: unknown) { res.status(500).json({ error: err instanceof Error ? err.message : String(err) }); }
+    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
 
 // --- TARIFARIO EXCEPCIONES ---
@@ -1871,7 +1871,7 @@ app.get('/api/tarifarios/exceptions/:casId', verifyToken, async (req: Request, r
         addInput(excReq, 'casId', sql.VarChar(50), casId);
         const result = await excReq.query("SELECT * FROM [dbo].[GAC_APP_TB_TARIFARIO_EXCEPCIONES] WHERE Empresa = @casId AND Estado = 'A' ORDER BY Prioridad DESC, Creado_El DESC");
         res.json(result.recordset);
-    } catch (err: unknown) { res.status(500).json({ error: err instanceof Error ? err.message : String(err) }); }
+    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
 
 app.post('/api/tarifarios/exceptions/save', verifyToken, async (req: Request, res: Response) => {
@@ -1908,7 +1908,7 @@ app.post('/api/tarifarios/exceptions/save', verifyToken, async (req: Request, re
                 END
             `);
         res.json({ success: true, id: finalId });
-    } catch (err: unknown) { res.status(500).json({ error: err instanceof Error ? err.message : String(err) }); }
+    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
 
 app.delete('/api/tarifarios/exceptions/:id', verifyToken, async (req: Request, res: Response) => {
@@ -1919,7 +1919,7 @@ app.delete('/api/tarifarios/exceptions/:id', verifyToken, async (req: Request, r
         addInput(excDelReq, 'id', sql.VarChar(8), id);
         await excDelReq.query("UPDATE [dbo].[GAC_APP_TB_TARIFARIO_EXCEPCIONES] SET Estado = 'I' WHERE IdExcepcion = @id");
         res.json({ success: true });
-    } catch (err: unknown) { res.status(500).json({ error: err instanceof Error ? err.message : String(err) }); }
+    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
 
 // --- TARIFARIO IMPORT ---
@@ -1989,7 +1989,7 @@ app.post('/api/tarifarios/import/preview', verifyToken, async (req: Request, res
             }
         }
         res.json({ preview });
-    } catch (err: unknown) { res.status(500).json({ error: err instanceof Error ? err.message : String(err) }); }
+    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
 
 app.post('/api/tarifarios/import/confirm', verifyToken, async (req: Request, res: Response) => {
@@ -2074,7 +2074,7 @@ app.post('/api/tarifarios/import/confirm', verifyToken, async (req: Request, res
             await transaction.rollback();
             throw err;
         }
-    } catch (err: unknown) { res.status(500).json({ error: err instanceof Error ? err.message : String(err) }); }
+    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
 
 // --- DASHBOARD ANALYTICS ---
@@ -2209,7 +2209,7 @@ app.get('/api/dashboard/stats', verifyToken, async (req: Request, res: Response)
             Sanciones: result.Sanciones || 0,
             Neto: bruto - (result.Sanciones || 0)
         });
-    } catch (err: unknown) { res.status(500).json({ error: err instanceof Error ? err.message : String(err) }); }
+    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
 
 app.get('/api/dashboard/trends', verifyToken, async (req: Request, res: Response) => {
@@ -2307,7 +2307,7 @@ app.get('/api/dashboard/trends', verifyToken, async (req: Request, res: Response
 
         const trends = await request.query(query);
         res.json(trends.recordset);
-    } catch (err: unknown) { res.status(500).json({ error: err instanceof Error ? err.message : String(err) }); }
+    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
 
 app.get('/api/dashboard/top-cas', verifyToken, async (req: Request, res: Response) => {
@@ -2358,7 +2358,7 @@ app.get('/api/dashboard/top-cas', verifyToken, async (req: Request, res: Respons
 
         const top = await request.query(query);
         res.json(top.recordset);
-    } catch (err: unknown) { res.status(500).json({ error: err instanceof Error ? err.message : String(err) }); }
+    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
 
 // --- C4C INTEGRATION ---
@@ -2438,10 +2438,10 @@ app.get('/api/c4c/report/:ticketId', verifyToken, async (req: Request, res: Resp
 
     } catch (err: unknown) {
         const axiosErr = err as { response?: { data?: { error?: { message?: { value?: string } } }; status?: number }; message?: string };
-        console.error('C4C Proxy Error:', axiosErr.response?.data || (err instanceof Error ? err.message : String(err)));
+        console.error('C4C Proxy Error:', axiosErr.response?.data || (safeError(err)));
         res.status(axiosErr.response?.status || 500).json({
             error: 'Failed to retrieve report from C4C',
-            details: axiosErr.response?.data?.error?.message?.value || (err instanceof Error ? err.message : String(err))
+            details: axiosErr.response?.data?.error?.message?.value || (safeError(err))
         });
     }
 });
@@ -2455,7 +2455,7 @@ app.get('/api/managements', verifyToken, async (req: Request, res: Response) => 
         const result = await db.request().query('SELECT Id as id, Name as name, Code as code FROM EBM.Managements');
         res.json(result.recordset);
     } catch (err: unknown) {
-        res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
+        res.status(500).json({ error: safeError(err) });
     }
 });
 
@@ -2480,7 +2480,7 @@ app.get('/api/users', verifyToken, verifyPermission('val.config.users'), async (
             LEFT JOIN EBM.Roles r ON u.RoleId = r.Id
         `);
         res.json(result.recordset);
-    } catch (err: unknown) { res.status(500).json({ error: err instanceof Error ? err.message : String(err) }); }
+    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
 
 app.post('/api/users', verifyToken, verifyPermission('val.config.users'), async (req: Request, res: Response) => {
@@ -2527,7 +2527,7 @@ app.post('/api/users', verifyToken, verifyPermission('val.config.users'), async 
             `);
         await logAudit(req, 'CREATE', 'USERS', username, { apps: appsInsert });
         res.status(201).json(result.recordset[0]);
-    } catch (err: unknown) { res.status(500).json({ error: err instanceof Error ? err.message : String(err) }); }
+    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
 
 app.put('/api/users/:id', verifyToken, verifyPermission('val.config.users'), async (req: Request, res: Response) => {
@@ -2550,7 +2550,7 @@ app.put('/api/users/:id', verifyToken, verifyPermission('val.config.users'), asy
         
         await logAudit(req, 'UPDATE', 'USERS', id as string, { apps: appsSave });
         res.json({ success: true });
-    } catch (err: unknown) { res.status(500).json({ error: err instanceof Error ? err.message : String(err) }); }
+    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
 
 app.delete('/api/users/:id', verifyToken, verifyPermission('val.config.users'), async (req: Request, res: Response) => {
@@ -2562,7 +2562,7 @@ app.delete('/api/users/:id', verifyToken, verifyPermission('val.config.users'), 
         await userDelReq.query("UPDATE EBM.Users SET IsActive = 0 WHERE Id = @id");
         await logAudit(req, 'DEACTIVATE', 'USERS', id as string, {});
         res.status(204).send();
-    } catch (err: unknown) { res.status(500).json({ error: err instanceof Error ? err.message : String(err) }); }
+    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
 
 // ROLES
@@ -2576,7 +2576,7 @@ app.get('/api/roles', verifyToken, verifyPermission('val.config.roles'), async (
             permissions: allPerms.filter((p: { RoleId: string; Permission: string }) => p.RoleId === r.id).map((p: { RoleId: string; Permission: string }) => p.Permission)
         }));
         res.json(result);
-    } catch (err: unknown) { res.status(500).json({ error: err instanceof Error ? err.message : String(err) }); }
+    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
 
 app.post('/api/roles', verifyToken, verifyPermission('val.config.roles'), async (req: Request, res: Response) => {
@@ -2602,7 +2602,7 @@ app.post('/api/roles', verifyToken, verifyPermission('val.config.roles'), async 
         }
         await logAudit(req, 'CREATE', 'ROLES', name, { apps: appsSave });
         res.status(201).json({ id: roleId, name, permissions });
-    } catch (err: unknown) { res.status(500).json({ error: err instanceof Error ? err.message : String(err) }); }
+    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
 
 app.put('/api/roles/:id', verifyToken, verifyPermission('val.config.roles'), async (req: Request, res: Response) => {
@@ -2631,7 +2631,7 @@ app.put('/api/roles/:id', verifyToken, verifyPermission('val.config.roles'), asy
         }
         await logAudit(req, 'UPDATE', 'ROLES', name, { apps: appsSave });
         res.json({ id, name, permissions });
-    } catch (err: unknown) { res.status(500).json({ error: err instanceof Error ? err.message : String(err) }); }
+    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
 
 app.delete('/api/roles/:id', verifyToken, verifyPermission('val.config.roles'), async (req: Request, res: Response) => {
@@ -2657,7 +2657,7 @@ app.delete('/api/roles/:id', verifyToken, verifyPermission('val.config.roles'), 
         
         await logAudit(req, 'DELETE', 'ROLES', id as string, {});
         res.status(204).send();
-    } catch (err: unknown) { res.status(500).json({ error: err instanceof Error ? err.message : String(err) }); }
+    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
 
 
@@ -2674,7 +2674,7 @@ app.get('/api/config/audit-logs', verifyToken, verifyPermission('val.config.audi
             ORDER BY Fecha DESC
         `);
         res.json(result.recordset);
-    } catch (err: unknown) { res.status(500).json({ error: err instanceof Error ? err.message : String(err) }); }
+    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
 
 // --- SERVE STATIC FILES (PROD) ---
@@ -2698,7 +2698,7 @@ async function fetchAppMeta(): Promise<void> {
             console.log(`[AppConfig] Loaded meta for ${code}: ${appMeta.label}`);
         }
     } catch (err: unknown) {
-        console.warn('[AppConfig] Could not fetch app meta from DB:', err instanceof Error ? err.message : String(err));
+        console.warn('[AppConfig] Could not fetch app meta from DB:', safeError(err));
     }
 }
 
@@ -2741,7 +2741,7 @@ if (process.env.NODE_ENV === 'production' && !(process.env.ALLOWED_ORIGINS || ''
 
 app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
     console.error(`[ERROR] ${req.method} ${req.path}:`, err);
-    res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Error interno del servidor' : err.message });
+    res.status(500).json({ error: safeError(err) });
 });
 
 app.listen(port, () => {
