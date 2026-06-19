@@ -77,6 +77,22 @@ async function logAudit(req: Request, action: string, entity: string, entityId: 
 
 app.set('trust proxy', 1);
 
+// --- REDIS CLIENT (declarado antes de rateLimit para evitar TDZ) ---
+let _redis: Redis | null = null;
+function getRedisClient(): Redis {
+    if (!_redis) {
+        _redis = new Redis({
+            host: process.env.REDIS_HOST || 'localhost',
+            port: parseInt(process.env.REDIS_PORT || '6379'),
+            password: process.env.REDIS_PASSWORD,
+            lazyConnect: true,
+            retryStrategy: (times: number) => Math.min(times * 100, 3000),
+        });
+        _redis.on('error', (err: Error) => console.error('[Redis] Error:', err.message));
+    }
+    return _redis;
+}
+
 app.use(helmet({
     contentSecurityPolicy: {
         directives: {
@@ -172,21 +188,6 @@ interface AuthRequest extends Request {
     user?: JwtUserPayload;
 }
 
-// --- REDIS CLIENT ---
-let _redis: Redis | null = null;
-function getRedisClient(): Redis {
-    if (!_redis) {
-        _redis = new Redis({
-            host: process.env.REDIS_HOST || 'localhost',
-            port: parseInt(process.env.REDIS_PORT || '6379'),
-            password: process.env.REDIS_PASSWORD,
-            lazyConnect: true,
-            retryStrategy: (times: number) => Math.min(times * 100, 3000),
-        });
-        _redis.on('error', (err: Error) => console.error('[Redis] Error:', err.message));
-    }
-    return _redis;
-}
 async function isTokenBlacklisted(token: string): Promise<boolean> {
     try {
         const hash = createHash('sha256').update(token).digest('hex');
