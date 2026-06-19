@@ -440,7 +440,9 @@ export default function TarifarioPage() {
                                                                                  className={cn(
                                                                                      "group transition-colors border-t border-border/[0.07]",
                                                                                      isFirst && "border-t-border/20",
-                                                                                     isInactive ? "opacity-40" : "hover:bg-primary/[0.02]"
+                                                                                     isInactive
+                                                                                         ? "bg-rose-50/70 dark:bg-rose-950/20 text-foreground/40 [&_span]:opacity-60"
+                                                                                         : "hover:bg-primary/[0.02]"
                                                                                  )}
                                                                              >
                                                                                  {/* Servicio — solo primera fila del grupo */}
