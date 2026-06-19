@@ -559,8 +559,7 @@ async function getC4CDetails(ticketIds: string[]) {
     for (let i = 0; i < ticketIds.length; i += chunkSize) {
         const chunk = ticketIds.slice(i, i + chunkSize);
         const filter = chunk.map(id => `ID eq '${id}'`).join(' or ');
-        // Sin ZIDRegistroCupoArea en $select — se obtiene por separado si existe
-        const url = `${C4C_BASE_URL}/ServiceRequestCollection?$filter=${encodeURIComponent(filter)}&$select=ID,CreatedBy,Name&$format=json`;
+        const url = `${C4C_BASE_URL}/ServiceRequestCollection?$filter=${encodeURIComponent(filter)}&$select=ID,CreatedBy,Name,zIDRegistroCupoArea&$format=json`;
 
         if (i === 0) console.log('[C4C] URL base:', url.split('?')[0]);
 
@@ -578,7 +577,7 @@ async function getC4CDetails(ticketIds: string[]) {
                     results[item.ID] = {
                         creator: item.CreatedBy || '',
                         subject: item.Name || '',
-                        cupoArea: item.ZIDRegistroCupoArea || item.ZzIDRegistroCupoArea || item.ZIDRegistrocupoArea || ''
+                        cupoArea: item.zIDRegistroCupoArea || ''
                     };
                 });
             })
