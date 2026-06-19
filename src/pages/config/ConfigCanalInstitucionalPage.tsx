@@ -27,7 +27,8 @@ interface ConfigInstitucional {
     Activo: boolean;
     Creado_Por: string;
     Creado_El: string;
-    // Aliases used by the edit form (lowercase)
+    // Aliases used by the edit form (lowercase) — 'id' lowercase is what the backend expects
+    id?: number;
     usuario_creador?: string;
     fecha_inicio?: string;
     fecha_fin?: string;
@@ -108,7 +109,7 @@ export default function ConfigCanalInstitucionalPage() {
         });
     };
 
-    const handleSave = async (e: React.FormEvent) => {
+    const handleSave = async (e: React.SyntheticEvent) => {
         e.preventDefault();
         try {
             await ApiClient.request('/config-canal-institucional', {
@@ -228,6 +229,7 @@ export default function ConfigCanalInstitucionalPage() {
                                                     onClick={() => {
                                                         setEditingConfig({
                                                             ...c,
+                                                            id: c.Id,
                                                             usuario_creador: c.Usuario_Creador,
                                                             fecha_inicio: formatToInputDate(c.Fecha_Inicio),
                                                             fecha_fin: formatToInputDate(c.Fecha_Fin),
@@ -270,7 +272,7 @@ export default function ConfigCanalInstitucionalPage() {
             <Modal 
                 isOpen={isModalOpen} 
                 onClose={() => setIsModalOpen(false)} 
-                title={editingConfig?.Id ? "Editar Regla Institucional" : "Configurar Canal Institucional"}
+                title={editingConfig?.id ? "Editar Regla Institucional" : "Configurar Canal Institucional"}
                 size="lg"
             >
                 <form onSubmit={handleSave} className="space-y-6">
