@@ -1,6 +1,6 @@
 ﻿import { useState, useRef } from 'react';
 import { X, Upload, Download, CheckCircle, RefreshCw, FileSpreadsheet, ArrowRight } from 'lucide-react';
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 import { ApiClient } from '../../services/apiClient';
 import { cn } from '../../utils/cn';
 import { useDialog } from '../../context/DialogContext';
@@ -37,14 +37,9 @@ function parseExcelDate(value: unknown): string {
     if (!value && value !== 0) return '';
     if (value instanceof Date) return value.toISOString().split('T')[0];
     if (typeof value === 'number') {
-        // Excel serial date
-        const date = XLSX.SSF.parse_date_code(value);
-        if (date) {
-            const y = date.y;
-            const m = String(date.m).padStart(2, '0');
-            const d = String(date.d).padStart(2, '0');
-            return `${y}-${m}-${d}`;
-        }
+        // Excel serial date (fallback — ExcelJS returns Date objects for date cells)
+        const utc = new Date(Math.round((value - 25569) * 86400 * 1000));
+        return `${utc.getUTCFullYear()}-${String(utc.getUTCMonth() + 1).padStart(2, '0')}-${String(utc.getUTCDate()).padStart(2, '0')}`;
     }
     if (typeof value === 'string') {
         // DD/MM/YYYY
@@ -56,17 +51,21 @@ function parseExcelDate(value: unknown): string {
     return String(value);
 }
 
-function downloadTemplate() {
-    const wb = XLSX.utils.book_new();
+async function downloadTemplate() {
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Tarifario');
     const headers = ['CAS_Nombre', 'Categoria', 'Servicio', 'Fecha_inicio', 'Fecha_fin', 'Importe', 'Estado'];
-    const example = [
-        ['Black', 'CALENTADORES A GAS', 'Instalación', '01/01/2025', '31/12/2026', 42, 'A'],
-        ['Silar', 'TERMAS ELECTRICAS -50LT', 'Revisión', '01/01/2025', '31/12/2026', 35, 'A'],
-    ];
-    const ws = XLSX.utils.aoa_to_sheet([headers, ...example]);
-    ws['!cols'] = headers.map((h) => ({ wch: Math.max(h.length + 4, 20) }));
-    XLSX.utils.book_append_sheet(wb, ws, 'Tarifario');
-    XLSX.writeFile(wb, 'Plantilla_Tarifario.xlsx');
+    worksheet.columns = headers.map(h => ({ header: h, width: Math.max(h.length + 4, 20) }));
+    worksheet.addRow(['Black', 'CALENTADORES A GAS', 'Instalación', '01/01/2025', '31/12/2026', 42, 'A']);
+    worksheet.addRow(['Silar', 'TERMAS ELECTRICAS -50LT', 'Revisión', '01/01/2025', '31/12/2026', 35, 'A']);
+    const buf = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'Plantilla_Tarifario.xlsx';
+    a.click();
+    URL.revokeObjectURL(url);
 }
 
 export default function TarifarioImportModal({ isOpen, onClose, onSuccess }: Props) {
@@ -91,9 +90,13 @@ export default function TarifarioImportModal({ isOpen, onClose, onSuccess }: Pro
         setLoading(true);
         try {
             const buffer = await file.arrayBuffer();
-            const wb = XLSX.read(buffer, { type: 'array', cellDates: false });
-            const ws = wb.Sheets[wb.SheetNames[0]];
-            const raw = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' }) as unknown[][];
+            const excelWb = new ExcelJS.Workbook();
+            await excelWb.xlsx.load(buffer);
+            const excelWs = excelWb.worksheets[0];
+            const raw: unknown[][] = [];
+            excelWs.eachRow({ includeEmpty: false }, (row) => {
+                raw.push((row.values as ExcelJS.CellValue[]).slice(1).map(v => v ?? ''));
+            });
 
             if (raw.length < 2) {
                 alert({ message: 'El archivo está vacío o solo tiene encabezados.' });
