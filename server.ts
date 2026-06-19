@@ -708,7 +708,9 @@ app.get('/api/valuations/:ruc', verifyToken, async (req: Request, res: Response)
         // Fetch Institutional Rules
         const rules = (await db.request().query("SELECT * FROM [dbo].[GAC_APP_TB_CONFIG_CANAL_INSTITUCIONAL] WHERE Activo = 1")).recordset;
 
-        if (tickets.length > 0 && rules.length > 0) {
+        if (tickets.length > 0) {
+            // Siempre consultar C4C para obtener CupoArea y UsuarioCreador,
+            // independientemente de si hay reglas institucionales activas.
             console.log(`[VALUATION] Fetching OData for ${tickets.length} tickets (Rules active: ${rules.length})`);
             const ticketIds = tickets.map(t => t.Ticket);
             const c4cDetails = await getC4CDetails(ticketIds);
@@ -720,18 +722,19 @@ app.get('/api/valuations/:ruc', verifyToken, async (req: Request, res: Response)
                 let finalTarifaBase = t.TarifaBaseCalculada;
                 let esInstitucional = false;
 
-                if (details) {
+                if (details && rules.length > 0) {
                     const matchingRule = rules.find(r => {
                         const tDate = new Date(t.FechaCierre);
                         const rStart = new Date(r.Fecha_Inicio);
                         const rEnd = new Date(r.Fecha_Fin);
-                        
-                        tDate.setHours(0,0,0,0);
-                        rStart.setHours(0,0,0,0);
-                        rEnd.setHours(23,59,59,999);
-                        
+
+                        tDate.setHours(0, 0, 0, 0);
+                        rStart.setHours(0, 0, 0, 0);
+                        rEnd.setHours(23, 59, 59, 999);
+
                         const dateMatch = tDate.getTime() >= rStart.getTime() && tDate.getTime() <= rEnd.getTime();
-                        const userMatch = details.creator && r.Usuario_Creador && details.creator.trim().toUpperCase() === r.Usuario_Creador.trim().toUpperCase();
+                        const userMatch = details.creator && r.Usuario_Creador &&
+                            details.creator.trim().toUpperCase() === r.Usuario_Creador.trim().toUpperCase();
                         return dateMatch && userMatch;
                     });
 
@@ -744,17 +747,12 @@ app.get('/api/valuations/:ruc', verifyToken, async (req: Request, res: Response)
                 return {
                     ...t,
                     TarifaBase: finalTarifaBase,
-                    UsuarioCreador: details?.creator || 'N/D',
+                    UsuarioCreador: details?.creator || '',
                     C4CSubject: details?.subject || '',
                     EsInstitucional: esInstitucional,
                     CupoArea: details?.cupoArea || ''
                 };
             });
-        } else {
-            if (tickets.length > 0) {
-                console.log(`[VALUATION] Returning ${tickets.length} tickets (No institutional rules apply)`);
-                tickets = tickets.map(t => ({ ...t, TarifaBase: t.TarifaBaseCalculada }));
-            }
         }
 
         res.json(tickets);

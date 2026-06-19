@@ -60,6 +60,9 @@ export interface ValuationTicket {
   Distrito?: string;
   Departamento?: string;
   EsInstitucional?: boolean;
+  UsuarioCreador?: string;
+  CupoArea?: string;
+  C4CSubject?: string;
 }
 
 export interface Material {
