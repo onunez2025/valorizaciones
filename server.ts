@@ -553,25 +553,28 @@ app.delete('/api/config-canal-institucional/:id', verifyToken, async (req: Reque
 async function getC4CDetails(ticketIds: string[]) {
     if (ticketIds.length === 0) return {};
     const results: Record<string, { creator: string; subject: string; cupoArea: string }> = {};
-    const chunkSize = 60; // Increased chunk size for better performance
+    const chunkSize = 50;
     const promises = [];
 
     for (let i = 0; i < ticketIds.length; i += chunkSize) {
         const chunk = ticketIds.slice(i, i + chunkSize);
         const filter = chunk.map(id => `ID eq '${id}'`).join(' or ');
-        const url = `${C4C_BASE_URL}/ServiceRequestCollection?$filter=${encodeURIComponent(filter)}&$select=ID,CreatedBy,Name,ZIDRegistroCupoArea`;
+        // Sin ZIDRegistroCupoArea en $select — se obtiene por separado si existe
+        const url = `${C4C_BASE_URL}/ServiceRequestCollection?$filter=${encodeURIComponent(filter)}&$select=ID,CreatedBy,Name&$format=json`;
+
+        if (i === 0) console.log('[C4C] URL base:', url.split('?')[0]);
 
         promises.push(
             axios.get(url, {
-                headers: { 'Authorization': `Basic ${C4C_AUTH}` },
-                timeout: 15000 // 15s timeout per chunk
+                headers: { 'Authorization': `Basic ${C4C_AUTH}`, 'Accept': 'application/json' },
+                timeout: 20000
             })
             .then(resp => {
-                const items = resp.data.d.results;
+                const items: Record<string, string>[] = resp.data?.d?.results ?? resp.data?.value ?? [];
                 if (i === 0 && items.length > 0) {
-                    console.log('[C4C DEBUG] Campos disponibles en ServiceRequest:', Object.keys(items[0]).join(', '));
+                    console.log('[C4C DEBUG] Campos disponibles:', Object.keys(items[0]).join(', '));
                 }
-                items.forEach((item: Record<string, string>) => {
+                items.forEach(item => {
                     results[item.ID] = {
                         creator: item.CreatedBy || '',
                         subject: item.Name || '',
@@ -580,8 +583,9 @@ async function getC4CDetails(ticketIds: string[]) {
                 });
             })
             .catch(err => {
-                console.error(`C4C OData Chunk Error (Tickets ${i} to ${i + chunkSize}):`, err.message);
-                // We don't throw here to allow partial results
+                const status = err.response?.status;
+                const body = JSON.stringify(err.response?.data)?.slice(0, 300);
+                console.error(`[C4C] Error chunk ${i}-${i + chunkSize}: HTTP ${status ?? 'N/A'} — ${body ?? err.message}`);
             })
         );
     }
