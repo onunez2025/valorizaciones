@@ -155,6 +155,16 @@ export default function TarifarioPage() {
         }
     };
 
+    // Parsea "2025-01-01T00:00:00.000Z" como fecha LOCAL para evitar el offset UTC-5
+    const parseLocalDate = (s?: string): Date | null => {
+        if (!s) return null;
+        const part = s.split('T')[0]; // "2025-01-01"
+        const [y, m, d] = part.split('-').map(Number);
+        return new Date(y, m - 1, d);
+    };
+
+    const today = (() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; })();
+
     const activeCount = editRates.filter(r => (r.Estado || 'A') === 'A').length;
     const inactiveCount = editRates.length - activeCount;
 
@@ -362,8 +372,6 @@ export default function TarifarioPage() {
                                          const serviceMap = groupedRates[category];
                                          const serviceNames = Object.keys(serviceMap).sort();
                                          const totalPeriods = serviceNames.reduce((sum, s) => sum + serviceMap[s].length, 0);
-                                         const today = new Date();
-                                         today.setHours(0, 0, 0, 0);
 
                                          return (
                                              <div key={category} className="bg-muted/5 rounded-xl border border-border/40 overflow-hidden transition-all duration-300">
@@ -407,8 +415,8 @@ export default function TarifarioPage() {
                                                                          const globalIdx = editRates.findIndex(r => r === rate);
                                                                          const isFirst = periodIdx === 0;
                                                                          const isInactive = (rate.Estado || 'A') !== 'A';
-                                                                         const fi = rate.Fecha_inicio ? new Date(rate.Fecha_inicio) : null;
-                                                                         const ff = rate.Fecha_fin ? new Date(rate.Fecha_fin) : null;
+                                                                         const fi = parseLocalDate(rate.Fecha_inicio);
+                                                                         const ff = parseLocalDate(rate.Fecha_fin);
                                                                          const isVigente = fi && fi <= today && (!ff || ff >= today);
                                                                          const isVencida = ff && ff < today && !isInactive;
 
@@ -597,7 +605,7 @@ export default function TarifarioPage() {
                                         <p className="text-[9px] font-black text-muted-foreground opacity-40 mb-1">Última actualización</p>
                                         <p className="text-xs font-bold">
                                             {lastDate
-                                                ? new Date(lastDate).toLocaleDateString('es-PE', { day: '2-digit', month: 'long', year: 'numeric' })
+                                                ? parseLocalDate(lastDate)?.toLocaleDateString('es-PE', { day: '2-digit', month: 'long', year: 'numeric' }) ?? '—'
                                                 : '—'
                                             }
                                         </p>
