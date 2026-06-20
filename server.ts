@@ -533,6 +533,8 @@ app.post('/api/config-canal-institucional', verifyToken, async (req: Request, re
         addInput(request, 'act', sql.Bit, activo ? 1 : 0);
         addInput(request, 'usr', sql.NVarChar(255), user);
 
+        console.log(`[CONFIG] Saving rule for ${sanitizeLog(user)}, ID: ${id || 'NEW'}`);
+
         if (id) {
             await request.input('id', sql.Int, Number(id)).query(`
                 UPDATE [dbo].[GAC_APP_TB_CONFIG_CANAL_INSTITUCIONAL]
@@ -648,7 +650,7 @@ app.get('/api/valuations/:ruc', verifyToken, async (req: Request, res: Response)
     }
     const { start, end } = req.query;
 
-    console.log(`[VALUATION] Starting request - RUC: ${ruc}, Range: ${start} to ${end}`);
+    console.log(`[VALUATION] Starting request - RUC: ${sanitizeLog(ruc)}, Range: ${sanitizeLog(start)} to ${sanitizeLog(end)}`);
 
     try {
         const db = await getDb();
@@ -1611,7 +1613,7 @@ app.post('/api/valuations/send-email', verifyToken, async (req: Request, res: Re
     } catch (err: unknown) {
         const axiosErr = err as { response?: { data?: { error?: { message?: string } } }; message?: string };
         console.error('Error enviando email:', axiosErr.response?.data || (safeError(err)));
-        res.status(500).json({ error: 'No se pudo enviar el correo: ' + (axiosErr.response?.data?.error?.message || (safeError(err))) });
+        res.status(500).json({ error: safeError(err) });
     }
 });
 
