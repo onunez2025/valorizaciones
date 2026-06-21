@@ -135,7 +135,7 @@ app.use(cors({
         if (!origin || allowedOrigins.includes(origin)) {
             callback(null, true);
         } else {
-            console.error(`Blocked CORS attempt from: ${origin}`);
+            console.error(`Blocked CORS attempt from: ${sanitizeLog(origin)}`);
             callback(new Error('Not allowed by CORS'));
         }
     },
@@ -234,7 +234,7 @@ const safeError = (err: unknown): string =>
         ? 'Error interno del servidor'
         : (err instanceof Error ? err.message : String(err));
 
-const sanitizeLog = (val: unknown, maxLen = 200): string => // eslint-disable-line @typescript-eslint/no-unused-vars
+const sanitizeLog = (val: unknown, maxLen = 200): string =>
     String(val ?? '').replace(/[\r\n\t\x00-\x1F\x7F]/g, ' ').slice(0, maxLen); // eslint-disable-line no-control-regex
 
 const verifyToken = async (req: Request, res: Response, next: NextFunction) => {
@@ -2776,7 +2776,7 @@ if (process.env.NODE_ENV === 'production' && !(process.env.ALLOWED_ORIGINS || ''
 }
 
 app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
-    console.error(`[ERROR] ${req.method} ${req.path}:`, err);
+    console.error(`[ERROR] ${sanitizeLog(req.method)} ${sanitizeLog(req.path)}:`, err);
     res.status(500).json({ error: safeError(err) });
 });
 
