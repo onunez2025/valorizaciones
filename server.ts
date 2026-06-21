@@ -1739,6 +1739,10 @@ app.get('/api/valuations/details/:id', verifyToken, async (req: Request, res: Re
 
 app.get('/api/tarifarios/:casId', verifyToken, async (req: Request, res: Response) => {
     const { casId } = req.params;
+    const currentUser = (req as any).user;
+    if (currentUser.casId !== null && currentUser.casId !== casId) {
+        return res.status(403).json({ error: 'Acceso denegado.' });
+    }
     try {
         const db = await getDb();
         const tarListReq = db.request();
