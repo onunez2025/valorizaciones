@@ -12,12 +12,14 @@ import TarifarioModal from '../components/tarifario/TarifarioModal';
 import MaterialRegisterModal from '../components/materials/MaterialRegisterModal';
 import { Modal } from '../components/common/Modal';
 import { SIATC_THEME } from '../utils/siatc-theme';
+import { useAuth } from '../hooks/useAuth';
 
 const isValuable = (code?: string) => ['3120', '3121', '5120', '5121'].some(prefix => code?.startsWith(prefix));
 
 // Version 1.0.1 - Fix Timezone UTC
 export default function ValuationsPage() {
     const { alert, confirm } = useDialog();
+    const { hasPermission } = useAuth();
     const [casList, setCasList] = useState<CAS[]>([]);
     const [selectedCas, setSelectedCas] = useState<CAS | null>(null);
     const [diasMaxCierre, setDiasMaxCierre] = useState<number>(1);
@@ -1647,16 +1649,18 @@ export default function ValuationsPage() {
                                 <span className="text-[10px] font-bold opacity-40">Fecha</span>
                                 <span className="text-sm font-bold">{new Date(globalSearchResult.Fecha!).toLocaleDateString('es-PE', { timeZone: 'UTC' })}</span>
                             </div>
-                            <button
-                                onClick={() => {
-                                    const cas = casList.find(c => c.RUC === globalSearchResult.RUC);
-                                    if (cas) setSelectedCas(cas);
-                                    setShowPenaltyModal({ show: true, type: 'penalty', ticket: globalSearchResult.Ticket, date: globalSearchResult.Fecha?.split('T')[0] });
-                                }}
-                                className="bg-red-600 text-white px-5 py-2.5 rounded-xl text-xs font-black hover:bg-red-700 transition-all shadow-lg shadow-red-600/20 flex items-center gap-2"
-                            >
-                                <AlertTriangle className="w-4 h-4" /> Aplicar penalidad
-                            </button>
+                            {hasPermission('val.penalties.create') && (
+                                <button
+                                    onClick={() => {
+                                        const cas = casList.find(c => c.RUC === globalSearchResult.RUC);
+                                        if (cas) setSelectedCas(cas);
+                                        setShowPenaltyModal({ show: true, type: 'penalty', ticket: globalSearchResult.Ticket, date: globalSearchResult.Fecha?.split('T')[0] });
+                                    }}
+                                    className="bg-red-600 text-white px-5 py-2.5 rounded-xl text-xs font-black hover:bg-red-700 transition-all shadow-lg shadow-red-600/20 flex items-center gap-2"
+                                >
+                                    <AlertTriangle className="w-4 h-4" /> Aplicar penalidad
+                                </button>
+                            )}
                         </div>
                     )}
                     <button onClick={() => setGlobalSearchResult(null)} className="p-2 hover:bg-primary/10 rounded-full transition-colors">
@@ -1799,50 +1803,59 @@ export default function ValuationsPage() {
                                 </div>
 
                                 <div className="grid grid-cols-1 gap-3 pt-6 mt-6 border-t border-border/50">
-                                    <button 
-                                        onClick={handleExportExcel} 
-                                        disabled={!selectedCas || tickets.length === 0} 
-                                        className="w-full flex items-center justify-center gap-2 p-4 bg-background border border-border rounded-xl text-sm font-bold transition-all disabled:opacity-30 disabled:cursor-not-allowed group"
-                                    >
-                                        <Download className="w-4 h-4 text-primary group-hover:scale-110 transition-transform" /> Exportar Borrador
-                                    </button>
-                                    <button 
-                                        onClick={handlePreparePreValuationEmail} 
-                                        disabled={!selectedCas || tickets.length === 0 || isClosing} 
-                                        className={cn(
-                                            "w-full flex items-center justify-center gap-2 p-4 border rounded-xl text-sm font-bold transition-all disabled:opacity-30 disabled:cursor-not-allowed group",
-                                            isClosing ? "bg-indigo-50 border-indigo-300 text-indigo-700" : "bg-background border-border hover:bg-indigo-50 hover:border-indigo-200"
-                                        )}
-                                    >
-                                        {isClosing ? (
-                                            <Loader2 className="w-4 h-4 animate-spin" />
-                                        ) : (
-                                            <Mail className="w-4 h-4 text-indigo-600 group-hover:scale-110 transition-transform" />
-                                        )}
-                                        {isClosing ? "Guardando Borrador..." : "Enviar Pre-Valorización"}
-                                    </button>
-                                    <button 
-                                        onClick={() => setShowCloseModal(true)} 
-                                        disabled={!selectedCas || tickets.length === 0} 
-                                        className="w-full flex items-center justify-center gap-2 p-4 bg-gradient-to-r from-emerald-600 to-emerald-700 text-white hover:opacity-90 text-sm font-bold rounded-xl transition-all shadow-xl shadow-emerald-600/20 disabled:opacity-30 disabled:cursor-not-allowed"
-                                    >
-                                        <Lock className="w-4 h-4" /> Cerrar y Notificar
-                                    </button>
-                                    <button 
-                                        onClick={() => setShowBatchAdjustmentModal(true)} 
-                                        disabled={!selectedCas} 
-                                        className="w-full flex items-center justify-center gap-2 p-4 bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 text-sm font-bold rounded-xl transition-all disabled:opacity-30"
-                                    >
-                                        <Activity className="w-4 h-4" /> Ajuste Masivo
-                                    </button>
-
-                                    <button 
-                                        onClick={() => setShowBatchDiscountModal(true)} 
-                                        disabled={!selectedCas} 
-                                        className="w-full flex items-center justify-center gap-2 p-4 bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 text-sm font-bold rounded-xl transition-all disabled:opacity-30"
-                                    >
-                                        <AlertTriangle className="w-4 h-4" /> Descuento Masivo
-                                    </button>
+                                    {hasPermission('val.valuations.export') && (
+                                        <button
+                                            onClick={handleExportExcel}
+                                            disabled={!selectedCas || tickets.length === 0}
+                                            className="w-full flex items-center justify-center gap-2 p-4 bg-background border border-border rounded-xl text-sm font-bold transition-all disabled:opacity-30 disabled:cursor-not-allowed group"
+                                        >
+                                            <Download className="w-4 h-4 text-primary group-hover:scale-110 transition-transform" /> Exportar Borrador
+                                        </button>
+                                    )}
+                                    {hasPermission('val.valuations.export') && (
+                                        <button
+                                            onClick={handlePreparePreValuationEmail}
+                                            disabled={!selectedCas || tickets.length === 0 || isClosing}
+                                            className={cn(
+                                                "w-full flex items-center justify-center gap-2 p-4 border rounded-xl text-sm font-bold transition-all disabled:opacity-30 disabled:cursor-not-allowed group",
+                                                isClosing ? "bg-indigo-50 border-indigo-300 text-indigo-700" : "bg-background border-border hover:bg-indigo-50 hover:border-indigo-200"
+                                            )}
+                                        >
+                                            {isClosing ? (
+                                                <Loader2 className="w-4 h-4 animate-spin" />
+                                            ) : (
+                                                <Mail className="w-4 h-4 text-indigo-600 group-hover:scale-110 transition-transform" />
+                                            )}
+                                            {isClosing ? "Guardando Borrador..." : "Enviar Pre-Valorización"}
+                                        </button>
+                                    )}
+                                    {hasPermission('val.valuations.close') && (
+                                        <button
+                                            onClick={() => setShowCloseModal(true)}
+                                            disabled={!selectedCas || tickets.length === 0}
+                                            className="w-full flex items-center justify-center gap-2 p-4 bg-gradient-to-r from-emerald-600 to-emerald-700 text-white hover:opacity-90 text-sm font-bold rounded-xl transition-all shadow-xl shadow-emerald-600/20 disabled:opacity-30 disabled:cursor-not-allowed"
+                                        >
+                                            <Lock className="w-4 h-4" /> Cerrar y Notificar
+                                        </button>
+                                    )}
+                                    {hasPermission('val.valuations.edit') && (
+                                        <button
+                                            onClick={() => setShowBatchAdjustmentModal(true)}
+                                            disabled={!selectedCas}
+                                            className="w-full flex items-center justify-center gap-2 p-4 bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 text-sm font-bold rounded-xl transition-all disabled:opacity-30"
+                                        >
+                                            <Activity className="w-4 h-4" /> Ajuste Masivo
+                                        </button>
+                                    )}
+                                    {hasPermission('val.valuations.edit') && (
+                                        <button
+                                            onClick={() => setShowBatchDiscountModal(true)}
+                                            disabled={!selectedCas}
+                                            className="w-full flex items-center justify-center gap-2 p-4 bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 text-sm font-bold rounded-xl transition-all disabled:opacity-30"
+                                        >
+                                            <AlertTriangle className="w-4 h-4" /> Descuento Masivo
+                                        </button>
+                                    )}
                                 </div>
                             </div>
                         </div>
@@ -2019,23 +2032,31 @@ export default function ValuationsPage() {
                                                                                                         (ticket.DiasDiferencia || 0) > diasMaxCierre ? (
                                                                                                             <span className="text-[10px] font-bold text-red-500 italic">Fuera de tiempo</span>
                                                                                                         ) : (
-                                                                                                            <button 
-                                                                                                                onClick={() => handleOpenMaterialModal(ticket)} 
-                                                                                                                className="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-[9px] font-black hover:scale-105 active:scale-95 transition-all shadow-md shadow-indigo-600/20 flex items-center gap-1.5"
-                                                                                                            >
-                                                                                                                <Package className="w-3 h-3" /> Registrar Prod.
-                                                                                                            </button>
+                                                                                                            hasPermission('val.valuations.edit') ? (
+                                                                                                                <button
+                                                                                                                    onClick={() => handleOpenMaterialModal(ticket)}
+                                                                                                                    className="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-[9px] font-black hover:scale-105 active:scale-95 transition-all shadow-md shadow-indigo-600/20 flex items-center gap-1.5"
+                                                                                                                >
+                                                                                                                    <Package className="w-3 h-3" /> Registrar Prod.
+                                                                                                                </button>
+                                                                                                            ) : (
+                                                                                                                <span className="text-[10px] font-bold text-muted-foreground/40 italic">Sin acceso</span>
+                                                                                                            )
                                                                                                         )
                                                                                                     ) : ticket.TarifaBase === 0 ? (
                                                                                                         (ticket.DiasDiferencia || 0) > diasMaxCierre ? (
                                                                                                             <span className="text-[10px] font-bold text-red-500 italic">Fuera de tiempo (S/ 0.00)</span>
                                                                                                         ) : (
-                                                                                                            <button 
-                                                                                                                onClick={() => handleOpenTarifarioModal(ticket)} 
-                                                                                                                className="px-3 py-1.5 bg-amber-500 text-white rounded-lg text-[9px] font-black hover:scale-105 active:scale-95 transition-all shadow-md shadow-amber-500/20"
-                                                                                                            >
-                                                                                                                Vincular Tarifa
-                                                                                                            </button>
+                                                                                                            hasPermission('val.valuations.edit') ? (
+                                                                                                                <button
+                                                                                                                    onClick={() => handleOpenTarifarioModal(ticket)}
+                                                                                                                    className="px-3 py-1.5 bg-amber-500 text-white rounded-lg text-[9px] font-black hover:scale-105 active:scale-95 transition-all shadow-md shadow-amber-500/20"
+                                                                                                                >
+                                                                                                                    Vincular Tarifa
+                                                                                                                </button>
+                                                                                                            ) : (
+                                                                                                                <span className="text-[10px] font-bold text-muted-foreground/40 italic">Sin acceso</span>
+                                                                                                            )
                                                                                                         )
                                                                                                     ) : (
                                                                                                         <div className="flex flex-col items-end">
@@ -2113,61 +2134,69 @@ export default function ValuationsPage() {
                                                                                                                                             <span className="text-xs font-bold text-foreground truncate">{item.Motivo}</span>
                                                                                                                                             <span className="text-[10px] font-bold text-emerald-600">S/ {Number(item.Importe).toLocaleString('es-PE', { minimumFractionDigits: 2 })}</span>
                                                                                                                                         </div>
-                                                                                                                                        <button
-                                                                                                                                            onClick={(e) => {
-                                                                                                                                                e.stopPropagation();
-                                                                                                                                                setShowPenaltyModal({
-                                                                                                                                                    show: true,
-                                                                                                                                                    type: 'additional',
-                                                                                                                                                    ticket: ticket.Ticket,
-                                                                                                                                                    existingData: item as unknown as Penalty
-                                                                                                                                                });
-                                                                                                                                            }}
-                                                                                                                                            className="p-1.5 text-indigo-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all opacity-0 group-hover/item:opacity-100 ml-2 flex-shrink-0"
-                                                                                                                                            title="Editar adicional"
-                                                                                                                                        >
-                                                                                                                                            <Pencil className="w-3.5 h-3.5" />
-                                                                                                                                        </button>
-                                                                                                                                        <button
-                                                                                                                                            onClick={async (e) => {
-                                                                                                                                                e.stopPropagation();
-                                                                                                                                                try {
-                                                                                                                                                    await ApiClient.request(`/adicionales/${item.Id}`, { method: 'DELETE' });
-                                                                                                                                                    setAdicionalesPopover(prev => prev ? { ...prev, items: prev.items.filter(i => i.Id !== item.Id) } : null);
-                                                                                                                                                    handleFetchValuation();
-                                                                                                                                                } catch (err) { console.error(err); }
-                                                                                                                                            }}
-                                                                                                                                            className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover/item:opacity-100 flex-shrink-0"
-                                                                                                                                            title="Eliminar adicional"
-                                                                                                                                        >
-                                                                                                                                            <Trash2 className="w-3.5 h-3.5" />
-                                                                                                                                        </button>
+                                                                                                                                        {hasPermission('val.valuations.edit') && (
+                                                                                                                                            <button
+                                                                                                                                                onClick={(e) => {
+                                                                                                                                                    e.stopPropagation();
+                                                                                                                                                    setShowPenaltyModal({
+                                                                                                                                                        show: true,
+                                                                                                                                                        type: 'additional',
+                                                                                                                                                        ticket: ticket.Ticket,
+                                                                                                                                                        existingData: item as unknown as Penalty
+                                                                                                                                                    });
+                                                                                                                                                }}
+                                                                                                                                                className="p-1.5 text-indigo-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all opacity-0 group-hover/item:opacity-100 ml-2 flex-shrink-0"
+                                                                                                                                                title="Editar adicional"
+                                                                                                                                            >
+                                                                                                                                                <Pencil className="w-3.5 h-3.5" />
+                                                                                                                                            </button>
+                                                                                                                                        )}
+                                                                                                                                        {hasPermission('val.valuations.edit') && (
+                                                                                                                                            <button
+                                                                                                                                                onClick={async (e) => {
+                                                                                                                                                    e.stopPropagation();
+                                                                                                                                                    try {
+                                                                                                                                                        await ApiClient.request(`/adicionales/${item.Id}`, { method: 'DELETE' });
+                                                                                                                                                        setAdicionalesPopover(prev => prev ? { ...prev, items: prev.items.filter(i => i.Id !== item.Id) } : null);
+                                                                                                                                                        handleFetchValuation();
+                                                                                                                                                    } catch (err) { console.error(err); }
+                                                                                                                                                }}
+                                                                                                                                                className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover/item:opacity-100 flex-shrink-0"
+                                                                                                                                                title="Eliminar adicional"
+                                                                                                                                            >
+                                                                                                                                                <Trash2 className="w-3.5 h-3.5" />
+                                                                                                                                            </button>
+                                                                                                                                        )}
                                                                                                                                     </div>
                                                                                                                                 ))}
                                                                                                                             </div>
                                                                                                                         )}
                                                                                                                     </div>
-                                                                                                                    <div className="p-2 border-t border-border/30">
-                                                                                                                        <button
-                                                                                                                            onClick={() => {
-                                                                                                                                setAdicionalesPopover(null);
-                                                                                                                                setShowPenaltyModal({ show: true, type: 'additional', ticket: ticket.Ticket, date: ticket.Fecha.split('T')[0] });
-                                                                                                                            }}
-                                                                                                                            className="w-full flex items-center justify-center gap-2 py-2.5 bg-emerald-600 text-white rounded-xl text-[11px] font-black hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-600/20"
-                                                                                                                        >
-                                                                                                                            <PlusCircle className="w-4 h-4" /> Agregar pago adicional
-                                                                                                                        </button>
-                                                                                                                    </div>
+                                                                                                                    {hasPermission('val.valuations.edit') && (
+                                                                                                                        <div className="p-2 border-t border-border/30">
+                                                                                                                            <button
+                                                                                                                                onClick={() => {
+                                                                                                                                    setAdicionalesPopover(null);
+                                                                                                                                    setShowPenaltyModal({ show: true, type: 'additional', ticket: ticket.Ticket, date: ticket.Fecha.split('T')[0] });
+                                                                                                                                }}
+                                                                                                                                className="w-full flex items-center justify-center gap-2 py-2.5 bg-emerald-600 text-white rounded-xl text-[11px] font-black hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-600/20"
+                                                                                                                            >
+                                                                                                                                <PlusCircle className="w-4 h-4" /> Agregar pago adicional
+                                                                                                                            </button>
+                                                                                                                        </div>
+                                                                                                                    )}
                                                                                                                 </div>
                                                                                                             )}
                                                                                                         </div>
-                                                                                                        <button 
-                                                                                                            onClick={() => setShowPenaltyModal({ show: true, type: 'penalty', ticket: ticket.Ticket, date: ticket.Fecha.split('T')[0] })} 
-                                                                                                            className="p-2 bg-red-500/10 text-red-600 rounded-lg hover:bg-red-600 hover:text-white transition-all opacity-0 group-hover/row:opacity-100 shadow-sm flex items-center justify-center" 
-                                                                                                            title="Aplicar Penalidad"
-                                                                                                        >
-                                                                                                            <AlertTriangle className="w-3.5 h-3.5" />
-                                                                                                        </button>
+                                                                                                        {hasPermission('val.penalties.create') && (
+                                                                                                            <button
+                                                                                                                onClick={() => setShowPenaltyModal({ show: true, type: 'penalty', ticket: ticket.Ticket, date: ticket.Fecha.split('T')[0] })}
+                                                                                                                className="p-2 bg-red-500/10 text-red-600 rounded-lg hover:bg-red-600 hover:text-white transition-all opacity-0 group-hover/row:opacity-100 shadow-sm flex items-center justify-center"
+                                                                                                                title="Aplicar Penalidad"
+                                                                                                            >
+                                                                                                                <AlertTriangle className="w-3.5 h-3.5" />
+                                                                                                            </button>
+                                                                                                        )}
                                                                                                     </div>
                                                                                                 </td>
                                                                                             </tr>
@@ -2239,8 +2268,8 @@ export default function ValuationsPage() {
                                                                 <span className="text-[9px] font-black text-muted-foreground opacity-30 italic">Débito CAS</span>
                                                             </div>
                                                             <div className="flex items-center gap-2">
-                                                                {!isAnulled && (
-                                                                    <button 
+                                                                {!isAnulled && hasPermission('val.penalties.create') && (
+                                                                    <button
                                                                         onClick={() => setShowPenaltyModal({ show: true, type: 'penalty', existingData: penalty })}
                                                                         className="p-2 bg-indigo-50 text-indigo-600 border border-indigo-100 rounded-xl hover:bg-indigo-600 hover:text-white transition-all shadow-sm"
                                                                         title="Editar penalidad"
@@ -2248,18 +2277,20 @@ export default function ValuationsPage() {
                                                                         <Pencil className="w-3.5 h-3.5" />
                                                                     </button>
                                                                 )}
-                                                                <button 
-                                                                    onClick={() => handleTogglePenaltyStatus(penalty)}
-                                                                    className={cn(
-                                                                        "px-4 py-1.5 rounded-xl text-[10px] font-black transition-all flex items-center gap-1.5 shadow-sm border",
-                                                                        isAnulled 
-                                                                            ? "bg-emerald-500 text-white border-emerald-600 hover:bg-emerald-600 shadow-emerald-500/20" 
-                                                                            : "bg-white text-red-600 border-red-100 hover:bg-red-50 hover:border-red-200"
-                                                                    )}
-                                                                >
-                                                                    {isAnulled ? <CheckCircle2 className="w-3.5 h-3.5" /> : <X className="w-3.5 h-3.5" />}
-                                                                    {isAnulled ? 'Habilitar' : 'Anular'}
-                                                                </button>
+                                                                {hasPermission('val.penalties.create') && (
+                                                                    <button
+                                                                        onClick={() => handleTogglePenaltyStatus(penalty)}
+                                                                        className={cn(
+                                                                            "px-4 py-1.5 rounded-xl text-[10px] font-black transition-all flex items-center gap-1.5 shadow-sm border",
+                                                                            isAnulled
+                                                                                ? "bg-emerald-500 text-white border-emerald-600 hover:bg-emerald-600 shadow-emerald-500/20"
+                                                                                : "bg-white text-red-600 border-red-100 hover:bg-red-50 hover:border-red-200"
+                                                                        )}
+                                                                    >
+                                                                        {isAnulled ? <CheckCircle2 className="w-3.5 h-3.5" /> : <X className="w-3.5 h-3.5" />}
+                                                                        {isAnulled ? 'Habilitar' : 'Anular'}
+                                                                    </button>
+                                                                )}
                                                             </div>
                                                         </div>
                                                     </div>
@@ -2318,15 +2349,17 @@ export default function ValuationsPage() {
                                                 <p className="text-2xl font-data text-emerald-600">S/ {(closure.Total_Final as number).toLocaleString('es-PE', { minimumFractionDigits: 2 })}</p>
                                             </div>
                                             <div className="flex gap-2">
-                                                <button
-                                                    onClick={() => handleReopenFortnight(closure.IdCierre as string, closure.Codigo_Valorizacion as string)}
-                                                    className="p-3 bg-red-50 text-red-600 rounded-xl hover:bg-red-600 hover:text-white transition-all shadow-sm border border-red-100"
-                                                    title="Reabrir Quincena"
-                                                >
-                                                    <RotateCcw className="w-5 h-5" />
-                                                </button>
-                                                {closure.Estado === 'BORRADOR' && (
-                                                    <button 
+                                                {hasPermission('val.valuations.reopen') && (
+                                                    <button
+                                                        onClick={() => handleReopenFortnight(closure.IdCierre as string, closure.Codigo_Valorizacion as string)}
+                                                        className="p-3 bg-red-50 text-red-600 rounded-xl hover:bg-red-600 hover:text-white transition-all shadow-sm border border-red-100"
+                                                        title="Reabrir Quincena"
+                                                    >
+                                                        <RotateCcw className="w-5 h-5" />
+                                                    </button>
+                                                )}
+                                                {closure.Estado === 'BORRADOR' && hasPermission('val.valuations.close') && (
+                                                    <button
                                                         onClick={() => handleFinalizeDraft(closure)}
                                                         className="p-3 bg-emerald-50 text-emerald-600 rounded-xl hover:bg-emerald-600 hover:text-white transition-all shadow-sm border border-emerald-100"
                                                         title="Cerrar Definitivamente"
@@ -2334,7 +2367,7 @@ export default function ValuationsPage() {
                                                         <Lock className="w-5 h-5" />
                                                     </button>
                                                 )}
-                                                <button 
+                                                <button
                                                     onClick={() => handleViewClosureDetails(closure)}
                                                     className="p-3 bg-muted rounded-xl hover:bg-primary hover:text-white transition-all shadow-sm"
                                                 >
@@ -2385,33 +2418,39 @@ export default function ValuationsPage() {
                                     )}
                                 </div>
                                 
-                                <button 
-                                    onClick={handleExportClosureExcel}
-                                    className="flex items-center gap-2 px-5 py-2.5 bg-card border border-cb-border text-cb-text-primary rounded-xl text-xs font-black hover:bg-muted transition-all active:scale-95"
-                                >
-                                    <Download className="w-4 h-4" /> Excel
-                                </button>
+                                {hasPermission('val.valuations.export') && (
+                                    <button
+                                        onClick={handleExportClosureExcel}
+                                        className="flex items-center gap-2 px-5 py-2.5 bg-card border border-cb-border text-cb-text-primary rounded-xl text-xs font-black hover:bg-muted transition-all active:scale-95"
+                                    >
+                                        <Download className="w-4 h-4" /> Excel
+                                    </button>
+                                )}
 
-                                <button 
-                                    onClick={handlePrepareClosureEmail}
-                                    className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white rounded-xl text-xs font-black hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-600/20 active:scale-95"
-                                >
-                                    <Mail className="w-4 h-4" /> Enviar Reporte
-                                </button>
+                                {hasPermission('val.valuations.export') && (
+                                    <button
+                                        onClick={handlePrepareClosureEmail}
+                                        className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white rounded-xl text-xs font-black hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-600/20 active:scale-95"
+                                    >
+                                        <Mail className="w-4 h-4" /> Enviar Reporte
+                                    </button>
+                                )}
 
-                                <button 
-                                    onClick={() => {
-                                        if (selectedClosure) {
-                                            const id = selectedClosure.IdCierre as string;
-                                            const code = selectedClosure.Codigo_Valorizacion as string;
-                                            setSelectedClosure(null);
-                                            handleReopenFortnight(id, code);
-                                        }
-                                    }}
-                                    className="flex items-center gap-2 px-5 py-2.5 bg-red-50 text-red-600 border border-red-100 rounded-xl text-xs font-black hover:bg-red-600 hover:text-white transition-all active:scale-95"
-                                >
-                                    <RotateCcw className="w-4 h-4" /> Reabrir
-                                </button>
+                                {hasPermission('val.valuations.reopen') && (
+                                    <button
+                                        onClick={() => {
+                                            if (selectedClosure) {
+                                                const id = selectedClosure.IdCierre as string;
+                                                const code = selectedClosure.Codigo_Valorizacion as string;
+                                                setSelectedClosure(null);
+                                                handleReopenFortnight(id, code);
+                                            }
+                                        }}
+                                        className="flex items-center gap-2 px-5 py-2.5 bg-red-50 text-red-600 border border-red-100 rounded-xl text-xs font-black hover:bg-red-600 hover:text-white transition-all active:scale-95"
+                                    >
+                                        <RotateCcw className="w-4 h-4" /> Reabrir
+                                    </button>
+                                )}
                                 
                                 <button onClick={() => { setSelectedClosure(null); setDetailSearchQuery(''); setDetailActiveTab('services'); }} className="p-2.5 hover:bg-red-50 hover:text-red-500 rounded-xl transition-all border border-transparent hover:border-red-100">
                                     <X className="w-5 h-5" />
@@ -2512,7 +2551,7 @@ export default function ValuationsPage() {
                                                     </span>
                                                 </td>
                                                 <td className="px-4 py-4 text-center">
-                                                    {det.Tipo === 'SERVICIO' && (
+                                                    {det.Tipo === 'SERVICIO' && hasPermission('val.penalties.create') && (
                                                         <button
                                                             onClick={() => setShowPenaltyModal({
                                                                 show: true,
