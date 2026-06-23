@@ -742,7 +742,7 @@ export default function ValuationsPage() {
         setLoadingDetails(true);
         try {
             const data = await ApiClient.request(`/valuations/details/${closure.IdCierre}`);
-            setClosureDetails(data);
+            setClosureDetails(Array.isArray(data) ? data : (data.tickets ?? []));
         } catch (error) {
             console.error("Error fetching closure details:", error);
             alert({ message: "No se pudo cargar el detalle del cierre." });
