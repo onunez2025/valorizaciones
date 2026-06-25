@@ -121,10 +121,16 @@ const limiter = rateLimit({
 app.use(limiter);
 
 // Auth rate limiter — starts with safe defaults, overwritten from EBM.AppSessionConfig at startup
+// keyGenerator: IP + username — cada usuario tiene su propio contador (evita que IP compartida de oficina bloquee a todos)
+const authKeyGenerator = (req: Request) => {
+    const username = String(req.body?.username || '').toLowerCase().trim().substring(0, 50);
+    return `${req.ip}:${username}`;
+};
 let authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 10,
     skipSuccessfulRequests: true,
+    keyGenerator: authKeyGenerator,
     message: { error: 'Too many login attempts, please try again later.' },
     store: new RedisStore({ sendCommand: (...args: string[]) => (getRedisClient() as any).call(...args) as any, prefix: 'rl:val:auth:' }), // eslint-disable-line @typescript-eslint/no-explicit-any
 });
@@ -2820,6 +2826,7 @@ app.listen(port, () => {
             windowMs: cfg.rateLimitWindowMinutes * 60 * 1000,
             max: cfg.rateLimitMaxAttempts,
             skipSuccessfulRequests: true,
+            keyGenerator: authKeyGenerator,
             message: { error: `Too many login attempts, please try again after ${cfg.rateLimitWindowMinutes} minutes.` },
             store: new RedisStore({ sendCommand: (...args: string[]) => (getRedisClient() as any).call(...args) as any, prefix: 'rl:val:auth:' }), // eslint-disable-line @typescript-eslint/no-explicit-any
         });
