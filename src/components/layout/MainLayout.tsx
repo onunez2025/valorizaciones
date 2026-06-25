@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Menu, X, Sun, Moon, Settings } from 'lucide-react';
+import { Menu, X, Sun, Moon, Settings, Clock } from 'lucide-react';
+import { useInactivityTimer } from '../../hooks/useInactivityTimer';
 import { NavLink, Navigate, Outlet } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { AppSwitcher } from './AppSwitcher';
@@ -10,7 +11,7 @@ import { cn } from '../../utils/cn';
 import { SIATC_THEME } from '../../utils/siatc-theme';
 
 export function MainLayout() {
-    const { isAuthenticated, isLoading, user, hasPermission } = useAuth();
+    const { isAuthenticated, isLoading, user, hasPermission, logout, sessionConfig } = useAuth();
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const { theme, setTheme } = useTheme();
     const appConfig = useAppConfig();
@@ -19,6 +20,13 @@ export function MainLayout() {
     const toggleTheme = () => {
         setTheme(theme === 'dark' ? 'light' : 'dark');
     };
+
+    const { showWarning, remainingSeconds, resetTimer } = useInactivityTimer({
+        timeoutMinutes: sessionConfig?.timeoutMinutes ?? 30,
+        warningMinutes: sessionConfig?.warningMinutes ?? 5,
+        onTimeout: () => { logout(); window.location.href = '/login?expired=true'; },
+        enabled: !!user,
+    });
 
     if (isLoading) {
         return (
@@ -168,6 +176,39 @@ export function MainLayout() {
                 <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/5 blur-[120px] rounded-full -translate-y-1/2 translate-x-1/2 -z-10 pointer-events-none" />
                 <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-blue-500/5 blur-[100px] rounded-full translate-y-1/2 -translate-x-1/2 -z-10 pointer-events-none" />
             </div>
+
+            {/* Session Warning Modal */}
+            {showWarning && (
+                <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50">
+                    <div className="bg-card border border-border rounded-xl shadow-xl p-6 max-w-sm w-full mx-4 space-y-4">
+                        <div className="flex items-center gap-3 text-amber-500">
+                            <Clock className="w-6 h-6 shrink-0" />
+                            <h3 className="text-lg font-semibold">Sesión a punto de expirar</h3>
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                            Tu sesión expirará en{' '}
+                            <span className="font-bold text-foreground">
+                                {String(Math.floor(remainingSeconds / 60)).padStart(2, '0')}:{String(remainingSeconds % 60).padStart(2, '0')}
+                            </span>{' '}
+                            por inactividad.
+                        </p>
+                        <div className="flex gap-3">
+                            <button
+                                onClick={resetTimer}
+                                className="flex-1 bg-primary text-primary-foreground rounded-lg py-2 text-sm font-medium hover:bg-primary/90 transition-colors"
+                            >
+                                Continuar sesión
+                            </button>
+                            <button
+                                onClick={logout}
+                                className="flex-1 bg-secondary text-secondary-foreground rounded-lg py-2 text-sm font-medium hover:bg-secondary/80 transition-colors"
+                            >
+                                Cerrar sesión
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useContext, createContext, useCallback } from 'react';
-import type { User, Permission } from '../types';
+import type { User, Permission, SessionConfig } from '../types';
 import { StorageService } from '../services/storageService';
 import { API_BASE_URL } from '../services/apiClient';
 
 interface AuthContextType {
     user: User | null;
-    login: (user: User, token?: string, remember?: boolean) => void;
+    sessionConfig: SessionConfig | null;
+    login: (user: User, token?: string, remember?: boolean, sessionConfig?: SessionConfig) => void;
     logout: () => void;
     isAuthenticated: boolean;
     isLoading: boolean;
@@ -14,6 +15,7 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType>({
     user: null,
+    sessionConfig: null,
     login: () => { },
     logout: () => { },
     isAuthenticated: false,
@@ -24,17 +26,22 @@ const AuthContext = createContext<AuthContextType>({
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const [user, setUser] = useState<User | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [sessionConfig, setSessionConfig] = useState<SessionConfig | null>(() => {
+        try { const s = localStorage.getItem('session_config'); return s ? JSON.parse(s) : null; } catch { return null; }
+    });
 
     const logout = useCallback(() => {
         setUser(null);
+        setSessionConfig(null);
+        localStorage.removeItem('session_config');
         StorageService.remove('current_user');
         StorageService.remove('auth_token');
-        
+
         // Clear shared cookie
         const isProd = window.location.hostname.endsWith('.siatc.cloud');
         const cookieDomain = isProd ? '; domain=.siatc.cloud' : '';
         document.cookie = `token=; path=/${cookieDomain}; max-age=0; SameSite=Lax; Secure=${isProd ? 'true' : 'false'}`;
-        
+
         window.location.href = '/login';
     }, []);
 
@@ -126,47 +133,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         validateSession();
     }, [logout]);
 
-    // --- Inactivity Logout Logic (5 Minutes) ---
-    useEffect(() => {
-        if (!user) return;
-
-        let timeoutId: ReturnType<typeof setTimeout>;
-
-        const resetTimer = () => {
-            timeoutId = setTimeout(() => {
-                logout();
-                window.location.href = '/login?expired=true';
-            }, 5 * 60 * 1000); // 5 minutes
-        };
-
-        const activityEvents = ['mousemove', 'keydown', 'mousedown', 'touchstart', 'scroll'];
-        
-        const handleActivity = () => {
-            if (timeoutId) clearTimeout(timeoutId);
-            resetTimer();
-        };
-
-        activityEvents.forEach(event => {
-            window.addEventListener(event, handleActivity);
-        });
-
-        resetTimer();
-
-        return () => {
-            if (timeoutId) clearTimeout(timeoutId);
-            activityEvents.forEach(event => {
-                window.removeEventListener(event, handleActivity);
-            });
-        };
-    }, [user, logout]);
-    // ------------------------------------------
-
-    const login = useCallback((newUser: User, token?: string, remember: boolean = true) => {
+    const login = useCallback((newUser: User, token?: string, remember: boolean = true, newSessionConfig?: SessionConfig) => {
         setUser(newUser);
         StorageService.setCurrentUser(newUser, remember);
+        if (newSessionConfig) {
+            setSessionConfig(newSessionConfig);
+            localStorage.setItem('session_config', JSON.stringify(newSessionConfig));
+        }
         if (token) {
             StorageService.setToken(token, remember);
-            
+
             // Set shared cookie for SSO across subdomains
             const isProd = window.location.hostname.endsWith('.siatc.cloud');
             const cookieDomain = isProd ? '; domain=.siatc.cloud' : '';
@@ -181,7 +157,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     };
 
     return (
-        <AuthContext.Provider value={{ user, login, logout, isAuthenticated: !!user, isLoading, hasPermission }}>
+        <AuthContext.Provider value={{ user, sessionConfig, login, logout, isAuthenticated: !!user, isLoading, hasPermission }}>
             {children}
         </AuthContext.Provider>
     );

@@ -41,7 +41,7 @@ export default function LoginPage() {
             }
 
             const data = await response.json();
-            login(data.user, data.token);
+            login(data.user, data.token, undefined, data.sessionConfig);
 
             if (data.user.requires_password_change) {
                 navigate('/force-change-password');

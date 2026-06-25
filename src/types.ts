@@ -1,3 +1,8 @@
+export interface SessionConfig {
+  timeoutMinutes: number;
+  warningMinutes: number;
+}
+
 export type Permission =
   | 'val.dashboard.view'
   | 'val.valuations.view'
