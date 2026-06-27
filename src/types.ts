@@ -36,6 +36,8 @@ export interface User {
   requires_password_change?: boolean;
   avatar_url?: string;
   apps?: string;
+  cas_id?: string | null;
+  cas_name?: string | null;
 }
 
 export interface CAS {
