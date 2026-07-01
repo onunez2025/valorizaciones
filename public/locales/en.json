@@ -1,0 +1,23 @@
+{
+  "common": {
+    "welcome": "Welcome",
+    "logout": "Log Out",
+    "loading": "Authenticating..."
+  },
+  "auth": {
+    "subtitle": "Enter your credentials to access the system.",
+    "username": "Username",
+    "password": "Password",
+    "rememberMe": "Remember me",
+    "forgotPassword": "Forgot your password?",
+    "forgotPasswordMessage": "Please contact your system administrator for a new password.",
+    "loginButton": "Log In",
+    "sessionExpired": {
+      "title": "Session expired",
+      "message": "For security reasons, your session has ended. Please enter your credentials again."
+    },
+    "errors": {
+      "invalid": "Invalid credentials"
+    }
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "common": {
+    "welcome": "Bienvenido",
+    "logout": "Cerrar Sesión",
+    "loading": "Autenticando..."
+  },
+  "auth": {
+    "subtitle": "Ingresa tus credenciales para acceder al sistema.",
+    "username": "Usuario",
+    "password": "Contraseña",
+    "rememberMe": "Recordarme",
+    "forgotPassword": "¿Olvidaste tu contraseña?",
+    "forgotPasswordMessage": "Por favor, contacta a tu administrador de sistemas para una nueva contraseña.",
+    "loginButton": "Iniciar Sesión",
+    "sessionExpired": {
+      "title": "Sesión expirada",
+      "message": "Por seguridad, tu sesión ha finalizado. Por favor ingresa tus credenciales de nuevo."
+    },
+    "errors": {
+      "invalid": "Credenciales inválidas"
+    }
+  }
+}

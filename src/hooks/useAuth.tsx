@@ -33,6 +33,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const logout = useCallback(() => {
         const token = StorageService.getToken();
         if (token) {
+            // blacklistToken() is called server-side inside POST /api/auth/logout (server.ts)
             fetch(`${API_BASE_URL}/auth/logout`, {
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${token}` },
