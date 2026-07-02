@@ -74,13 +74,17 @@ app.set('trust proxy', 1);
 let _redis = null;
 function getRedisClient() {
     if (!_redis) {
-        _redis = new Redis({
+        const redisOptions = {
             host: process.env.REDIS_HOST || 'localhost',
             port: parseInt(process.env.REDIS_PORT || '6379'),
             password: process.env.REDIS_PASSWORD,
             lazyConnect: true,
             retryStrategy: (times) => Math.min(times * 100, 3000),
-        });
+        };
+        if (process.env.REDIS_USERNAME) {
+            redisOptions.username = process.env.REDIS_USERNAME;
+        }
+        _redis = new Redis(redisOptions);
         _redis.on('error', (err) => console.error('[Redis] Error:', err.message));
     }
     return _redis;
@@ -214,7 +218,9 @@ async function blacklistToken(token, exp) {
     }
 }
 // --- SECURITY HELPERS (ver CLAUDE.md) ---
-const safeError = (err) => err instanceof Error ? `${err.message}\n${err.stack}` : String(err);
+const safeError = (err) => process.env.NODE_ENV === 'production'
+    ? 'Error interno del servidor'
+    : (err instanceof Error ? err.message : String(err));
 const sanitizeLog = (val, maxLen = 200) => String(val ?? '').replace(/[\r\n\t\x00-\x1F\x7F]/g, ' ').slice(0, maxLen); // eslint-disable-line no-control-regex
 const verifyToken = async (req, res, next) => {
     const token = req.headers.authorization?.split(' ')[1];

@@ -81,13 +81,17 @@ app.set('trust proxy', 1);
 let _redis: Redis | null = null;
 function getRedisClient(): Redis {
     if (!_redis) {
-        _redis = new Redis({
+        const redisOptions: any = {
             host: process.env.REDIS_HOST || 'localhost',
             port: parseInt(process.env.REDIS_PORT || '6379'),
             password: process.env.REDIS_PASSWORD,
             lazyConnect: true,
             retryStrategy: (times: number) => Math.min(times * 100, 3000),
-        });
+        };
+        if (process.env.REDIS_USERNAME) {
+            redisOptions.username = process.env.REDIS_USERNAME;
+        }
+        _redis = new Redis(redisOptions);
         _redis.on('error', (err: Error) => console.error('[Redis] Error:', err.message));
     }
     return _redis;
@@ -238,7 +242,9 @@ async function blacklistToken(token: string, exp: number): Promise<void> {
 
 // --- SECURITY HELPERS (ver CLAUDE.md) ---
 const safeError = (err: unknown): string =>
-    err instanceof Error ? `${err.message}\n${err.stack}` : String(err);
+    process.env.NODE_ENV === 'production'
+        ? 'Error interno del servidor'
+        : (err instanceof Error ? err.message : String(err));
 
 const sanitizeLog = (val: unknown, maxLen = 200): string =>
     String(val ?? '').replace(/[\r\n\t\x00-\x1F\x7F]/g, ' ').slice(0, maxLen); // eslint-disable-line no-control-regex
