@@ -81,6 +81,7 @@ app.set('trust proxy', 1);
 let _redis: Redis | null = null;
 function getRedisClient(): Redis {
     if (!_redis) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const redisOptions: any = {
             host: process.env.REDIS_HOST || 'localhost',
             port: parseInt(process.env.REDIS_PORT || '6379'),
