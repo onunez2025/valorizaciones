@@ -1,7 +1,7 @@
 import { NavLink, Outlet, useLocation, Navigate } from 'react-router-dom';
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Users, Shield, Terminal, ChevronRight, Settings2, MapPin, Briefcase } from 'lucide-react';
+import { Terminal, ChevronRight, Settings2, MapPin, Briefcase } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { useAuth } from '../../hooks/useAuth';
 import { SIATC_THEME } from '../../utils/siatc-theme';
@@ -11,14 +11,10 @@ export default function ConfigLayout() {
     const { hasPermission } = useAuth();
     const location = useLocation();
 
-    const consoleUrl = import.meta.env.VITE_CONSOLE_URL || (import.meta.env.PROD ? 'https://console.siatc.cloud' : 'http://localhost:3008');
-
     const configItems = [
         { to: '/config/settings', icon: Settings2, label: t('config.nav.settings'), permission: 'val.config.users' as const },
         { to: '/config/institucional', icon: Briefcase, label: t('config.nav.institutional'), permission: 'val.config.users' as const },
         { to: '/config/distritos', icon: MapPin, label: t('config.nav.districts'), permission: 'val.config.users' as const },
-        { to: `${consoleUrl}/users`, icon: Users, label: t('config.nav.users'), permission: 'val.config.users' as const, isExternal: true },
-        { to: `${consoleUrl}/roles`, icon: Shield, label: t('config.nav.roles'), permission: 'val.config.roles' as const, isExternal: true },
         { to: '/config/audit', icon: Terminal, label: t('config.nav.audit'), permission: 'val.config.audit' as const },
     ];
 
