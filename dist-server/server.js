@@ -110,13 +110,21 @@ const limiter = rateLimit({
     store: new RedisStore({ sendCommand: (...args) => getRedisClient().call(...args), prefix: 'rl:val:' }), // eslint-disable-line @typescript-eslint/no-explicit-any
 });
 app.use(limiter);
-const authLimiter = rateLimit({
-    windowMs: 60 * 60 * 1000,
-    max: 50,
-    message: { error: 'Too many login attempts, please try again after an hour.' },
+// Auth rate limiter — starts with safe defaults, overwritten from EBM.AppSessionConfig at startup
+// keyGenerator: IP + username — cada usuario tiene su propio contador (evita que IP compartida de oficina bloquee a todos)
+const authKeyGenerator = (req) => {
+    const username = String(req.body?.username || '').toLowerCase().trim().substring(0, 50);
+    return `${req.ip}:${username}`;
+};
+let authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 10,
+    skipSuccessfulRequests: true,
+    keyGenerator: authKeyGenerator,
+    message: { error: 'Too many login attempts, please try again later.' },
     store: new RedisStore({ sendCommand: (...args) => getRedisClient().call(...args), prefix: 'rl:val:auth:' }), // eslint-disable-line @typescript-eslint/no-explicit-any
 });
-app.use('/api/auth/login', authLimiter);
+app.use('/api/auth/login', (req, res, next) => authLimiter(req, res, next));
 app.use(cors({
     origin: (origin, callback) => {
         if (process.env.NODE_ENV !== 'production')
@@ -206,9 +214,7 @@ async function blacklistToken(token, exp) {
     }
 }
 // --- SECURITY HELPERS (ver CLAUDE.md) ---
-const safeError = (err) => process.env.NODE_ENV === 'production'
-    ? 'Error interno del servidor'
-    : (err instanceof Error ? err.message : String(err));
+const safeError = (err) => err instanceof Error ? `${err.message}\n${err.stack}` : String(err);
 const sanitizeLog = (val, maxLen = 200) => String(val ?? '').replace(/[\r\n\t\x00-\x1F\x7F]/g, ' ').slice(0, maxLen); // eslint-disable-line no-control-regex
 const verifyToken = async (req, res, next) => {
     const token = req.headers.authorization?.split(' ')[1];
@@ -278,7 +284,8 @@ app.post('/api/auth/login', async (req, res) => {
         const db = await getDb();
         const result = await db.request().input('u', sql.NVarChar(sql.MAX), username).input('app', sql.NVarChar(sql.MAX), APP_IDENTIFIER).query(`
             SELECT u.*, r.Name as RoleName, m.Name as ManagementName,
-                uc.CASId as cas_id, TRIM(c.RUC) as cas_ruc
+                uc.CASId as cas_id, TRIM(c.RUC) as cas_ruc,
+                r.InactivityTimeoutMinutes as role_timeout, r.WarningBeforeMinutes as role_warning
             FROM EBM.Users u
             LEFT JOIN EBM.Roles r ON u.RoleId = r.Id
             LEFT JOIN EBM.Managements m ON u.ManagementId = m.Id
@@ -300,12 +307,18 @@ app.post('/api/auth/login', async (req, res) => {
         addInput(permsReqLogin, 'rid', sql.UniqueIdentifier, user.RoleId);
         addInput(permsReqLogin, 'app', sql.NVarChar(20), APP_IDENTIFIER);
         const perms = (await permsReqLogin.query("SELECT Permission FROM EBM.RolePermissions WHERE RoleId = @rid AND (Permission LIKE @app + '.%' OR Permission LIKE 'ebm.%')")).recordset.map(p => p.Permission);
+        const appCfgReq = db.request();
+        addInput(appCfgReq, 'appCode', sql.VarChar(20), APP_IDENTIFIER);
+        const appCfgResult = await appCfgReq.query('SELECT DefaultInactivityTimeoutMinutes, DefaultWarningBeforeMinutes FROM EBM.AppSessionConfig WHERE UPPER(AppCode) = UPPER(@appCode)');
+        const appCfg = appCfgResult.recordset[0];
+        const timeoutMinutes = user.role_timeout ?? appCfg?.DefaultInactivityTimeoutMinutes ?? 30;
+        const warningMinutes = user.role_warning ?? appCfg?.DefaultWarningBeforeMinutes ?? 2;
         const token = jwt.sign({ id: user.Id, username: user.Username, role: user.RoleName, perms, casId: user.cas_id || null, casRUC: user.cas_ruc || null }, JWT_SECRET, { expiresIn: '12h' });
         const ssoToken = jwt.sign({ id: user.Id, role: user.RoleName, role_name: user.RoleName, username: user.Username, apps: user.Apps || '', casId: user.cas_id || null }, JWT_SECRET, { expiresIn: '12h' });
         if (process.env.NODE_ENV === 'production') {
             res.cookie('token', ssoToken, { domain: '.siatc.cloud', maxAge: 12 * 60 * 60 * 1000, httpOnly: false, secure: true, sameSite: 'lax', path: '/' });
         }
-        res.json({ token, user: { id: user.Id, username: user.Username, full_name: user.FullName, email: user.Email, role_name: user.RoleName, management_id: user.ManagementId, management_name: user.ManagementName, avatar_url: user.AvatarUrl, permissions: perms, apps: user.Apps, requires_password_change: user.RequiresPasswordChange === 1 } });
+        res.json({ token, user: { id: user.Id, username: user.Username, full_name: user.FullName, email: user.Email, role_name: user.RoleName, management_id: user.ManagementId, management_name: user.ManagementName, avatar_url: user.AvatarUrl, permissions: perms, apps: user.Apps, requires_password_change: user.RequiresPasswordChange === 1 }, sessionConfig: { timeoutMinutes, warningMinutes } });
     }
     catch (err) {
         res.status(500).json({ error: safeError(err) });
@@ -2618,6 +2631,22 @@ async function fetchAppMeta() {
         console.warn('[AppConfig] Could not fetch app meta from DB:', safeError(err));
     }
 }
+async function fetchSessionConfig() {
+    try {
+        const db = await getDb();
+        const r = db.request();
+        addInput(r, 'code', sql.VarChar(20), APP_IDENTIFIER);
+        const result = await r.query('SELECT RateLimitMaxAttempts, RateLimitWindowMinutes FROM EBM.AppSessionConfig WHERE UPPER(AppCode) = UPPER(@code)');
+        if (result.recordset.length > 0) {
+            const row = result.recordset[0];
+            return { rateLimitMaxAttempts: row.RateLimitMaxAttempts, rateLimitWindowMinutes: row.RateLimitWindowMinutes };
+        }
+    }
+    catch (err) {
+        console.warn('[SessionConfig] Could not fetch from DB, using defaults:', safeError(err));
+    }
+    return { rateLimitMaxAttempts: 10, rateLimitWindowMinutes: 15 };
+}
 // SPA Fallback: Serve index.html for any remaining routes
 app.use((req, res) => {
     const indexPath = path.join(__dirname, '..', 'dist', 'index.html');
@@ -2659,6 +2688,16 @@ app.use((err, req, res, _next) => {
 });
 app.listen(port, () => {
     console.log(`Server Valorizaciones running on http://localhost:${port}`);
-    // Fetch app metadata from DB for OG tags
     fetchAppMeta();
+    fetchSessionConfig().then(cfg => {
+        authLimiter = rateLimit({
+            windowMs: cfg.rateLimitWindowMinutes * 60 * 1000,
+            max: cfg.rateLimitMaxAttempts,
+            skipSuccessfulRequests: true,
+            keyGenerator: authKeyGenerator,
+            message: { error: `Too many login attempts, please try again after ${cfg.rateLimitWindowMinutes} minutes.` },
+            store: new RedisStore({ sendCommand: (...args) => getRedisClient().call(...args), prefix: 'rl:val:auth:' }), // eslint-disable-line @typescript-eslint/no-explicit-any
+        });
+        console.log(`[SessionConfig] Auth limiter: ${cfg.rateLimitMaxAttempts} intentos / ${cfg.rateLimitWindowMinutes} min`);
+    }).catch(err => console.error('[SessionConfig] Failed to load rate limit config:', err));
 });
