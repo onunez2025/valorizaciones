@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ApiClient } from '../../services/apiClient';
 import {
     MapPin, Plus, Edit2, Trash2, Search,
@@ -41,6 +42,7 @@ interface CAS {
 }
 
 export default function ConfigDistritosPage() {
+    const { t } = useTranslation();
     const [configs, setConfigs] = useState<ConfigDistrito[]>([]);
     const [distritosRepo, setDistritosRepo] = useState<DistritoInfo[]>([]);
     const [casList, setCasList] = useState<CAS[]>([]);
@@ -76,7 +78,7 @@ export default function ConfigDistritosPage() {
             if (distritosData.length > 0) setSelectedCity(distritosData[0].Ciudad);
         } catch (error: unknown) {
             console.error("Error fetching data:", error);
-            alert({ message: "No se pudo cargar la configuración." });
+            alert({ message: t('configDistritos.errors.loadFailed') });
         } finally {
             setLoading(false);
         }
@@ -84,17 +86,17 @@ export default function ConfigDistritosPage() {
 
     const handleDelete = (id: number) => {
         confirm({
-            title: "¿Eliminar configuración?",
-            message: "Esta acción no se puede deshacer y afectará los cálculos futuros.",
-            confirmText: "Si, eliminar",
+            title: t('configDistritos.dialog.deleteTitle'),
+            message: t('configDistritos.dialog.deleteMessage'),
+            confirmText: t('configDistritos.dialog.deleteConfirm'),
             type: 'danger',
             onConfirm: async () => {
                 try {
                     await ApiClient.request(`/config-distritos/${id}`, { method: 'DELETE' });
-                    alert({ title: "Eliminado", message: "La regla ha sido eliminada.", type: 'success' });
+                    alert({ title: t('configDistritos.success.deletedTitle'), message: t('configDistritos.success.deletedMessage'), type: 'success' });
                     fetchData();
                 } catch (_error: unknown) {
-                    alert({ message: "Error al eliminar." });
+                    alert({ message: t('configDistritos.errors.deleteFailed') });
                 }
             }
         });
@@ -116,11 +118,11 @@ export default function ConfigDistritosPage() {
                     activo: editingConfig.activo
                 })
             });
-            alert({ title: "Guardado", message: "Configuración actualizada correctamente.", type: 'success' });
+            alert({ title: t('configDistritos.success.savedTitle'), message: t('configDistritos.success.savedMessage'), type: 'success' });
             setIsEditModalOpen(false);
             fetchData();
         } catch (_error: unknown) {
-            alert({ message: "No se pudo guardar la configuración." });
+            alert({ message: t('configDistritos.errors.saveFailed') });
         }
     };
 
@@ -139,11 +141,11 @@ export default function ConfigDistritosPage() {
                 <div className="space-y-1">
                     <h1 className={cn(SIATC_THEME.TYPOGRAPHY.PAGE_TITLE, "flex items-center gap-3")}>
                         <MapPin className="w-6 h-6 text-primary" />
-                        Adicionales por Distrito
+                        {t('configDistritos.title')}
                     </h1>
-                    <p className={SIATC_THEME.TYPOGRAPHY.PAGE_SUBTITLE}>Zonificación de incentivos y recargos por CAS/Distrito.</p>
+                    <p className={SIATC_THEME.TYPOGRAPHY.PAGE_SUBTITLE}>{t('configDistritos.subtitle')}</p>
                 </div>
-                <button 
+                <button
                     onClick={() => {
                         setEditingConfig({
                             cas_ids: [],
@@ -157,7 +159,7 @@ export default function ConfigDistritosPage() {
                     }}
                     className={SIATC_THEME.COMPONENTS.BUTTON_PRIMARY}
                 >
-                    <Plus className="w-4 h-4" /> Crear Configuración
+                    <Plus className="w-4 h-4" /> {t('configDistritos.create')}
                 </button>
             </div>
 
@@ -168,7 +170,7 @@ export default function ConfigDistritosPage() {
                         <Activity className="w-6 h-6 leading-none" />
                     </div>
                     <div>
-                        <p className="text-[11px] font-bold text-cb-neutral uppercase tracking-wider leading-none mb-1">Reglas Activas</p>
+                        <p className="text-[11px] font-bold text-cb-neutral uppercase tracking-wider leading-none mb-1">{t('configDistritos.stats.activeRules')}</p>
                         <p className="text-2xl font-bold text-cb-text-primary leading-none">{configs.filter(c => c.Activo).length}</p>
                     </div>
                 </div>
@@ -177,7 +179,7 @@ export default function ConfigDistritosPage() {
                         <MapPin className="w-6 h-6 leading-none" />
                     </div>
                     <div>
-                        <p className="text-[11px] font-bold text-cb-neutral uppercase tracking-wider leading-none mb-1">Distritos Cubiertos</p>
+                        <p className="text-[11px] font-bold text-cb-neutral uppercase tracking-wider leading-none mb-1">{t('configDistritos.stats.coveredDistricts')}</p>
                         <p className="text-2xl font-bold text-cb-text-primary leading-none">
                             {new Set(configs.flatMap(c => JSON.parse(c.Distritos))).size}
                         </p>
@@ -188,7 +190,7 @@ export default function ConfigDistritosPage() {
                         <Building2 className="w-6 h-6 leading-none" />
                     </div>
                     <div>
-                        <p className="text-[11px] font-bold text-cb-neutral uppercase tracking-wider leading-none mb-1">CAS Participantes</p>
+                        <p className="text-[11px] font-bold text-cb-neutral uppercase tracking-wider leading-none mb-1">{t('configDistritos.stats.participatingCas')}</p>
                         <p className="text-2xl font-bold text-cb-text-primary leading-none">
                             {new Set(configs.flatMap(c => JSON.parse(c.CAS_Ids))).size}
                         </p>
@@ -201,9 +203,9 @@ export default function ConfigDistritosPage() {
                 <div className={SIATC_THEME.LAYOUT.SEARCH_BAR_WRAPPER}>
                     <div className="flex-1 relative">
                         <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-cb-neutral/60" />
-                        <input 
-                            type="text" 
-                            placeholder="Buscar por distrito..." 
+                        <input
+                            type="text"
+                            placeholder={t('configDistritos.searchPlaceholder')}
                             className={cn(SIATC_THEME.COMPONENTS.INPUT, "pl-11 pr-4")}
                             value={search}
                             onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
@@ -211,7 +213,7 @@ export default function ConfigDistritosPage() {
                     </div>
                     <div className={cn(SIATC_THEME.STATES.BADGE_BASE, SIATC_THEME.STATES.SECONDARY, "px-3 h-[36px]")}>
                         <Filter className="w-3.5 h-3.5" />
-                        FILTROS ACTIVOS
+                        {t('configDistritos.filtersActive')}
                     </div>
                 </div>
 
@@ -219,24 +221,24 @@ export default function ConfigDistritosPage() {
                     {loading ? (
                         <div className="h-full flex flex-col items-center justify-center gap-4 opacity-40">
                             <Activity className="w-10 h-10 animate-spin text-primary" />
-                            <p className="text-sm font-bold text-cb-text-secondary italic">Sincronizando configuraciones...</p>
+                            <p className="text-sm font-bold text-cb-text-secondary italic">{t('configDistritos.loading')}</p>
                         </div>
                     ) : paginatedConfigs.length === 0 ? (
                         <div className="h-full flex flex-col items-center justify-center text-center py-20 opacity-30">
                             <MapPin className="w-16 h-16 mb-6 text-cb-neutral" />
-                            <h3 className="text-lg font-bold text-cb-text-primary">No hay reglas configuradas</h3>
-                            <p className="text-xs font-bold text-cb-text-secondary mt-2 max-w-xs">Cree una nueva regla para empezar a aplicar adicionales por zona.</p>
+                            <h3 className="text-lg font-bold text-cb-text-primary">{t('configDistritos.empty')}</h3>
+                            <p className="text-xs font-bold text-cb-text-secondary mt-2 max-w-xs">{t('configDistritos.emptyHint')}</p>
                         </div>
                     ) : (
                         <>
                             <thead className={SIATC_THEME.TABLE.HEADER_ROW}>
                                 <tr>
-                                    <th className={SIATC_THEME.TABLE.HEADER_TH}><span className={SIATC_THEME.TYPOGRAPHY.TABLE_HEADER}>Distritos</span></th>
-                                    <th className={SIATC_THEME.TABLE.HEADER_TH}><span className={SIATC_THEME.TYPOGRAPHY.TABLE_HEADER}>CAS</span></th>
-                                    <th className={cn(SIATC_THEME.TABLE.HEADER_TH, "text-center")}><span className={SIATC_THEME.TYPOGRAPHY.TABLE_HEADER}>Importe</span></th>
-                                    <th className={cn(SIATC_THEME.TABLE.HEADER_TH, "text-center")}><span className={SIATC_THEME.TYPOGRAPHY.TABLE_HEADER}>Vigencia</span></th>
-                                    <th className={cn(SIATC_THEME.TABLE.HEADER_TH, "text-center")}><span className={SIATC_THEME.TYPOGRAPHY.TABLE_HEADER}>Estado</span></th>
-                                    <th className={cn(SIATC_THEME.TABLE.HEADER_TH, "text-right")}><span className={SIATC_THEME.TYPOGRAPHY.TABLE_HEADER}>Acciones</span></th>
+                                    <th className={SIATC_THEME.TABLE.HEADER_TH}><span className={SIATC_THEME.TYPOGRAPHY.TABLE_HEADER}>{t('configDistritos.table.districts')}</span></th>
+                                    <th className={SIATC_THEME.TABLE.HEADER_TH}><span className={SIATC_THEME.TYPOGRAPHY.TABLE_HEADER}>{t('configDistritos.table.cas')}</span></th>
+                                    <th className={cn(SIATC_THEME.TABLE.HEADER_TH, "text-center")}><span className={SIATC_THEME.TYPOGRAPHY.TABLE_HEADER}>{t('configDistritos.table.amount')}</span></th>
+                                    <th className={cn(SIATC_THEME.TABLE.HEADER_TH, "text-center")}><span className={SIATC_THEME.TYPOGRAPHY.TABLE_HEADER}>{t('configDistritos.table.validity')}</span></th>
+                                    <th className={cn(SIATC_THEME.TABLE.HEADER_TH, "text-center")}><span className={SIATC_THEME.TYPOGRAPHY.TABLE_HEADER}>{t('configDistritos.table.status')}</span></th>
+                                    <th className={cn(SIATC_THEME.TABLE.HEADER_TH, "text-right")}><span className={SIATC_THEME.TYPOGRAPHY.TABLE_HEADER}>{t('configDistritos.table.actions')}</span></th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-cb-border/50">
@@ -256,7 +258,7 @@ export default function ConfigDistritosPage() {
                                             </SIATCTableCell>
                                             <SIATCTableCell className="max-w-[200px]">
                                                 <div className="text-xs font-bold text-cb-text-secondary group">
-                                                    {cCAS.length} {cCAS.length === 1 ? 'CAS Seleccionado' : 'CAS Seleccionados'}
+                                                    {t('configDistritos.table.casCount', { count: cCAS.length })}
                                                     <div className="hidden group-hover:flex flex-wrap gap-1 mt-2">
                                                         {cCAS.map((id: string) => {
                                                             const casItem = casList.find(item => item.ID_CAS === id);
@@ -281,7 +283,7 @@ export default function ConfigDistritosPage() {
                                                         <Calendar className="w-3 h-3 text-primary opacity-50" />
                                                         {format(new Date(c.Fecha_Inicio), 'dd/MM/yy')}
                                                         <span className="text-cb-text-secondary font-black">→</span>
-                                                        {c.Fecha_Fin ? format(new Date(c.Fecha_Fin), 'dd/MM/yy') : <span className="text-cb-success italic">Indefinido</span>}
+                                                        {c.Fecha_Fin ? format(new Date(c.Fecha_Fin), 'dd/MM/yy') : <span className="text-cb-success italic">{t('configDistritos.table.indefinite')}</span>}
                                                     </div>
                                                 </div>
                                             </SIATCTableCell>
@@ -292,7 +294,7 @@ export default function ConfigDistritosPage() {
                                                         ? SIATC_THEME.STATES.SUCCESS 
                                                         : SIATC_THEME.STATES.SECONDARY
                                                 )}>
-                                                    {c.Activo ? 'ACTIVO' : 'INACTIVO'}
+                                                    {c.Activo ? t('configDistritos.table.active') : t('configDistritos.table.inactive')}
                                                 </span>
                                             </SIATCTableCell>
                                             <SIATCTableCell className="text-right">
@@ -342,42 +344,42 @@ export default function ConfigDistritosPage() {
                 <Modal 
                     isOpen={isEditModalOpen} 
                     onClose={() => setIsEditModalOpen(false)} 
-                    title={editingConfig.Id ? "Editar Regla Zonal" : "Nueva Regla Zonal"}
+                    title={editingConfig.Id ? t('configDistritos.modal.editTitle') : t('configDistritos.modal.newTitle')}
                     size="xl"
                 >
                     <form onSubmit={handleSave} className="space-y-6">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             {/* CAS MultiSelect */}
                             <div className="flex flex-col gap-2">
-                                <label className="text-[11px] font-bold text-cb-neutral uppercase tracking-wider ml-1">Seleccionar CAS</label>
+                                <label className="text-[11px] font-bold text-cb-neutral uppercase tracking-wider ml-1">{t('configDistritos.modal.selectCas')}</label>
                                 <MultiSelect
                                     options={casList.map(cas => ({ value: cas.ID_CAS, label: cas.Nombre_CAS, badge: cas.Abrev_nombre_colaboradores }))}
                                     selected={editingConfig.cas_ids ?? []}
                                     onChange={(vals) => setEditingConfig({...editingConfig, cas_ids: vals})}
-                                    placeholder="Buscar CAS..."
+                                    placeholder={t('configDistritos.modal.searchCas')}
                                 />
                             </div>
 
                             {/* Ciudad y Distrito MultiSelect */}
                             <div className="flex flex-col gap-4">
                                 <div className="flex flex-col gap-2">
-                                    <label className="text-[11px] font-bold text-cb-neutral uppercase tracking-wider ml-1">Filtrar por Ciudad</label>
+                                    <label className="text-[11px] font-bold text-cb-neutral uppercase tracking-wider ml-1">{t('configDistritos.modal.filterByCity')}</label>
                                     <select 
                                         className={cn(SIATC_THEME.COMPONENTS.INPUT, "h-11 appearance-none cursor-pointer")}
                                         value={selectedCity}
                                         onChange={(e) => setSelectedCity(e.target.value)}
                                     >
-                                        <option value="">Todas las ciudades</option>
+                                        <option value="">{t('configDistritos.modal.allCities')}</option>
                                         {cities.map(c => <option key={c} value={c}>{c}</option>)}
                                     </select>
                                 </div>
                                 <div className="flex flex-col gap-2">
-                                    <label className="text-[11px] font-bold text-cb-neutral uppercase tracking-wider ml-1">Seleccionar Distritos ({selectedCity || 'Todos'})</label>
+                                    <label className="text-[11px] font-bold text-cb-neutral uppercase tracking-wider ml-1">{t('configDistritos.modal.selectDistricts', { city: selectedCity || 'Todos' })}</label>
                                     <MultiSelect
                                         options={availableDistrictsForCity.map(d => ({ value: d, label: d }))}
                                         selected={editingConfig.distritos ?? []}
                                         onChange={(vals) => setEditingConfig({...editingConfig, distritos: vals})}
-                                        placeholder="Buscar distritos..."
+                                        placeholder={t('configDistritos.modal.searchDistricts')}
                                     />
                                 </div>
                             </div>
@@ -385,7 +387,7 @@ export default function ConfigDistritosPage() {
                             {/* Importe y Fechas */}
                             <div className="flex flex-col gap-4">
                                 <div className="flex flex-col gap-2">
-                                    <label className="text-[11px] font-bold text-cb-neutral uppercase tracking-wider ml-1">Importe Adicional (S/.)</label>
+                                    <label className="text-[11px] font-bold text-cb-neutral uppercase tracking-wider ml-1">{t('configDistritos.modal.amount')}</label>
                                     <div className="relative">
                                         <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-500 animate-in fade-in" />
                                         <input 
@@ -456,18 +458,18 @@ export default function ConfigDistritosPage() {
                         </div>
 
                         <div className="pt-6 flex gap-4">
-                            <button 
+                            <button
                                 type="button"
                                 onClick={() => setIsEditModalOpen(false)}
                                 className={cn(SIATC_THEME.COMPONENTS.BUTTON_SECONDARY, "flex-1 h-12")}
                             >
-                                Cancelar
+                                {t('common.cancel')}
                             </button>
-                            <button 
+                            <button
                                 type="submit"
                                 className={cn(SIATC_THEME.COMPONENTS.BUTTON_PRIMARY, "flex-[2] h-12")}
                             >
-                                {editingConfig.Id ? 'Guardar Cambios' : 'Crear Configuración Ahora'}
+                                {editingConfig.Id ? t('common.saveChanges') : t('configDistritos.create')}
                             </button>
                         </div>
                     </form>

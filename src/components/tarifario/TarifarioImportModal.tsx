@@ -1,4 +1,5 @@
 ﻿import { useState, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { X, Upload, Download, CheckCircle, RefreshCw, FileSpreadsheet, ArrowRight } from 'lucide-react';
 import ExcelJS from 'exceljs';
 import { ApiClient } from '../../services/apiClient';
@@ -25,13 +26,6 @@ interface Props {
     onClose: () => void;
     onSuccess: () => void;
 }
-
-const STATUS_CONFIG = {
-    INSERT:  { label: 'INSERTAR',    bg: 'bg-emerald-50',  text: 'text-emerald-700',  border: 'border-emerald-200',  dot: 'bg-emerald-500'  },
-    UPDATE:  { label: 'ACTUALIZAR',  bg: 'bg-amber-50',    text: 'text-amber-700',    border: 'border-amber-200',    dot: 'bg-amber-500'    },
-    OK:      { label: 'SIN CAMBIOS', bg: 'bg-muted/30',    text: 'text-muted-foreground', border: 'border-border/20', dot: 'bg-muted-foreground/40' },
-    ERROR:   { label: 'ERROR',       bg: 'bg-red-50',      text: 'text-red-700',      border: 'border-red-200',      dot: 'bg-red-500'      },
-};
 
 function parseExcelDate(value: unknown): string {
     if (!value && value !== 0) return '';
@@ -69,6 +63,7 @@ async function downloadTemplate() {
 }
 
 export default function TarifarioImportModal({ isOpen, onClose, onSuccess }: Props) {
+    const { t } = useTranslation();
     const { alert } = useDialog();
     const fileRef = useRef<HTMLInputElement>(null);
     const [step, setStep] = useState<'upload' | 'preview' | 'done'>('upload');
@@ -76,6 +71,13 @@ export default function TarifarioImportModal({ isOpen, onClose, onSuccess }: Pro
     const [confirming, setConfirming] = useState(false);
     const [preview, setPreview] = useState<PreviewRow[]>([]);
     const [result, setResult] = useState<{ inserted: number; updated: number } | null>(null);
+
+    const STATUS_CONFIG = {
+        INSERT:  { label: t('tarifarioImport.statuses.insert'),  bg: 'bg-emerald-50',  text: 'text-emerald-700',  border: 'border-emerald-200',  dot: 'bg-emerald-500'  },
+        UPDATE:  { label: t('tarifarioImport.statuses.update'),  bg: 'bg-amber-50',    text: 'text-amber-700',    border: 'border-amber-200',    dot: 'bg-amber-500'    },
+        OK:      { label: t('tarifarioImport.statuses.ok'),      bg: 'bg-muted/30',    text: 'text-muted-foreground', border: 'border-border/20', dot: 'bg-muted-foreground/40' },
+        ERROR:   { label: t('tarifarioImport.statuses.error'),   bg: 'bg-red-50',      text: 'text-red-700',      border: 'border-red-200',      dot: 'bg-red-500'      },
+    };
 
     if (!isOpen) return null;
 
@@ -99,7 +101,7 @@ export default function TarifarioImportModal({ isOpen, onClose, onSuccess }: Pro
             });
 
             if (raw.length < 2) {
-                alert({ message: 'El archivo está vacío o solo tiene encabezados.' });
+                alert({ message: t('tarifarioImport.errors.emptyFile') });
                 setLoading(false);
                 return;
             }
@@ -157,7 +159,7 @@ export default function TarifarioImportModal({ isOpen, onClose, onSuccess }: Pro
             setStep('preview');
         } catch (err: unknown) {
             if (err instanceof Error && err.message !== 'AUTH_EXPIRED')
-                alert({ message: 'Error al procesar el archivo: ' + err.message });
+                alert({ message: t('tarifarioImport.errors.processingError', { error: err.message }) });
         } finally {
             setLoading(false);
         }
@@ -166,7 +168,7 @@ export default function TarifarioImportModal({ isOpen, onClose, onSuccess }: Pro
     const handleConfirm = async () => {
         const toApply = preview.filter(r => r.Status === 'INSERT' || r.Status === 'UPDATE');
         if (toApply.length === 0) {
-            alert({ message: 'No hay cambios pendientes para aplicar.' });
+            alert({ message: t('tarifarioImport.errors.noChanges') });
             return;
         }
         setConfirming(true);
@@ -180,7 +182,7 @@ export default function TarifarioImportModal({ isOpen, onClose, onSuccess }: Pro
             onSuccess();
         } catch (err: unknown) {
             if (err instanceof Error && err.message !== 'AUTH_EXPIRED')
-                alert({ message: 'Error al confirmar la importación: ' + err.message });
+                alert({ message: t('tarifarioImport.errors.confirmError', { error: err.message }) });
         } finally {
             setConfirming(false);
         }
@@ -205,8 +207,8 @@ export default function TarifarioImportModal({ isOpen, onClose, onSuccess }: Pro
                             <FileSpreadsheet className="w-5 h-5" />
                         </div>
                         <div>
-                            <h2 className="text-base font-black tracking-tight">Importar Tarifario desde Excel</h2>
-                            <p className="text-[10px] font-bold text-muted-foreground/50">Carga masiva para múltiples CAS</p>
+                            <h2 className="text-base font-black tracking-tight">{t('tarifarioImport.title')}</h2>
+                            <p className="text-[10px] font-bold text-muted-foreground/50">{t('tarifarioImport.subtitle')}</p>
                         </div>
                     </div>
                     <button onClick={onClose} className="p-2 hover:bg-muted rounded-lg transition-colors text-muted-foreground">
@@ -222,7 +224,7 @@ export default function TarifarioImportModal({ isOpen, onClose, onSuccess }: Pro
                         <div className="space-y-8">
                             {/* Format guide */}
                             <div className="bg-blue-50/50 border border-blue-100 rounded-xl p-6">
-                                <h3 className="text-[11px] font-black uppercase tracking-widest text-blue-700 mb-4">Formato requerido del Excel</h3>
+                                <h3 className="text-[11px] font-black uppercase tracking-widest text-blue-700 mb-4">{t('tarifarioImport.format.title')}</h3>
                                 <div className="overflow-x-auto">
                                     <table className="w-full text-left text-[11px]">
                                         <thead>
@@ -255,10 +257,10 @@ export default function TarifarioImportModal({ isOpen, onClose, onSuccess }: Pro
                                     </table>
                                 </div>
                                 <div className="mt-4 grid grid-cols-2 gap-3 text-[10px] font-bold text-blue-600">
-                                    <div><span className="text-blue-800">CAS_Nombre:</span> Nombre exacto del CAS en el sistema (ej: "Black", "Silar")</div>
-                                    <div><span className="text-blue-800">Categoria:</span> Categoría del producto en MAYÚSCULAS</div>
-                                    <div><span className="text-blue-800">Fecha_inicio / Fecha_fin:</span> Formato DD/MM/YYYY o YYYY-MM-DD</div>
-                                    <div><span className="text-blue-800">Estado:</span> A = Activo, I = Inactivo (opcional, por defecto A)</div>
+                                    <div><span className="text-blue-800">CAS_Nombre:</span> {t('tarifarioImport.format.casName')}</div>
+                                    <div><span className="text-blue-800">Categoria:</span> {t('tarifarioImport.format.categoria')}</div>
+                                    <div><span className="text-blue-800">Fecha_inicio / Fecha_fin:</span> {t('tarifarioImport.format.dates')}</div>
+                                    <div><span className="text-blue-800">Estado:</span> {t('tarifarioImport.format.estado')}</div>
                                 </div>
                             </div>
 
@@ -273,14 +275,14 @@ export default function TarifarioImportModal({ isOpen, onClose, onSuccess }: Pro
                                 {loading ? (
                                     <div className="flex flex-col items-center gap-4">
                                         <RefreshCw className="w-10 h-10 text-primary animate-spin opacity-40" />
-                                        <p className="text-sm font-black text-muted-foreground/60">Procesando archivo y verificando contra la BD...</p>
+                                        <p className="text-sm font-black text-muted-foreground/60">{t('tarifarioImport.processing')}</p>
                                     </div>
                                 ) : (
                                     <div className="flex flex-col items-center gap-4">
                                         <Upload className="w-10 h-10 text-muted-foreground/30" />
                                         <div>
-                                            <p className="text-sm font-black text-foreground/70">Haz clic o arrastra tu archivo Excel aquí</p>
-                                            <p className="text-[10px] font-bold text-muted-foreground/40 mt-1">Acepta .xlsx y .xls</p>
+                                            <p className="text-sm font-black text-foreground/70">{t('tarifarioImport.uploadText')}</p>
+                                            <p className="text-[10px] font-bold text-muted-foreground/40 mt-1">{t('tarifarioImport.uploadHint')}</p>
                                         </div>
                                     </div>
                                 )}
@@ -303,28 +305,28 @@ export default function TarifarioImportModal({ isOpen, onClose, onSuccess }: Pro
                                 {counts.insert > 0 && (
                                     <div className="flex items-center gap-2 px-4 py-2 bg-emerald-50 border border-emerald-200 rounded-lg">
                                         <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                                        <span className="text-[11px] font-black text-emerald-700">{counts.insert} a insertar</span>
+                                        <span className="text-[11px] font-black text-emerald-700">{counts.insert} {t('tarifarioImport.preview.toInsert')}</span>
                                     </div>
                                 )}
                                 {counts.update > 0 && (
                                     <div className="flex items-center gap-2 px-4 py-2 bg-amber-50 border border-amber-200 rounded-lg">
                                         <div className="w-2 h-2 rounded-full bg-amber-500" />
-                                        <span className="text-[11px] font-black text-amber-700">{counts.update} a actualizar</span>
+                                        <span className="text-[11px] font-black text-amber-700">{counts.update} {t('tarifarioImport.preview.toUpdate')}</span>
                                     </div>
                                 )}
                                 {counts.ok > 0 && (
                                     <div className="flex items-center gap-2 px-4 py-2 bg-muted/40 border border-border/30 rounded-lg">
                                         <div className="w-2 h-2 rounded-full bg-muted-foreground/30" />
-                                        <span className="text-[11px] font-black text-muted-foreground/60">{counts.ok} sin cambios</span>
+                                        <span className="text-[11px] font-black text-muted-foreground/60">{counts.ok} {t('tarifarioImport.preview.noChanges')}</span>
                                     </div>
                                 )}
                                 {counts.error > 0 && (
                                     <div className="flex items-center gap-2 px-4 py-2 bg-red-50 border border-red-200 rounded-lg">
                                         <div className="w-2 h-2 rounded-full bg-red-500" />
-                                        <span className="text-[11px] font-black text-red-700">{counts.error} con error</span>
+                                        <span className="text-[11px] font-black text-red-700">{counts.error} {t('tarifarioImport.preview.withError')}</span>
                                     </div>
                                 )}
-                                <span className="text-[10px] font-bold text-muted-foreground/40 ml-auto">{preview.length} filas en total</span>
+                                <span className="text-[10px] font-bold text-muted-foreground/40 ml-auto">{preview.length} {t('tarifarioImport.preview.totalRows')}</span>
                             </div>
 
                             {/* Table */}
@@ -332,13 +334,13 @@ export default function TarifarioImportModal({ isOpen, onClose, onSuccess }: Pro
                                 <table className="w-full text-left text-[11px]">
                                     <thead>
                                         <tr className="border-b border-border/40 bg-muted/10">
-                                            <th className="px-4 py-3 font-black text-muted-foreground/60 uppercase tracking-widest">CAS</th>
-                                            <th className="px-4 py-3 font-black text-muted-foreground/60 uppercase tracking-widest">Categoria</th>
-                                            <th className="px-4 py-3 font-black text-muted-foreground/60 uppercase tracking-widest">Servicio</th>
-                                            <th className="px-4 py-3 font-black text-muted-foreground/60 uppercase tracking-widest text-center">Vigencia</th>
-                                            <th className="px-4 py-3 font-black text-muted-foreground/60 uppercase tracking-widest text-right">Actual</th>
-                                            <th className="px-4 py-3 font-black text-muted-foreground/60 uppercase tracking-widest text-right">Nuevo</th>
-                                            <th className="px-4 py-3 font-black text-muted-foreground/60 uppercase tracking-widest text-center">Estado</th>
+                                            <th className="px-4 py-3 font-black text-muted-foreground/60 uppercase tracking-widest">{t('tarifarioImport.preview.headers.cas')}</th>
+                                            <th className="px-4 py-3 font-black text-muted-foreground/60 uppercase tracking-widest">{t('tarifarioImport.preview.headers.category')}</th>
+                                            <th className="px-4 py-3 font-black text-muted-foreground/60 uppercase tracking-widest">{t('tarifarioImport.preview.headers.service')}</th>
+                                            <th className="px-4 py-3 font-black text-muted-foreground/60 uppercase tracking-widest text-center">{t('tarifarioImport.preview.headers.validity')}</th>
+                                            <th className="px-4 py-3 font-black text-muted-foreground/60 uppercase tracking-widest text-right">{t('tarifarioImport.preview.headers.current')}</th>
+                                            <th className="px-4 py-3 font-black text-muted-foreground/60 uppercase tracking-widest text-right">{t('tarifarioImport.preview.headers.new')}</th>
+                                            <th className="px-4 py-3 font-black text-muted-foreground/60 uppercase tracking-widest text-center">{t('tarifarioImport.preview.headers.status')}</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border/20">
@@ -386,9 +388,9 @@ export default function TarifarioImportModal({ isOpen, onClose, onSuccess }: Pro
                                 <CheckCircle className="w-10 h-10 text-emerald-500" />
                             </div>
                             <div>
-                                <h3 className="text-xl font-black">¡Importación exitosa!</h3>
+                                <h3 className="text-xl font-black">{t('tarifarioImport.done.title')}</h3>
                                 <p className="text-muted-foreground text-sm mt-2">
-                                    Se insertaron <strong>{result.inserted}</strong> nuevas tarifas y se actualizaron <strong>{result.updated}</strong>.
+                                    {t('tarifarioImport.done.message', { inserted: result.inserted, updated: result.updated })}
                                 </p>
                             </div>
                         </div>
@@ -402,7 +404,7 @@ export default function TarifarioImportModal({ isOpen, onClose, onSuccess }: Pro
                         className="flex items-center gap-2 text-[10px] font-black text-muted-foreground/50 hover:text-primary transition-colors"
                     >
                         <Download className="w-4 h-4" />
-                        Descargar plantilla Excel
+                        {t('tarifarioImport.downloadTemplate')}
                     </button>
 
                     <div className="flex items-center gap-3">
@@ -411,7 +413,7 @@ export default function TarifarioImportModal({ isOpen, onClose, onSuccess }: Pro
                                 onClick={handleReset}
                                 className="px-5 py-2.5 bg-muted rounded-lg font-bold text-[10px] text-muted-foreground hover:bg-muted/80 transition-all"
                             >
-                                Cargar otro archivo
+                                {t('tarifarioImport.uploadAnother')}
                             </button>
                         )}
                         {step === 'done' ? (
@@ -428,9 +430,9 @@ export default function TarifarioImportModal({ isOpen, onClose, onSuccess }: Pro
                                 className="px-6 py-2.5 bg-emerald-600 text-white rounded-lg font-bold text-[10px] shadow-lg flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
                             >
                                 {confirming ? (
-                                    <><RefreshCw className="w-4 h-4 animate-spin" /> Aplicando...</>
+                                    <><RefreshCw className="w-4 h-4 animate-spin" /> {t('tarifarioImport.confirming')}</>
                                 ) : (
-                                    <><ArrowRight className="w-4 h-4" /> Confirmar importación ({counts.insert + counts.update})</>
+                                    <><ArrowRight className="w-4 h-4" /> {t('tarifarioImport.confirm', { count: counts.insert + counts.update })}</>
                                 )}
                             </button>
                         ) : (

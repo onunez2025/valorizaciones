@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Menu, X, Sun, Moon, Settings, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useInactivityTimer } from '../../hooks/useInactivityTimer';
 import { NavLink, Navigate, Outlet } from 'react-router-dom';
@@ -11,6 +12,7 @@ import { cn } from '../../utils/cn';
 import { SIATC_THEME } from '../../utils/siatc-theme';
 
 export function MainLayout() {
+    const { t } = useTranslation();
     const { isAuthenticated, isLoading, user, hasPermission, logout, sessionConfig } = useAuth();
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const { theme, setTheme } = useTheme();
@@ -241,27 +243,27 @@ export function MainLayout() {
                     <div className="bg-card border border-border rounded-xl shadow-xl p-6 max-w-sm w-full mx-4 space-y-4">
                         <div className="flex items-center gap-3 text-amber-500">
                             <Clock className="w-6 h-6 shrink-0" />
-                            <h3 className="text-lg font-semibold">Sesión a punto de expirar</h3>
+                            <h3 className="text-lg font-semibold">{t('mainLayout.sessionWarningTitle')}</h3>
                         </div>
                         <p className="text-sm text-muted-foreground">
-                            Tu sesión expirará en{' '}
+                            {t('mainLayout.sessionExpiresIn')}{' '}
                             <span className="font-bold text-foreground">
                                 {String(Math.floor(remainingSeconds / 60)).padStart(2, '0')}:{String(remainingSeconds % 60).padStart(2, '0')}
                             </span>{' '}
-                            por inactividad.
+                            {t('mainLayout.sessionInactivity')}
                         </p>
                         <div className="flex gap-3">
                             <button
                                 onClick={resetTimer}
                                 className="flex-1 bg-primary text-primary-foreground rounded-lg py-2 text-sm font-medium hover:bg-primary/90 transition-colors"
                             >
-                                Continuar sesión
+                                {t('mainLayout.continueSession')}
                             </button>
                             <button
                                 onClick={logout}
                                 className="flex-1 bg-secondary text-secondary-foreground rounded-lg py-2 text-sm font-medium hover:bg-secondary/80 transition-colors"
                             >
-                                Cerrar sesión
+                                {t('mainLayout.closeSession')}
                             </button>
                         </div>
                     </div>

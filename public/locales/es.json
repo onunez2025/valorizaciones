@@ -2,7 +2,20 @@
   "common": {
     "welcome": "Bienvenido",
     "logout": "Cerrar Sesión",
-    "loading": "Autenticando..."
+    "loading": "Autenticando...",
+    "cancel": "Cancelar",
+    "save": "Guardar",
+    "saving": "Guardando...",
+    "edit": "Editar",
+    "delete": "Eliminar",
+    "close": "Cerrar",
+    "search": "Buscar",
+    "actions": "Acciones",
+    "status": "Estado",
+    "active": "Activo",
+    "inactive": "Inactivo",
+    "saveChanges": "Guardar Cambios",
+    "configuration": "Configuración"
   },
   "auth": {
     "subtitle": "Ingresa tus credenciales para acceder al sistema.",
@@ -18,6 +31,606 @@
     },
     "errors": {
       "invalid": "Credenciales inválidas"
+    }
+  },
+  "dashboard": {
+    "title": "Auditoría Analítica",
+    "subtitle": "Inteligencia de negocios CAS en tiempo real.",
+    "searchPlaceholder": "Buscar centro o RUC...",
+    "allCompanies": "Todas las Empresas",
+    "period": {
+      "year": "Año",
+      "range": "Rango",
+      "to": "Hasta"
+    },
+    "kpi": {
+      "grossTotal": "Total Bruto Valorizado",
+      "closedTickets": "{{count}} Tickets cerrados",
+      "penalties": "Penalidades Aplicadas",
+      "deductionsActive": "Deducciones activas",
+      "netAmount": "Neto por Liquidar",
+      "projectedAmount": "Monto final proyectado",
+      "efficiency": "Eficiencia de Atención",
+      "resolvedTickets": "Tickets solucionados"
+    },
+    "chart": {
+      "title": "Historial de Gastos",
+      "growth": "Crecimiento Mensual",
+      "individual": "Tendencia Individual",
+      "gross": "Bruto",
+      "penalties": "Sanciones"
+    },
+    "ranking": {
+      "title": "Productividad",
+      "allCas": "Top 5 CAS Activos",
+      "local": "Desempeño Local",
+      "rank": "Ranking",
+      "tickets": "Tickets"
+    },
+    "noData": "No hay datos para este filtro",
+    "audited": "Auditados",
+    "complete": "100% Completo"
+  },
+  "penalties": {
+    "title": "Gestión de Penalidades",
+    "subtitle": "Listado de infracciones y descargos del CAS.",
+    "redirectMessage": "Este módulo se gestiona directamente en las valorizaciones quincenales."
+  },
+  "materials": {
+    "title": "Maestro de Materiales",
+    "subtitle": "Gestión de catálogo y categorías para tarifario.",
+    "totalProducts": "Total Productos",
+    "searchPlaceholder": "Buscar por nombre o código externo...",
+    "newProduct": "Nuevo Producto",
+    "loading": "Cargando maestro...",
+    "empty": "No se encontraron productos",
+    "emptyHint": "Pruebe ajustando los filtros de búsqueda.",
+    "noCategory": "Sin Categoría",
+    "table": {
+      "externalCode": "Código Externo",
+      "productName": "Nombre del Producto",
+      "category": "Categoría",
+      "status": "Estado",
+      "actions": "Acciones"
+    },
+    "modal": {
+      "editTitle": "Editar Producto",
+      "newTitle": "Nuevo Producto",
+      "description": "Descripción del Producto",
+      "externalCode": "Código Externo",
+      "category": "Categoría",
+      "viewList": "Ver Lista",
+      "newCategory": "+ Nueva",
+      "newCategoryPlaceholder": "Nueva categoría...",
+      "selectCategory": "Seleccionar...",
+      "addNewCategory": "➕ Nueva Categoría...",
+      "saveChanges": "Guardar Cambios",
+      "createProduct": "Crear Producto"
+    },
+    "errors": {
+      "loadFailed": "No se pudo cargar el maestro de materiales.",
+      "saveFailed": "No se pudo actualizar el material."
+    },
+    "success": {
+      "title": "¡Éxito!",
+      "message": "Material actualizado correctamente."
+    }
+  },
+  "materialRegisterModal": {
+    "title": "Registrar Nuevo Producto",
+    "unidentifiedTitle": "Producto No Identificado",
+    "unidentifiedMessage": "Este producto no existe en el maestro. Regístrelo ahora para que el sistema pueda asignarle una tarifa automáticamente.",
+    "externalCode": "Código Externo",
+    "description": "Descripción del Producto",
+    "descriptionPlaceholder": "Nombre del equipo...",
+    "category": "Categoría asignada",
+    "categoryPlaceholder": "Escriba o seleccione categoría...",
+    "registering": "Registrando...",
+    "save": "Guardar en Maestro",
+    "errors": {
+      "missingCategoryTitle": "Faltan datos",
+      "missingCategoryMessage": "Debe seleccionar o escribir una categoría.",
+      "saveFailed": "No se pudo registrar el material."
+    },
+    "success": {
+      "title": "¡Registrado!",
+      "message": "El producto ha sido añadido al maestro de materiales."
+    }
+  },
+  "tarifario": {
+    "title": "Tarifario de Servicios",
+    "subtitle": "Configuración dinámica de precios por centro de atención.",
+    "importExcel": "Importar desde Excel",
+    "companyLabel": "Empresa en configuración",
+    "selectCasPlaceholder": "-- Seleccione un CAS para editar precios --",
+    "searchPlaceholder": "Buscar por sede o identificador...",
+    "noMatches": "Sin coincidencias",
+    "empty": {
+      "title": "Gestión de Tarifas CAS",
+      "subtitle": "Personalización de precios según la sede para facturación automática."
+    },
+    "ratesLabel": "Precios configurados",
+    "activeLabel": "activos",
+    "inactiveLabel": "inactivos",
+    "discard": "Descartar",
+    "saving": "Guardando...",
+    "saveRates": "Guardar tarifario",
+    "addRate": "Agregar tarifa",
+    "specialCases": "Casos Especiales",
+    "servicesCount": "{{services}} servicios · {{periods}} periodos",
+    "table": {
+      "service": "Servicio",
+      "startDate": "Fecha Inicio",
+      "endDate": "Fecha Fin",
+      "amount": "Importe",
+      "status": "Estado"
+    },
+    "errors": {
+      "loadFailed": "No se pudieron cargar las tarifas del CAS seleccionado. Verifique la conexión.",
+      "saveFailed": "Hubo un error al guardar los cambios en el servidor.",
+      "statusChangeFailed": "No se pudo cambiar el estado de la tarifa."
+    },
+    "success": {
+      "savedTitle": "¡Tarifario Guardado!",
+      "savedMessage": "Los precios se han actualizado correctamente."
+    }
+  },
+  "tarifarioExceptions": {
+    "title": "Casos Especiales / Excepciones",
+    "addRule": "Agregar Regla",
+    "empty": "No hay casos especiales configurados.",
+    "namePlaceholder": "Nombre de la regla...",
+    "excludedZones": "Zonas Excluidas (Ej: PIURA, LAMBAYEQUE)",
+    "includedZones": "Zonas Incluidas (Ej: JAEN)",
+    "productCategories": "Categorías de Producto",
+    "clearAll": "Limpiar / Todas",
+    "saveRule": "Guardar Regla",
+    "deleteRule": "Eliminar Regla",
+    "note": "* Las reglas de exclusión tienen prioridad sobre las de inclusión. Si no se define zona, aplica a todo el país.",
+    "zoneSelector": {
+      "placeholder": "Seleccionar zona...",
+      "addMore": "Agregar...",
+      "noResults": "No se encontraron resultados"
+    }
+  },
+  "tarifarioImport": {
+    "title": "Importar Tarifario desde Excel",
+    "subtitle": "Carga masiva para múltiples CAS",
+    "format": {
+      "title": "Formato requerido del Excel",
+      "casName": "Nombre exacto del CAS en el sistema (ej: \"Black\", \"Silar\")",
+      "categoria": "Categoría del producto en MAYÚSCULAS",
+      "dates": "Formato DD/MM/YYYY o YYYY-MM-DD",
+      "estado": "A = Activo, I = Inactivo (opcional, por defecto A)"
+    },
+    "processing": "Procesando archivo y verificando contra la BD...",
+    "uploadText": "Haz clic o arrastra tu archivo Excel aquí",
+    "uploadHint": "Acepta .xlsx y .xls",
+    "preview": {
+      "toInsert": "a insertar",
+      "toUpdate": "a actualizar",
+      "noChanges": "sin cambios",
+      "withError": "con error",
+      "totalRows": "filas en total",
+      "headers": {
+        "cas": "CAS",
+        "category": "Categoria",
+        "service": "Servicio",
+        "validity": "Vigencia",
+        "current": "Actual",
+        "new": "Nuevo",
+        "status": "Estado"
+      }
+    },
+    "statuses": {
+      "insert": "INSERTAR",
+      "update": "ACTUALIZAR",
+      "ok": "SIN CAMBIOS",
+      "error": "ERROR"
+    },
+    "done": {
+      "title": "¡Importación exitosa!",
+      "message": "Se insertaron {{inserted}} nuevas tarifas y se actualizaron {{updated}}."
+    },
+    "downloadTemplate": "Descargar plantilla Excel",
+    "uploadAnother": "Cargar otro archivo",
+    "confirming": "Aplicando...",
+    "confirm": "Confirmar importación ({{count}})",
+    "errors": {
+      "emptyFile": "El archivo está vacío o solo tiene encabezados.",
+      "processingError": "Error al procesar el archivo: {{error}}",
+      "noChanges": "No hay cambios pendientes para aplicar.",
+      "confirmError": "Error al confirmar la importación: {{error}}"
+    }
+  },
+  "valuations": {
+    "pageTitle": "Valorizaciones CAS",
+    "pageSubtitle": "Gestión quincenal de pagos y descuentos.",
+    "tabGenerate": "Generar",
+    "tabHistory": "Historial",
+    "selectEnterprise": "Seleccionar empresa...",
+    "searchCasPlaceholder": "Buscar CAS...",
+    "searchTicketGlobal": "Buscar ticket específico en todo el CAS...",
+    "ticketNotFound": "Ticket no encontrado",
+    "ticketFound": "Ticket encontrado",
+    "applyPenalty": "Aplicar penalidad",
+    "sectionSummary": "Resumen de Cuenta",
+    "summaryServices": "Servicios",
+    "summaryPenalties": "Penalidades",
+    "summaryNetTotal": "Total Neto",
+    "summarySiatcLive": "Siatc Live",
+    "summaryOfficialAudit": "Cálculo Oficial de Auditoría",
+    "buttonExportDraft": "Exportar Borrador",
+    "buttonSendPreValuation": "Enviar Pre-Valorización",
+    "buttonCloseAndNotify": "Cerrar y Notificar",
+    "buttonBatchAdjustment": "Ajuste Masivo",
+    "buttonBatchDiscount": "Descuento Masivo",
+    "tableHeaderProcessDate": "Fecha de Proceso",
+    "tableHeaderServices": "Servicios",
+    "tableHeaderAuditStatus": "Estado de Auditoría",
+    "tableHeaderDailyAccumulation": "Acumulado Diario",
+    "tabServicesCount": "Servicios realizados ({{count}})",
+    "tabPenaltiesCount": "Penalidades aplicadas ({{count}})",
+    "emptyStateTitle": "Esperando selección",
+    "emptyStateMessage": "Seleccione una empresa y el rango de fechas para visualizar la auditoría.",
+    "emptyServices": "No se detectaron servicios en el rango seleccionado",
+    "emptyPenalties": "No se han registrado penalizaciones en este periodo.",
+    "emptyClosures": "No hay cierres registrados aún.",
+    "statusAudited": "Auditado",
+    "statusToLink": "por vincular",
+    "statusNoObservations": "Sin observaciones",
+    "statusApplied": "Aplicado",
+    "statusIgnored": "Ignorado",
+    "statusAnnulled": "Anulado",
+    "detailTableVisitClosureDates": "Visita / Cierre",
+    "detailTableDays": "Días",
+    "detailTableServicePerformed": "Servicio Realizado",
+    "detailTableCategory": "Categoría",
+    "detailTableAreaQuota": "Cupo Área",
+    "detailTableSubtotal": "Subtotal",
+    "detailLabelExempt": "Exento",
+    "detailLabelVisitFree": "Visita (S/ 0.00)",
+    "detailLabelOutOfTime": "Fuera de tiempo",
+    "detailLabelOutOfTimeFree": "Fuera de tiempo (S/ 0.00)",
+    "detailButtonRegisterProduct": "Registrar Prod.",
+    "detailButtonLinkRate": "Vincular Tarifa",
+    "detailLabelNoAccess": "Sin acceso",
+    "detailButtonTechnicalReport": "Ver Informe Técnico C4C",
+    "additionalsTitle": "Pagos Adicionales",
+    "additionalsEmpty": "Sin pagos adicionales registrados",
+    "additionalsAdd": "Agregar pago adicional",
+    "additionalEdit": "Editar adicional",
+    "additionalDelete": "Eliminar adicional",
+    "penaltyReasonGeneral": "Descuento general",
+    "penaltyNoteIgnored": "Se aplicó un descuento mayor para este ticket",
+    "penaltyLabelDebit": "Débito CAS",
+    "penaltyButtonEdit": "Editar penalidad",
+    "penaltyButtonAnnul": "Anular",
+    "penaltyButtonEnable": "Habilitar",
+    "confirmToggleTitle": "{{action}} Penalidad",
+    "confirmToggleMessage": "¿Está seguro que desea {{action}} esta penalidad?{{exclusion}}",
+    "confirmToggleExclusion": " Esta será excluida de los cálculos y reportes.",
+    "confirmToggleAnnulText": "Sí, anular",
+    "confirmToggleEnableText": "Sí, habilitar",
+    "alertSuccessEmail": "El correo ha sido enviado correctamente.",
+    "alertBatchAdjustmentTitle": "Ajuste Completado",
+    "alertBatchAdjustmentMessage": "Se procesaron {{count}} tickets exitosamente.",
+    "alertBatchDiscountTitle": "Descuento Completado",
+    "alertBatchDiscountMessage": "Se procesaron {{count}} tickets exitosamente.",
+    "alertCloseSuccessTitle": "¡Cierre Exitoso!",
+    "alertCloseSuccessMessage": "La quincena se ha cerrado con código: {{code}}. ¿Deseas enviar el reporte oficial ahora?",
+    "alertDraftSavedTitle": "Borrador Guardado",
+    "alertDraftSavedMessage": "La pre-valorización se ha guardada correctamente. Ahora puedes enviarla o cerrarla desde el historial.",
+    "alertCloseTitle": "Cerrar Valorización",
+    "alertCloseMessage": "¿Está seguro que desea cerrar definitivamente la valorización {{code}}? Una vez cerrada, ya no podrá modificarse.",
+    "alertCloseConfirmed": "La valorización ha sido cerrada correctamente.",
+    "alertReopenTitle": "¿Reabrir Quincena?",
+    "alertReopenMessage": "Esta acción eliminará el registro de cierre {{code}} y los tickets volverán a estar activos para edición. ¿Está seguro?",
+    "alertReopenSuccess": "La quincena ha sido reabierta.",
+    "validationNoTickets": "Debe ingresar al menos un número de ticket.",
+    "validationNoValidTickets": "Debe ingresar al menos un número de ticket válido.",
+    "validationNoDiscountReason": "Debe seleccionar un motivo para el descuento.",
+    "modalEmailTitle": "Compartir Valorización por Correo",
+    "modalEmailRecipients": "Destinatarios",
+    "modalEmailPlaceholder": "ejemplo@correo.com, otro@correo.com",
+    "modalEmailHint": "Separe múltiples correos con una coma (,)",
+    "modalEmailAttachmentReady": "Adjunto listo",
+    "modalEmailInfo": "Se enviará un correo formal con el resumen neto y el reporte Excel detallado adjunto.",
+    "modalEmailSendButton": "Enviar Auditoría",
+    "modalBatchAdjustmentTitle": "Ajuste Masivo",
+    "modalBatchAdjustmentTicketsLabel": "Tickets (pegue aquí la lista)",
+    "modalBatchAdjustmentAmountLabel": "Importe Final Fijo",
+    "modalBatchAdjustmentReasonLabel": "Motivo",
+    "modalBatchAdjustmentInfo": "El sistema calculará automáticamente la diferencia contra la tarifa base de cada ticket para que el total sume exactamente S/ {{amount}}.",
+    "modalBatchAdjustmentWarning": "Los ajustes previos en estos tickets serán reemplazados.",
+    "modalBatchAdjustmentApply": "Aplicar Ajuste a Tickets",
+    "modalBatchAdjustmentApplying": "Aplicando ajustes...",
+    "modalBatchDiscountTitle": "Descuento Masivo",
+    "modalBatchDiscountTicketsLabel": "Tickets (Ticket o Ticket,Monto)",
+    "modalBatchDiscountAmountLabel": "Monto a Descontar",
+    "modalBatchDiscountReasonLabel": "Motivo del Descuento",
+    "modalBatchDiscountDescriptionLabel": "Descripción Detallada",
+    "modalBatchDiscountSelectReason": "Seleccione un motivo...",
+    "modalBatchDiscountApply": "Aplicar Descuentos",
+    "modalBatchDiscountApplying": "Aplicando...",
+    "modalBatchDiscountDescriptionPlaceholder": "Explicación detallada del descuento...",
+    "modalCloseTitle": "Confirmar Cierre de Operaciones",
+    "modalCloseWarningTitle": "Bloqueo de Quincena",
+    "modalCloseWarningMessage": "Esta acción es irreversible. Se bloquearán todos los tickets y descuentos del periodo {{startDate}} / {{endDate}}.",
+    "modalCloseIncome": "Ingresos (bruto)",
+    "modalCloseExpenses": "Egresos (penalidades)",
+    "modalCloseButtonBack": "Regresar",
+    "modalCloseButtonConfirm": "Confirmar cierre final",
+    "modalCloseProcessing": "Procesando cierre...",
+    "modalDetailTitle": "Detalle del Cierre",
+    "modalDetailSearchPlaceholder": "Buscar ticket...",
+    "modalDetailButtonExcel": "Excel",
+    "modalDetailButtonSendReport": "Enviar Reporte",
+    "modalDetailButtonReopen": "Reabrir",
+    "modalDetailTabServices": "Servicios ({{count}})",
+    "modalDetailTabPenalties": "Penalidades ({{count}})",
+    "modalDetailSubtotalServices": "Subtotal Servicios",
+    "modalDetailTotalPenalties": "Total Penalidades",
+    "modalDetailRecordsShown": "Mostrando {{count}} registros auditados",
+    "modalDetailEmptySearch": "No hay {{type}} que coincidan con la búsqueda",
+    "modalDetailEmptySearchServices": "servicios",
+    "modalDetailEmptySearchPenalties": "penalidades",
+    "modalDetailClosedBy": "Cerrado por",
+    "modalDetailRegistrationDate": "Fecha de Registro",
+    "modalDetailTotalLiquidated": "Total Liquidado Final",
+    "modalDetailPenalizeButton": "Penalizar Ticket",
+    "closureCode": "Código del Cierre",
+    "closureDetail": "Detalle del Cierre",
+    "closureServicesProcessed": "Servicios Procesados",
+    "closureAuditedTickets": "Tickets Auditados",
+    "closureSubtotalServices": "Subtotal por Servicios",
+    "closurePenaltiesApplied": "Penalidades Aplicadas",
+    "closureTotalToInvoice": "Total Neto a Facturar",
+    "closureTotalToInvoiceEstimated": "Total Estimado a Facturar",
+    "closureTotalShort": "TOTAL A FACTURAR",
+    "errors": {
+      "selectCasFirst": "Por favor, seleccione un Centro de Atención (CAS) primero.",
+      "loadValuation": "No se pudo cargar la información de la valorización.",
+      "loadHistory": "No se pudo cargar el historial de cierres.",
+      "loadClosureDetails": "No se pudo cargar el detalle del cierre.",
+      "sendEmail": "No se pudo enviar el correo.",
+      "batchAdjustment": "Error al aplicar el ajuste masivo.",
+      "batchDiscount": "Error al aplicar el descuento masivo.",
+      "togglePenalty": "No se pudo {{action}} la penalidad: {{error}}",
+      "closeFortnight": "No se pudo cerrar la quincena. Intente nuevamente.",
+      "saveDraft": "No se pudo guardar el borrador: {{error}}",
+      "finalize": "No se pudo finalizar.",
+      "reopen": "No se pudo reabrir.",
+      "reportTitle": "Error de Reporte",
+      "reportMessage": "Error al generar reporte.",
+      "popupBlocked": "El navegador bloqueó la ventana emergente. Por favor, permite las ventanas emergentes para este sitio.",
+      "technicalReport": "No se pudo obtener el informe técnico"
+    }
+  },
+  "penaltyModal": {
+    "titlePenalty": "Registrar Penalidad / Descuento",
+    "titleAdditional": "Registrar Importe Adicional",
+    "ticketLabel": "Ticket Asociado (Opcional)",
+    "ticketPlaceholder": "Escriba ticket o servicio...",
+    "noTicket": "-- Sin ticket específico --",
+    "dateLabel": "Fecha",
+    "motiveLabel": "Motivo / Concepto",
+    "selectMotive": "-- Seleccionar motivo --",
+    "motivePlaceholder": "Ej: Bono por cumplimiento, Servicio extra...",
+    "amountLabel": "Importe (S/)",
+    "descriptionLabel": "Descripción / Observaciones",
+    "descriptionPlaceholder": "Detalle los motivos del descuento o adicional...",
+    "saving": "Guardando..."
+  },
+  "profile": {
+    "title": "Mi Perfil",
+    "subtitle": "Gestiona tu información personal y credenciales.",
+    "noRole": "Sin rol",
+    "infoTitle": "Información",
+    "emailLabel": "Email",
+    "managementLabel": "Gerencia",
+    "noManagement": "Sin gerencia",
+    "statusLabel": "Estado",
+    "activeStatus": "Activo",
+    "accountTitle": "Cuenta",
+    "accountSubtitle": "Tu nombre de usuario y correo electrónico.",
+    "userLabel": "Usuario",
+    "readOnlyNote": "Estos campos son de solo lectura. Si necesitas un cambio, contacta al administrador del sistema.",
+    "securityTitle": "Seguridad",
+    "securitySubtitle": "Cambia tu contraseña de acceso.",
+    "newPasswordLabel": "Nueva Contraseña",
+    "confirmPasswordLabel": "Confirmar Contraseña",
+    "passwordHint": "Deja los campos vacíos para mantener tu contraseña actual. Mínimo 4 caracteres.",
+    "saving": "Guardando...",
+    "saveChanges": "Guardar Cambios",
+    "changeAvatar": "Cambiar foto de perfil",
+    "errors": {
+      "imageProcessing": "Error al procesar la imagen",
+      "passwordMismatch": "Las contraseñas no coinciden",
+      "passwordTooShort": "La contraseña debe tener al menos 4 caracteres",
+      "updateFailed": "Error al actualizar el perfil"
+    },
+    "success": {
+      "updated": "Perfil actualizado correctamente"
+    }
+  },
+  "audit": {
+    "breadcrumb": "Trazabilidad de Seguridad",
+    "title": "Bitácora de Auditoría",
+    "subtitle": "Monitoreo transaccional y registro de eventos críticos de Valorizaciones",
+    "sync": "Sincronizar Eventos",
+    "searchPlaceholder": "Buscar por usuario, acción o entidad...",
+    "loading": "Indexando Auditoría",
+    "empty": "No se registran transacciones críticas",
+    "filter": {
+      "all": "LOGS: TODOS LOS EVENTOS",
+      "denied": "CRÍTICO: ACCESOS DENEGADOS",
+      "login": "ACCESO: INICIOS DE SESIÓN",
+      "create": "SEGURIDAD: ALTA DE RECURSOS",
+      "update": "SEGURIDAD: MODIFICACIONES",
+      "delete": "SEGURIDAD: ELIMINACIONES"
+    },
+    "table": {
+      "date": "Fecha y Hora",
+      "user": "Usuario Responsable",
+      "operation": "Operación",
+      "entity": "Ref. Entidad",
+      "payload": "Payload / Detalle Técnico"
+    }
+  },
+  "settings": {
+    "title": "Ajustes Generales",
+    "subtitle": "Configure los parámetros operativos de la plataforma.",
+    "loading": "Cargando configuración...",
+    "sectionTitle": "Parámetros de Valorización",
+    "maxDaysLabel": "Días Máximos de Cierre",
+    "maxDaysDescription": "Define la cantidad máxima de días permitidos entre la fecha de visita y la fecha de cierre del ticket (CheckOut). Si se supera este límite, la tarifa base calculada será S/ 0.00.",
+    "saveChanges": "Guardar Cambios",
+    "errors": {
+      "loadFailed": "Error al cargar la configuración",
+      "invalidNumber": "Ingrese un número válido mayor a 0",
+      "saveFailed": "No se pudo guardar la configuración"
+    },
+    "success": {
+      "saved": "Configuración guardada correctamente"
+    }
+  },
+  "configDistritos": {
+    "title": "Adicionales por Distrito",
+    "subtitle": "Zonificación de incentivos y recargos por CAS/Distrito.",
+    "create": "Crear Configuración",
+    "stats": {
+      "activeRules": "Reglas Activas",
+      "coveredDistricts": "Distritos Cubiertos",
+      "participatingCas": "CAS Participantes"
+    },
+    "searchPlaceholder": "Buscar por distrito...",
+    "filtersActive": "FILTROS ACTIVOS",
+    "loading": "Sincronizando configuraciones...",
+    "empty": "No hay reglas configuradas",
+    "emptyHint": "Cree una nueva regla para empezar a aplicar adicionales por zona.",
+    "table": {
+      "districts": "Distritos",
+      "cas": "CAS",
+      "amount": "Importe",
+      "validity": "Vigencia",
+      "status": "Estado",
+      "actions": "Acciones",
+      "casCount_one": "{{count}} CAS Seleccionado",
+      "casCount_other": "{{count}} CAS Seleccionados",
+      "indefinite": "Indefinido",
+      "active": "ACTIVO",
+      "inactive": "INACTIVO"
+    },
+    "modal": {
+      "editTitle": "Editar Regla Zonal",
+      "newTitle": "Nueva Regla Zonal",
+      "selectCas": "Seleccionar CAS",
+      "filterByCity": "Filtrar por Ciudad",
+      "allCities": "Todas las ciudades",
+      "selectDistricts": "Seleccionar Distritos ({{city}})",
+      "amount": "Importe Adicional (S/.)",
+      "searchCas": "Buscar CAS...",
+      "searchDistricts": "Buscar distritos..."
+    },
+    "dialog": {
+      "deleteTitle": "¿Eliminar configuración?",
+      "deleteMessage": "Esta acción no se puede deshacer y afectará los cálculos futuros.",
+      "deleteConfirm": "Si, eliminar"
+    },
+    "errors": {
+      "loadFailed": "No se pudo cargar la configuración.",
+      "deleteFailed": "Error al eliminar.",
+      "saveFailed": "No se pudo guardar la configuración."
+    },
+    "success": {
+      "deletedTitle": "Eliminado",
+      "deletedMessage": "La regla ha sido eliminada.",
+      "savedTitle": "Guardado",
+      "savedMessage": "Configuración actualizada correctamente."
+    }
+  },
+  "configInstitucional": {
+    "title": "Canal Institucional",
+    "subtitle": "Tarifa plana por Cupo de Área (OBRAS / TALLER / GENERAL).",
+    "newRule": "Nueva Regla",
+    "searchPlaceholder": "Buscar por cupo área...",
+    "loading": "Cargando reglas",
+    "empty": "No hay reglas configuradas",
+    "emptyHint": "Crea una regla para aplicar tarifa plana por Cupo Área.",
+    "table": {
+      "cupoArea": "Cupo Área",
+      "amount": "Importe",
+      "validity": "Vigencia",
+      "actions": "Acciones"
+    },
+    "modal": {
+      "editTitle": "Editar Regla",
+      "newTitle": "Nueva Regla de Canal Institucional",
+      "cupoArea": "Cupo Área",
+      "startDate": "Fecha Inicio",
+      "endDate": "Fecha Fin",
+      "amount": "Importe (S/.)",
+      "save": "Guardar Regla"
+    },
+    "dialog": {
+      "deleteTitle": "¿Eliminar regla?",
+      "deleteMessage": "Esta acción afectará los cálculos de valorización futuros.",
+      "deleteConfirm": "Sí, eliminar"
+    },
+    "errors": {
+      "loadFailed": "Error al cargar la configuración institucional.",
+      "deleteFailed": "Error al eliminar.",
+      "saveFailed": "Error al guardar la configuración."
+    },
+    "success": {
+      "deletedTitle": "Eliminado",
+      "deletedMessage": "La regla ha sido eliminada.",
+      "savedTitle": "Guardado",
+      "savedMessage": "Configuración actualizada correctamente."
+    }
+  },
+  "config": {
+    "moduleOf": "Módulo de",
+    "title": "Configuración",
+    "adminControl": "Control Administrativo",
+    "siatcSystem": "Sistema SIATC",
+    "siatcDescription": "Valorizaciones CAS",
+    "nav": {
+      "settings": "Ajustes Generales",
+      "institutional": "Canal Institucional",
+      "districts": "Adicionales por Distrito",
+      "users": "Gestión de Usuarios",
+      "roles": "Perfiles y Permisos",
+      "audit": "Logs de Auditoría"
+    }
+  },
+  "mainLayout": {
+    "sessionWarningTitle": "Sesión a punto de expirar",
+    "sessionExpiresIn": "Tu sesión expirará en",
+    "sessionInactivity": "por inactividad.",
+    "continueSession": "Continuar sesión",
+    "closeSession": "Cerrar sesión"
+  },
+  "tarifarioModal": {
+    "title": "Vincular Nueva Tarifa",
+    "ticketInfo": "Información del Ticket",
+    "casLabel": "CAS",
+    "categoryLabel": "Categoría",
+    "serviceLabel": "Servicio",
+    "amountLabel": "Importe de Tarifa (S/)",
+    "startDateLabel": "Fecha Inicio",
+    "endDateLabel": "Fecha Fin (Opcional)",
+    "saving": "Guardando...",
+    "createAndLink": "Crear y Vincular Tarifa",
+    "errors": {
+      "invalidAmountTitle": "Valor Inválido",
+      "invalidAmount": "El importe debe ser mayor a cero.",
+      "createFailed": "No se pudo crear la tarifa."
+    },
+    "success": {
+      "title": "¡Éxito!",
+      "message": "La tarifa ha sido creada y aplicada."
     }
   }
 }

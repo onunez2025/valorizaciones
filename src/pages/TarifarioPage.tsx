@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
     Search, Plus, Save, Trash2, History, DollarSign, Building2,
     ChevronDown, Check, Target, AlertCircle, FileText, Activity, Upload
@@ -34,6 +35,7 @@ interface Rate {
 }
 
 export default function TarifarioPage() {
+    const { t } = useTranslation();
     const { alert } = useDialog();
     const [casList, setCasList] = useState<CAS[]>([]);
     const [selectedCas, setSelectedCas] = useState<CAS | null>(null);
@@ -102,7 +104,7 @@ export default function TarifarioPage() {
         } catch (err: unknown) {
             if (err instanceof Error && err.message === 'AUTH_EXPIRED') return;
             console.error("Error fetching rates:", err);
-            alert({ message: "No se pudieron cargar las tarifas del CAS seleccionado. Verifique la conexión." });
+            alert({ message: t('tarifario.errors.loadFailed') });
         } finally {
             setLoading(false);
         }
@@ -143,13 +145,13 @@ export default function TarifarioPage() {
                     rates: ratesToSave
                 })
             });
-            alert({ title: "¡Tarifario Guardado!", message: "Los precios se han actualizado correctamente.", type: 'success' });
+            alert({ title: t('tarifario.success.savedTitle'), message: t('tarifario.success.savedMessage'), type: 'success' });
             setIsEditing(false);
             fetchRates(selectedCas);
         } catch (err: unknown) {
             if (err instanceof Error && err.message === 'AUTH_EXPIRED') return;
             console.error("Error saving rates:", err);
-            alert({ message: "Hubo un error al guardar los cambios en el servidor." });
+            alert({ message: t('tarifario.errors.saveFailed') });
         } finally {
             setSaving(false);
         }
@@ -185,7 +187,7 @@ export default function TarifarioPage() {
             setRates(r => r.map((x, i) => i === globalIdx ? { ...x, Estado: newEstado } : x));
         } catch (_err) {
             setEditRates(prev);
-            alert({ message: 'No se pudo cambiar el estado de la tarifa.' });
+            alert({ message: t('tarifario.errors.statusChangeFailed') });
         } finally {
             setTogglingId(null);
         }
@@ -212,14 +214,14 @@ export default function TarifarioPage() {
         <div className={SIATC_THEME.LAYOUT.PAGE_WRAPPER}>
             <div className={SIATC_THEME.LAYOUT.HEADER_WRAPPER}>
                 <div>
-                    <h1 className={SIATC_THEME.TYPOGRAPHY.PAGE_TITLE}>Tarifario de Servicios</h1>
-                    <p className={SIATC_THEME.TYPOGRAPHY.PAGE_SUBTITLE}>Configuración dinámica de precios por centro de atención.</p>
+                    <h1 className={SIATC_THEME.TYPOGRAPHY.PAGE_TITLE}>{t('tarifario.title')}</h1>
+                    <p className={SIATC_THEME.TYPOGRAPHY.PAGE_SUBTITLE}>{t('tarifario.subtitle')}</p>
                 </div>
                 <button
                     onClick={() => setIsImportModalOpen(true)}
                     className="h-10 px-5 bg-blue-600 text-white rounded-lg font-bold text-[10px] shadow-lg flex items-center gap-2 transition-all hover:opacity-90 active:scale-95 self-start md:self-auto"
                 >
-                    <Upload className="w-3.5 h-3.5" /> Importar desde Excel
+                    <Upload className="w-3.5 h-3.5" /> {t('tarifario.importExcel')}
                 </button>
             </div>
 
@@ -239,12 +241,12 @@ export default function TarifarioPage() {
                         onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                         className="flex-1 text-left px-3 py-1"
                     >
-                        <p className="text-[9px] font-bold text-muted-foreground/60 mb-0">Empresa en configuración</p>
+                        <p className="text-[9px] font-bold text-muted-foreground/60 mb-0">{t('tarifario.companyLabel')}</p>
                         <p className={cn(
                             "text-base font-bold tracking-tight flex items-center gap-2",
                             !selectedCas && "text-muted-foreground/30 italic"
                         )}>
-                            {selectedCas ? toTitleCase(selectedCas.Nombre_CAS) : "-- Seleccione un CAS para editar precios --"}
+                            {selectedCas ? toTitleCase(selectedCas.Nombre_CAS) : t('tarifario.selectCasPlaceholder')}
                             {selectedCas && <span className="text-[11px] font-bold text-muted-foreground opacity-40">(RUC: {selectedCas.RUC})</span>}
                         </p>
                     </button>
@@ -262,7 +264,7 @@ export default function TarifarioPage() {
                                 <input
                                     autoFocus
                                     type="text"
-                                    placeholder="Buscar por sede o identificador..."
+                                    placeholder={t('tarifario.searchPlaceholder')}
                                     className="w-full bg-muted/30 border border-transparent rounded-lg pl-11 pr-5 py-3 text-sm font-bold focus:bg-background focus:ring-4 focus:ring-primary/5 focus:border-primary/20 outline-none transition-all"
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
@@ -300,7 +302,7 @@ export default function TarifarioPage() {
                                     <div className="w-20 h-20 bg-muted/30 rounded-full flex items-center justify-center mx-auto mb-5 border-2 border-dashed border-border/50">
                                         <Search className="w-10 h-10 text-muted-foreground opacity-10" />
                                     </div>
-                                    <p className="text-xs font-black text-muted-foreground opacity-30">Sin coincidencias</p>
+                                    <p className="text-xs font-black text-muted-foreground opacity-30">{t('tarifario.noMatches')}</p>
                                 </div>
                             )}
                         </div>
@@ -315,8 +317,8 @@ export default function TarifarioPage() {
                             <History className="w-14 h-14 text-primary opacity-20" />
                             <div className="absolute inset-0 bg-primary/10 rounded-full animate-pulse blur-2xl opacity-20" />
                         </div>
-                        <h3 className="text-3xl font-black tracking-tight mb-4">Gestión de Tarifas CAS</h3>
-                        <p className="text-muted-foreground max-w-sm font-bold opacity-50 leading-relaxed text-[11px]">Personalización de precios según la sede para facturación automática.</p>
+                        <h3 className="text-3xl font-black tracking-tight mb-4">{t('tarifario.empty.title')}</h3>
+                        <p className="text-muted-foreground max-w-sm font-bold opacity-50 leading-relaxed text-[11px]">{t('tarifario.empty.subtitle')}</p>
                     </div>
                 ) : (
                     <>
@@ -326,15 +328,15 @@ export default function TarifarioPage() {
                                     <DollarSign className="w-5 h-5" />
                                 </div>
                                 <div>
-                                    <h3 className="text-[9px] font-bold text-muted-foreground/60 mb-0.5">Precios configurados</h3>
+                                    <h3 className="text-[9px] font-bold text-muted-foreground/60 mb-0.5">{t('tarifario.ratesLabel')}</h3>
                                     <div className="flex items-center gap-3">
                                         <p className="text-xl font-bold tracking-tight">
                                             <span className="text-emerald-600">{activeCount}</span>
-                                            <span className="text-muted-foreground/40 text-sm font-bold"> activos</span>
+                                            <span className="text-muted-foreground/40 text-sm font-bold"> {t('tarifario.activeLabel')}</span>
                                         </p>
                                         {inactiveCount > 0 && (
                                             <span className="text-[9px] font-black px-2.5 py-1 rounded-full border bg-muted/20 border-border/40 text-muted-foreground/50">
-                                                {inactiveCount} inactivos
+                                                {inactiveCount} {t('tarifario.inactiveLabel')}
                                             </span>
                                         )}
                                     </div>
@@ -347,14 +349,14 @@ export default function TarifarioPage() {
                                             onClick={() => { setIsEditing(false); setEditRates(rates); }}
                                             className="px-5 py-2.5 bg-muted rounded-lg font-bold text-[10px] text-muted-foreground hover:bg-muted/80 transition-all"
                                         >
-                                            Descartar
+                                            {t('tarifario.discard')}
                                         </button>
                                         <button
                                             onClick={handleSave}
                                             disabled={saving}
                                             className="px-6 py-2.5 bg-emerald-600 text-white rounded-lg font-bold text-[10px] shadow-lg flex items-center gap-2"
                                         >
-                                            {saving ? "Guardando..." : <><Save className="w-4 h-4" /> Guardar tarifario</>}
+                                            {saving ? t('tarifario.saving') : <><Save className="w-4 h-4" /> {t('tarifario.saveRates')}</>}
                                         </button>
                                     </div>
                                 ) : (
@@ -362,14 +364,14 @@ export default function TarifarioPage() {
                                         onClick={handleAddRow}
                                         className="h-10 px-6 bg-foreground text-background rounded-lg font-bold text-[10px] shadow-lg flex items-center gap-2 transition-all hover:opacity-90 active:scale-95"
                                     >
-                                        <Plus className="w-3.5 h-3.5" /> Agregar tarifa
+                                        <Plus className="w-3.5 h-3.5" /> {t('tarifario.addRate')}
                                     </button>
                                 )}
                                 <button
                                     onClick={() => setIsExceptionsModalOpen(true)}
                                     className="h-10 px-6 border border-amber-500/20 bg-amber-500/5 text-amber-600 rounded-lg font-bold text-[10px] shadow-sm flex items-center gap-2 transition-all hover:bg-amber-500/10 active:scale-95"
                                 >
-                                    <AlertCircle className="w-3.5 h-3.5" /> Casos Especiales
+                                    <AlertCircle className="w-3.5 h-3.5" /> {t('tarifario.specialCases')}
                                 </button>
                             </div>
                         </div>
@@ -403,7 +405,7 @@ export default function TarifarioPage() {
                                                      </div>
                                                      <div className="flex items-center gap-6">
                                                          <span className="text-[10px] font-bold text-muted-foreground opacity-40 uppercase tracking-widest">
-                                                             {serviceNames.length} servicios · {totalPeriods} periodos
+                                                             {t('tarifario.servicesCount', { services: serviceNames.length, periods: totalPeriods })}
                                                          </span>
                                                          <ChevronDown className={cn("w-4 h-4 text-muted-foreground/30 transition-transform duration-500", isExpanded && "rotate-180 text-primary")} />
                                                      </div>
@@ -414,11 +416,11 @@ export default function TarifarioPage() {
                                                          <table className="w-full text-left">
                                                              <thead>
                                                                  <tr className="border-b border-border/20 bg-muted/5">
-                                                                     <th className="px-6 py-2.5 font-bold text-[9px] uppercase tracking-widest text-muted-foreground/50 w-[35%]">Servicio</th>
-                                                                     <th className="px-4 py-2.5 font-bold text-[9px] uppercase tracking-widest text-muted-foreground/50">Fecha Inicio</th>
-                                                                     <th className="px-4 py-2.5 font-bold text-[9px] uppercase tracking-widest text-muted-foreground/50">Fecha Fin</th>
-                                                                     <th className="px-4 py-2.5 font-bold text-[9px] uppercase tracking-widest text-muted-foreground/50 text-right">Importe</th>
-                                                                     <th className="px-4 py-2.5 font-bold text-[9px] uppercase tracking-widest text-muted-foreground/50 text-center">Estado</th>
+                                                                     <th className="px-6 py-2.5 font-bold text-[9px] uppercase tracking-widest text-muted-foreground/50 w-[35%]">{t('tarifario.table.service')}</th>
+                                                                     <th className="px-4 py-2.5 font-bold text-[9px] uppercase tracking-widest text-muted-foreground/50">{t('tarifario.table.startDate')}</th>
+                                                                     <th className="px-4 py-2.5 font-bold text-[9px] uppercase tracking-widest text-muted-foreground/50">{t('tarifario.table.endDate')}</th>
+                                                                     <th className="px-4 py-2.5 font-bold text-[9px] uppercase tracking-widest text-muted-foreground/50 text-right">{t('tarifario.table.amount')}</th>
+                                                                     <th className="px-4 py-2.5 font-bold text-[9px] uppercase tracking-widest text-muted-foreground/50 text-center">{t('tarifario.table.status')}</th>
                                                                      <th className="px-3 py-2.5 w-8"></th>
                                                                  </tr>
                                                              </thead>

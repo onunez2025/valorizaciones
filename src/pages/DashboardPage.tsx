@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { 
+import { useTranslation } from 'react-i18next';
+import {
     TrendingUp, TrendingDown, DollarSign, Activity, 
     ArrowUpRight, ArrowDownRight, Calendar, AlertCircle, Building2, Search, ChevronDown, Check
 } from 'lucide-react';
@@ -35,6 +36,7 @@ interface CAS {
 }
 
 export default function DashboardPage() {
+    const { t } = useTranslation();
     const [stats, setStats] = useState<DashboardStats | null>(null);
     const [trends, setTrends] = useState<TrendData[]>([]);
     const [topCas, setTopCas] = useState<TopCasData[]>([]);
@@ -93,14 +95,14 @@ export default function DashboardPage() {
             const queryParams = (start && end) ? `?start=${start}&end=${end}${casQuery}` : (casQuery ? `?ruc=${selectedCas}` : '');
             const monthsParam = (period === 'year' ? '?months=12' : (period === '90' ? '?months=3' : '?months=6')) + casQuery.replace('&', '');
 
-            const [s, t, tc] = await Promise.all([
+            const [s, trendData, tc] = await Promise.all([
                 ApiClient.request(`/dashboard/stats${queryParams.includes('?') ? queryParams : '?' + queryParams.replace('&', '')}`),
                 ApiClient.request(`/dashboard/trends${monthsParam.includes('?') ? monthsParam : '?' + monthsParam.replace('&', '')}`),
                 ApiClient.request(`/dashboard/top-cas${queryParams.includes('?') ? queryParams : '?' + queryParams.replace('&', '')}`)
             ]);
             
             setStats(s || { TotalTickets: 0, Bruto: 0, Sanciones: 0 });
-            setTrends(t || []);
+            setTrends(trendData || []);
             setTopCas(tc || []);
         } catch (err) {
             console.error("Dashboard error:", err);
@@ -120,8 +122,8 @@ export default function DashboardPage() {
         cas.RUC.includes(searchQuery)
     );
 
-    const activeCasName = selectedCas === 'all' 
-        ? 'Todas las Empresas' 
+    const activeCasName = selectedCas === 'all'
+        ? t('dashboard.allCompanies')
         : casList.find(c => c.RUC === selectedCas)?.Nombre_CAS;
 
     const netAmount = (stats?.Bruto || 0) - (stats?.Sanciones || 0);
@@ -138,10 +140,10 @@ export default function DashboardPage() {
             <div className={SIATC_THEME.LAYOUT.HEADER_WRAPPER}>
                 <div>
                     <h1 className={cn(SIATC_THEME.TYPOGRAPHY.PAGE_TITLE, "flex items-center gap-3")}>
-                        Auditoría Analítica
+                        {t('dashboard.title')}
                         <div className="w-2 h-2 bg-primary rounded-full animate-pulse shadow-[0_0_10px_rgba(var(--primary-rgb),0.5)]" />
                     </h1>
-                    <p className={SIATC_THEME.TYPOGRAPHY.PAGE_SUBTITLE}>Inteligencia de negocios CAS en tiempo real.</p>
+                    <p className={SIATC_THEME.TYPOGRAPHY.PAGE_SUBTITLE}>{t('dashboard.subtitle')}</p>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-4">
@@ -172,7 +174,7 @@ export default function DashboardPage() {
                                         <input 
                                             autoFocus
                                             type="text" 
-                                            placeholder="Buscar centro o RUC..."
+                                            placeholder={t('dashboard.searchPlaceholder')}
                                             className={cn(SIATC_THEME.COMPONENTS.INPUT, "pl-9 text-[11px] font-bold")}
                                             value={searchQuery}
                                             onChange={(e) => setSearchQuery(e.target.value)}
@@ -187,7 +189,7 @@ export default function DashboardPage() {
                                             selectedCas === 'all' ? "bg-primary text-white" : "hover:bg-muted text-muted-foreground"
                                         )}
                                     >
-                                        Todas las Empresas
+                                        {t('dashboard.allCompanies')}
                                         {selectedCas === 'all' && <Check className="w-3 h-3" />}
                                     </button>
                                     <div className="h-px bg-border/30 my-1 mx-2" />
@@ -218,8 +220,8 @@ export default function DashboardPage() {
                             { id: '7', label: '7D' },
                             { id: '30', label: '30D' },
                             { id: '90', label: '90D' },
-                            { id: 'year', label: 'Año' },
-                            { id: 'custom', label: 'Rango' },
+                            { id: 'year', label: t('dashboard.period.year') },
+                            { id: 'custom', label: t('dashboard.period.range') },
                         ].map((p) => (
                             <button
                                 key={p.id}
@@ -250,7 +252,7 @@ export default function DashboardPage() {
                             onChange={(e) => setCustomRange({...customRange, start: e.target.value})}
                         />
                     </div>
-                    <span className="text-muted-foreground text-[9px] font-bold opacity-40">Hasta</span>
+                    <span className="text-muted-foreground text-[9px] font-bold opacity-40">{t('dashboard.period.to')}</span>
                     <div className="flex items-center gap-3 bg-background px-3 py-1.5 rounded-lg border border-border shadow-sm">
                         <Calendar className="w-3.5 h-3.5 text-primary" />
                         <input 
@@ -265,37 +267,37 @@ export default function DashboardPage() {
 
             {/* Metricas Principales - Idéntico a Liquidaciones */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                <StatCard 
-                    title="Total Bruto Valorizado" 
-                    value={`S/ ${(stats?.Bruto || 0).toLocaleString()}`} 
-                    subtitle={`${stats?.TotalTickets} Tickets cerrados`}
+                <StatCard
+                    title={t('dashboard.kpi.grossTotal')}
+                    value={`S/ ${(stats?.Bruto || 0).toLocaleString()}`}
+                    subtitle={t('dashboard.kpi.closedTickets', { count: stats?.TotalTickets })}
                     icon={<DollarSign className="w-5 h-5" />}
                     trend="+12.5%"
                     trendUp={true}
                     color="blue"
                 />
-                <StatCard 
-                    title="Penalidades Aplicadas" 
-                    value={`S/ ${(stats?.Sanciones || 0).toLocaleString()}`} 
-                    subtitle="Deducciones activas"
+                <StatCard
+                    title={t('dashboard.kpi.penalties')}
+                    value={`S/ ${(stats?.Sanciones || 0).toLocaleString()}`}
+                    subtitle={t('dashboard.kpi.deductionsActive')}
                     icon={<TrendingDown className="w-5 h-5" />}
                     trend="+5.2%"
                     trendUp={false}
                     color="red"
                 />
-                <StatCard 
-                    title="Neto por Liquidar" 
-                    value={`S/ ${netAmount.toLocaleString()}`} 
-                    subtitle="Monto final proyectado"
+                <StatCard
+                    title={t('dashboard.kpi.netAmount')}
+                    value={`S/ ${netAmount.toLocaleString()}`}
+                    subtitle={t('dashboard.kpi.projectedAmount')}
                     icon={<TrendingUp className="w-5 h-5" />}
                     trend="+8.1%"
                     trendUp={true}
                     color="emerald"
                 />
-                <StatCard 
-                    title="Eficiencia de Atención" 
-                    value="94.2%" 
-                    subtitle="Tickets solucionados"
+                <StatCard
+                    title={t('dashboard.kpi.efficiency')}
+                    value="94.2%"
+                    subtitle={t('dashboard.kpi.resolvedTickets')}
                     icon={<Activity className="w-5 h-5" />}
                     trend="+2.3%"
                     trendUp={true}
@@ -308,17 +310,17 @@ export default function DashboardPage() {
                 <div className={cn("lg:col-span-2 p-6 transition-all", SIATC_THEME.COMPONENTS.CARD_CONTAINER)}>
                     <div className="flex items-center justify-between mb-8">
                         <div>
-                            <h3 className={SIATC_THEME.TYPOGRAPHY.SECTION_TITLE}>Historial de Gastos</h3>
-                            <p className="text-xl font-bold tracking-tight text-cb-text-primary">{selectedCas === 'all' ? 'Crecimiento Mensual' : 'Tendencia Individual'}</p>
+                            <h3 className={SIATC_THEME.TYPOGRAPHY.SECTION_TITLE}>{t('dashboard.chart.title')}</h3>
+                            <p className="text-xl font-bold tracking-tight text-cb-text-primary">{selectedCas === 'all' ? t('dashboard.chart.growth') : t('dashboard.chart.individual')}</p>
                         </div>
                         <div className="flex gap-4">
                             <div className="flex items-center gap-2">
                                 <div className="w-3 h-3 bg-primary rounded-full" />
-                                <span className="text-[10px] font-bold opacity-50 text-cb-text-primary">Bruto</span>
+                                <span className="text-[10px] font-bold opacity-50 text-cb-text-primary">{t('dashboard.chart.gross')}</span>
                             </div>
                             <div className="flex items-center gap-2">
                                 <div className="w-3 h-3 bg-red-500 rounded-full" />
-                                <span className="text-[10px] font-bold opacity-50 text-cb-text-primary">Sanciones</span>
+                                <span className="text-[10px] font-bold opacity-50 text-cb-text-primary">{t('dashboard.chart.penalties')}</span>
                             </div>
                         </div>
                     </div>
@@ -352,18 +354,18 @@ export default function DashboardPage() {
                 {/* Ranking de CAS */}
                 <div className={cn("p-6 flex flex-col justify-between", SIATC_THEME.COMPONENTS.CARD_CONTAINER)}>
                     <div>
-                        <h3 className={SIATC_THEME.TYPOGRAPHY.SECTION_TITLE}>Productividad</h3>
-                        <p className="text-xl font-bold tracking-tight mb-6 text-cb-text-primary">{selectedCas === 'all' ? 'Top 5 CAS Activos' : 'Desempeño Local'}</p>
+                        <h3 className={SIATC_THEME.TYPOGRAPHY.SECTION_TITLE}>{t('dashboard.ranking.title')}</h3>
+                        <p className="text-xl font-bold tracking-tight mb-6 text-cb-text-primary">{selectedCas === 'all' ? t('dashboard.ranking.allCas') : t('dashboard.ranking.local')}</p>
                         
                         <div className="space-y-6">
                             {topCas.length > 0 ? topCas.map((cas, index) => (
                                 <div key={cas.label} className="group cursor-default">
                                     <div className="flex justify-between items-end mb-2">
                                         <div className="flex flex-col">
-                                            <span className="text-[10px] font-black text-muted-foreground tracking-tighter">Ranking {index + 1}</span>
+                                            <span className="text-[10px] font-black text-muted-foreground tracking-tighter">{t('dashboard.ranking.rank')} {index + 1}</span>
                                             <span className="text-sm font-black text-cb-text-primary group-hover:text-primary transition-colors line-clamp-1">{toTitleCase(cas.label)}</span>
                                         </div>
-                                        <span className="text-sm font-black opacity-40 text-cb-text-secondary group-hover:opacity-100 transition-opacity whitespace-nowrap">{cas.value} Tickets</span>
+                                        <span className="text-sm font-black opacity-40 text-cb-text-secondary group-hover:opacity-100 transition-opacity whitespace-nowrap">{cas.value} {t('dashboard.ranking.tickets')}</span>
                                     </div>
                                     <div className="w-full bg-muted/40 h-2.5 rounded-full overflow-hidden">
                                         <div 
@@ -375,7 +377,7 @@ export default function DashboardPage() {
                             )) : (
                                 <div className="text-center py-10">
                                     <AlertCircle className="w-8 h-8 text-muted-foreground mx-auto mb-2 opacity-20" />
-                                    <p className="text-[10px] font-black text-muted-foreground opacity-40">No hay datos para este filtro</p>
+                                    <p className="text-[10px] font-black text-muted-foreground opacity-40">{t('dashboard.noData')}</p>
                                 </div>
                             )}
                         </div>
@@ -383,8 +385,8 @@ export default function DashboardPage() {
                     
                     <div className="mt-8 pt-6 border-t border-border flex items-center justify-between">
                         <div className="flex flex-col">
-                            <span className="text-[10px] font-black text-muted-foreground">Auditados</span>
-                            <span className="text-lg font-black text-cb-text-primary">100% Completo</span>
+                            <span className="text-[10px] font-black text-muted-foreground">{t('dashboard.audited')}</span>
+                            <span className="text-lg font-black text-cb-text-primary">{t('dashboard.complete')}</span>
                         </div>
                         <div className="p-3 bg-emerald-500/10 text-emerald-600 rounded-lg shadow-sm">
                             <ArrowUpRight className="w-6 h-6" />

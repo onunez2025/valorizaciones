@@ -2,7 +2,20 @@
   "common": {
     "welcome": "Welcome",
     "logout": "Log Out",
-    "loading": "Authenticating..."
+    "loading": "Authenticating...",
+    "cancel": "Cancel",
+    "save": "Save",
+    "saving": "Saving...",
+    "edit": "Edit",
+    "delete": "Delete",
+    "close": "Close",
+    "search": "Search",
+    "actions": "Actions",
+    "status": "Status",
+    "active": "Active",
+    "inactive": "Inactive",
+    "saveChanges": "Save Changes",
+    "configuration": "Configuration"
   },
   "auth": {
     "subtitle": "Enter your credentials to access the system.",
@@ -18,6 +31,606 @@
     },
     "errors": {
       "invalid": "Invalid credentials"
+    }
+  },
+  "dashboard": {
+    "title": "Analytical Audit",
+    "subtitle": "Real-time CAS business intelligence.",
+    "searchPlaceholder": "Search by center or RUC...",
+    "allCompanies": "All Companies",
+    "period": {
+      "year": "Year",
+      "range": "Range",
+      "to": "To"
+    },
+    "kpi": {
+      "grossTotal": "Total Gross Valued",
+      "closedTickets": "{{count}} Tickets closed",
+      "penalties": "Applied Penalties",
+      "deductionsActive": "Active deductions",
+      "netAmount": "Net to Settle",
+      "projectedAmount": "Projected final amount",
+      "efficiency": "Service Efficiency",
+      "resolvedTickets": "Tickets resolved"
+    },
+    "chart": {
+      "title": "Expense History",
+      "growth": "Monthly Growth",
+      "individual": "Individual Trend",
+      "gross": "Gross",
+      "penalties": "Penalties"
+    },
+    "ranking": {
+      "title": "Productivity",
+      "allCas": "Top 5 Active CAS",
+      "local": "Local Performance",
+      "rank": "Ranking",
+      "tickets": "Tickets"
+    },
+    "noData": "No data for this filter",
+    "audited": "Audited",
+    "complete": "100% Complete"
+  },
+  "penalties": {
+    "title": "Penalty Management",
+    "subtitle": "List of infractions and CAS discounts.",
+    "redirectMessage": "This module is managed directly in biweekly valuations."
+  },
+  "materials": {
+    "title": "Materials Master",
+    "subtitle": "Catalog and category management for rate schedule.",
+    "totalProducts": "Total Products",
+    "searchPlaceholder": "Search by name or external code...",
+    "newProduct": "New Product",
+    "loading": "Loading master...",
+    "empty": "No products found",
+    "emptyHint": "Try adjusting the search filters.",
+    "noCategory": "No Category",
+    "table": {
+      "externalCode": "External Code",
+      "productName": "Product Name",
+      "category": "Category",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "modal": {
+      "editTitle": "Edit Product",
+      "newTitle": "New Product",
+      "description": "Product Description",
+      "externalCode": "External Code",
+      "category": "Category",
+      "viewList": "View List",
+      "newCategory": "+ New",
+      "newCategoryPlaceholder": "New category...",
+      "selectCategory": "Select...",
+      "addNewCategory": "➕ New Category...",
+      "saveChanges": "Save Changes",
+      "createProduct": "Create Product"
+    },
+    "errors": {
+      "loadFailed": "Could not load the materials master.",
+      "saveFailed": "Could not update the material."
+    },
+    "success": {
+      "title": "Success!",
+      "message": "Material updated correctly."
+    }
+  },
+  "materialRegisterModal": {
+    "title": "Register New Product",
+    "unidentifiedTitle": "Unidentified Product",
+    "unidentifiedMessage": "This product does not exist in the master. Register it now so the system can automatically assign a rate.",
+    "externalCode": "External Code",
+    "description": "Product Description",
+    "descriptionPlaceholder": "Equipment name...",
+    "category": "Assigned Category",
+    "categoryPlaceholder": "Type or select a category...",
+    "registering": "Registering...",
+    "save": "Save to Master",
+    "errors": {
+      "missingCategoryTitle": "Missing data",
+      "missingCategoryMessage": "You must select or type a category.",
+      "saveFailed": "Could not register the material."
+    },
+    "success": {
+      "title": "Registered!",
+      "message": "The product has been added to the materials master."
+    }
+  },
+  "tarifario": {
+    "title": "Service Rate Schedule",
+    "subtitle": "Dynamic price configuration per service center.",
+    "importExcel": "Import from Excel",
+    "companyLabel": "Company in configuration",
+    "selectCasPlaceholder": "-- Select a CAS to edit prices --",
+    "searchPlaceholder": "Search by branch or identifier...",
+    "noMatches": "No matches",
+    "empty": {
+      "title": "CAS Rate Management",
+      "subtitle": "Price customization by branch for automatic billing."
+    },
+    "ratesLabel": "Configured prices",
+    "activeLabel": "active",
+    "inactiveLabel": "inactive",
+    "discard": "Discard",
+    "saving": "Saving...",
+    "saveRates": "Save rate schedule",
+    "addRate": "Add rate",
+    "specialCases": "Special Cases",
+    "servicesCount": "{{services}} services · {{periods}} periods",
+    "table": {
+      "service": "Service",
+      "startDate": "Start Date",
+      "endDate": "End Date",
+      "amount": "Amount",
+      "status": "Status"
+    },
+    "errors": {
+      "loadFailed": "Could not load rates for the selected CAS. Check your connection.",
+      "saveFailed": "An error occurred saving changes to the server.",
+      "statusChangeFailed": "Could not change the rate status."
+    },
+    "success": {
+      "savedTitle": "Rate Schedule Saved!",
+      "savedMessage": "Prices have been updated correctly."
+    }
+  },
+  "tarifarioExceptions": {
+    "title": "Special Cases / Exceptions",
+    "addRule": "Add Rule",
+    "empty": "No special cases configured.",
+    "namePlaceholder": "Rule name...",
+    "excludedZones": "Excluded Zones (e.g.: PIURA, LAMBAYEQUE)",
+    "includedZones": "Included Zones (e.g.: JAEN)",
+    "productCategories": "Product Categories",
+    "clearAll": "Clear / All",
+    "saveRule": "Save Rule",
+    "deleteRule": "Delete Rule",
+    "note": "* Exclusion rules take priority over inclusion rules. If no zone is defined, applies nationwide.",
+    "zoneSelector": {
+      "placeholder": "Select zone...",
+      "addMore": "Add...",
+      "noResults": "No results found"
+    }
+  },
+  "tarifarioImport": {
+    "title": "Import Rate Schedule from Excel",
+    "subtitle": "Bulk upload for multiple CAS",
+    "format": {
+      "title": "Required Excel format",
+      "casName": "Exact CAS name in the system (e.g.: \"Black\", \"Silar\")",
+      "categoria": "Product category in UPPERCASE",
+      "dates": "Format DD/MM/YYYY or YYYY-MM-DD",
+      "estado": "A = Active, I = Inactive (optional, default A)"
+    },
+    "processing": "Processing file and verifying against DB...",
+    "uploadText": "Click or drag your Excel file here",
+    "uploadHint": "Accepts .xlsx and .xls",
+    "preview": {
+      "toInsert": "to insert",
+      "toUpdate": "to update",
+      "noChanges": "no changes",
+      "withError": "with error",
+      "totalRows": "total rows",
+      "headers": {
+        "cas": "CAS",
+        "category": "Category",
+        "service": "Service",
+        "validity": "Validity",
+        "current": "Current",
+        "new": "New",
+        "status": "Status"
+      }
+    },
+    "statuses": {
+      "insert": "INSERT",
+      "update": "UPDATE",
+      "ok": "NO CHANGES",
+      "error": "ERROR"
+    },
+    "done": {
+      "title": "Import successful!",
+      "message": "{{inserted}} new rates were inserted and {{updated}} were updated."
+    },
+    "downloadTemplate": "Download Excel template",
+    "uploadAnother": "Upload another file",
+    "confirming": "Applying...",
+    "confirm": "Confirm import ({{count}})",
+    "errors": {
+      "emptyFile": "The file is empty or has only headers.",
+      "processingError": "Error processing the file: {{error}}",
+      "noChanges": "No pending changes to apply.",
+      "confirmError": "Error confirming the import: {{error}}"
+    }
+  },
+  "valuations": {
+    "pageTitle": "CAS Valuations",
+    "pageSubtitle": "Biweekly payment and discount management.",
+    "tabGenerate": "Generate",
+    "tabHistory": "History",
+    "selectEnterprise": "Select company...",
+    "searchCasPlaceholder": "Search CAS...",
+    "searchTicketGlobal": "Search specific ticket in all CAS...",
+    "ticketNotFound": "Ticket not found",
+    "ticketFound": "Ticket found",
+    "applyPenalty": "Apply penalty",
+    "sectionSummary": "Account Summary",
+    "summaryServices": "Services",
+    "summaryPenalties": "Penalties",
+    "summaryNetTotal": "Net Total",
+    "summarySiatcLive": "Siatc Live",
+    "summaryOfficialAudit": "Official Audit Calculation",
+    "buttonExportDraft": "Export Draft",
+    "buttonSendPreValuation": "Send Pre-Valuation",
+    "buttonCloseAndNotify": "Close and Notify",
+    "buttonBatchAdjustment": "Bulk Adjustment",
+    "buttonBatchDiscount": "Bulk Discount",
+    "tableHeaderProcessDate": "Process Date",
+    "tableHeaderServices": "Services",
+    "tableHeaderAuditStatus": "Audit Status",
+    "tableHeaderDailyAccumulation": "Daily Accumulation",
+    "tabServicesCount": "Services performed ({{count}})",
+    "tabPenaltiesCount": "Penalties applied ({{count}})",
+    "emptyStateTitle": "Waiting for selection",
+    "emptyStateMessage": "Select a company and date range to view the audit.",
+    "emptyServices": "No services detected in the selected range",
+    "emptyPenalties": "No penalties registered for this period.",
+    "emptyClosures": "No closures registered yet.",
+    "statusAudited": "Audited",
+    "statusToLink": "to link",
+    "statusNoObservations": "No observations",
+    "statusApplied": "Applied",
+    "statusIgnored": "Ignored",
+    "statusAnnulled": "Annulled",
+    "detailTableVisitClosureDates": "Visit / Closure",
+    "detailTableDays": "Days",
+    "detailTableServicePerformed": "Service Performed",
+    "detailTableCategory": "Category",
+    "detailTableAreaQuota": "Area Quota",
+    "detailTableSubtotal": "Subtotal",
+    "detailLabelExempt": "Exempt",
+    "detailLabelVisitFree": "Visit (S/ 0.00)",
+    "detailLabelOutOfTime": "Out of time",
+    "detailLabelOutOfTimeFree": "Out of time (S/ 0.00)",
+    "detailButtonRegisterProduct": "Register Prod.",
+    "detailButtonLinkRate": "Link Rate",
+    "detailLabelNoAccess": "No access",
+    "detailButtonTechnicalReport": "View Technical Report C4C",
+    "additionalsTitle": "Additional Payments",
+    "additionalsEmpty": "No additional payments registered",
+    "additionalsAdd": "Add additional payment",
+    "additionalEdit": "Edit additional",
+    "additionalDelete": "Delete additional",
+    "penaltyReasonGeneral": "General discount",
+    "penaltyNoteIgnored": "A larger discount was applied for this ticket",
+    "penaltyLabelDebit": "CAS Debit",
+    "penaltyButtonEdit": "Edit penalty",
+    "penaltyButtonAnnul": "Annul",
+    "penaltyButtonEnable": "Enable",
+    "confirmToggleTitle": "{{action}} Penalty",
+    "confirmToggleMessage": "Are you sure you want to {{action}} this penalty?{{exclusion}}",
+    "confirmToggleExclusion": " It will be excluded from calculations and reports.",
+    "confirmToggleAnnulText": "Yes, annul",
+    "confirmToggleEnableText": "Yes, enable",
+    "alertSuccessEmail": "The email was sent successfully.",
+    "alertBatchAdjustmentTitle": "Adjustment Complete",
+    "alertBatchAdjustmentMessage": "{{count}} tickets were processed successfully.",
+    "alertBatchDiscountTitle": "Discount Complete",
+    "alertBatchDiscountMessage": "{{count}} tickets were processed successfully.",
+    "alertCloseSuccessTitle": "Successful Closure!",
+    "alertCloseSuccessMessage": "The fortnight has been closed with code: {{code}}. Do you want to send the official report now?",
+    "alertDraftSavedTitle": "Draft Saved",
+    "alertDraftSavedMessage": "The pre-valuation has been saved correctly. You can now send or close it from the history.",
+    "alertCloseTitle": "Close Valuation",
+    "alertCloseMessage": "Are you sure you want to definitively close valuation {{code}}? Once closed, it can no longer be modified.",
+    "alertCloseConfirmed": "The valuation has been closed correctly.",
+    "alertReopenTitle": "Reopen Fortnight?",
+    "alertReopenMessage": "This action will delete the closure record {{code}} and tickets will become active for editing again. Are you sure?",
+    "alertReopenSuccess": "The fortnight has been reopened.",
+    "validationNoTickets": "You must enter at least one ticket number.",
+    "validationNoValidTickets": "You must enter at least one valid ticket number.",
+    "validationNoDiscountReason": "You must select a reason for the discount.",
+    "modalEmailTitle": "Share Valuation by Email",
+    "modalEmailRecipients": "Recipients",
+    "modalEmailPlaceholder": "example@email.com, other@email.com",
+    "modalEmailHint": "Separate multiple emails with a comma (,)",
+    "modalEmailAttachmentReady": "Attachment ready",
+    "modalEmailInfo": "A formal email will be sent with the net summary and detailed Excel report attached.",
+    "modalEmailSendButton": "Send Audit",
+    "modalBatchAdjustmentTitle": "Bulk Adjustment",
+    "modalBatchAdjustmentTicketsLabel": "Tickets (paste list here)",
+    "modalBatchAdjustmentAmountLabel": "Fixed Final Amount",
+    "modalBatchAdjustmentReasonLabel": "Reason",
+    "modalBatchAdjustmentInfo": "The system will automatically calculate the difference against the base rate of each ticket so the total sums exactly S/ {{amount}}.",
+    "modalBatchAdjustmentWarning": "Previous adjustments on these tickets will be replaced.",
+    "modalBatchAdjustmentApply": "Apply Adjustment to Tickets",
+    "modalBatchAdjustmentApplying": "Applying adjustments...",
+    "modalBatchDiscountTitle": "Bulk Discount",
+    "modalBatchDiscountTicketsLabel": "Tickets (Ticket or Ticket,Amount)",
+    "modalBatchDiscountAmountLabel": "Amount to Discount",
+    "modalBatchDiscountReasonLabel": "Discount Reason",
+    "modalBatchDiscountDescriptionLabel": "Detailed Description",
+    "modalBatchDiscountSelectReason": "Select a reason...",
+    "modalBatchDiscountApply": "Apply Discounts",
+    "modalBatchDiscountApplying": "Applying...",
+    "modalBatchDiscountDescriptionPlaceholder": "Detailed explanation of the discount...",
+    "modalCloseTitle": "Confirm Operations Closure",
+    "modalCloseWarningTitle": "Fortnight Lock",
+    "modalCloseWarningMessage": "This action is irreversible. All tickets and discounts for the period {{startDate}} / {{endDate}} will be locked.",
+    "modalCloseIncome": "Income (gross)",
+    "modalCloseExpenses": "Expenses (penalties)",
+    "modalCloseButtonBack": "Go back",
+    "modalCloseButtonConfirm": "Confirm final closure",
+    "modalCloseProcessing": "Processing closure...",
+    "modalDetailTitle": "Closure Detail",
+    "modalDetailSearchPlaceholder": "Search ticket...",
+    "modalDetailButtonExcel": "Excel",
+    "modalDetailButtonSendReport": "Send Report",
+    "modalDetailButtonReopen": "Reopen",
+    "modalDetailTabServices": "Services ({{count}})",
+    "modalDetailTabPenalties": "Penalties ({{count}})",
+    "modalDetailSubtotalServices": "Services Subtotal",
+    "modalDetailTotalPenalties": "Total Penalties",
+    "modalDetailRecordsShown": "Showing {{count}} audited records",
+    "modalDetailEmptySearch": "No {{type}} matching the search",
+    "modalDetailEmptySearchServices": "services",
+    "modalDetailEmptySearchPenalties": "penalties",
+    "modalDetailClosedBy": "Closed by",
+    "modalDetailRegistrationDate": "Registration Date",
+    "modalDetailTotalLiquidated": "Final Liquidated Total",
+    "modalDetailPenalizeButton": "Penalize Ticket",
+    "closureCode": "Closure Code",
+    "closureDetail": "Closure Detail",
+    "closureServicesProcessed": "Services Processed",
+    "closureAuditedTickets": "Audited Tickets",
+    "closureSubtotalServices": "Services Subtotal",
+    "closurePenaltiesApplied": "Applied Penalties",
+    "closureTotalToInvoice": "Net Total to Invoice",
+    "closureTotalToInvoiceEstimated": "Estimated Total to Invoice",
+    "closureTotalShort": "TOTAL TO INVOICE",
+    "errors": {
+      "selectCasFirst": "Please select a Service Center (CAS) first.",
+      "loadValuation": "Could not load valuation information.",
+      "loadHistory": "Could not load closure history.",
+      "loadClosureDetails": "Could not load closure details.",
+      "sendEmail": "Could not send the email.",
+      "batchAdjustment": "Error applying bulk adjustment.",
+      "batchDiscount": "Error applying bulk discount.",
+      "togglePenalty": "Could not {{action}} the penalty: {{error}}",
+      "closeFortnight": "Could not close the fortnight. Please try again.",
+      "saveDraft": "Could not save the draft: {{error}}",
+      "finalize": "Could not finalize.",
+      "reopen": "Could not reopen.",
+      "reportTitle": "Report Error",
+      "reportMessage": "Error generating report.",
+      "popupBlocked": "The browser blocked the popup. Please allow popups for this site.",
+      "technicalReport": "Could not get the technical report"
+    }
+  },
+  "penaltyModal": {
+    "titlePenalty": "Register Penalty / Discount",
+    "titleAdditional": "Register Additional Amount",
+    "ticketLabel": "Associated Ticket (Optional)",
+    "ticketPlaceholder": "Type ticket or service...",
+    "noTicket": "-- No specific ticket --",
+    "dateLabel": "Date",
+    "motiveLabel": "Reason / Concept",
+    "selectMotive": "-- Select reason --",
+    "motivePlaceholder": "E.g.: Compliance bonus, Extra service...",
+    "amountLabel": "Amount (S/)",
+    "descriptionLabel": "Description / Observations",
+    "descriptionPlaceholder": "Detail the reasons for the discount or additional...",
+    "saving": "Saving..."
+  },
+  "profile": {
+    "title": "My Profile",
+    "subtitle": "Manage your personal information and credentials.",
+    "noRole": "No role",
+    "infoTitle": "Information",
+    "emailLabel": "Email",
+    "managementLabel": "Management",
+    "noManagement": "No management",
+    "statusLabel": "Status",
+    "activeStatus": "Active",
+    "accountTitle": "Account",
+    "accountSubtitle": "Your username and email address.",
+    "userLabel": "User",
+    "readOnlyNote": "These fields are read-only. If you need a change, contact the system administrator.",
+    "securityTitle": "Security",
+    "securitySubtitle": "Change your access password.",
+    "newPasswordLabel": "New Password",
+    "confirmPasswordLabel": "Confirm Password",
+    "passwordHint": "Leave fields empty to keep your current password. Minimum 4 characters.",
+    "saving": "Saving...",
+    "saveChanges": "Save Changes",
+    "changeAvatar": "Change profile picture",
+    "errors": {
+      "imageProcessing": "Error processing the image",
+      "passwordMismatch": "Passwords do not match",
+      "passwordTooShort": "Password must be at least 4 characters",
+      "updateFailed": "Error updating the profile"
+    },
+    "success": {
+      "updated": "Profile updated successfully"
+    }
+  },
+  "audit": {
+    "breadcrumb": "Security Traceability",
+    "title": "Audit Log",
+    "subtitle": "Transactional monitoring and critical event log for Valuations",
+    "sync": "Sync Events",
+    "searchPlaceholder": "Search by user, action or entity...",
+    "loading": "Indexing Audit",
+    "empty": "No critical transactions recorded",
+    "filter": {
+      "all": "LOGS: ALL EVENTS",
+      "denied": "CRITICAL: DENIED ACCESS",
+      "login": "ACCESS: LOGIN SESSIONS",
+      "create": "SECURITY: RESOURCE CREATION",
+      "update": "SECURITY: MODIFICATIONS",
+      "delete": "SECURITY: DELETIONS"
+    },
+    "table": {
+      "date": "Date and Time",
+      "user": "Responsible User",
+      "operation": "Operation",
+      "entity": "Entity Ref.",
+      "payload": "Payload / Technical Detail"
+    }
+  },
+  "settings": {
+    "title": "General Settings",
+    "subtitle": "Configure the operational parameters of the platform.",
+    "loading": "Loading configuration...",
+    "sectionTitle": "Valuation Parameters",
+    "maxDaysLabel": "Maximum Closure Days",
+    "maxDaysDescription": "Defines the maximum number of days allowed between the visit date and ticket closure date (CheckOut). If this limit is exceeded, the calculated base rate will be S/ 0.00.",
+    "saveChanges": "Save Changes",
+    "errors": {
+      "loadFailed": "Error loading configuration",
+      "invalidNumber": "Enter a valid number greater than 0",
+      "saveFailed": "Could not save the configuration"
+    },
+    "success": {
+      "saved": "Configuration saved successfully"
+    }
+  },
+  "configDistritos": {
+    "title": "District Additionals",
+    "subtitle": "Zoning of incentives and surcharges by CAS/District.",
+    "create": "Create Configuration",
+    "stats": {
+      "activeRules": "Active Rules",
+      "coveredDistricts": "Covered Districts",
+      "participatingCas": "Participating CAS"
+    },
+    "searchPlaceholder": "Search by district...",
+    "filtersActive": "ACTIVE FILTERS",
+    "loading": "Syncing configurations...",
+    "empty": "No rules configured",
+    "emptyHint": "Create a new rule to start applying district additionals.",
+    "table": {
+      "districts": "Districts",
+      "cas": "CAS",
+      "amount": "Amount",
+      "validity": "Validity",
+      "status": "Status",
+      "actions": "Actions",
+      "casCount_one": "{{count}} CAS Selected",
+      "casCount_other": "{{count}} CAS Selected",
+      "indefinite": "Indefinite",
+      "active": "ACTIVE",
+      "inactive": "INACTIVE"
+    },
+    "modal": {
+      "editTitle": "Edit Zonal Rule",
+      "newTitle": "New Zonal Rule",
+      "selectCas": "Select CAS",
+      "filterByCity": "Filter by City",
+      "allCities": "All cities",
+      "selectDistricts": "Select Districts ({{city}})",
+      "amount": "Additional Amount (S/.)",
+      "searchCas": "Search CAS...",
+      "searchDistricts": "Search districts..."
+    },
+    "dialog": {
+      "deleteTitle": "Delete configuration?",
+      "deleteMessage": "This action cannot be undone and will affect future calculations.",
+      "deleteConfirm": "Yes, delete"
+    },
+    "errors": {
+      "loadFailed": "Could not load configuration.",
+      "deleteFailed": "Error deleting.",
+      "saveFailed": "Could not save configuration."
+    },
+    "success": {
+      "deletedTitle": "Deleted",
+      "deletedMessage": "The rule has been deleted.",
+      "savedTitle": "Saved",
+      "savedMessage": "Configuration updated successfully."
+    }
+  },
+  "configInstitucional": {
+    "title": "Institutional Channel",
+    "subtitle": "Flat rate by Area Quota (OBRAS / TALLER / GENERAL).",
+    "newRule": "New Rule",
+    "searchPlaceholder": "Search by area quota...",
+    "loading": "Loading rules",
+    "empty": "No rules configured",
+    "emptyHint": "Create a rule to apply flat rates by Area Quota.",
+    "table": {
+      "cupoArea": "Area Quota",
+      "amount": "Amount",
+      "validity": "Validity",
+      "actions": "Actions"
+    },
+    "modal": {
+      "editTitle": "Edit Rule",
+      "newTitle": "New Institutional Channel Rule",
+      "cupoArea": "Area Quota",
+      "startDate": "Start Date",
+      "endDate": "End Date",
+      "amount": "Amount (S/.)",
+      "save": "Save Rule"
+    },
+    "dialog": {
+      "deleteTitle": "Delete rule?",
+      "deleteMessage": "This action will affect future valuation calculations.",
+      "deleteConfirm": "Yes, delete"
+    },
+    "errors": {
+      "loadFailed": "Error loading institutional configuration.",
+      "deleteFailed": "Error deleting.",
+      "saveFailed": "Error saving configuration."
+    },
+    "success": {
+      "deletedTitle": "Deleted",
+      "deletedMessage": "The rule has been deleted.",
+      "savedTitle": "Saved",
+      "savedMessage": "Configuration updated successfully."
+    }
+  },
+  "config": {
+    "moduleOf": "Module of",
+    "title": "Configuration",
+    "adminControl": "Administrative Control",
+    "siatcSystem": "SIATC System",
+    "siatcDescription": "CAS Valuations",
+    "nav": {
+      "settings": "General Settings",
+      "institutional": "Institutional Channel",
+      "districts": "District Additionals",
+      "users": "User Management",
+      "roles": "Profiles and Permissions",
+      "audit": "Audit Logs"
+    }
+  },
+  "mainLayout": {
+    "sessionWarningTitle": "Session about to expire",
+    "sessionExpiresIn": "Your session will expire in",
+    "sessionInactivity": "due to inactivity.",
+    "continueSession": "Continue session",
+    "closeSession": "Sign out"
+  },
+  "tarifarioModal": {
+    "title": "Link New Rate",
+    "ticketInfo": "Ticket Information",
+    "casLabel": "CAS",
+    "categoryLabel": "Category",
+    "serviceLabel": "Service",
+    "amountLabel": "Rate Amount (S/)",
+    "startDateLabel": "Start Date",
+    "endDateLabel": "End Date (Optional)",
+    "saving": "Saving...",
+    "createAndLink": "Create and Link Rate",
+    "errors": {
+      "invalidAmountTitle": "Invalid Value",
+      "invalidAmount": "The amount must be greater than zero.",
+      "createFailed": "Could not create the rate."
+    },
+    "success": {
+      "title": "Success!",
+      "message": "The rate has been created and applied."
     }
   }
 }

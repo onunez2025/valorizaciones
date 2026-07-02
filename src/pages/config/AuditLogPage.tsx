@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Terminal, ShieldAlert, Search, RefreshCcw, User, Clock, Activity, FileText, ChevronRight, Database, ChevronDown, CheckCircle2 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { AuditService } from '../../services/auditService';
@@ -41,6 +42,7 @@ const normalizeLogs = (data: unknown[]): AuditLog[] => {
 };
 
 export default function AuditLogPage() {
+    const { t } = useTranslation();
     const { widths, onResizeStart } = useTableResizer('val_audit_column_widths', {
         fecha: 180,
         usuario: 220,
@@ -116,12 +118,12 @@ export default function AuditLogPage() {
                 <div className="space-y-1">
                     <div className="flex items-center gap-2 text-sm text-cb-text-secondary font-medium">
                         <Terminal className="w-4 h-4 text-cb-neutral" />
-                        <span>Configuración</span>
+                        {t('common.configuration')}
                         <ChevronRight className="w-3 h-3 opacity-50" />
-                        <span className="text-cb-text-primary">Trazabilidad de Seguridad</span>
+                        <span className="text-cb-text-primary">{t('audit.breadcrumb')}</span>
                     </div>
-                    <h1 className={SIATC_THEME.TYPOGRAPHY.PAGE_TITLE}>Bitácora de Auditoría</h1>
-                    <p className={SIATC_THEME.TYPOGRAPHY.PAGE_SUBTITLE}>Monitoreo transaccional y registro de eventos críticos de Valorizaciones</p>
+                    <h1 className={SIATC_THEME.TYPOGRAPHY.PAGE_TITLE}>{t('audit.title')}</h1>
+                    <p className={SIATC_THEME.TYPOGRAPHY.PAGE_SUBTITLE}>{t('audit.subtitle')}</p>
                 </div>
                 <button 
                     onClick={fetchLogs}
@@ -129,7 +131,7 @@ export default function AuditLogPage() {
                     className={cn(SIATC_THEME.COMPONENTS.BUTTON_PRIMARY, isLoading && "opacity-80 cursor-not-allowed")}
                 >
                     <RefreshCcw className={cn("w-4 h-4 stroke-[2.5]", isLoading && "animate-spin")} />
-                    Sincronizar Eventos
+                    {t('audit.sync')}
                 </button>
             </div>
 
@@ -143,7 +145,7 @@ export default function AuditLogPage() {
                             type="text"
                             value={search}
                             onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
-                            placeholder="Buscar por usuario, acción o entidad..."
+                            placeholder={t('audit.searchPlaceholder')}
                             className={cn(SIATC_THEME.COMPONENTS.INPUT, "pl-11 pr-4 dark:bg-cb-bg text-cb-text-primary border-cb-border")}
                         />
                     </div>
@@ -154,12 +156,12 @@ export default function AuditLogPage() {
                             value={filterAction}
                             onChange={(e) => { setFilterAction(e.target.value); setCurrentPage(1); }}
                         >
-                            <option value="ALL">LOGS: TODOS LOS EVENTOS</option>
-                            <option value="ACCESO_DENEGADO">CRÍTICO: ACCESOS DENEGADOS</option>
-                            <option value="LOGIN_SUCCESS">ACCESO: INICIOS DE SESIÓN</option>
-                            <option value="CREATE">SEGURIDAD: ALTA DE RECURSOS</option>
-                            <option value="UPDATE">SEGURIDAD: MODIFICACIONES</option>
-                            <option value="DELETE">SEGURIDAD: ELIMINACIONES</option>
+                            <option value="ALL">{t('audit.filter.all')}</option>
+                            <option value="ACCESO_DENEGADO">{t('audit.filter.denied')}</option>
+                            <option value="LOGIN_SUCCESS">{t('audit.filter.login')}</option>
+                            <option value="CREATE">{t('audit.filter.create')}</option>
+                            <option value="UPDATE">{t('audit.filter.update')}</option>
+                            <option value="DELETE">{t('audit.filter.delete')}</option>
                         </select>
                         <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-cb-neutral pointer-events-none" />
                     </div>
@@ -170,25 +172,25 @@ export default function AuditLogPage() {
                     {isLoading ? (
                         <div className="absolute inset-0 flex flex-col items-center justify-center bg-card/60 backdrop-blur-md z-50">
                             <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-                            <span className="text-sm font-bold text-cb-text-secondary mt-6 tracking-[0.2em] animate-pulse">Indexando Auditoría</span>
+                            <span className="text-sm font-bold text-cb-text-secondary mt-6 tracking-[0.2em] animate-pulse">{t('audit.loading')}</span>
                         </div>
                     ) : (
                         <>
                             <thead className={SIATC_THEME.TABLE.HEADER_ROW}>
                                 <tr className="border-b border-cb-border">
                                     <ResizableHeader columnId="fecha" width={widths.fecha} onResizeStart={onResizeStart}>
-                                        <span className={SIATC_THEME.TYPOGRAPHY.TABLE_HEADER}>Fecha y Hora</span>
+                                        <span className={SIATC_THEME.TYPOGRAPHY.TABLE_HEADER}>{t('audit.table.date')}</span>
                                     </ResizableHeader>
                                     <ResizableHeader columnId="usuario" width={widths.usuario} onResizeStart={onResizeStart}>
-                                        <span className={SIATC_THEME.TYPOGRAPHY.TABLE_HEADER}>Usuario Responsable</span>
+                                        <span className={SIATC_THEME.TYPOGRAPHY.TABLE_HEADER}>{t('audit.table.user')}</span>
                                     </ResizableHeader>
                                     <ResizableHeader columnId="operacion" width={widths.operacion} onResizeStart={onResizeStart}>
-                                        <span className={SIATC_THEME.TYPOGRAPHY.TABLE_HEADER}>Operación</span>
+                                        <span className={SIATC_THEME.TYPOGRAPHY.TABLE_HEADER}>{t('audit.table.operation')}</span>
                                     </ResizableHeader>
                                     <ResizableHeader columnId="entidad" width={widths.entidad} onResizeStart={onResizeStart}>
-                                        <span className={SIATC_THEME.TYPOGRAPHY.TABLE_HEADER}>Ref. Entidad</span>
+                                        <span className={SIATC_THEME.TYPOGRAPHY.TABLE_HEADER}>{t('audit.table.entity')}</span>
                                     </ResizableHeader>
-                                    <th className={SIATC_THEME.TABLE.HEADER_TH}><span className={SIATC_THEME.TYPOGRAPHY.TABLE_HEADER}>Payload / Detalle Técnico</span></th>
+                                    <th className={SIATC_THEME.TABLE.HEADER_TH}><span className={SIATC_THEME.TYPOGRAPHY.TABLE_HEADER}>{t('audit.table.payload')}</span></th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-cb-border/60">
@@ -197,7 +199,7 @@ export default function AuditLogPage() {
                                         <td colSpan={5} className="px-6 py-32 text-center">
                                             <div className="flex flex-col items-center gap-4 opacity-30">
                                                 <Activity className="w-16 h-16 text-cb-neutral" />
-                                                <p className="text-xs font-bold tracking-widest text-cb-neutral">No se registran transacciones críticas</p>
+                                                <p className="text-xs font-bold tracking-widest text-cb-neutral">{t('audit.empty')}</p>
                                             </div>
                                         </td>
                                     </tr>

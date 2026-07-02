@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Save, Loader2, Settings2, ChevronRight } from 'lucide-react';
 import { ApiClient } from '../../services/apiClient';
 import { useDialog } from '../../context/DialogContext';
@@ -12,6 +13,7 @@ interface ConfigItem {
 }
 
 export default function SettingsPage() {
+    const { t } = useTranslation();
     const { alert } = useDialog();
     const [diasMax, setDiasMax] = useState<string>('');
     const [loading, setLoading] = useState(true);
@@ -27,7 +29,7 @@ export default function SettingsPage() {
                 }
             } catch (err) {
                 console.error("Error fetching config:", err);
-                alert({ title: 'Error', message: 'Error al cargar la configuración', type: 'error' });
+                alert({ title: 'Error', message: t('settings.errors.loadFailed'), type: 'error' });
             } finally {
                 setLoading(false);
             }
@@ -38,7 +40,7 @@ export default function SettingsPage() {
 
     const handleSave = async () => {
         if (!diasMax || isNaN(Number(diasMax))) {
-            alert({ title: 'Error', message: 'Ingrese un número válido mayor a 0', type: 'error' });
+            alert({ title: 'Error', message: t('settings.errors.invalidNumber'), type: 'error' });
             return;
         }
 
@@ -54,10 +56,10 @@ export default function SettingsPage() {
                     descripcion: 'Máximo de días permitidos entre la visita y el cierre (CheckOut) para considerar tarifa.'
                 })
             });
-            alert({ title: 'Éxito', message: 'Configuración guardada correctamente', type: 'success' });
+            alert({ title: 'Éxito', message: t('settings.success.saved'), type: 'success' });
         } catch (err) {
             console.error("Error saving config:", err);
-            alert({ title: 'Error', message: 'No se pudo guardar la configuración', type: 'error' });
+            alert({ title: 'Error', message: t('settings.errors.saveFailed'), type: 'error' });
         } finally {
             setSaving(false);
         }
@@ -68,7 +70,7 @@ export default function SettingsPage() {
             <div className="flex-1 p-6 flex flex-col justify-center items-center bg-cb-bg dark:bg-cb-bg/50">
                 <Loader2 className="w-8 h-8 animate-spin text-cb-neutral" />
                 <p className="mt-4 text-xs font-bold text-cb-text-secondary tracking-[0.2em] animate-pulse uppercase">
-                    Cargando configuración...
+                    {t('settings.loading')}
                 </p>
             </div>
         );
@@ -81,13 +83,13 @@ export default function SettingsPage() {
                 <div className="space-y-1">
                     <div className="flex items-center gap-2 text-sm text-cb-text-secondary font-medium">
                         <Settings2 className="w-4 h-4 text-cb-neutral" />
-                        <span>Configuración</span>
+                        {t('common.configuration')}
                         <ChevronRight className="w-3 h-3 opacity-50" />
-                        <span className="text-cb-text-primary">Ajustes Generales</span>
+                        <span className="text-cb-text-primary">{t('settings.title')}</span>
                     </div>
-                    <h1 className={SIATC_THEME.TYPOGRAPHY.PAGE_TITLE}>Ajustes Generales</h1>
+                    <h1 className={SIATC_THEME.TYPOGRAPHY.PAGE_TITLE}>{t('settings.title')}</h1>
                     <p className={SIATC_THEME.TYPOGRAPHY.PAGE_SUBTITLE}>
-                        Configure los parámetros operativos de la plataforma.
+                        {t('settings.subtitle')}
                     </p>
                 </div>
             </div>
@@ -98,17 +100,17 @@ export default function SettingsPage() {
                     <div className="p-2 bg-primary/10 text-primary dark:bg-primary/20 dark:text-primary-foreground rounded-cb-btn border border-cb-border/50">
                         <Settings2 className="w-5 h-5 stroke-[2]" />
                     </div>
-                    <h2 className={SIATC_THEME.TYPOGRAPHY.SECTION_TITLE}>Parámetros de Valorización</h2>
+                    <h2 className={SIATC_THEME.TYPOGRAPHY.SECTION_TITLE}>{t('settings.sectionTitle')}</h2>
                 </div>
 
                 <div className="p-6 flex-1 flex flex-col justify-between">
                     <div className="space-y-6 max-w-xl">
                         <div className="space-y-2">
                             <label className="block text-sm font-bold text-cb-text-primary">
-                                Días Máximos de Cierre
+                                {t('settings.maxDaysLabel')}
                             </label>
                             <p className="text-xs text-cb-text-secondary leading-relaxed">
-                                Define la cantidad máxima de días permitidos entre la fecha de visita y la fecha de cierre del ticket (CheckOut). Si se supera este límite, la tarifa base calculada será S/ 0.00 .
+                                {t('settings.maxDaysDescription')}
                             </p>
                             <input
                                 type="number"
@@ -136,7 +138,7 @@ export default function SettingsPage() {
                             ) : (
                                 <Save className="w-4 h-4" />
                             )}
-                            Guardar Cambios
+                            {t('settings.saveChanges')}
                         </button>
                     </div>
                 </div>

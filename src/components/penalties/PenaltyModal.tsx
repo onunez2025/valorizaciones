@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Search, Save } from 'lucide-react';
 import { ApiClient } from '../../services/apiClient';
 import type { PenaltyMotive, ValuationTicket } from '../../types';
@@ -27,6 +28,7 @@ interface PenaltyModalProps {
 }
 
 export default function PenaltyModal({ isOpen, onClose, onSuccess, ruc, tickets, type, initialTicket, initialDate, existingData }: PenaltyModalProps) {
+    const { t } = useTranslation();
     const [motives, setMotives] = useState<PenaltyMotive[]>([]);
     const [loading, setLoading] = useState(false);
     const [showDropdown, setShowDropdown] = useState(false);
@@ -113,16 +115,16 @@ export default function PenaltyModal({ isOpen, onClose, onSuccess, ruc, tickets,
         <Modal 
             isOpen={isOpen} 
             onClose={onClose} 
-            title={type === 'penalty' ? "Registrar Penalidad / Descuento" : "Registrar Importe Adicional"}
+            title={type === 'penalty' ? t('penaltyModal.titlePenalty') : t('penaltyModal.titleAdditional')}
         >
             <form onSubmit={handleSubmit} className="space-y-5 p-1">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="relative space-y-1.5 text-left">
-                        <label className="text-[11px] font-bold text-cb-neutral uppercase tracking-wider ml-1">Ticket Asociado (Opcional)</label>
+                        <label className="text-[11px] font-bold text-cb-neutral uppercase tracking-wider ml-1">{t('penaltyModal.ticketLabel')}</label>
                         <div className="relative">
-                            <input 
+                            <input
                                 type="text"
-                                placeholder="Escriba ticket o servicio..."
+                                placeholder={t('penaltyModal.ticketPlaceholder')}
                                 value={formData.ticket}
                                 onChange={(e) => {
                                     const val = e.target.value;
@@ -141,7 +143,7 @@ export default function PenaltyModal({ isOpen, onClose, onSuccess, ruc, tickets,
                         {showDropdown && (
                             <div className="absolute z-50 w-full mt-1 bg-white dark:bg-cb-bg border border-cb-border rounded-cb-card shadow-cb-level-2 max-h-60 overflow-auto custom-scrollbar animate-in fade-in slide-in-from-top-2 duration-200">
                                 <div className="p-1">
-                                    <button 
+                                    <button
                                         type="button"
                                         onClick={() => {
                                             setFormData({...formData, ticket: ''});
@@ -149,26 +151,26 @@ export default function PenaltyModal({ isOpen, onClose, onSuccess, ruc, tickets,
                                         }}
                                         className="w-full text-left px-3 py-2 text-xs font-bold text-cb-neutral hover:bg-cb-bg rounded-cb-btn transition-colors"
                                     >
-                                        -- Sin ticket específico --
+                                        {t('penaltyModal.noTicket')}
                                     </button>
                                     {searchResults
-                                        .map(t => (
-                                            <button 
-                                                key={t.Ticket}
+                                        .map(ticket => (
+                                            <button
+                                                key={ticket.Ticket}
                                                 type="button"
                                                 onClick={() => {
                                                     setFormData({
-                                                        ...formData, 
-                                                        ticket: t.Ticket,
-                                                        fecha: t.Fecha.split('T')[0]
+                                                        ...formData,
+                                                        ticket: ticket.Ticket,
+                                                        fecha: ticket.Fecha.split('T')[0]
                                                     });
                                                     setShowDropdown(false);
                                                 }}
                                                 className="w-full text-left px-3 py-2 rounded-cb-btn hover:bg-primary/5 transition-colors group border-b border-cb-border/10 last:border-none"
                                             >
                                                 <div className="flex flex-col">
-                                                    <span className="text-sm font-bold group-hover:text-primary transition-colors text-cb-text-primary">{t.Ticket}</span>
-                                                    <span className="text-[10px] text-cb-neutral font-bold truncate">{toTitleCase(t.ServicioNombre || t.Servicio)}</span>
+                                                    <span className="text-sm font-bold group-hover:text-primary transition-colors text-cb-text-primary">{ticket.Ticket}</span>
+                                                    <span className="text-[10px] text-cb-neutral font-bold truncate">{toTitleCase(ticket.ServicioNombre || ticket.Servicio)}</span>
                                                 </div>
                                             </button>
                                         ))}
@@ -177,7 +179,7 @@ export default function PenaltyModal({ isOpen, onClose, onSuccess, ruc, tickets,
                         )}
                     </div>
                     <div className="space-y-1.5 text-left">
-                        <label className="text-[11px] font-bold text-cb-neutral uppercase tracking-wider ml-1">Fecha</label>
+                        <label className="text-[11px] font-bold text-cb-neutral uppercase tracking-wider ml-1">{t('penaltyModal.dateLabel')}</label>
                         <input 
                             type="date"
                             value={formData.fecha}
@@ -189,23 +191,23 @@ export default function PenaltyModal({ isOpen, onClose, onSuccess, ruc, tickets,
                 </div>
 
                 <div className="space-y-1.5 text-left">
-                    <label className="text-[11px] font-bold text-cb-neutral uppercase tracking-wider ml-1">Motivo / Concepto</label>
+                    <label className="text-[11px] font-bold text-cb-neutral uppercase tracking-wider ml-1">{t('penaltyModal.motiveLabel')}</label>
                     {type === 'penalty' ? (
-                        <select 
+                        <select
                             value={formData.motivo}
                             onChange={(e) => setFormData({...formData, motivo: e.target.value})}
                             required
                             className={cn(SIATC_THEME.COMPONENTS.INPUT, "dark:bg-cb-bg text-cb-text-primary border-cb-border")}
                         >
-                            <option value="">-- Seleccionar motivo --</option>
+                            <option value="">{t('penaltyModal.selectMotive')}</option>
                             {motives.map(m => (
                                 <option key={m.IdMotivo} value={m.Motivo}>{toTitleCase(m.Motivo)}</option>
                             ))}
                         </select>
                     ) : (
-                        <input 
+                        <input
                             type="text"
-                            placeholder="Ej: Bono por cumplimiento, Servicio extra..."
+                            placeholder={t('penaltyModal.motivePlaceholder')}
                             value={formData.motivo}
                             onChange={(e) => setFormData({...formData, motivo: e.target.value})}
                             required
@@ -216,7 +218,7 @@ export default function PenaltyModal({ isOpen, onClose, onSuccess, ruc, tickets,
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-1.5 text-left">
-                        <label className="text-[11px] font-bold text-cb-neutral uppercase tracking-wider ml-1">Importe (S/)</label>
+                        <label className="text-[11px] font-bold text-cb-neutral uppercase tracking-wider ml-1">{t('penaltyModal.amountLabel')}</label>
                         <input 
                             type="number"
                             step="0.01"
@@ -230,31 +232,31 @@ export default function PenaltyModal({ isOpen, onClose, onSuccess, ruc, tickets,
                 </div>
 
                 <div className="space-y-1.5 text-left">
-                    <label className="text-[11px] font-bold text-cb-neutral uppercase tracking-wider ml-1">Descripción / Observaciones</label>
-                    <textarea 
+                    <label className="text-[11px] font-bold text-cb-neutral uppercase tracking-wider ml-1">{t('penaltyModal.descriptionLabel')}</label>
+                    <textarea
                         rows={3}
                         value={formData.descripcion}
                         onChange={(e) => setFormData({...formData, descripcion: e.target.value})}
                         required
                         className={cn(SIATC_THEME.COMPONENTS.INPUT, "h-auto py-2.5 resize-none dark:bg-cb-bg text-cb-text-primary border-cb-border")}
-                        placeholder="Detalle los motivos del descuento o adicional..."
+                        placeholder={t('penaltyModal.descriptionPlaceholder')}
                     />
                 </div>
 
                 <div className="pt-4 flex gap-3">
-                    <button 
-                        type="button" 
+                    <button
+                        type="button"
                         onClick={onClose}
                         className={cn(SIATC_THEME.COMPONENTS.BUTTON_SECONDARY, "flex-1")}
                     >
-                        Cancelar
+                        {t('common.cancel')}
                     </button>
-                    <button 
-                        type="submit" 
+                    <button
+                        type="submit"
                         disabled={loading}
                         className={cn(SIATC_THEME.COMPONENTS.BUTTON_PRIMARY, "flex-1")}
                     >
-                        {loading ? "Guardando..." : <><Save className="w-4 h-4" /> Guardar</>}
+                        {loading ? t('penaltyModal.saving') : <><Save className="w-4 h-4" /> {t('common.save')}</>}
                     </button>
                 </div>
             </form>

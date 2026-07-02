@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ApiClient } from '../../services/apiClient';
 import { Plus, Edit2, Trash2, Search, DollarSign, AlertCircle, ChevronRight, Layers } from 'lucide-react';
 import { Modal } from '../../components/common/Modal';
@@ -45,6 +46,7 @@ const formatDateUTC = (dateStr: string) => {
 };
 
 export default function ConfigCanalInstitucionalPage() {
+    const { t } = useTranslation();
     const [configs, setConfigs] = useState<ConfigInstitucional[]>([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
@@ -59,7 +61,7 @@ export default function ConfigCanalInstitucionalPage() {
         try {
             setConfigs(await ApiClient.request('/config-canal-institucional'));
         } catch {
-            alert({ message: 'Error al cargar la configuración institucional.' });
+            alert({ message: t('configInstitucional.errors.loadFailed') });
         } finally {
             setLoading(false);
         }
@@ -69,17 +71,17 @@ export default function ConfigCanalInstitucionalPage() {
 
     const handleDelete = (id: number) => {
         confirm({
-            title: '¿Eliminar regla?',
-            message: 'Esta acción afectará los cálculos de valorización futuros.',
-            confirmText: 'Sí, eliminar',
+            title: t('configInstitucional.dialog.deleteTitle'),
+            message: t('configInstitucional.dialog.deleteMessage'),
+            confirmText: t('configInstitucional.dialog.deleteConfirm'),
             type: 'danger',
             onConfirm: async () => {
                 try {
                     await ApiClient.request(`/config-canal-institucional/${id}`, { method: 'DELETE' });
-                    alert({ title: 'Eliminado', message: 'La regla ha sido eliminada.', type: 'success' });
+                    alert({ title: t('configInstitucional.success.deletedTitle'), message: t('configInstitucional.success.deletedMessage'), type: 'success' });
                     fetchData();
                 } catch {
-                    alert({ message: 'Error al eliminar.' });
+                    alert({ message: t('configInstitucional.errors.deleteFailed') });
                 }
             }
         });
@@ -92,11 +94,11 @@ export default function ConfigCanalInstitucionalPage() {
                 method: 'POST',
                 body: JSON.stringify(editForm)
             });
-            alert({ title: 'Guardado', message: 'Configuración actualizada correctamente.', type: 'success' });
+            alert({ title: t('configInstitucional.success.savedTitle'), message: t('configInstitucional.success.savedMessage'), type: 'success' });
             setIsModalOpen(false);
             fetchData();
         } catch {
-            alert({ message: 'Error al guardar la configuración.' });
+            alert({ message: t('configInstitucional.errors.saveFailed') });
         }
     };
 
@@ -135,17 +137,17 @@ export default function ConfigCanalInstitucionalPage() {
                 <div className="space-y-1">
                     <div className="flex items-center gap-2 text-sm text-cb-text-secondary font-medium">
                         <Layers className="w-4 h-4 text-cb-neutral" />
-                        <span>Configuración</span>
+                        <span>{t('common.configuration')}</span>
                         <ChevronRight className="w-3 h-3 opacity-50" />
-                        <span className="text-cb-text-primary">Canal Institucional</span>
+                        <span className="text-cb-text-primary">{t('configInstitucional.title')}</span>
                     </div>
-                    <h1 className={SIATC_THEME.TYPOGRAPHY.PAGE_TITLE}>Canal Institucional</h1>
+                    <h1 className={SIATC_THEME.TYPOGRAPHY.PAGE_TITLE}>{t('configInstitucional.title')}</h1>
                     <p className={SIATC_THEME.TYPOGRAPHY.PAGE_SUBTITLE}>
-                        Tarifa plana por Cupo de Área (OBRAS / TALLER / GENERAL).
+                        {t('configInstitucional.subtitle')}
                     </p>
                 </div>
                 <button onClick={openNew} className={SIATC_THEME.COMPONENTS.BUTTON_PRIMARY}>
-                    <Plus className="w-4 h-4 stroke-[2.5]" /> Nueva Regla
+                    <Plus className="w-4 h-4 stroke-[2.5]" /> {t('configInstitucional.newRule')}
                 </button>
             </div>
 
@@ -155,7 +157,7 @@ export default function ConfigCanalInstitucionalPage() {
                         <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-cb-neutral/60" />
                         <input
                             type="text"
-                            placeholder="Buscar por cupo área..."
+                            placeholder={t('configInstitucional.searchPlaceholder')}
                             className={cn(SIATC_THEME.COMPONENTS.INPUT, 'pl-11 pr-4')}
                             value={search}
                             onChange={e => { setSearch(e.target.value); setCurrentPage(1); }}
@@ -167,22 +169,22 @@ export default function ConfigCanalInstitucionalPage() {
                     {loading ? (
                         <div className="absolute inset-0 flex flex-col items-center justify-center bg-card/60 backdrop-blur-md z-50">
                             <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-                            <span className="text-sm font-bold text-cb-text-secondary mt-6 tracking-[0.2em] animate-pulse">Cargando reglas</span>
+                            <span className="text-sm font-bold text-cb-text-secondary mt-6 tracking-[0.2em] animate-pulse">{t('configInstitucional.loading')}</span>
                         </div>
                     ) : paginated.length === 0 ? (
                         <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-8 opacity-30">
                             <AlertCircle className="w-16 h-16 mb-4 text-cb-neutral" />
-                            <h3 className="text-sm font-bold uppercase tracking-widest text-cb-neutral">No hay reglas configuradas</h3>
-                            <p className="text-xs text-cb-text-secondary mt-2 max-w-xs">Crea una regla para aplicar tarifa plana por Cupo Área.</p>
+                            <h3 className="text-sm font-bold uppercase tracking-widest text-cb-neutral">{t('configInstitucional.empty')}</h3>
+                            <p className="text-xs text-cb-text-secondary mt-2 max-w-xs">{t('configInstitucional.emptyHint')}</p>
                         </div>
                     ) : (
                         <>
                             <thead className={SIATC_THEME.TABLE.HEADER_ROW}>
                                 <tr className="border-b border-cb-border">
-                                    <th className={SIATC_THEME.TABLE.HEADER_TH}><span className={SIATC_THEME.TYPOGRAPHY.TABLE_HEADER}>Cupo Área</span></th>
-                                    <th className={cn(SIATC_THEME.TABLE.HEADER_TH, 'text-center')}><span className={SIATC_THEME.TYPOGRAPHY.TABLE_HEADER}>Importe</span></th>
-                                    <th className={cn(SIATC_THEME.TABLE.HEADER_TH, 'text-center')}><span className={SIATC_THEME.TYPOGRAPHY.TABLE_HEADER}>Vigencia</span></th>
-                                    <th className={cn(SIATC_THEME.TABLE.HEADER_TH, 'text-right')}><span className={SIATC_THEME.TYPOGRAPHY.TABLE_HEADER}>Acciones</span></th>
+                                    <th className={SIATC_THEME.TABLE.HEADER_TH}><span className={SIATC_THEME.TYPOGRAPHY.TABLE_HEADER}>{t('configInstitucional.table.cupoArea')}</span></th>
+                                    <th className={cn(SIATC_THEME.TABLE.HEADER_TH, 'text-center')}><span className={SIATC_THEME.TYPOGRAPHY.TABLE_HEADER}>{t('configInstitucional.table.amount')}</span></th>
+                                    <th className={cn(SIATC_THEME.TABLE.HEADER_TH, 'text-center')}><span className={SIATC_THEME.TYPOGRAPHY.TABLE_HEADER}>{t('configInstitucional.table.validity')}</span></th>
+                                    <th className={cn(SIATC_THEME.TABLE.HEADER_TH, 'text-right')}><span className={SIATC_THEME.TYPOGRAPHY.TABLE_HEADER}>{t('configInstitucional.table.actions')}</span></th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-cb-border/60">
@@ -237,13 +239,13 @@ export default function ConfigCanalInstitucionalPage() {
             <Modal
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
-                title={editForm?.id ? 'Editar Regla' : 'Nueva Regla de Canal Institucional'}
+                title={editForm?.id ? t('configInstitucional.modal.editTitle') : t('configInstitucional.modal.newTitle')}
                 size="lg"
             >
                 <form onSubmit={handleSave} className="space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                         <div className="flex flex-col gap-2 md:col-span-2">
-                            <label className="text-[10px] font-bold text-cb-text-secondary uppercase tracking-widest ml-1">Cupo Área</label>
+                            <label className="text-[10px] font-bold text-cb-text-secondary uppercase tracking-widest ml-1">{t('configInstitucional.modal.cupoArea')}</label>
                             <select
                                 className={cn(SIATC_THEME.COMPONENTS.INPUT, 'px-4')}
                                 value={editForm?.cupo_area ?? 'OBRAS'}
@@ -257,7 +259,7 @@ export default function ConfigCanalInstitucionalPage() {
                         </div>
 
                         <div className="flex flex-col gap-2">
-                            <label className="text-[10px] font-bold text-cb-text-secondary uppercase tracking-widest ml-1">Fecha Inicio</label>
+                            <label className="text-[10px] font-bold text-cb-text-secondary uppercase tracking-widest ml-1">{t('configInstitucional.modal.startDate')}</label>
                             <input
                                 type="date"
                                 className={cn(SIATC_THEME.COMPONENTS.INPUT, 'px-4')}
@@ -268,7 +270,7 @@ export default function ConfigCanalInstitucionalPage() {
                         </div>
 
                         <div className="flex flex-col gap-2">
-                            <label className="text-[10px] font-bold text-cb-text-secondary uppercase tracking-widest ml-1">Fecha Fin</label>
+                            <label className="text-[10px] font-bold text-cb-text-secondary uppercase tracking-widest ml-1">{t('configInstitucional.modal.endDate')}</label>
                             <input
                                 type="date"
                                 className={cn(SIATC_THEME.COMPONENTS.INPUT, 'px-4')}
@@ -279,7 +281,7 @@ export default function ConfigCanalInstitucionalPage() {
                         </div>
 
                         <div className="flex flex-col gap-2 md:col-span-2">
-                            <label className="text-[10px] font-bold text-cb-text-secondary uppercase tracking-widest ml-1">Importe (S/.)</label>
+                            <label className="text-[10px] font-bold text-cb-text-secondary uppercase tracking-widest ml-1">{t('configInstitucional.modal.amount')}</label>
                             <div className="relative">
                                 <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-500 pointer-events-none" />
                                 <input
@@ -297,10 +299,10 @@ export default function ConfigCanalInstitucionalPage() {
 
                     <div className="pt-4 flex gap-4">
                         <button type="button" onClick={() => setIsModalOpen(false)} className={SIATC_THEME.COMPONENTS.BUTTON_SECONDARY}>
-                            Cancelar
+                            {t('common.cancel')}
                         </button>
                         <button type="submit" className={SIATC_THEME.COMPONENTS.BUTTON_PRIMARY}>
-                            Guardar Regla
+                            {t('configInstitucional.modal.save')}
                         </button>
                     </div>
                 </form>

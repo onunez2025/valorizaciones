@@ -13,11 +13,13 @@ import MaterialRegisterModal from '../components/materials/MaterialRegisterModal
 import { Modal } from '../components/common/Modal';
 import { SIATC_THEME } from '../utils/siatc-theme';
 import { useAuth } from '../hooks/useAuth';
+import { useTranslation } from 'react-i18next';
 
 const isValuable = (code?: string) => ['3120', '3121', '5120', '5121'].some(prefix => code?.startsWith(prefix));
 
 // Version 1.0.1 - Fix Timezone UTC
 export default function ValuationsPage() {
+    const { t } = useTranslation();
     const { alert, confirm } = useDialog();
     const { hasPermission } = useAuth();
     const [casList, setCasList] = useState<CAS[]>([]);
@@ -186,7 +188,7 @@ export default function ValuationsPage() {
             const result = await ApiClient.request(`/tickets/find/${globalSearch.trim()}`);
             setGlobalSearchResult(result);
         } catch (_err) {
-            setGlobalSearchResult({ error: 'Ticket no encontrado' });
+            setGlobalSearchResult({ error: t('valuations.ticketNotFound') });
         } finally {
             setIsSearchingGlobal(false);
         }
@@ -198,7 +200,7 @@ export default function ValuationsPage() {
                 handleSearchTicket();
                 return;
             }
-            alert({ message: "Por favor, seleccione un Centro de Atención (CAS) primero." });
+            alert({ message: t('valuations.errors.selectCasFirst') });
             return;
         }
         setLoadingData(true);
@@ -230,26 +232,26 @@ export default function ValuationsPage() {
                 const detailResult = await ApiClient.request(`/valuations/details/${draft.IdCierre}`);
                 if (detailResult && detailResult.tickets) {
                     const savedTickets = detailResult.tickets
-                        .filter((t: Record<string, unknown>) => t.Tipo === 'SERVICIO')
-                        .map((t: Record<string, unknown>) => ({
-                            ...t,
-                            Ticket: t.Ticket,
-                            Fecha: t.Fecha_Ticket,
-                            Servicio: t.Servicio_Nombre,
-                            Categoria: t.Categoria,
-                            FechaVisita: t.Fecha_Visita,
-                            FechaCierre: t.Fecha_Cierre,
-                            DiasDiferencia: t.Dias_Diferencia,
-                            CodigoEquipo: t.Codigo_Externo,
-                            TarifaBase: t.Tarifa_Base,
-                            Adicionales: t.Adicionales,
-                            Distrito: t.Distrito,
-                            Departamento: t.Departamento,
-                            NombreEquipo: t.Nombre_Equipo
+                        .filter((row: Record<string, unknown>) => row.Tipo === 'SERVICIO')
+                        .map((row: Record<string, unknown>) => ({
+                            ...row,
+                            Ticket: row.Ticket,
+                            Fecha: row.Fecha_Ticket,
+                            Servicio: row.Servicio_Nombre,
+                            Categoria: row.Categoria,
+                            FechaVisita: row.Fecha_Visita,
+                            FechaCierre: row.Fecha_Cierre,
+                            DiasDiferencia: row.Dias_Diferencia,
+                            CodigoEquipo: row.Codigo_Externo,
+                            TarifaBase: row.Tarifa_Base,
+                            Adicionales: row.Adicionales,
+                            Distrito: row.Distrito,
+                            Departamento: row.Departamento,
+                            NombreEquipo: row.Nombre_Equipo
                         }));
 
                     const savedPenalties = detailResult.tickets
-                        .filter((t: Record<string, unknown>) => t.Tipo === 'PENALIDAD')
+                        .filter((row: Record<string, unknown>) => row.Tipo === 'PENALIDAD')
                         .map((p: Record<string, unknown>) => ({
                             Id: p.ID_Referencia,
                             Ticket: p.Ticket === 'G-DESCUENTO' ? null : p.Ticket,
@@ -265,7 +267,7 @@ export default function ValuationsPage() {
         } catch (error: unknown) {
             if (error instanceof Error && error.message === 'AUTH_EXPIRED') return;
             console.error("Error fetching valuation:", error);
-            alert({ message: "No se pudo cargar la información de la valorización." });
+            alert({ message: t('valuations.errors.loadValuation') });
         } finally {
             setLoadingData(false);
         }
@@ -274,9 +276,9 @@ export default function ValuationsPage() {
     const handleApplyBatchAdjustment = async () => {
         if (!selectedCas) return;
         
-        const ticketList = batchTickets.split(/[\n,;]+/).map(t => t.trim()).filter(t => t.length > 0);
+        const ticketList = batchTickets.split(/[\n,;]+/).map(tk => tk.trim()).filter(tk => tk.length > 0);
         if (ticketList.length === 0) {
-            alert({ message: "Debe ingresar al menos un número de ticket." });
+            alert({ message: t('valuations.validationNoTickets') });
             return;
         }
 
@@ -292,16 +294,16 @@ export default function ValuationsPage() {
                 })
             });
 
-            alert({ 
-                title: 'Ajuste Completado', 
-                message: `Se procesaron ${result.processed} tickets exitosamente.` 
+            alert({
+                title: t('valuations.alertBatchAdjustmentTitle'),
+                message: t('valuations.alertBatchAdjustmentMessage', { count: result.processed })
             });
             setShowBatchAdjustmentModal(false);
             setShowBatchDiscountModal(false);
             setBatchTickets('');
             handleFetchValuation(); // Refrescar los datos para ver los cambios
         } catch (err: unknown) {
-            alert({ title: 'Error', message: err instanceof Error ? err.message : 'Error al aplicar el ajuste masivo.' });
+            alert({ title: 'Error', message: err instanceof Error ? err.message : t('valuations.errors.batchAdjustment') });
         } finally {
             setIsApplyingBatch(false);
         }
@@ -325,15 +327,15 @@ export default function ValuationsPage() {
                 id: line,
                 amount: parseFloat(discountAmount)
             };
-        }).filter(t => t.id && !isNaN(t.amount));
+        }).filter(tk => tk.id && !isNaN(tk.amount));
 
         if (preparedTickets.length === 0) {
-            alert({ message: "Debe ingresar al menos un número de ticket válido." });
+            alert({ message: t('valuations.validationNoValidTickets') });
             return;
         }
 
         if (!discountMotivo.trim()) {
-            alert({ message: "Debe seleccionar un motivo para el descuento." });
+            alert({ message: t('valuations.validationNoDiscountReason') });
             return;
         }
 
@@ -349,9 +351,9 @@ export default function ValuationsPage() {
                 })
             });
 
-            alert({ 
-                title: 'Descuento Completado', 
-                message: `Se procesaron ${result.processed} tickets exitosamente.` 
+            alert({
+                title: t('valuations.alertBatchDiscountTitle'),
+                message: t('valuations.alertBatchDiscountMessage', { count: result.processed })
             });
             setShowBatchDiscountModal(false);
             setDiscountTickets('');
@@ -360,7 +362,7 @@ export default function ValuationsPage() {
             setDiscountDescripcion('');
             handleFetchValuation(); // Refrescar los datos
         } catch (err: unknown) {
-            alert({ title: 'Error', message: err instanceof Error ? err.message : 'Error al aplicar el descuento masivo.' });
+            alert({ title: 'Error', message: err instanceof Error ? err.message : t('valuations.errors.batchDiscount') });
         } finally {
             setIsApplyingDiscount(false);
         }
@@ -382,12 +384,12 @@ export default function ValuationsPage() {
                     attachmentBase64
                 })
             });
-            alert({ title: 'Éxito', message: 'El correo ha sido enviado correctamente.' });
+            alert({ title: 'Éxito', message: t('valuations.alertSuccessEmail') });
             setShowEmailModal(false);
             setPendingEmailData(null);
             setEmailTo('');
         } catch (err: unknown) {
-            alert({ title: 'Error', message: err instanceof Error ? err.message : 'No se pudo enviar el correo.' });
+            alert({ title: 'Error', message: err instanceof Error ? err.message : t('valuations.errors.sendEmail') });
         } finally {
             setIsSendingEmail(false);
         }
@@ -731,7 +733,7 @@ export default function ValuationsPage() {
             setClosures(data);
         } catch (error) {
             console.error("Error fetching closures:", error);
-            alert({ message: "No se pudo cargar el historial de cierres." });
+            alert({ message: t('valuations.errors.loadHistory') });
         } finally {
             setLoadingHistory(false);
         }
@@ -745,7 +747,7 @@ export default function ValuationsPage() {
             setClosureDetails(Array.isArray(data) ? data : (data.tickets ?? []));
         } catch (error) {
             console.error("Error fetching closure details:", error);
-            alert({ message: "No se pudo cargar el detalle del cierre." });
+            alert({ message: t('valuations.errors.loadClosureDetails') });
         } finally {
             setLoadingDetails(false);
         }
@@ -757,10 +759,10 @@ export default function ValuationsPage() {
         const actionLabel = isAnulling ? 'anular' : 'habilitar';
 
         confirm({
-            title: `${toTitleCase(actionLabel)} Penalidad`,
-            message: `¿Está seguro que desea ${actionLabel} esta penalidad?${isAnulling ? ' Esta será excluida de los cálculos y reportes.' : ''}`,
+            title: t('valuations.confirmToggleTitle', { action: toTitleCase(actionLabel) }),
+            message: t('valuations.confirmToggleMessage', { action: actionLabel, exclusion: isAnulling ? t('valuations.confirmToggleExclusion') : '' }),
             type: isAnulling ? 'warning' : 'info',
-            confirmText: isAnulling ? 'Sí, anular' : 'Sí, habilitar',
+            confirmText: isAnulling ? t('valuations.confirmToggleAnnulText') : t('valuations.confirmToggleEnableText'),
             onConfirm: async () => {
                 try {
                     await ApiClient.request(`/penalties/${penalty.Id}/status`, {
@@ -773,7 +775,7 @@ export default function ValuationsPage() {
                     });
                     handleFetchValuation();
                 } catch (error: unknown) {
-                    alert({ title: 'Error', message: `No se pudo ${actionLabel} la penalidad: ${error instanceof Error ? error.message : String(error)}`, type: 'error' });
+                    alert({ title: 'Error', message: t('valuations.errors.togglePenalty', { action: actionLabel, error: error instanceof Error ? error.message : String(error) }), type: 'error' });
                 }
             }
         });
@@ -808,7 +810,7 @@ export default function ValuationsPage() {
 
     const effectivePenaltyIds = new Set(Object.values(effectivePenaltiesMap).map(p => p.Id));
 
-    const totalTickets = tickets.reduce((sum, t) => sum + (isValuable(t.CodigoEquipo) ? (t.TarifaBase + (t.Adicionales || 0)) : 0), 0);
+    const totalTickets = tickets.reduce((sum, tk) => sum + (isValuable(tk.CodigoEquipo) ? (tk.TarifaBase + (tk.Adicionales || 0)) : 0), 0);
     const totalPenalties = Object.values(effectivePenaltiesMap).reduce((sum: number, p: Penalty) => sum + p.Importe, 0);
     const grandTotal = totalTickets - totalPenalties;
 
@@ -816,25 +818,25 @@ export default function ValuationsPage() {
         if (!selectedCas) return;
         setIsClosing(true);
 
-        const ticketDetails = tickets.map(t => ({
-            ticket: t.Ticket,
-            monto: t.TarifaBase + (t.Adicionales || 0),
-            fecha: t.Fecha,
+        const ticketDetails = tickets.map(tk => ({
+            ticket: tk.Ticket,
+            monto: tk.TarifaBase + (tk.Adicionales || 0),
+            fecha: tk.Fecha,
             tipo: 'SERVICIO',
-            servicio: t.ServicioNombre || t.Servicio,
-            categoria: t.EsInstitucional ? `${t.Categoria} [OBRAS]` : t.Categoria,
-            fechaVisita: t.FechaVisita,
-            fechaCierre: t.FechaCierre || t.Fecha,
-            diasDiferencia: t.DiasDiferencia,
-            codigoExterno: t.CodigoEquipo,
-            tarifaBase: t.TarifaBase,
-            adicionales: (t.Adicionales || 0),
-            nombreTecnico: t.NombreTecnico,
-            apellidoTecnico: t.ApellidoTecnico,
-            comentarioTecnico: t.ComentarioTecnico,
-            distrito: t.Distrito,
-            departamento: t.Departamento,
-            nombreEquipo: t.NombreEquipo
+            servicio: tk.ServicioNombre || tk.Servicio,
+            categoria: tk.EsInstitucional ? `${tk.Categoria} [OBRAS]` : tk.Categoria,
+            fechaVisita: tk.FechaVisita,
+            fechaCierre: tk.FechaCierre || tk.Fecha,
+            diasDiferencia: tk.DiasDiferencia,
+            codigoExterno: tk.CodigoEquipo,
+            tarifaBase: tk.TarifaBase,
+            adicionales: (tk.Adicionales || 0),
+            nombreTecnico: tk.NombreTecnico,
+            apellidoTecnico: tk.ApellidoTecnico,
+            comentarioTecnico: tk.ComentarioTecnico,
+            distrito: tk.Distrito,
+            departamento: tk.Departamento,
+            nombreEquipo: tk.NombreEquipo
         }));
 
         const penaltyDetails = activePenalties.map(p => {
@@ -872,9 +874,9 @@ export default function ValuationsPage() {
             // Re-fetch to clear current screen
             handleFetchValuation();
 
-            alert({ 
-                title: "¡Cierre Exitoso!", 
-                message: `La quincena se ha cerrado con código: ${result.codigo}. ¿Deseas enviar el reporte oficial ahora?`, 
+            alert({
+                title: t('valuations.alertCloseSuccessTitle'),
+                message: t('valuations.alertCloseSuccessMessage', { code: result.codigo }),
                 type: 'success',
                 onConfirm: () => {
                    // Preparar correo de cierre usando el resultado
@@ -883,7 +885,7 @@ export default function ValuationsPage() {
             });
         } catch (error) {
             console.error("Error closing fortnight:", error);
-            alert({ message: "No se pudo cerrar la quincena. Intente nuevamente." });
+            alert({ message: t('valuations.errors.closeFortnight') });
         } finally {
             setIsClosing(false);
         }
@@ -893,23 +895,23 @@ export default function ValuationsPage() {
         if (!selectedCas) return;
         setIsClosing(true);
 
-        const ticketDetails = tickets.map(t => ({
-            ticket: t.Ticket,
-            monto: t.TarifaBase + (t.Adicionales || 0),
-            fecha: t.Fecha,
+        const ticketDetails = tickets.map(tk => ({
+            ticket: tk.Ticket,
+            monto: tk.TarifaBase + (tk.Adicionales || 0),
+            fecha: tk.Fecha,
             tipo: 'SERVICIO',
-            servicio: t.ServicioNombre || t.Servicio,
-            categoria: t.EsInstitucional ? `${t.Categoria} [OBRAS]` : t.Categoria,
-            fechaVisita: t.FechaVisita,
-            fechaCierre: t.FechaCierre || t.Fecha,
-            diasDiferencia: t.DiasDiferencia,
-            codigoExterno: t.CodigoEquipo,
-            tarifaBase: t.TarifaBase,
-            adicionales: (t.Adicionales || 0),
+            servicio: tk.ServicioNombre || tk.Servicio,
+            categoria: tk.EsInstitucional ? `${tk.Categoria} [OBRAS]` : tk.Categoria,
+            fechaVisita: tk.FechaVisita,
+            fechaCierre: tk.FechaCierre || tk.Fecha,
+            diasDiferencia: tk.DiasDiferencia,
+            codigoExterno: tk.CodigoEquipo,
+            tarifaBase: tk.TarifaBase,
+            adicionales: (tk.Adicionales || 0),
             idReferencia: null,
-            distrito: t.Distrito,
-            departamento: t.Departamento,
-            nombreEquipo: t.NombreEquipo
+            distrito: tk.Distrito,
+            departamento: tk.Departamento,
+            nombreEquipo: tk.NombreEquipo
         }));
 
         const penaltyDetails = activePenalties.map(p => {
@@ -952,16 +954,16 @@ export default function ValuationsPage() {
                 Estado: 'BORRADOR'
             });
 
-            alert({ 
-                title: "Borrador Guardado", 
-                message: "La pre-valorización se ha guardado correctamente. Ahora puedes enviarla o cerrarla desde el historial.", 
+            alert({
+                title: t('valuations.alertDraftSavedTitle'),
+                message: t('valuations.alertDraftSavedMessage'),
                 type: 'success'
             });
             
             return result;
         } catch (error: unknown) {
             console.error("Error saving draft:", error);
-            alert({ message: "No se pudo guardar el borrador: " + (error instanceof Error ? error.message : String(error)) });
+            alert({ message: t('valuations.errors.saveDraft', { error: error instanceof Error ? error.message : String(error) }) });
         } finally {
             setIsClosing(false);
         }
@@ -969,19 +971,19 @@ export default function ValuationsPage() {
 
     const handleFinalizeDraft = async (closure: Record<string, unknown>) => {
         confirm({
-            title: 'Cerrar Valorización',
-            message: `¿Está seguro que desea cerrar definitivamente la valorización ${closure.Codigo_Valorizacion}? Una vez cerrada, ya no podrá modificarse.`,
+            title: t('valuations.alertCloseTitle'),
+            message: t('valuations.alertCloseMessage', { code: closure.Codigo_Valorizacion }),
             type: 'warning',
             onConfirm: async () => {
                 try {
                     await ApiClient.request(`/valuations/finalize/${closure.IdCierre}`, { method: 'POST' });
-                    alert({ title: 'Éxito', message: 'La valorización ha sido cerrada correctamente.', type: 'success' });
+                    alert({ title: 'Éxito', message: t('valuations.alertCloseConfirmed'), type: 'success' });
                     handleFetchClosures();
                     if (currentDraft?.IdCierre === closure.IdCierre) {
                         setCurrentDraft(null);
                     }
                 } catch (err: unknown) {
-                    alert({ title: 'Error', message: err instanceof Error ? err.message : 'No se pudo finalizar.' });
+                    alert({ title: 'Error', message: err instanceof Error ? err.message : t('valuations.errors.finalize') });
                 }
             }
         });
@@ -1036,16 +1038,16 @@ export default function ValuationsPage() {
 
     const handleReopenFortnight = async (idCierre: string, code: string) => {
         confirm({
-            title: '¿Reabrir Quincena?',
-            message: `Esta acción eliminará el registro de cierre ${code} y los tickets volverán a estar activos para edición. ¿Está seguro?`,
+            title: t('valuations.alertReopenTitle'),
+            message: t('valuations.alertReopenMessage', { code }),
             type: 'warning',
             onConfirm: async () => {
                 try {
                     await ApiClient.request(`/valuations/reopen/${idCierre}`, { method: 'POST' });
-                    alert({ title: 'Éxito', message: 'La quincena ha sido reabierta.', type: 'success' });
+                    alert({ title: 'Éxito', message: t('valuations.alertReopenSuccess'), type: 'success' });
                     handleFetchClosures();
                 } catch (err: unknown) {
-                    alert({ title: 'Error', message: err instanceof Error ? err.message : 'No se pudo reabrir.' });
+                    alert({ title: 'Error', message: err instanceof Error ? err.message : t('valuations.errors.reopen') });
                 }
             }
         });
@@ -1061,22 +1063,22 @@ export default function ValuationsPage() {
 
             if (!response.ok) {
                 const error = await response.json();
-                throw new Error(error.details || error.error || 'No se pudo obtener el informe técnico');
+                throw new Error(error.details || error.error || t('valuations.errors.technicalReport'));
             }
 
             const blob = await response.blob();
             const url = window.URL.createObjectURL(blob);
             const win = window.open(url, '_blank');
             if (!win) {
-                throw new Error('El navegador bloqueó la ventana emergente. Por favor, permite las ventanas emergentes para este sitio.');
+                throw new Error(t('valuations.errors.popupBlocked'));
             }
             
             // Cleanup after some time
             setTimeout(() => window.URL.revokeObjectURL(url), 60000);
         } catch (err: unknown) {
             alert({
-                title: 'Error de Reporte',
-                message: err instanceof Error ? err.message : 'Error al generar reporte.',
+                title: t('valuations.errors.reportTitle'),
+                message: err instanceof Error ? err.message : t('valuations.errors.reportMessage'),
                 type: 'error'
             });
         } finally {
@@ -1192,8 +1194,8 @@ export default function ValuationsPage() {
         });
 
         const breakdownMap = new Map<string, { count: number, total: number }>();
-        tickets.forEach(t => {
-            const dateVal = t.FechaCierre || t.Fecha;
+        tickets.forEach(tk => {
+            const dateVal = tk.FechaCierre || tk.Fecha;
             if (!dateVal) return;
             const d = new Date(dateVal);
             // Fix: Use UTC timezone to match web grouping and prevent date shifting
@@ -1201,7 +1203,7 @@ export default function ValuationsPage() {
             const current = breakdownMap.get(dateStr) || { count: 0, total: 0 };
             breakdownMap.set(dateStr, {
                 count: current.count + 1,
-                total: current.total + (t.TarifaBase + (t.Adicionales || 0))
+                total: current.total + (tk.TarifaBase + (tk.Adicionales || 0))
             });
         });
 
@@ -1237,31 +1239,31 @@ export default function ValuationsPage() {
             c.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
         });
 
-        tickets.forEach(t => {
+        tickets.forEach(tk => {
             const row = sheetDetalle.addRow([
-                t.Ticket,
-                t.FechaVisita ? new Date(t.FechaVisita) : null,
-                t.FechaCierre ? new Date(t.FechaCierre) : new Date(t.Fecha),
-                t.DiasDiferencia ?? '-',
-                t.ServicioNombre || t.Servicio,
-                `${t.NombreTecnico || ''} ${t.ApellidoTecnico || ''}`.trim() || '-',
-                t.ComentarioTecnico || '-',
-                t.CodigoEquipo || '-',
-                t.NombreEquipo || '-',
-                t.Categoria,
-                t.EsInstitucional ? "OBRAS" : "-",
-                t.Distrito || '-',
-                t.Departamento || '-',
-                t.TarifaBase ?? (t.TarifaBase + (t.Adicionales || 0)), // Si TarifaBase es null, usar el total
-                t.Adicionales || 0,
-                (t.TarifaBase + (t.Adicionales || 0))
+                tk.Ticket,
+                tk.FechaVisita ? new Date(tk.FechaVisita) : null,
+                tk.FechaCierre ? new Date(tk.FechaCierre) : new Date(tk.Fecha),
+                tk.DiasDiferencia ?? '-',
+                tk.ServicioNombre || tk.Servicio,
+                `${tk.NombreTecnico || ''} ${tk.ApellidoTecnico || ''}`.trim() || '-',
+                tk.ComentarioTecnico || '-',
+                tk.CodigoEquipo || '-',
+                tk.NombreEquipo || '-',
+                tk.Categoria,
+                tk.EsInstitucional ? "OBRAS" : "-",
+                tk.Distrito || '-',
+                tk.Departamento || '-',
+                tk.TarifaBase ?? (tk.TarifaBase + (tk.Adicionales || 0)), // Si TarifaBase es null, usar el total
+                tk.Adicionales || 0,
+                (tk.TarifaBase + (tk.Adicionales || 0))
             ]);
             row.getCell(2).numFmt = 'dd/mm/yyyy';
             row.getCell(3).numFmt = 'dd/mm/yyyy';
             row.getCell(14).numFmt = '"S/" #,##0.00';
             row.getCell(15).numFmt = '"S/" #,##0.00';
             row.getCell(16).numFmt = '"S/" #,##0.00';
-            if ((t.DiasDiferencia || 0) > diasMaxCierre) {
+            if ((tk.DiasDiferencia || 0) > diasMaxCierre) {
                 row.getCell(4).font = { color: { argb: 'FFFF0000' }, bold: true };
             }
             row.eachCell(c => { c.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} }; });
@@ -1531,8 +1533,8 @@ export default function ValuationsPage() {
             {/* Cabecera */}
             <div className={SIATC_THEME.LAYOUT.HEADER_WRAPPER}>
                 <div>
-                    <h1 className={SIATC_THEME.TYPOGRAPHY.PAGE_TITLE}>Valorizaciones CAS</h1>
-                    <p className={SIATC_THEME.TYPOGRAPHY.PAGE_SUBTITLE}>Gestión quincenal de pagos y descuentos.</p>
+                    <h1 className={SIATC_THEME.TYPOGRAPHY.PAGE_TITLE}>{t('valuations.pageTitle')}</h1>
+                    <p className={SIATC_THEME.TYPOGRAPHY.PAGE_SUBTITLE}>{t('valuations.pageSubtitle')}</p>
                 </div>
 
                 <div className="flex bg-muted/30 p-1 rounded-2xl border border-border/50">
@@ -1543,16 +1545,16 @@ export default function ValuationsPage() {
                             viewMode === 'current' ? "bg-card text-primary shadow-sm ring-1 ring-border/50" : "text-muted-foreground hover:bg-white/40"
                         )}
                     >
-                        <BarChart2 className="w-4 h-4" /> Generar
+                        <BarChart2 className="w-4 h-4" /> {t('valuations.tabGenerate')}
                     </button>
-                    <button 
+                    <button
                         onClick={() => { setViewMode('history'); handleFetchClosures(); }}
                         className={cn(
                             "flex items-center gap-2 px-5 py-2 rounded-xl text-xs font-black transition-all",
                             viewMode === 'history' ? "bg-card text-primary shadow-sm ring-1 ring-border/50" : "text-muted-foreground hover:bg-white/40"
                         )}
                     >
-                        <History className="w-4 h-4" /> Historial
+                        <History className="w-4 h-4" /> {t('valuations.tabHistory')}
                     </button>
                 </div>
             </div>
@@ -1562,22 +1564,22 @@ export default function ValuationsPage() {
             <Modal
                 isOpen={showEmailModal}
                 onClose={() => { if (!isSendingEmail) setShowEmailModal(false); }}
-                title="Compartir Valorización por Correo"
+                title={t('valuations.modalEmailTitle')}
             >
                 <div className="space-y-6">
                     <div className="flex flex-col gap-1.5">
-                        <label className="text-[11px] font-black uppercase text-muted-foreground ml-1">Destinatarios</label>
+                        <label className="text-[11px] font-black uppercase text-muted-foreground ml-1">{t('valuations.modalEmailRecipients')}</label>
                         <div className="relative group">
                             <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
-                            <input 
+                            <input
                                 type="text"
-                                placeholder="ejemplo@correo.com, otro@correo.com"
+                                placeholder={t('valuations.modalEmailPlaceholder')}
                                 className="w-full pl-11 pr-4 py-3.5 bg-muted/20 border border-transparent rounded-2xl text-sm font-bold outline-none ring-primary/5 focus:ring-4 focus:bg-card focus:border-primary/20 transition-all"
                                 value={emailTo}
                                 onChange={(e) => setEmailTo(e.target.value)}
                             />
                         </div>
-                        <p className="text-[10px] font-bold text-muted-foreground ml-1 opacity-50">Separe múltiples correos con una coma (,)</p>
+                        <p className="text-[10px] font-bold text-muted-foreground ml-1 opacity-50">{t('valuations.modalEmailHint')}</p>
                     </div>
 
                     <div className="p-4 bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-100/50 dark:border-indigo-900/30 rounded-2xl space-y-3">
@@ -1586,24 +1588,24 @@ export default function ValuationsPage() {
                                 <FileText className="w-4 h-4 text-indigo-600" />
                             </div>
                             <div className="flex flex-col">
-                                <span className="text-[10px] font-black text-indigo-800 uppercase leading-none mb-1">Adjunto listo</span>
+                                <span className="text-[10px] font-black text-indigo-800 uppercase leading-none mb-1">{t('valuations.modalEmailAttachmentReady')}</span>
                                 <span className="text-xs font-bold text-slate-600 truncate max-w-[300px]">{pendingEmailData?.filename}</span>
                             </div>
                         </div>
                         <p className="text-[11px] font-medium text-indigo-700/70 leading-relaxed italic">
-                            Se enviará un correo formal con el resumen neto y el reporte Excel detallado adjunto.
+                            {t('valuations.modalEmailInfo')}
                         </p>
                     </div>
 
                     <div className="flex gap-3">
-                        <button 
+                        <button
                             disabled={isSendingEmail}
                             onClick={() => setShowEmailModal(false)}
                             className="flex-1 py-4 text-sm font-black text-slate-600 hover:bg-muted rounded-2xl transition-all disabled:opacity-50"
                         >
                             Cancelar
                         </button>
-                        <button 
+                        <button
                             disabled={isSendingEmail || !emailTo.trim()}
                             onClick={handleSendEmail}
                             className="flex-[2] py-4 text-sm font-black text-white bg-gradient-to-r from-indigo-600 to-indigo-700 rounded-2xl transition-all shadow-xl shadow-indigo-600/20 active:scale-95 flex items-center justify-center gap-2 group disabled:opacity-50"
@@ -1616,7 +1618,7 @@ export default function ValuationsPage() {
                             ) : (
                                 <>
                                     <Mail className="w-4 h-4 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
-                                    Enviar Auditoría
+                                    {t('valuations.modalEmailSendButton')}
                                 </>
                             )}
                         </button>
@@ -1636,7 +1638,7 @@ export default function ValuationsPage() {
                     ) : (
                         <div className="flex flex-wrap items-center gap-6">
                         <div className="flex flex-col">
-                                <span className="text-[10px] font-bold text-primary opacity-60">Ticket encontrado</span>
+                                <span className="text-[10px] font-bold text-primary opacity-60">{t('valuations.ticketFound')}</span>
                                 <span className="text-lg font-black">{globalSearchResult.Ticket}</span>
                             </div>
                             <div className="h-8 w-px bg-primary/10" />
@@ -1658,7 +1660,7 @@ export default function ValuationsPage() {
                                     }}
                                     className="bg-red-600 text-white px-5 py-2.5 rounded-xl text-xs font-black hover:bg-red-700 transition-all shadow-lg shadow-red-600/20 flex items-center gap-2"
                                 >
-                                    <AlertTriangle className="w-4 h-4" /> Aplicar penalidad
+                                    <AlertTriangle className="w-4 h-4" /> {t('valuations.applyPenalty')}
                                 </button>
                             )}
                         </div>
@@ -1685,7 +1687,7 @@ export default function ValuationsPage() {
                         <button onClick={() => setIsDropdownOpen(!isDropdownOpen)} className="flex-1 text-left px-1 py-1 overflow-hidden">
                             <p className="text-[13px] font-medium text-muted-foreground mb-0">Empresa (CAS)</p>
                             <p className={cn("text-sm font-bold tracking-tight truncate", !selectedCas && "text-muted-foreground/30 italic font-medium")}>
-                                {selectedCas ? toTitleCase(selectedCas.Nombre_CAS) : "Seleccionar empresa..."}
+                                {selectedCas ? toTitleCase(selectedCas.Nombre_CAS) : t('valuations.selectEnterprise')}
                             </p>
                         </button>
                         {selectedCas && (
@@ -1699,7 +1701,7 @@ export default function ValuationsPage() {
                     {isDropdownOpen && (
                         <div className="absolute top-full left-0 mt-2 w-full bg-card border border-border rounded-xl shadow-xl z-[100] animate-in fade-in zoom-in-95 duration-200 overflow-hidden">
                             <div className="p-3 border-b border-border/40">
-                                <input autoFocus type="text" placeholder="Buscar CAS..." className="w-full bg-muted/30 border border-transparent rounded-lg px-3 py-2 text-sm font-medium focus:bg-background focus:border-primary/20 outline-none transition-all" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+                                <input autoFocus type="text" placeholder={t('valuations.searchCasPlaceholder')} className="w-full bg-muted/30 border border-transparent rounded-lg px-3 py-2 text-sm font-medium focus:bg-background focus:border-primary/20 outline-none transition-all" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
                             </div>
                             <div className="max-h-[280px] overflow-y-auto p-2 space-y-1 custom-scrollbar">
                                 {filteredCasList.map(cas => (
@@ -1748,7 +1750,7 @@ export default function ValuationsPage() {
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground opacity-40" />
                         <input 
                             type="text" 
-                            placeholder="Buscar ticket específico en todo el CAS..." 
+                            placeholder={t('valuations.searchTicketGlobal')}
                             className="w-full pl-10 pr-4 py-2.5 bg-muted/20 border border-transparent rounded-xl text-xs font-bold focus:bg-background focus:border-primary/20 focus:ring-4 focus:ring-primary/5 outline-none transition-all h-11"
                             value={globalSearch}
                             onChange={(e) => setGlobalSearch(e.target.value)}
@@ -1770,25 +1772,25 @@ export default function ValuationsPage() {
                             <div className={cn("p-6 h-full flex flex-col justify-between overflow-y-auto custom-scrollbar", SIATC_THEME.COMPONENTS.CARD_CONTAINER)}>
                                 <div className="space-y-6">
                                     <div className="flex items-center justify-between">
-                                        <h3 className="text-[11px] font-bold text-muted-foreground">Resumen de Cuenta</h3>
+                                        <h3 className="text-[11px] font-bold text-muted-foreground">{t('valuations.sectionSummary')}</h3>
                                         <Calculator className="w-5 h-5 text-primary" />
                                     </div>
                                     
                                     <div className="space-y-3">
                                         <div className="flex justify-between items-center p-4 bg-muted/20 rounded-xl border border-border/30">
-                                            <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Servicios</span>
+                                            <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">{t('valuations.summaryServices')}</span>
                                             <span className="text-base font-data">S/ {totalTickets.toLocaleString('es-PE', { minimumFractionDigits: 2 })}</span>
                                         </div>
                                         <div className="flex justify-between items-center p-4 bg-red-50/50 rounded-xl border border-red-100">
-                                            <span className="text-[11px] font-bold text-red-600 uppercase tracking-wider">Penalidades</span>
+                                            <span className="text-[11px] font-bold text-red-600 uppercase tracking-wider">{t('valuations.summaryPenalties')}</span>
                                             <span className="text-base font-data text-red-600">- S/ {totalPenalties.toLocaleString('es-PE', { minimumFractionDigits: 2 })}</span>
                                         </div>                                               
                                         <div className="flex flex-col px-5 py-6 bg-card border-l-[6px] border-emerald-600 rounded-xl shadow-sm hover:shadow-md transition-all duration-300 group/neto">
                                             <div className="flex items-center justify-between mb-3">
-                                                <span className="text-[11px] font-bold text-[#059669]">Total Neto</span>
+                                                <span className="text-[11px] font-bold text-[#059669]">{t('valuations.summaryNetTotal')}</span>
                                                 <div className="flex items-center gap-1.5 bg-emerald-50 px-2 py-1 rounded-md">
                                                     <div className="w-1.5 h-1.5 bg-[#059669] rounded-full animate-pulse" />
-                                                    <span className="text-[11px] font-bold text-[#059669]">Siatc Live</span>
+                                                    <span className="text-[11px] font-bold text-[#059669]">{t('valuations.summarySiatcLive')}</span>
                                                 </div>
                                             </div>
                                             <div className="flex items-center gap-2 whitespace-nowrap overflow-hidden">
@@ -1797,7 +1799,7 @@ export default function ValuationsPage() {
                                                     {grandTotal.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                                 </span>
                                             </div>
-                                            <p className="text-[11px] font-bold text-muted-foreground mt-2">Cálculo Oficial de Auditoría</p>
+                                            <p className="text-[11px] font-bold text-muted-foreground mt-2">{t('valuations.summaryOfficialAudit')}</p>
                                         </div>
                                     </div>
                                 </div>
@@ -1809,7 +1811,7 @@ export default function ValuationsPage() {
                                             disabled={!selectedCas || tickets.length === 0}
                                             className="w-full flex items-center justify-center gap-2 p-4 bg-background border border-border rounded-xl text-sm font-bold transition-all disabled:opacity-30 disabled:cursor-not-allowed group"
                                         >
-                                            <Download className="w-4 h-4 text-primary group-hover:scale-110 transition-transform" /> Exportar Borrador
+                                            <Download className="w-4 h-4 text-primary group-hover:scale-110 transition-transform" /> {t('valuations.buttonExportDraft')}
                                         </button>
                                     )}
                                     {hasPermission('val.valuations.export') && (
@@ -1826,7 +1828,7 @@ export default function ValuationsPage() {
                                             ) : (
                                                 <Mail className="w-4 h-4 text-indigo-600 group-hover:scale-110 transition-transform" />
                                             )}
-                                            {isClosing ? "Guardando Borrador..." : "Enviar Pre-Valorización"}
+                                            {isClosing ? "Guardando Borrador..." : t('valuations.buttonSendPreValuation')}
                                         </button>
                                     )}
                                     {hasPermission('val.valuations.close') && (
@@ -1835,7 +1837,7 @@ export default function ValuationsPage() {
                                             disabled={!selectedCas || tickets.length === 0}
                                             className="w-full flex items-center justify-center gap-2 p-4 bg-gradient-to-r from-emerald-600 to-emerald-700 text-white hover:opacity-90 text-sm font-bold rounded-xl transition-all shadow-xl shadow-emerald-600/20 disabled:opacity-30 disabled:cursor-not-allowed"
                                         >
-                                            <Lock className="w-4 h-4" /> Cerrar y Notificar
+                                            <Lock className="w-4 h-4" /> {t('valuations.buttonCloseAndNotify')}
                                         </button>
                                     )}
                                     {hasPermission('val.valuations.edit') && (
@@ -1844,7 +1846,7 @@ export default function ValuationsPage() {
                                             disabled={!selectedCas}
                                             className="w-full flex items-center justify-center gap-2 p-4 bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 text-sm font-bold rounded-xl transition-all disabled:opacity-30"
                                         >
-                                            <Activity className="w-4 h-4" /> Ajuste Masivo
+                                            <Activity className="w-4 h-4" /> {t('valuations.buttonBatchAdjustment')}
                                         </button>
                                     )}
                                     {hasPermission('val.valuations.edit') && (
@@ -1853,7 +1855,7 @@ export default function ValuationsPage() {
                                             disabled={!selectedCas}
                                             className="w-full flex items-center justify-center gap-2 p-4 bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 text-sm font-bold rounded-xl transition-all disabled:opacity-30"
                                         >
-                                            <AlertTriangle className="w-4 h-4" /> Descuento Masivo
+                                            <AlertTriangle className="w-4 h-4" /> {t('valuations.buttonBatchDiscount')}
                                         </button>
                                     )}
                                 </div>
@@ -1864,10 +1866,10 @@ export default function ValuationsPage() {
                         <div className={cn("xl:col-span-3 flex flex-col overflow-hidden", SIATC_THEME.COMPONENTS.CARD_CONTAINER)}>
                             <div className="flex p-2 bg-muted/20 border-b border-border/40">
                                 <button onClick={() => setActiveTab('services')} className={cn("flex-1 flex items-center justify-center gap-2 py-3 text-sm font-bold rounded-xl transition-all", activeTab === 'services' ? "bg-background text-primary shadow-sm ring-1 ring-border/50" : "text-muted-foreground hover:bg-background/40")}>
-                                    <Briefcase className="w-4 h-4" /> Servicios realizados ({tickets.length})
+                                    <Briefcase className="w-4 h-4" /> {t('valuations.tabServicesCount', { count: tickets.length })}
                                 </button>
                                 <button onClick={() => setActiveTab('penalties')} className={cn("flex-1 flex items-center justify-center gap-2 py-3 text-sm font-bold rounded-xl transition-all", activeTab === 'penalties' ? "bg-background text-red-600 shadow-sm ring-1 ring-border/50" : "text-muted-foreground hover:bg-background/40")}>
-                                    <AlertTriangle className="w-4 h-4" /> Penalidades aplicadas ({penalties.length})
+                                    <AlertTriangle className="w-4 h-4" /> {t('valuations.tabPenaltiesCount', { count: penalties.length })}
                                 </button>
                             </div>
 
@@ -1875,24 +1877,24 @@ export default function ValuationsPage() {
                                 {!selectedCas ? (
                                     <div className="h-full flex flex-col items-center justify-center text-center py-20 opacity-30">
                                         <div className="w-20 h-20 bg-muted rounded-full flex items-center justify-center mb-6"><Building2 className="w-10 h-10" /></div>
-                                        <h3 className="text-lg font-black">Esperando selección</h3>
-                                        <p className="text-xs font-bold max-w-[250px] mt-2">Seleccione una empresa y el rango de fechas para visualizar la auditoría.</p>
+                                        <h3 className="text-lg font-black">{t('valuations.emptyStateTitle')}</h3>
+                                        <p className="text-xs font-bold max-w-[250px] mt-2">{t('valuations.emptyStateMessage')}</p>
                                     </div>
                                 ) : activeTab === 'services' ? (
                                     <div className="h-full">
                                         {tickets.length === 0 ? (
                                             <div className="py-24 text-center opacity-40">
                                                 <FileText className="w-12 h-12 mx-auto mb-4" />
-                                                <p className="text-xs font-bold">No se detectaron servicios en el rango seleccionado</p>
+                                                <p className="text-xs font-bold">{t('valuations.emptyServices')}</p>
                                             </div>
                                         ) : (
                                             <table className={SIATC_THEME.TABLE.TABLE_ELEMENT}>
                                                 <thead className={SIATC_THEME.TABLE.HEADER_ROW}>
                                                     <tr>
-                                                        <th className={SIATC_THEME.TABLE.HEADER_TH}>Fecha de Proceso</th>
-                                                        <th className={cn(SIATC_THEME.TABLE.HEADER_TH, "text-center")}>Servicios</th>
-                                                        <th className={cn(SIATC_THEME.TABLE.HEADER_TH, "text-center")}>Estado de Auditoría</th>
-                                                        <th className={cn(SIATC_THEME.TABLE.HEADER_TH, "text-right")}>Acumulado Diario</th>
+                                                        <th className={SIATC_THEME.TABLE.HEADER_TH}>{t('valuations.tableHeaderProcessDate')}</th>
+                                                        <th className={cn(SIATC_THEME.TABLE.HEADER_TH, "text-center")}>{t('valuations.tableHeaderServices')}</th>
+                                                        <th className={cn(SIATC_THEME.TABLE.HEADER_TH, "text-center")}>{t('valuations.tableHeaderAuditStatus')}</th>
+                                                        <th className={cn(SIATC_THEME.TABLE.HEADER_TH, "text-right")}>{t('valuations.tableHeaderDailyAccumulation')}</th>
                                                         <th className={cn(SIATC_THEME.TABLE.HEADER_TH, "w-10")}></th>
                                                     </tr>
                                                 </thead>
@@ -1928,12 +1930,12 @@ export default function ValuationsPage() {
                                                                             {groupedTickets[date].zeroPriceCount > 0 ? (
                                                                                 <span className="px-3 py-1 bg-amber-50 text-amber-600 rounded-full text-[10px] font-medium border border-amber-100 flex items-center gap-1.5 animate-pulse">
                                                                                     <AlertCircle className="w-3.5 h-3.5" />
-                                                                                    {groupedTickets[date].zeroPriceCount} por vincular
+                                                                                    {groupedTickets[date].zeroPriceCount} {t('valuations.statusToLink')}
                                                                                 </span>
                                                                             ) : (
                                                                                 <span className="px-3 py-1 bg-emerald-50 text-emerald-600 rounded-full text-[10px] font-medium border border-emerald-100 flex items-center gap-1.5">
                                                                                     <CheckCircle2 className="w-3.5 h-3.5" />
-                                                                                    Auditado
+                                                                                    {t('valuations.statusAudited')}
                                                                                 </span>
                                                                             )}
                                                                         </div>
@@ -1958,17 +1960,17 @@ export default function ValuationsPage() {
                                                                                             <th onClick={() => handleDetailSort('Ticket')} className="px-5 py-3 text-left cursor-pointer hover:text-primary transition-colors">
                                                                                                 <div className="flex items-center gap-1">Ticket <ArrowUpDown className="w-3 h-3 opacity-40" /></div>
                                                                                             </th>
-                                                                                            <th className="px-2 py-3 text-center">Visita / Cierre</th>
-                                                                                            <th className="px-2 py-3 text-center">Días</th>
+                                                                                            <th className="px-2 py-3 text-center">{t('valuations.detailTableVisitClosureDates')}</th>
+                                                                                            <th className="px-2 py-3 text-center">{t('valuations.detailTableDays')}</th>
                                                                                             <th onClick={() => handleDetailSort('ServicioNombre')} className="px-6 py-3 text-left cursor-pointer hover:text-primary transition-colors">
-                                                                                                <div className="flex items-center gap-1">Servicio Realizado <ArrowUpDown className="w-3 h-3 opacity-40" /></div>
+                                                                                                <div className="flex items-center gap-1">{t('valuations.detailTableServicePerformed')} <ArrowUpDown className="w-3 h-3 opacity-40" /></div>
                                                                                             </th>
                                                                                             <th onClick={() => handleDetailSort('Categoria')} className="px-6 py-3 text-left cursor-pointer hover:text-primary transition-colors">
-                                                                                                <div className="flex items-center gap-1">Categoría <ArrowUpDown className="w-3 h-3 opacity-40" /></div>
+                                                                                                <div className="flex items-center gap-1">{t('valuations.detailTableCategory')} <ArrowUpDown className="w-3 h-3 opacity-40" /></div>
                                                                                             </th>
-                                                                                            <th className="px-4 py-3 text-center">Cupo Área</th>
+                                                                                            <th className="px-4 py-3 text-center">{t('valuations.detailTableAreaQuota')}</th>
                                                                                             <th onClick={() => handleDetailSort('Subtotal')} className="px-6 py-3 text-right cursor-pointer hover:text-primary transition-colors">
-                                                                                                <div className="flex items-center gap-1 justify-end">Subtotal <ArrowUpDown className="w-3 h-3 opacity-40" /></div>
+                                                                                                <div className="flex items-center gap-1 justify-end">{t('valuations.detailTableSubtotal')} <ArrowUpDown className="w-3 h-3 opacity-40" /></div>
                                                                                             </th>
                                                                                             <th className="px-6 py-3 text-right">Acciones</th>
                                                                                         </tr>
@@ -2025,37 +2027,37 @@ export default function ValuationsPage() {
                                                                                                 </td>
                                                                                                 <td className="px-6 py-4 text-right">
                                                                                                     {!isValuable(ticket.CodigoEquipo) ? (
-                                                                                                        <span className="text-[10px] font-bold text-muted-foreground/40 italic">Exento</span>
+                                                                                                        <span className="text-[10px] font-bold text-muted-foreground/40 italic">{t('valuations.detailLabelExempt')}</span>
                                                                                                     ) : (ticket.ServicioNombre || '').toLowerCase().includes('visita') ? (
-                                                                                                        <span className="text-[10px] font-bold text-muted-foreground/40 italic">Visita (S/ 0.00)</span>
+                                                                                                        <span className="text-[10px] font-bold text-muted-foreground/40 italic">{t('valuations.detailLabelVisitFree')}</span>
                                                                                                     ) : ticket.Categoria === 'N/A' ? (
                                                                                                         (ticket.DiasDiferencia || 0) > diasMaxCierre ? (
-                                                                                                            <span className="text-[10px] font-bold text-red-500 italic">Fuera de tiempo</span>
+                                                                                                            <span className="text-[10px] font-bold text-red-500 italic">{t('valuations.detailLabelOutOfTime')}</span>
                                                                                                         ) : (
                                                                                                             hasPermission('val.valuations.edit') ? (
                                                                                                                 <button
                                                                                                                     onClick={() => handleOpenMaterialModal(ticket)}
                                                                                                                     className="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-[9px] font-black hover:scale-105 active:scale-95 transition-all shadow-md shadow-indigo-600/20 flex items-center gap-1.5"
                                                                                                                 >
-                                                                                                                    <Package className="w-3 h-3" /> Registrar Prod.
+                                                                                                                    <Package className="w-3 h-3" /> {t('valuations.detailButtonRegisterProduct')}
                                                                                                                 </button>
                                                                                                             ) : (
-                                                                                                                <span className="text-[10px] font-bold text-muted-foreground/40 italic">Sin acceso</span>
+                                                                                                                <span className="text-[10px] font-bold text-muted-foreground/40 italic">{t('valuations.detailLabelNoAccess')}</span>
                                                                                                             )
                                                                                                         )
                                                                                                     ) : ticket.TarifaBase === 0 ? (
                                                                                                         (ticket.DiasDiferencia || 0) > diasMaxCierre ? (
-                                                                                                            <span className="text-[10px] font-bold text-red-500 italic">Fuera de tiempo (S/ 0.00)</span>
+                                                                                                            <span className="text-[10px] font-bold text-red-500 italic">{t('valuations.detailLabelOutOfTimeFree')}</span>
                                                                                                         ) : (
                                                                                                             hasPermission('val.valuations.edit') ? (
                                                                                                                 <button
                                                                                                                     onClick={() => handleOpenTarifarioModal(ticket)}
                                                                                                                     className="px-3 py-1.5 bg-amber-500 text-white rounded-lg text-[9px] font-black hover:scale-105 active:scale-95 transition-all shadow-md shadow-amber-500/20"
                                                                                                                 >
-                                                                                                                    Vincular Tarifa
+                                                                                                                    {t('valuations.detailButtonLinkRate')}
                                                                                                                 </button>
                                                                                                             ) : (
-                                                                                                                <span className="text-[10px] font-bold text-muted-foreground/40 italic">Sin acceso</span>
+                                                                                                                <span className="text-[10px] font-bold text-muted-foreground/40 italic">{t('valuations.detailLabelNoAccess')}</span>
                                                                                                             )
                                                                                                         )
                                                                                                     ) : (
@@ -2080,7 +2082,7 @@ export default function ValuationsPage() {
                                                                                                                 "p-2 bg-blue-500/5 text-blue-600 rounded-lg transition-all shadow-sm flex items-center justify-center",
                                                                                                                 loadingPdf === ticket.Ticket ? "animate-pulse opacity-50 cursor-wait bg-blue-500/10" : "hover:bg-blue-600 hover:text-white"
                                                                                                             )}
-                                                                                                            title="Ver Informe Técnico C4C"
+                                                                                                            title={t('valuations.detailButtonTechnicalReport')}
                                                                                                         >
                                                                                                             {loadingPdf === ticket.Ticket ? <Activity className="w-3.5 h-3.5 animate-spin" /> : <FileText className="w-3.5 h-3.5" />}
                                                                                                         </button>
@@ -2117,7 +2119,7 @@ export default function ValuationsPage() {
                                                                                                                     <div className="px-4 py-3 bg-gradient-to-r from-emerald-50 to-emerald-100/50 border-b border-emerald-100 flex items-center justify-between">
                                                                                                                         <div className="flex items-center gap-2">
                                                                                                                             <DollarSign className="w-4 h-4 text-emerald-600" />
-                                                                                                                            <span className="text-xs font-black text-emerald-800">Pagos Adicionales</span>
+                                                                                                                            <span className="text-xs font-black text-emerald-800">{t('valuations.additionalsTitle')}</span>
                                                                                                                         </div>
                                                                                                                         <span className="text-[10px] font-bold text-emerald-600/60">Ticket {ticket.Ticket}</span>
                                                                                                                     </div>
@@ -2125,7 +2127,7 @@ export default function ValuationsPage() {
                                                                                                                         {adicionalesPopover.loading ? (
                                                                                                                             <div className="py-4 flex justify-center"><Activity className="w-5 h-5 animate-spin text-emerald-500" /></div>
                                                                                                                         ) : adicionalesPopover.items.length === 0 ? (
-                                                                                                                            <p className="text-xs text-muted-foreground text-center py-3 opacity-50 font-bold">Sin pagos adicionales registrados</p>
+                                                                                                                            <p className="text-xs text-muted-foreground text-center py-3 opacity-50 font-bold">{t('valuations.additionalsEmpty')}</p>
                                                                                                                         ) : (
                                                                                                                             <div className="space-y-2">
                                                                                                                                 {adicionalesPopover.items.map((item: ValuationAdicional) => (
@@ -2146,7 +2148,7 @@ export default function ValuationsPage() {
                                                                                                                                                     });
                                                                                                                                                 }}
                                                                                                                                                 className="p-1.5 text-indigo-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all opacity-0 group-hover/item:opacity-100 ml-2 flex-shrink-0"
-                                                                                                                                                title="Editar adicional"
+                                                                                                                                                title={t('valuations.additionalEdit')}
                                                                                                                                             >
                                                                                                                                                 <Pencil className="w-3.5 h-3.5" />
                                                                                                                                             </button>
@@ -2162,7 +2164,7 @@ export default function ValuationsPage() {
                                                                                                                                                     } catch (err) { console.error(err); }
                                                                                                                                                 }}
                                                                                                                                                 className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover/item:opacity-100 flex-shrink-0"
-                                                                                                                                                title="Eliminar adicional"
+                                                                                                                                                title={t('valuations.additionalDelete')}
                                                                                                                                             >
                                                                                                                                                 <Trash2 className="w-3.5 h-3.5" />
                                                                                                                                             </button>
@@ -2181,7 +2183,7 @@ export default function ValuationsPage() {
                                                                                                                                 }}
                                                                                                                                 className="w-full flex items-center justify-center gap-2 py-2.5 bg-emerald-600 text-white rounded-xl text-[11px] font-black hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-600/20"
                                                                                                                             >
-                                                                                                                                <PlusCircle className="w-4 h-4" /> Agregar pago adicional
+                                                                                                                                <PlusCircle className="w-4 h-4" /> {t('valuations.additionalsAdd')}
                                                                                                                             </button>
                                                                                                                         </div>
                                                                                                                     )}
@@ -2235,20 +2237,20 @@ export default function ValuationsPage() {
                                                                 <div className="flex items-center gap-3">
                                                                     <span className={cn("text-base font-black tracking-tight", isAnulled && "line-through text-slate-500")}>{toTitleCase(penalty.Motivo)}</span>
                                                                     <span className={cn("px-2.5 py-1 rounded-lg text-[10px] font-black", isAnulled ? "bg-slate-100 text-slate-600" : "bg-red-100 text-red-700")}>
-                                                                        {penalty.Ticket || 'Descuento general'}
+                                                                        {penalty.Ticket || t('valuations.penaltyReasonGeneral')}
                                                                     </span>
                                                                     {!isAnulled && (
                                                                         effectivePenaltyIds.has(penalty.Id) ? (
                                                                             <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded text-[9px] font-black uppercase flex items-center gap-1">
-                                                                                <CheckCircle2 className="w-3 h-3" /> Aplicado
+                                                                                <CheckCircle2 className="w-3 h-3" /> {t('valuations.statusApplied')}
                                                                             </span>
                                                                         ) : (
-                                                                            <span className="px-2 py-0.5 bg-amber-100 text-amber-700 rounded text-[9px] font-black uppercase flex items-center gap-1" title="Se aplicó un descuento mayor para este ticket">
-                                                                                <Info className="w-3 h-3" /> Ignorado
+                                                                            <span className="px-2 py-0.5 bg-amber-100 text-amber-700 rounded text-[9px] font-black uppercase flex items-center gap-1" title={t('valuations.penaltyNoteIgnored')}>
+                                                                                <Info className="w-3 h-3" /> {t('valuations.statusIgnored')}
                                                                             </span>
                                                                         )
                                                                     )}
-                                                                    {isAnulled && <span className="px-2 py-0.5 bg-slate-200 text-slate-700 rounded text-[9px] font-black uppercase">Anulado</span>}
+                                                                    {isAnulled && <span className="px-2 py-0.5 bg-slate-200 text-slate-700 rounded text-[9px] font-black uppercase">{t('valuations.statusAnnulled')}</span>}
                                                                 </div>
                                                                 <p className="text-xs text-muted-foreground font-medium opacity-70 leading-relaxed font-sans">{penalty.Descripcion}</p>
                                                                 <p className="text-[10px] font-black text-muted-foreground opacity-40">
@@ -2265,14 +2267,14 @@ export default function ValuationsPage() {
                                                                 )}>
                                                                     - S/ {penalty.Importe.toLocaleString('es-PE', { minimumFractionDigits: 2 })}
                                                                 </p>
-                                                                <span className="text-[9px] font-black text-muted-foreground opacity-30 italic">Débito CAS</span>
+                                                                <span className="text-[9px] font-black text-muted-foreground opacity-30 italic">{t('valuations.penaltyLabelDebit')}</span>
                                                             </div>
                                                             <div className="flex items-center gap-2">
                                                                 {!isAnulled && hasPermission('val.penalties.create') && (
                                                                     <button
                                                                         onClick={() => setShowPenaltyModal({ show: true, type: 'penalty', existingData: penalty })}
                                                                         className="p-2 bg-indigo-50 text-indigo-600 border border-indigo-100 rounded-xl hover:bg-indigo-600 hover:text-white transition-all shadow-sm"
-                                                                        title="Editar penalidad"
+                                                                        title={t('valuations.penaltyButtonEdit')}
                                                                     >
                                                                         <Pencil className="w-3.5 h-3.5" />
                                                                     </button>
@@ -2288,7 +2290,7 @@ export default function ValuationsPage() {
                                                                         )}
                                                                     >
                                                                         {isAnulled ? <CheckCircle2 className="w-3.5 h-3.5" /> : <X className="w-3.5 h-3.5" />}
-                                                                        {isAnulled ? 'Habilitar' : 'Anular'}
+                                                                        {isAnulled ? t('valuations.penaltyButtonEnable') : t('valuations.penaltyButtonAnnul')}
                                                                     </button>
                                                                 )}
                                                             </div>
@@ -2298,7 +2300,7 @@ export default function ValuationsPage() {
                                             })}
                                             </div>
                                         ) : (
-                                            <div className="py-24 text-center"><div className="w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-6 border border-emerald-100 shadow-sm"><CheckCircle2 className="w-10 h-10 text-emerald-500" /></div><h3 className="text-xl font-black">Sin observaciones</h3><p className="text-xs text-muted-foreground font-bold opacity-60 mt-2">No se han registrado penalizaciones en este periodo.</p></div>
+                                            <div className="py-24 text-center"><div className="w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-6 border border-emerald-100 shadow-sm"><CheckCircle2 className="w-10 h-10 text-emerald-500" /></div><h3 className="text-xl font-black">{t('valuations.statusNoObservations')}</h3><p className="text-xs text-muted-foreground font-bold opacity-60 mt-2">{t('valuations.emptyPenalties')}</p></div>
                                         )}
                                     </div>
                                 )}
@@ -2314,7 +2316,7 @@ export default function ValuationsPage() {
                         ) : closures.length === 0 ? (
                             <div className="h-full flex flex-col items-center justify-center opacity-30">
                                 <History className="w-16 h-16 mb-4" />
-                                <p className="text-sm font-bold">No hay cierres registrados aún.</p>
+                                <p className="text-sm font-bold">{t('valuations.emptyClosures')}</p>
                             </div>
                         ) : (
                             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
@@ -2345,7 +2347,7 @@ export default function ValuationsPage() {
                                         </div>
                                         <div className="flex justify-between items-end">
                                             <div>
-                                                <p className="text-[10px] font-bold text-muted-foreground mb-1 uppercase opacity-30">Total Neto</p>
+                                                <p className="text-[10px] font-bold text-muted-foreground mb-1 uppercase opacity-30">{t('valuations.summaryNetTotal')}</p>
                                                 <p className="text-2xl font-data text-emerald-600">S/ {(closure.Total_Final as number).toLocaleString('es-PE', { minimumFractionDigits: 2 })}</p>
                                             </div>
                                             <div className="flex gap-2">
@@ -2394,7 +2396,7 @@ export default function ValuationsPage() {
                                 </div>
                                 <div>
                                     <h2 className="text-xl font-black text-cb-text-primary flex items-center gap-3">
-                                        Detalle del Cierre
+                                        {t('valuations.modalDetailTitle')}
                                         <span className="text-xs font-black text-primary bg-primary/5 border border-primary/20 px-3 py-1 rounded-full">{selectedClosure.Codigo_Valorizacion as string}</span>
                                     </h2>
                                     <p className="text-xs font-bold text-muted-foreground mt-0.5">{selectedClosure.Nombre_CAS as string} • {new Date(selectedClosure.Fecha_Inicio as string).toLocaleDateString('es-PE', { timeZone: 'UTC' })} al {new Date(selectedClosure.Fecha_Fin as string).toLocaleDateString('es-PE', { timeZone: 'UTC' })}</p>
@@ -2406,7 +2408,7 @@ export default function ValuationsPage() {
                                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground transition-colors group-focus-within:text-primary" />
                                     <input 
                                         type="text"
-                                        placeholder="Buscar ticket..."
+                                        placeholder={t('valuations.modalDetailSearchPlaceholder')}
                                         className="w-full pl-10 pr-4 py-2.5 bg-muted/30 border border-transparent rounded-xl text-xs font-bold outline-none ring-primary/5 focus:ring-4 focus:bg-white focus:border-primary transition-all"
                                         value={detailSearchQuery}
                                         onChange={(e) => setDetailSearchQuery(e.target.value)}
@@ -2423,7 +2425,7 @@ export default function ValuationsPage() {
                                         onClick={handleExportClosureExcel}
                                         className="flex items-center gap-2 px-5 py-2.5 bg-card border border-cb-border text-cb-text-primary rounded-xl text-xs font-black hover:bg-muted transition-all active:scale-95"
                                     >
-                                        <Download className="w-4 h-4" /> Excel
+                                        <Download className="w-4 h-4" /> {t('valuations.modalDetailButtonExcel')}
                                     </button>
                                 )}
 
@@ -2432,7 +2434,7 @@ export default function ValuationsPage() {
                                         onClick={handlePrepareClosureEmail}
                                         className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white rounded-xl text-xs font-black hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-600/20 active:scale-95"
                                     >
-                                        <Mail className="w-4 h-4" /> Enviar Reporte
+                                        <Mail className="w-4 h-4" /> {t('valuations.modalDetailButtonSendReport')}
                                     </button>
                                 )}
 
@@ -2448,7 +2450,7 @@ export default function ValuationsPage() {
                                         }}
                                         className="flex items-center gap-2 px-5 py-2.5 bg-red-50 text-red-600 border border-red-100 rounded-xl text-xs font-black hover:bg-red-600 hover:text-white transition-all active:scale-95"
                                     >
-                                        <RotateCcw className="w-4 h-4" /> Reabrir
+                                        <RotateCcw className="w-4 h-4" /> {t('valuations.modalDetailButtonReopen')}
                                     </button>
                                 )}
                                 
@@ -2468,10 +2470,10 @@ export default function ValuationsPage() {
                             >
                                 <div className="flex items-center gap-2">
                                     <Briefcase className="w-3.5 h-3.5" />
-                                    Servicios ({closureDetails.filter(d => d.Tipo === 'SERVICIO').length})
+                                    {t('valuations.modalDetailTabServices', { count: closureDetails.filter(d => d.Tipo === 'SERVICIO').length })}
                                 </div>
                             </button>
-                            <button 
+                            <button
                                 onClick={() => setDetailActiveTab('penalties')}
                                 className={cn(
                                     "px-6 py-3 text-xs font-extrabold transition-all border-b-2 rounded-t-xl",
@@ -2480,7 +2482,7 @@ export default function ValuationsPage() {
                             >
                                 <div className="flex items-center gap-2">
                                     <AlertTriangle className="w-3.5 h-3.5" />
-                                    Penalidades ({closureDetails.filter(d => d.Tipo === 'PENALIDAD').length})
+                                    {t('valuations.modalDetailTabPenalties', { count: closureDetails.filter(d => d.Tipo === 'PENALIDAD').length })}
                                 </div>
                             </button>
                         </div>
@@ -2496,20 +2498,20 @@ export default function ValuationsPage() {
                                         <div className="flex items-center gap-3 px-4 py-2 bg-card rounded-xl border border-cb-border/50 shadow-sm">
                                             <div className="w-2 h-2 rounded-full bg-blue-500" />
                                             <div className="flex flex-col">
-                                                <span className="text-[9px] font-black uppercase text-muted-foreground opacity-60 leading-none">Subtotal Servicios</span>
+                                                <span className="text-[9px] font-black uppercase text-muted-foreground opacity-60 leading-none">{t('valuations.modalDetailSubtotalServices')}</span>
                                                 <span className="text-sm font-black text-cb-text-primary">S/ {(selectedClosure.Subtotal_Servicios || 0).toLocaleString()}</span>
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-3 px-4 py-2 bg-card rounded-xl border border-cb-border/50 shadow-sm">
                                             <div className="w-2 h-2 rounded-full bg-red-500" />
                                             <div className="flex flex-col">
-                                                <span className="text-[9px] font-black uppercase text-muted-foreground opacity-60 leading-none">Total Penalidades</span>
+                                                <span className="text-[9px] font-black uppercase text-muted-foreground opacity-60 leading-none">{t('valuations.modalDetailTotalPenalties')}</span>
                                                 <span className="text-sm font-black text-red-600">- S/ {(selectedClosure.Subtotal_Penalidades || 0).toLocaleString()}</span>
                                             </div>
                                         </div>
                                     </div>
                                     <div className="text-[10px] font-bold text-muted-foreground opacity-50 italic">
-                                        Mostrando {closureDetails.filter(d => detailActiveTab === 'services' ? d.Tipo === 'SERVICIO' : d.Tipo === 'PENALIDAD').length} registros auditados
+                                        {t('valuations.modalDetailRecordsShown', { count: closureDetails.filter(d => detailActiveTab === 'services' ? d.Tipo === 'SERVICIO' : d.Tipo === 'PENALIDAD').length })}
                                     </div>
                                 </div>
                                 <table className="w-full border-separate border-spacing-0">
@@ -2560,7 +2562,7 @@ export default function ValuationsPage() {
                                                                 date: (det.Fecha_Ticket as string).split('T')[0]
                                                             })}
                                                             className="p-2 bg-red-500/10 text-red-600 rounded-lg hover:bg-red-600 hover:text-white transition-all opacity-0 group-hover/det:opacity-100 shadow-sm flex items-center justify-center mx-auto"
-                                                            title="Penalizar Ticket"
+                                                            title={t('valuations.modalDetailPenalizeButton')}
                                                         >
                                                             <AlertTriangle className="w-3.5 h-3.5" />
                                                         </button>
@@ -2574,7 +2576,7 @@ export default function ValuationsPage() {
                                             <tr>
                                                 <td colSpan={5} className="py-20 text-center text-muted-foreground opacity-40">
                                                     <Search className="w-10 h-10 mx-auto mb-3" />
-                                                    <p className="text-xs font-bold">No hay {detailActiveTab === 'services' ? 'servicios' : 'penalidades'} que coincidan con la búsqueda</p>
+                                                    <p className="text-xs font-bold">{t('valuations.modalDetailEmptySearch', { type: detailActiveTab === 'services' ? t('valuations.modalDetailEmptySearchServices') : t('valuations.modalDetailEmptySearchPenalties') })}</p>
                                                 </td>
                                             </tr>
                                         )}
@@ -2586,7 +2588,7 @@ export default function ValuationsPage() {
                         <div className="p-6 border-t border-border/50 bg-slate-50/50 flex items-center justify-between">
                             <div className="flex gap-10">
                                 <div className="flex flex-col">
-                                    <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1 opacity-40">Cerrado por</p>
+                                    <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1 opacity-40">{t('valuations.modalDetailClosedBy')}</p>
                                     <div className="flex items-center gap-2">
                                         <div className="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-600">
                                             {(selectedClosure.Cerrado_Por as string)?.split(' ').map((n: string) => n[0]).join('')}
@@ -2595,7 +2597,7 @@ export default function ValuationsPage() {
                                     </div>
                                 </div>
                                 <div className="flex flex-col">
-                                    <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1 opacity-40">Fecha de Registro</p>
+                                    <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1 opacity-40">{t('valuations.modalDetailRegistrationDate')}</p>
                                     <div className="flex items-center gap-2 text-slate-600">
                                         <Calendar className="w-3.5 h-3.5" />
                                         <p className="text-sm font-bold">{new Date(selectedClosure.Cerrado_El as string).toLocaleString()}</p>
@@ -2603,7 +2605,7 @@ export default function ValuationsPage() {
                                 </div>
                             </div>
                             <div className="flex flex-col items-end">
-                                <p className="text-[11px] font-black text-emerald-600/50 uppercase tracking-widest mb-0.5">Total Liquidado Final</p>
+                                <p className="text-[11px] font-black text-emerald-600/50 uppercase tracking-widest mb-0.5">{t('valuations.modalDetailTotalLiquidated')}</p>
                                 <div className="flex items-center gap-3">
                                     <span className="text-xl font-bold text-emerald-600/40">S/</span>
                                     <p className="text-4xl font-black text-emerald-600 tracking-tighter drop-shadow-sm">
@@ -2655,7 +2657,7 @@ export default function ValuationsPage() {
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
                     <div className="bg-card w-full max-w-lg rounded-[32px] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300 flex flex-col border border-cb-border">
                         <div className="p-8 border-b border-cb-border bg-cb-bg/30 flex items-center justify-between">
-                            <h2 className="text-xl font-black text-cb-text-primary">Confirmar Cierre de Operaciones</h2>
+                            <h2 className="text-xl font-black text-cb-text-primary">{t('valuations.modalCloseTitle')}</h2>
                             <button onClick={() => setShowCloseModal(false)} className="p-2 hover:bg-muted rounded-xl transition-all"><X className="w-5 h-5" /></button>
                         </div>
                         
@@ -2663,30 +2665,30 @@ export default function ValuationsPage() {
                             <div className="p-6 bg-amber-50 border border-amber-100 rounded-3xl flex items-start gap-4">
                                 <div className="p-3 bg-amber-500 text-white rounded-2xl shadow-lg shadow-amber-500/20"><AlertCircle className="w-6 h-6" /></div>
                                 <div className="space-y-1">
-                                    <h4 className="font-black text-amber-900">Bloqueo de Quincena</h4>
-                                    <p className="text-[11px] font-bold text-amber-800/70 leading-relaxed">Esta acción es irreversible. Se bloquearán todos los tickets y descuentos del periodo <span className="underline font-black">{startDate} / {endDate}</span>.</p>
+                                    <h4 className="font-black text-amber-900">{t('valuations.modalCloseWarningTitle')}</h4>
+                                    <p className="text-[11px] font-bold text-amber-800/70 leading-relaxed">{t('valuations.modalCloseWarningMessage', { startDate, endDate })}</p>
                                 </div>
                             </div>
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="p-5 bg-muted/20 border border-border/30 rounded-2xl">
-                                    <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-4 opacity-40">Ingresos (bruto)</p>
+                                    <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-4 opacity-40">{t('valuations.modalCloseIncome')}</p>
                                     <p className="text-2xl font-black text-cb-text-primary tracking-tighter">S/ {totalTickets.toLocaleString()}</p>
                                 </div>
                                 <div className="p-5 bg-red-50 text-red-600 border border-red-100 rounded-2xl">
-                                    <p className="text-[10px] font-black text-red-400 uppercase tracking-widest mb-4 opacity-40">Egresos (penalidades)</p>
+                                    <p className="text-[10px] font-black text-red-400 uppercase tracking-widest mb-4 opacity-40">{t('valuations.modalCloseExpenses')}</p>
                                     <p className="text-2xl font-black text-red-600 tracking-tighter">- S/ {totalPenalties.toLocaleString()}</p>
                                 </div>
                             </div>
 
                             <div className="flex items-center gap-4">
-                                <button onClick={() => setShowCloseModal(false)} className="flex-1 py-4 text-xs font-black text-muted-foreground hover:bg-muted rounded-2xl transition-all">Regresar</button>
+                                <button onClick={() => setShowCloseModal(false)} className="flex-1 py-4 text-xs font-black text-muted-foreground hover:bg-muted rounded-2xl transition-all">{t('valuations.modalCloseButtonBack')}</button>
                                 <button 
                                     onClick={handleCloseFortnightCurrent} 
                                     disabled={isClosing}
                                     className="flex-[2] py-4 bg-slate-900 dark:bg-slate-800 text-white text-xs font-black rounded-2xl hover:bg-slate-800 dark:hover:bg-slate-700 transition-all shadow-xl shadow-slate-900/20 disabled:opacity-50"
                                 >
-                                    {isClosing ? "Procesando cierre..." : "Confirmar cierre final"}
+                                    {isClosing ? t('valuations.modalCloseProcessing') : t('valuations.modalCloseButtonConfirm')}
                                 </button>
                             </div>
                         </div>
@@ -2749,6 +2751,7 @@ interface BatchAdjustmentModalProps {
     isApplying: boolean;
 }
 function BatchAdjustmentModal({ isOpen, onClose, onApply, tickets, setTickets, targetAmount, setTargetAmount, motivo, setMotivo, isApplying }: BatchAdjustmentModalProps) {
+    const { t } = useTranslation();
     if (!isOpen) return null;
     return (
         <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
@@ -2756,15 +2759,15 @@ function BatchAdjustmentModal({ isOpen, onClose, onApply, tickets, setTickets, t
                 <div className="p-8 border-b border-cb-border bg-cb-bg/30 flex items-center justify-between">
                     <div className="flex items-center gap-3">
                         <div className="p-2 bg-amber-500 rounded-lg text-white shadow-lg shadow-amber-500/20"><Activity className="w-5 h-5" /></div>
-                        <h2 className="text-xl font-black text-cb-text-primary">Ajuste Masivo</h2>
+                        <h2 className="text-xl font-black text-cb-text-primary">{t('valuations.modalBatchAdjustmentTitle')}</h2>
                     </div>
                     <button onClick={onClose} className="p-2 hover:bg-muted rounded-xl transition-all"><X className="w-5 h-5" /></button>
                 </div>
-                
+
                 <div className="p-8 space-y-6">
                     <div className="space-y-2">
-                        <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Tickets (pegue aquí la lista)</label>
-                        <textarea 
+                        <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">{t('valuations.modalBatchAdjustmentTicketsLabel')}</label>
+                        <textarea
                             value={tickets}
                             onChange={(e) => setTickets(e.target.value)}
                             placeholder="Ej: 1195343&#10;1195350&#10;1195943..."
@@ -2774,10 +2777,10 @@ function BatchAdjustmentModal({ isOpen, onClose, onApply, tickets, setTickets, t
 
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                            <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Importe Final Fijo</label>
+                            <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">{t('valuations.modalBatchAdjustmentAmountLabel')}</label>
                             <div className="relative">
                                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs">S/</span>
-                                <input 
+                                <input
                                     type="number"
                                     step="0.01"
                                     value={targetAmount}
@@ -2787,8 +2790,8 @@ function BatchAdjustmentModal({ isOpen, onClose, onApply, tickets, setTickets, t
                             </div>
                         </div>
                         <div className="space-y-2">
-                            <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Motivo</label>
-                            <input 
+                            <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">{t('valuations.modalBatchAdjustmentReasonLabel')}</label>
+                            <input
                                 type="text"
                                 value={motivo}
                                 onChange={(e) => setMotivo(e.target.value)}
@@ -2800,18 +2803,18 @@ function BatchAdjustmentModal({ isOpen, onClose, onApply, tickets, setTickets, t
                     <div className="p-4 bg-amber-50 border border-amber-100 rounded-2xl flex items-start gap-3">
                         <AlertCircle className="w-4 h-4 text-amber-600 mt-0.5" />
                         <p className="text-[10px] font-bold text-amber-700 leading-tight">
-                            El sistema calculará automáticamente la diferencia contra la tarifa base de cada ticket para que el total sume exactamente S/ {targetAmount}. 
-                            <br/><span className="font-black">Los ajustes previos en estos tickets serán reemplazados.</span>
+                            {t('valuations.modalBatchAdjustmentInfo', { amount: targetAmount })}
+                            <br/><span className="font-black">{t('valuations.modalBatchAdjustmentWarning')}</span>
                         </p>
                     </div>
 
-                    <button 
+                    <button
                         onClick={onApply}
                         disabled={isApplying || !tickets.trim()}
                         className="w-full py-4 bg-slate-900 text-white text-xs font-black rounded-2xl hover:bg-slate-800 transition-all shadow-xl shadow-slate-900/20 disabled:opacity-50 flex items-center justify-center gap-2"
                     >
                         {isApplying ? <Activity className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-                        {isApplying ? "Aplicando ajustes..." : "Aplicar Ajuste a Tickets"}
+                        {isApplying ? t('valuations.modalBatchAdjustmentApplying') : t('valuations.modalBatchAdjustmentApply')}
                     </button>
                 </div>
             </div>
@@ -2828,6 +2831,7 @@ interface EmailModalProps {
     isSending: boolean;
 }
 function EmailModal({ isOpen, onClose, onSend, emailTo, setEmailTo, isSending }: EmailModalProps) {
+    const { t } = useTranslation();
     if (!isOpen) return null;
     return (
         <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
@@ -2837,38 +2841,38 @@ function EmailModal({ isOpen, onClose, onSend, emailTo, setEmailTo, isSending }:
                         <div className="p-2.5 bg-indigo-500 rounded-xl text-white shadow-lg shadow-indigo-500/20">
                             <Mail className="w-5 h-5" />
                         </div>
-                        <h2 className="text-xl font-black text-cb-text-primary tracking-tight">Enviar Reporte</h2>
+                        <h2 className="text-xl font-black text-cb-text-primary tracking-tight">{t('valuations.modalEmailTitle')}</h2>
                     </div>
                     <button onClick={onClose} className="p-2 hover:bg-muted rounded-xl transition-all"><X className="w-5 h-5" /></button>
                 </div>
                 <div className="p-8 space-y-6">
                     <div className="space-y-2">
-                        <label className="text-[11px] font-black text-muted-foreground uppercase tracking-wider ml-1">Destinatarios</label>
+                        <label className="text-[11px] font-black text-muted-foreground uppercase tracking-wider ml-1">{t('valuations.modalEmailRecipients')}</label>
                         <div className="relative group">
                             <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-indigo-500 transition-colors" />
-                            <input 
-                                type="text" 
-                                placeholder="ejemplo@correo.com; otro@correo.com"
+                            <input
+                                type="text"
+                                placeholder={t('valuations.modalEmailPlaceholder')}
                                 className="w-full pl-12 pr-4 py-4 bg-muted/20 border border-transparent rounded-2xl text-sm font-bold focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/5 outline-none transition-all"
                                 value={emailTo}
                                 onChange={(e) => setEmailTo(e.target.value)}
                                 autoFocus
                             />
                         </div>
-                        <p className="text-[10px] font-medium text-muted-foreground ml-1 opacity-60">Separe múltiples correos con punto y coma (;)</p>
+                        <p className="text-[10px] font-medium text-muted-foreground ml-1 opacity-60">{t('valuations.modalEmailHint')}</p>
                     </div>
 
                     <div className="p-5 bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-100/50 dark:border-indigo-900/30 rounded-2xl flex items-start gap-4">
                         <div className="p-2 bg-indigo-100 text-indigo-600 rounded-lg"><FileText className="w-4 h-4" /></div>
                         <div>
-                            <p className="text-xs font-black text-indigo-800 dark:text-indigo-300">Se adjuntará el reporte Excel</p>
-                            <p className="text-[10px] text-indigo-700/60 dark:text-indigo-400/60 font-medium">El archivo se genera automáticamente con los datos actuales de la vista.</p>
+                            <p className="text-xs font-black text-indigo-800 dark:text-indigo-300">{t('valuations.modalEmailAttachmentReady')}</p>
+                            <p className="text-[10px] text-indigo-700/60 dark:text-indigo-400/60 font-medium">{t('valuations.modalEmailInfo')}</p>
                         </div>
                     </div>
 
                     <div className="flex gap-4 pt-2">
                         <button onClick={onClose} className="flex-1 py-4 text-xs font-black text-muted-foreground hover:bg-muted rounded-2xl transition-all">Cancelar</button>
-                        <button 
+                        <button
                             onClick={onSend}
                             disabled={isSending || !emailTo.trim()}
                             className="flex-[2] py-4 bg-indigo-600 text-white text-xs font-black rounded-2xl hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-600/20 disabled:opacity-50 flex items-center justify-center gap-2"
@@ -2876,7 +2880,7 @@ function EmailModal({ isOpen, onClose, onSend, emailTo, setEmailTo, isSending }:
                             {isSending ? (
                                 <><Activity className="w-4 h-4 animate-spin" /> Enviando...</>
                             ) : (
-                                <><Mail className="w-4 h-4" /> Enviar Reporte Ahora</>
+                                <><Mail className="w-4 h-4" /> {t('valuations.modalEmailSendButton')}</>
                             )}
                         </button>
                     </div>
@@ -2902,6 +2906,7 @@ interface BatchDiscountModalProps {
     motivos: PenaltyMotive[];
 }
 function BatchDiscountModal({ isOpen, onClose, onApply, tickets, setTickets, amount, setAmount, motivo, setMotivo, descripcion, setDescripcion, isApplying, motivos }: BatchDiscountModalProps) {
+    const { t } = useTranslation();
     if (!isOpen) return null;
     return (
         <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
@@ -2909,15 +2914,15 @@ function BatchDiscountModal({ isOpen, onClose, onApply, tickets, setTickets, amo
                 <div className="p-8 border-b border-cb-border bg-cb-bg/30 flex items-center justify-between">
                     <div className="flex items-center gap-3">
                         <div className="p-2 bg-red-500 rounded-lg text-white shadow-lg shadow-red-500/20"><AlertTriangle className="w-5 h-5" /></div>
-                        <h2 className="text-xl font-black text-cb-text-primary">Descuento Masivo</h2>
+                        <h2 className="text-xl font-black text-cb-text-primary">{t('valuations.modalBatchDiscountTitle')}</h2>
                     </div>
                     <button onClick={onClose} className="p-2 hover:bg-muted rounded-xl transition-all"><X className="w-5 h-5" /></button>
                 </div>
-                
+
                 <div className="p-8 space-y-6">
                     <div className="space-y-2">
-                        <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Tickets (Ticket o Ticket,Monto)</label>
-                        <textarea 
+                        <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">{t('valuations.modalBatchDiscountTicketsLabel')}</label>
+                        <textarea
                             value={tickets}
                             onChange={(e) => setTickets(e.target.value)}
                             placeholder="Ejemplo:&#10;1195343,15.50&#10;1195350,20.00&#10;1195943 (usará el monto global)"
@@ -2931,10 +2936,10 @@ function BatchDiscountModal({ isOpen, onClose, onApply, tickets, setTickets, amo
 
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                            <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Monto a Descontar</label>
+                            <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">{t('valuations.modalBatchDiscountAmountLabel')}</label>
                             <div className="relative">
                                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs">S/</span>
-                                <input 
+                                <input
                                     type="number"
                                     step="0.01"
                                     value={amount}
@@ -2945,13 +2950,13 @@ function BatchDiscountModal({ isOpen, onClose, onApply, tickets, setTickets, amo
                             </div>
                         </div>
                         <div className="space-y-2">
-                            <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Motivo del Descuento</label>
-                            <select 
+                            <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">{t('valuations.modalBatchDiscountReasonLabel')}</label>
+                            <select
                                 value={motivo}
                                 onChange={(e) => setMotivo(e.target.value)}
                                 className="w-full px-4 py-3.5 bg-muted/20 border border-border/50 rounded-xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all appearance-none cursor-pointer"
                             >
-                                <option value="">Seleccione un motivo...</option>
+                                <option value="">{t('valuations.modalBatchDiscountSelectReason')}</option>
                                 {motivos.map((m: PenaltyMotive) => (
                                     <option key={m.IdMotivo} value={m.Motivo}>{m.Motivo}</option>
                                 ))}
@@ -2960,27 +2965,27 @@ function BatchDiscountModal({ isOpen, onClose, onApply, tickets, setTickets, amo
                     </div>
 
                     <div className="space-y-2">
-                        <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Descripción Detallada</label>
-                        <input 
+                        <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">{t('valuations.modalBatchDiscountDescriptionLabel')}</label>
+                        <input
                             type="text"
                             value={descripcion}
                             onChange={(e) => setDescripcion(e.target.value)}
-                            placeholder="Explicación detallada del descuento..."
+                            placeholder={t('valuations.modalBatchDiscountDescriptionPlaceholder')}
                             className="w-full px-4 py-3.5 bg-muted/20 border border-border/50 rounded-xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all"
                         />
                     </div>
 
                     <div className="pt-4 flex gap-4">
                         <button onClick={onClose} className="flex-1 py-4 text-xs font-black text-muted-foreground hover:bg-muted rounded-2xl transition-all">Cancelar</button>
-                        <button 
+                        <button
                             onClick={onApply}
                             disabled={isApplying || !tickets.trim() || !motivo.trim()}
                             className="flex-[2] py-4 bg-red-600 text-white text-xs font-black rounded-2xl hover:bg-red-700 transition-all shadow-xl shadow-red-600/20 disabled:opacity-50 flex items-center justify-center gap-2"
                         >
                             {isApplying ? (
-                                <><Activity className="w-4 h-4 animate-spin" /> Aplicando...</>
+                                <><Activity className="w-4 h-4 animate-spin" /> {t('valuations.modalBatchDiscountApplying')}</>
                             ) : (
-                                <><CheckCircle2 className="w-4 h-4" /> Aplicar Descuentos</>
+                                <><CheckCircle2 className="w-4 h-4" /> {t('valuations.modalBatchDiscountApply')}</>
                             )}
                         </button>
                     </div>

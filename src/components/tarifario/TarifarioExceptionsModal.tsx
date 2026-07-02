@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
     X, Plus, Trash2, MapPin, Tag, DollarSign, AlertCircle,
     Save, Map, Globe, Search
@@ -29,6 +30,7 @@ interface Props {
 }
 
 export default function TarifarioExceptionsModal({ cas, isOpen, onClose }: Props) {
+    const { t } = useTranslation();
     const { alert, confirm } = useDialog();
     const [exceptions, setExceptions] = useState<Exception[]>([]);
     const [loading, setLoading] = useState(true);
@@ -156,7 +158,7 @@ export default function TarifarioExceptionsModal({ cas, isOpen, onClose }: Props
                             <AlertCircle className="w-6 h-6" />
                         </div>
                         <div>
-                            <h2 className="text-xl font-bold tracking-tight text-cb-text-primary">Casos Especiales / Excepciones</h2>
+                            <h2 className="text-xl font-bold tracking-tight text-cb-text-primary">{t('tarifarioExceptions.title')}</h2>
                             <p className="text-[11px] font-bold text-cb-text-secondary uppercase tracking-widest">{cas.Nombre_CAS}</p>
                         </div>
                     </div>
@@ -165,7 +167,7 @@ export default function TarifarioExceptionsModal({ cas, isOpen, onClose }: Props
                             onClick={handleAdd}
                             className={SIATC_THEME.COMPONENTS.BUTTON_PRIMARY}
                         >
-                            <Plus className="w-4 h-4" /> Agregar Regla
+                            <Plus className="w-4 h-4" /> {t('tarifarioExceptions.addRule')}
                         </button>
                         <button onClick={onClose} className="p-2 hover:bg-cb-bg rounded-full transition-colors text-cb-text-secondary">
                             <X className="w-5 h-5" />
@@ -181,7 +183,7 @@ export default function TarifarioExceptionsModal({ cas, isOpen, onClose }: Props
                     ) : exceptions.length === 0 ? (
                         <div className="py-20 text-center flex flex-col items-center justify-center grayscale opacity-50">
                             <Map className="w-16 h-16 mb-4 text-cb-neutral" />
-                            <p className="text-sm font-bold text-cb-neutral">No hay casos especiales configurados.</p>
+                            <p className="text-sm font-bold text-cb-neutral">{t('tarifarioExceptions.empty')}</p>
                         </div>
                     ) : (
                         <div className="grid grid-cols-1 gap-4">
@@ -199,7 +201,7 @@ export default function TarifarioExceptionsModal({ cas, isOpen, onClose }: Props
                                                         setExceptions(newEx);
                                                     }}
                                                     className={cn(SIATC_THEME.COMPONENTS.INPUT, "flex-1 dark:bg-cb-bg text-cb-text-primary border-cb-border")}
-                                                    placeholder="Nombre de la regla..."
+                                                    placeholder={t('tarifarioExceptions.namePlaceholder')}
                                                 />
                                                 <div className="flex items-center gap-2 bg-white dark:bg-cb-bg border border-cb-border rounded-cb-btn px-3 h-[36px]">
                                                     <DollarSign className="w-4 h-4 text-emerald-500" />
@@ -218,7 +220,7 @@ export default function TarifarioExceptionsModal({ cas, isOpen, onClose }: Props
 
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                 <ZoneSelector
-                                                    label="Zonas Excluidas (Ej: PIURA, LAMBAYEQUE)"
+                                                    label={t('tarifarioExceptions.excludedZones')}
                                                     icon={Globe}
                                                     selected={ex.Zonas_Excluidas || []}
                                                     options={availableDistritos}
@@ -229,7 +231,7 @@ export default function TarifarioExceptionsModal({ cas, isOpen, onClose }: Props
                                                     }}
                                                 />
                                                 <ZoneSelector
-                                                    label="Zonas Incluidas (Ej: JAEN)"
+                                                    label={t('tarifarioExceptions.includedZones')}
                                                     icon={MapPin}
                                                     selected={ex.Zonas_Incluidas || []}
                                                     options={availableDistritos}
@@ -243,7 +245,7 @@ export default function TarifarioExceptionsModal({ cas, isOpen, onClose }: Props
 
                                             <div className="space-y-2">
                                                 <label className="text-[11px] font-bold uppercase text-cb-neutral tracking-wider flex items-center gap-2">
-                                                    <Tag className="w-3 h-3" /> Categorías de Producto
+                                                    <Tag className="w-3 h-3" /> {t('tarifarioExceptions.productCategories')}
                                                 </label>
                                                 <div className="flex flex-wrap gap-2">
                                                     {availableCategories.map(cat => (
@@ -279,7 +281,7 @@ export default function TarifarioExceptionsModal({ cas, isOpen, onClose }: Props
                                                         }}
                                                         className={cn(SIATC_THEME.STATES.BADGE_BASE, "bg-transparent border-dashed border-cb-border text-cb-neutral/60 cursor-pointer")}
                                                     >
-                                                        Limpiar / Todas
+                                                        {t('tarifarioExceptions.clearAll')}
                                                     </button>
                                                 </div>
                                             </div>
@@ -290,14 +292,14 @@ export default function TarifarioExceptionsModal({ cas, isOpen, onClose }: Props
                                                 onClick={() => handleSave(ex)}
                                                 disabled={saving}
                                                 className="p-3 bg-[#05B169] text-white rounded-cb-btn shadow-cb-level-1 hover:bg-[#05B169]/90 transition-all active:scale-95 flex items-center justify-center cursor-pointer"
-                                                title="Guardar Regla"
+                                                title={t('tarifarioExceptions.saveRule')}
                                             >
                                                 <Save className="w-5 h-5" />
                                             </button>
                                             <button 
                                                 onClick={() => handleDelete(ex.IdExcepcion)}
                                                 className="p-3 bg-[#DF2935]/10 text-[#DF2935] rounded-cb-btn hover:bg-[#DF2935]/20 transition-all active:scale-95 flex items-center justify-center cursor-pointer"
-                                                title="Eliminar Regla"
+                                                title={t('tarifarioExceptions.deleteRule')}
                                             >
                                                 <Trash2 className="w-5 h-5" />
                                             </button>
@@ -324,7 +326,7 @@ export default function TarifarioExceptionsModal({ cas, isOpen, onClose }: Props
 
                 <div className="p-6 border-t border-cb-border bg-cb-bg/10 flex items-center justify-between">
                     <p className="text-[11px] font-bold text-cb-neutral/80 italic max-w-md">
-                        * Las reglas de exclusión tienen prioridad sobre las de inclusión. Si no se define zona, aplica a todo el país.
+                        {t('tarifarioExceptions.note')}
                     </p>
                     <button 
                         onClick={onClose}
@@ -351,6 +353,7 @@ function ZoneSelector({
     options: string[],
     onChange: (val: string[]) => void
 }) {
+    const { t } = useTranslation();
     const [search, setSearch] = useState('');
     const [isOpen, setIsOpen] = useState(false);
 
@@ -385,7 +388,7 @@ function ZoneSelector({
                     onFocus={() => setIsOpen(true)}
                     onBlur={() => setTimeout(() => setIsOpen(false), 200)}
                     onChange={e => setSearch(e.target.value)}
-                    placeholder={selected.length === 0 ? "Seleccionar zona..." : "Agregar..."}
+                    placeholder={selected.length === 0 ? t('tarifarioExceptions.zoneSelector.placeholder') : t('tarifarioExceptions.zoneSelector.addMore')}
                     className="flex-1 min-w-[120px] bg-transparent outline-none text-[11px] font-bold placeholder:text-cb-neutral/40 text-cb-text-primary"
                 />
             </div>
@@ -396,7 +399,7 @@ function ZoneSelector({
                         {filtered.length === 0 ? (
                             <div className="p-4 text-center">
                                 <Search className="w-8 h-8 text-cb-neutral/20 mx-auto mb-2" />
-                                <p className="text-[10px] font-bold text-cb-neutral italic">No se encontraron resultados</p>
+                                <p className="text-[10px] font-bold text-cb-neutral italic">{t('tarifarioExceptions.zoneSelector.noResults')}</p>
                             </div>
                         ) : (
                             filtered.map(opt => (

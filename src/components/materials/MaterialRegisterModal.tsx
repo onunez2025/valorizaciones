@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ApiClient } from '../../services/apiClient';
 import { Modal } from '../common/Modal';
 import { Save, Package, ChevronDown, Check } from 'lucide-react';
@@ -17,6 +18,7 @@ interface MaterialRegisterModalProps {
 }
 
 export default function MaterialRegisterModal({ isOpen, onClose, onSuccess, initialData }: MaterialRegisterModalProps) {
+    const { t } = useTranslation();
     const [nombre, setNombre] = useState(initialData.nombre);
     const [categoria, setCategoria] = useState('');
     const [categories, setCategories] = useState<string[]>([]);
@@ -38,7 +40,7 @@ export default function MaterialRegisterModal({ isOpen, onClose, onSuccess, init
 
     const handleSave = async () => {
         if (!categoria) {
-            alert({ title: "Faltan datos", message: "Debe seleccionar o escribir una categoría.", type: 'warning' });
+            alert({ title: t('materialRegisterModal.errors.missingCategoryTitle'), message: t('materialRegisterModal.errors.missingCategoryMessage'), type: 'warning' });
             return;
         }
 
@@ -53,11 +55,11 @@ export default function MaterialRegisterModal({ isOpen, onClose, onSuccess, init
                     sector: 'GAC'
                 })
             });
-            alert({ title: "¡Registrado!", message: "El producto ha sido añadido al maestro de materiales.", type: 'success' });
+            alert({ title: t('materialRegisterModal.success.title'), message: t('materialRegisterModal.success.message'), type: 'success' });
             onSuccess();
             onClose();
         } catch (e: unknown) {
-            alert({ title: "Error", message: e instanceof Error ? e.message : "No se pudo registrar el material.", type: 'error' });
+            alert({ title: "Error", message: e instanceof Error ? e.message : t('materialRegisterModal.errors.saveFailed'), type: 'error' });
         } finally {
             setLoading(false);
         }
@@ -65,9 +67,9 @@ export default function MaterialRegisterModal({ isOpen, onClose, onSuccess, init
 
     return (
         <Modal 
-            isOpen={isOpen} 
-            onClose={onClose} 
-            title="Registrar Nuevo Producto"
+            isOpen={isOpen}
+            onClose={onClose}
+            title={t('materialRegisterModal.title')}
         >
             <div className="flex flex-col gap-6">
                 {/* Info Card */}
@@ -76,16 +78,16 @@ export default function MaterialRegisterModal({ isOpen, onClose, onSuccess, init
                         <Package className="w-5 h-5" />
                     </div>
                     <div className="flex-1">
-                        <h4 className="text-xs font-bold text-amber-700 dark:text-amber-500 uppercase tracking-wider mb-1">Producto No Identificado</h4>
+                        <h4 className="text-xs font-bold text-amber-700 dark:text-amber-500 uppercase tracking-wider mb-1">{t('materialRegisterModal.unidentifiedTitle')}</h4>
                         <p className="text-[11px] font-bold text-amber-600/70 dark:text-amber-500/60 leading-relaxed">
-                            Este producto no existe en el maestro. Regístrelo ahora para que el sistema pueda asignarle una tarifa automáticamente.
+                            {t('materialRegisterModal.unidentifiedMessage')}
                         </p>
                     </div>
                 </div>
 
                 <div className="space-y-4">
                     <div className="flex flex-col gap-1.5">
-                        <label className="text-[11px] font-bold text-cb-neutral uppercase tracking-wider ml-1">Código Externo</label>
+                        <label className="text-[11px] font-bold text-cb-neutral uppercase tracking-wider ml-1">{t('materialRegisterModal.externalCode')}</label>
                         <input 
                             disabled
                             type="text" 
@@ -95,25 +97,25 @@ export default function MaterialRegisterModal({ isOpen, onClose, onSuccess, init
                     </div>
 
                     <div className="flex flex-col gap-1.5">
-                        <label className="text-[11px] font-bold text-cb-neutral uppercase tracking-wider ml-1">Descripción del Producto</label>
-                        <textarea 
+                        <label className="text-[11px] font-bold text-cb-neutral uppercase tracking-wider ml-1">{t('materialRegisterModal.description')}</label>
+                        <textarea
                             value={nombre}
                             onChange={(e) => setNombre(e.target.value)}
                             className={cn(SIATC_THEME.COMPONENTS.INPUT, "h-20 py-2.5 resize-none dark:bg-cb-bg text-cb-text-primary border-cb-border")}
-                            placeholder="Nombre del equipo..."
+                            placeholder={t('materialRegisterModal.descriptionPlaceholder')}
                         />
                     </div>
 
                     <div className="flex flex-col gap-1.5 relative">
-                        <label className="text-[11px] font-bold text-cb-neutral uppercase tracking-wider ml-1">Categoría asignada</label>
+                        <label className="text-[11px] font-bold text-cb-neutral uppercase tracking-wider ml-1">{t('materialRegisterModal.category')}</label>
                         <div className="relative">
-                            <input 
-                                type="text" 
+                            <input
+                                type="text"
                                 value={categoria}
                                 onChange={(e) => setCategoria(e.target.value)}
                                 onFocus={() => setIsDropdownOpen(true)}
                                 className={cn(SIATC_THEME.COMPONENTS.INPUT, "dark:bg-cb-bg text-cb-text-primary border-cb-border")}
-                                placeholder="Escriba o seleccione categoría..."
+                                placeholder={t('materialRegisterModal.categoryPlaceholder')}
                             />
                             <button 
                                 type="button"
@@ -145,21 +147,21 @@ export default function MaterialRegisterModal({ isOpen, onClose, onSuccess, init
                 </div>
 
                 <div className="flex items-center gap-3 pt-4 border-t border-cb-border">
-                    <button 
+                    <button
                         onClick={onClose}
                         className={cn(SIATC_THEME.COMPONENTS.BUTTON_SECONDARY, "flex-1")}
                     >
-                        Cancelar
+                        {t('common.cancel')}
                     </button>
-                    <button 
+                    <button
                         onClick={handleSave}
                         disabled={loading}
                         className={cn(SIATC_THEME.COMPONENTS.BUTTON_PRIMARY, "flex-[2]")}
                     >
-                        {loading ? "Registrando..." : (
+                        {loading ? t('materialRegisterModal.registering') : (
                             <>
                                 <Save className="w-4 h-4" />
-                                Guardar en Maestro
+                                {t('materialRegisterModal.save')}
                             </>
                         )}
                     </button>

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
     User, Mail, Lock, Camera, Save, CheckCircle, AlertCircle,
     Shield, Building2, BadgeCheck, Loader2
@@ -44,6 +45,7 @@ function compressImage(file: File, maxSize = 256, quality = 0.8): Promise<string
 }
 
 export function ProfilePage() {
+    const { t } = useTranslation();
     const { user, login } = useAuth();
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -87,7 +89,7 @@ export function ProfilePage() {
             setStatus('idle');
         } catch {
             setStatus('error');
-            setMessage('Error al procesar la imagen');
+            setMessage(t('profile.errors.imageProcessing'));
         }
     };
 
@@ -98,13 +100,13 @@ export function ProfilePage() {
         // Validate passwords match
         if (formData.password && formData.password !== formData.confirmPassword) {
             setStatus('error');
-            setMessage('Las contraseñas no coinciden');
+            setMessage(t('profile.errors.passwordMismatch'));
             return;
         }
 
         if (formData.password && formData.password.length < 4) {
             setStatus('error');
-            setMessage('La contraseña debe tener al menos 4 caracteres');
+            setMessage(t('profile.errors.passwordTooShort'));
             return;
         }
 
@@ -128,13 +130,13 @@ export function ProfilePage() {
             login(mergedUser);
 
             setStatus('success');
-            setMessage('Perfil actualizado correctamente');
+            setMessage(t('profile.success.updated'));
             setFormData(prev => ({ ...prev, password: '', confirmPassword: '' }));
             setTimeout(() => setStatus('idle'), 4000);
         } catch (error) {
             console.error('Profile update error:', error);
             setStatus('error');
-            setMessage('Error al actualizar el perfil');
+            setMessage(t('profile.errors.updateFailed'));
         } finally {
             setIsSaving(false);
         }
@@ -145,33 +147,33 @@ export function ProfilePage() {
     const initials = (user.full_name || user.username || '??')
         .split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
 
-    const t = SIATC_THEME.PROFILE_LAYOUT;
+    const theme = SIATC_THEME.PROFILE_LAYOUT;
 
     return (
-        <div className={t.PAGE_WRAPPER}>
-            <div className={t.INNER_CONTAINER}>
+        <div className={theme.PAGE_WRAPPER}>
+            <div className={theme.INNER_CONTAINER}>
                 {/* Header */}
                 <div className={SIATC_THEME.LAYOUT.HEADER_WRAPPER}>
                     <div>
-                        <h1 className={SIATC_THEME.TYPOGRAPHY.PAGE_TITLE}>Mi Perfil</h1>
-                        <p className={SIATC_THEME.TYPOGRAPHY.PAGE_SUBTITLE}>Gestiona tu información personal y credenciales.</p>
+                        <h1 className={SIATC_THEME.TYPOGRAPHY.PAGE_TITLE}>{t('profile.title')}</h1>
+                        <p className={SIATC_THEME.TYPOGRAPHY.PAGE_SUBTITLE}>{t('profile.subtitle')}</p>
                     </div>
                 </div>
 
-                <div className={t.GRID}>
+                <div className={theme.GRID}>
 
                     {/* Left Column: Profile Card */}
-                    <div className={t.LEFT_COLUMN}>
+                    <div className={theme.LEFT_COLUMN}>
                         <div className={cn(SIATC_THEME.COMPONENTS.CARD_CONTAINER, "overflow-hidden hover:-translate-y-0.5 transition-all duration-300")}>
                             {/* Gradient banner */}
-                            <div className={t.BANNER}>
-                                <div className={t.BANNER_OVERLAY} />
+                            <div className={theme.BANNER}>
+                                <div className={theme.BANNER_OVERLAY} />
                             </div>
 
                             {/* Avatar */}
-                            <div className={t.AVATAR_CONTAINER}>
+                            <div className={theme.AVATAR_CONTAINER}>
                                 <div className="relative group">
-                                    <div className={t.AVATAR_RING}>
+                                    <div className={theme.AVATAR_RING}>
                                         {formData.avatar_url ? (
                                             <img src={formData.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
                                         ) : (
@@ -181,8 +183,8 @@ export function ProfilePage() {
                                     <button
                                         type="button"
                                         onClick={() => fileInputRef.current?.click()}
-                                        className={t.CAMERA_BUTTON}
-                                        title="Cambiar foto de perfil"
+                                        className={theme.CAMERA_BUTTON}
+                                        title={t('profile.changeAvatar')}
                                     >
                                         <Camera className="w-4 h-4" />
                                     </button>
@@ -199,45 +201,45 @@ export function ProfilePage() {
                                 <p className="text-sm text-primary font-medium">@{user.username}</p>
 
                                 {/* Role badge */}
-                                <div className={t.ROLE_BADGE}>
+                                <div className={theme.ROLE_BADGE}>
                                     <Shield className="w-3.5 h-3.5" />
-                                    {user.role_name || 'Sin rol'}
+                                    {user.role_name || t('profile.noRole')}
                                 </div>
                             </div>
                         </div>
 
                         {/* Quick Info Card */}
-                        <div className={cn(SIATC_THEME.COMPONENTS.CARD_CONTAINER, t.QUICK_INFO_CARD)}>
-                            <h3 className="text-xs font-bold text-cb-neutral uppercase tracking-wider">Información</h3>
+                        <div className={cn(SIATC_THEME.COMPONENTS.CARD_CONTAINER, theme.QUICK_INFO_CARD)}>
+                            <h3 className="text-xs font-bold text-cb-neutral uppercase tracking-wider">{t('profile.infoTitle')}</h3>
 
-                            <div className={t.INFO_LIST}>
-                                <div className={t.INFO_ITEM}>
-                                    <div className={cn(t.INFO_ITEM_ICON_BASE, t.INFO_ITEM_ICON_PRIMARY)}>
+                            <div className={theme.INFO_LIST}>
+                                <div className={theme.INFO_ITEM}>
+                                    <div className={cn(theme.INFO_ITEM_ICON_BASE, theme.INFO_ITEM_ICON_PRIMARY)}>
                                         <Mail className="w-5 h-5" />
                                     </div>
-                                    <div className={t.INFO_ITEM_DETAILS}>
-                                        <p className={t.INFO_ITEM_LABEL}>Email</p>
-                                        <p className={t.INFO_ITEM_VALUE}>{user.email}</p>
+                                    <div className={theme.INFO_ITEM_DETAILS}>
+                                        <p className={theme.INFO_ITEM_LABEL}>{t('profile.emailLabel')}</p>
+                                        <p className={theme.INFO_ITEM_VALUE}>{user.email}</p>
                                     </div>
                                 </div>
 
-                                <div className={t.INFO_ITEM}>
-                                    <div className={cn(t.INFO_ITEM_ICON_BASE, t.INFO_ITEM_ICON_PURPLE)}>
+                                <div className={theme.INFO_ITEM}>
+                                    <div className={cn(theme.INFO_ITEM_ICON_BASE, theme.INFO_ITEM_ICON_PURPLE)}>
                                         <Building2 className="w-5 h-5" />
                                     </div>
-                                    <div className={t.INFO_ITEM_DETAILS}>
-                                        <p className={t.INFO_ITEM_LABEL}>Gerencia</p>
-                                        <p className={t.INFO_ITEM_VALUE}>{user.management_name || user.management_id || 'Sin gerencia'}</p>
+                                    <div className={theme.INFO_ITEM_DETAILS}>
+                                        <p className={theme.INFO_ITEM_LABEL}>{t('profile.managementLabel')}</p>
+                                        <p className={theme.INFO_ITEM_VALUE}>{user.management_name || user.management_id || t('profile.noManagement')}</p>
                                     </div>
                                 </div>
 
-                                <div className={t.INFO_ITEM}>
-                                    <div className={cn(t.INFO_ITEM_ICON_BASE, t.INFO_ITEM_ICON_EMERALD)}>
+                                <div className={theme.INFO_ITEM}>
+                                    <div className={cn(theme.INFO_ITEM_ICON_BASE, theme.INFO_ITEM_ICON_EMERALD)}>
                                         <BadgeCheck className="w-5 h-5" />
                                     </div>
-                                    <div className={t.INFO_ITEM_DETAILS}>
-                                        <p className={t.INFO_ITEM_LABEL}>Estado</p>
-                                        <p className={t.INFO_ITEM_VALUE_SUCCESS}>Activo</p>
+                                    <div className={theme.INFO_ITEM_DETAILS}>
+                                        <p className={theme.INFO_ITEM_LABEL}>{t('profile.statusLabel')}</p>
+                                        <p className={theme.INFO_ITEM_VALUE_SUCCESS}>{t('profile.activeStatus')}</p>
                                     </div>
                                 </div>
                             </div>
@@ -245,59 +247,59 @@ export function ProfilePage() {
                     </div>
 
                     {/* Right Column: Edit Form */}
-                    <div className={t.RIGHT_COLUMN}>
+                    <div className={theme.RIGHT_COLUMN}>
 
                         {/* Account Settings Card */}
                         <div className={SIATC_THEME.COMPONENTS.CARD_CONTAINER}>
-                            <div className={t.FORM_SECTION_HEADER}>
-                                <h3 className={t.FORM_SECTION_TITLE}>
+                            <div className={theme.FORM_SECTION_HEADER}>
+                                <h3 className={theme.FORM_SECTION_TITLE}>
                                     <User className="w-4 h-4 text-primary" />
-                                    Cuenta
+                                    {t('profile.accountTitle')}
                                 </h3>
-                                <p className={t.FORM_SECTION_SUBTITLE}>Tu nombre de usuario y correo electrónico.</p>
+                                <p className={theme.FORM_SECTION_SUBTITLE}>{t('profile.accountSubtitle')}</p>
                             </div>
 
                             <div className="p-6 space-y-5">
-                                <div className={t.FORM_GRID}>
+                                <div className={theme.FORM_GRID}>
                                     <div>
-                                        <label className={t.FIELD_LABEL}>
-                                            Usuario
+                                        <label className={theme.FIELD_LABEL}>
+                                            {t('profile.userLabel')}
                                         </label>
-                                        <div className={t.FIELD_WRAPPER}>
-                                            <div className={t.FIELD_ICON}>
+                                        <div className={theme.FIELD_WRAPPER}>
+                                            <div className={theme.FIELD_ICON}>
                                                 <User className="w-4 h-4" />
                                             </div>
                                             <input
                                                 type="text"
                                                 value={formData.username}
                                                 disabled
-                                                className={t.INPUT_DISABLED}
+                                                className={theme.INPUT_DISABLED}
                                             />
                                         </div>
                                     </div>
 
                                     <div>
-                                        <label className={t.FIELD_LABEL}>
-                                            Email
+                                        <label className={theme.FIELD_LABEL}>
+                                            {t('profile.emailLabel')}
                                         </label>
-                                        <div className={t.FIELD_WRAPPER}>
-                                            <div className={t.FIELD_ICON}>
+                                        <div className={theme.FIELD_WRAPPER}>
+                                            <div className={theme.FIELD_ICON}>
                                                 <Mail className="w-4 h-4" />
                                             </div>
                                             <input
                                                 type="email"
                                                 value={formData.email}
                                                 disabled
-                                                className={t.INPUT_DISABLED}
+                                                className={theme.INPUT_DISABLED}
                                             />
                                         </div>
                                     </div>
                                 </div>
 
-                                <div className={t.READONLY_ALERT}>
-                                    <p className={t.READONLY_ALERT_TEXT}>
+                                <div className={theme.READONLY_ALERT}>
+                                    <p className={theme.READONLY_ALERT_TEXT}>
                                         <AlertCircle className="w-3.5 h-3.5 inline" />
-                                        Estos campos son de solo lectura. Si necesitas un cambio, contacta al administrador del sistema.
+                                        {t('profile.readOnlyNote')}
                                     </p>
                                 </div>
                             </div>
@@ -306,22 +308,22 @@ export function ProfilePage() {
                         {/* Security Card */}
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div className={SIATC_THEME.COMPONENTS.CARD_CONTAINER}>
-                                <div className={t.FORM_SECTION_HEADER}>
-                                    <h3 className={t.FORM_SECTION_TITLE}>
+                                <div className={theme.FORM_SECTION_HEADER}>
+                                    <h3 className={theme.FORM_SECTION_TITLE}>
                                         <Lock className="w-4 h-4 text-primary" />
-                                        Seguridad
+                                        {t('profile.securityTitle')}
                                     </h3>
-                                    <p className={t.FORM_SECTION_SUBTITLE}>Cambia tu contraseña de acceso.</p>
+                                    <p className={theme.FORM_SECTION_SUBTITLE}>{t('profile.securitySubtitle')}</p>
                                 </div>
 
                                 <div className="p-6 space-y-5">
-                                    <div className={t.FORM_GRID}>
+                                    <div className={theme.FORM_GRID}>
                                         <div>
-                                            <label className={t.FIELD_LABEL}>
-                                                Nueva Contraseña
+                                            <label className={theme.FIELD_LABEL}>
+                                                {t('profile.newPasswordLabel')}
                                             </label>
-                                            <div className={t.FIELD_WRAPPER}>
-                                                <div className={t.FIELD_ICON}>
+                                            <div className={theme.FIELD_WRAPPER}>
+                                                <div className={theme.FIELD_ICON}>
                                                     <Lock className="w-4 h-4" />
                                                 </div>
                                                 <input
@@ -330,18 +332,18 @@ export function ProfilePage() {
                                                     value={formData.password}
                                                     onChange={handleChange}
                                                     placeholder="••••••••"
-                                                    className={t.INPUT_ACTIVE}
+                                                    className={theme.INPUT_ACTIVE}
                                                     minLength={4}
                                                 />
                                             </div>
                                         </div>
 
                                         <div>
-                                            <label className={t.FIELD_LABEL}>
-                                                Confirmar Contraseña
+                                            <label className={theme.FIELD_LABEL}>
+                                                {t('profile.confirmPasswordLabel')}
                                             </label>
-                                            <div className={t.FIELD_WRAPPER}>
-                                                <div className={t.FIELD_ICON}>
+                                            <div className={theme.FIELD_WRAPPER}>
+                                                <div className={theme.FIELD_ICON}>
                                                     <Shield className="w-4 h-4" />
                                                 </div>
                                                 <input
@@ -351,8 +353,8 @@ export function ProfilePage() {
                                                     onChange={handleChange}
                                                     placeholder="••••••••"
                                                     className={cn(
-                                                        t.INPUT_ACTIVE,
-                                                        formData.confirmPassword && formData.password !== formData.confirmPassword && t.INPUT_ERROR
+                                                        theme.INPUT_ACTIVE,
+                                                        formData.confirmPassword && formData.password !== formData.confirmPassword && theme.INPUT_ERROR
                                                     )}
                                                     minLength={4}
                                                 />
@@ -360,8 +362,8 @@ export function ProfilePage() {
                                         </div>
                                     </div>
 
-                                    <p className={t.FORM_NOTE}>
-                                        Deja los campos vacíos para mantener tu contraseña actual. Mínimo 4 caracteres.
+                                    <p className={theme.FORM_NOTE}>
+                                        {t('profile.passwordHint')}
                                     </p>
                                 </div>
                             </div>
@@ -369,8 +371,8 @@ export function ProfilePage() {
                             {/* Status Message */}
                             {status !== 'idle' && (
                                 <div className={cn(
-                                    t.STATUS_ALERT_BASE,
-                                    status === 'success' ? t.STATUS_ALERT_SUCCESS : t.STATUS_ALERT_ERROR
+                                    theme.STATUS_ALERT_BASE,
+                                    status === 'success' ? theme.STATUS_ALERT_SUCCESS : theme.STATUS_ALERT_ERROR
                                 )}>
                                     {status === 'success' ? <CheckCircle className="w-5 h-5 flex-shrink-0" /> : <AlertCircle className="w-5 h-5 flex-shrink-0" />}
                                     {message}
@@ -393,7 +395,7 @@ export function ProfilePage() {
                                     ) : (
                                         <Save className="w-4 h-4" />
                                     )}
-                                    {isSaving ? 'Guardando...' : 'Guardar Cambios'}
+                                    {isSaving ? t('profile.saving') : t('profile.saveChanges')}
                                 </button>
                             </div>
                         </form>
