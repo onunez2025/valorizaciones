@@ -67,158 +67,223 @@ export default function LoginPage() {
         i18n.changeLanguage(i18n.language === 'es' ? 'en' : 'es');
     };
 
-    return (
-        <div className={SIATC_THEME.LOGIN_LAYOUT.CONTAINER}>
-            {/* Left Side - Brand / Visual (Matches Ecosystem Standard) */}
-            <div className={SIATC_THEME.LOGIN_LAYOUT.LEFT_PANEL}>
-                <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCI+IDxyZWN0IHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgZmlsbD0ibm9uZSIvPiA8ZyBmaWxsPSJub25lIiBzdHJva2U9IiNmZmYiIHN0cm9rZS1vcGFjaXR5PSIwLjA1IiBzdHJva2Utd2lkdGg9IjIiPiA8cGF0aCBkPSJNMCAzdjU0TTMgMGg1NCIvPiA8L2c+IDwvc3ZnPg==')] bg-[size:60px_60px]" />
-                <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-900 to-blue-900/50" />
-
-                <div className="relative z-10">
-                    <div className="flex items-center gap-3 mb-6">
-                        <div className="w-12 h-12 flex items-center justify-center shrink-0 overflow-hidden">
-                            <img src={logoUrl} alt="Valorizaciones Logo" className="h-full w-full object-contain" />
+    const renderFormFields = () => (
+        <form onSubmit={handleLogin} className="space-y-6">
+            <div className="space-y-4">
+                <div>
+                    <label className="block text-sm font-medium mb-1.5 ml-1 text-cb-text-primary">
+                        {t('auth.username')}
+                    </label>
+                    <div className={SIATC_THEME.LOGIN_LAYOUT.INPUT_WRAPPER}>
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-muted-foreground">
+                            <User className="w-5 h-5" />
                         </div>
-                        <span className="text-2xl font-bold tracking-tight text-white">Valorizaciones</span>
-                    </div>
-                    <h1 className="text-5xl font-bold mb-4 leading-tight text-white">
-                        Sistema<br />Gestión de<br />Valorizaciones
-                    </h1>
-                    <div className="text-slate-400 text-lg max-w-md space-y-6">
-                        <p>Control automatizado de pagos, penalidades<br />y servicios de terceros.</p>
-                        <div className="flex flex-col w-fit gap-2">
-                            <span className="text-2xl font-bold text-slate-100 tracking-tight">Gerencia de Atención al Cliente</span>
-                            <img
-                                src="/Logo - Grupo Sole - Transparente blanco.png"
-                                alt="Logo Grupo Sole"
-                                className="h-auto max-w-[12rem] object-contain"
-                            />
-                        </div>
+                        <input
+                            type="text"
+                            value={username}
+                            onChange={(e) => setUsername(e.target.value)}
+                            className={SIATC_THEME.LOGIN_LAYOUT.INPUT}
+                            placeholder="Ingrese usuario"
+                            required
+                            autoFocus
+                        />
                     </div>
                 </div>
 
-                <div className="relative z-10 text-sm text-slate-500">
-                    © 2026 GAC - Grupo Sole. Rinnai Corporation. Todos los derechos reservados.
+                <div>
+                    <label className="block text-sm font-medium mb-1.5 ml-1 text-cb-text-primary">
+                        {t('auth.password')}
+                    </label>
+                    <div className={SIATC_THEME.LOGIN_LAYOUT.INPUT_WRAPPER}>
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-muted-foreground">
+                            <Lock className="w-5 h-5" />
+                        </div>
+                        <input
+                            type={showPassword ? 'text' : 'password'}
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            className={SIATC_THEME.LOGIN_LAYOUT.INPUT}
+                            placeholder="Ingrese contraseña"
+                            required
+                        />
+                        <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="absolute inset-y-0 right-0 pr-3 flex items-center text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                            {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                        </button>
+                    </div>
                 </div>
             </div>
 
-            {/* Right Side - Login Form */}
-            <div className={SIATC_THEME.LOGIN_LAYOUT.RIGHT_PANEL}>
-                <div className="absolute top-6 right-6 flex items-center gap-4">
-                    <button
-                        onClick={toggleTheme}
-                        className="p-2 rounded-full hover:bg-accent text-muted-foreground transition-colors"
-                        title="Alternar Tema"
-                    >
-                        {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-                    </button>
-                    <button
-                        onClick={toggleLanguage}
-                        className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-border hover:bg-accent text-sm font-medium transition-colors cursor-pointer"
-                    >
-                        <Globe className="w-4 h-4" />
-                        {i18n.language === 'es' ? 'ES' : 'EN'}
-                    </button>
+            <div className="flex items-center justify-between text-sm">
+                <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" className="w-4 h-4 rounded border-input text-primary focus:ring-primary" />
+                    <span className="text-cb-text-secondary">{t('auth.rememberMe')}</span>
+                </label>
+                <button
+                    type="button"
+                    onClick={() => setError(t('auth.forgotPasswordMessage'))}
+                    className="font-medium text-primary hover:text-primary/80 transition-colors bg-transparent border-none p-0 cursor-pointer"
+                >
+                    {t('auth.forgotPassword')}
+                </button>
+            </div>
+
+            {error && (
+                <div className="p-3 rounded-lg bg-destructive/10 text-destructive text-sm font-medium text-center animate-in fade-in zoom-in-95">
+                    {error}
                 </div>
-                <div className="w-full max-w-md space-y-8">
-                    <div className="text-center">
-                        <h2 className={SIATC_THEME.LOGIN_LAYOUT.TITLE}>{t('common.welcome')}</h2>
-                        <p className={SIATC_THEME.LOGIN_LAYOUT.SUBTITLE}>
-                            {t('auth.subtitle')}
-                        </p>
+            )}
+
+            <button
+                type="submit"
+                disabled={loading}
+                className={cn(
+                    SIATC_THEME.COMPONENTS.BUTTON_PRIMARY,
+                    "w-full flex justify-center disabled:opacity-70 disabled:cursor-not-allowed"
+                )}
+            >
+                {loading ? t('common.loading') : t('auth.loginButton')}
+            </button>
+        </form>
+    );
+
+    return (
+        <div className={SIATC_THEME.LOGIN_LAYOUT.CONTAINER}>
+            {/* ===== MOBILE ONLY (<768px): header con color de marca + tarjeta blanca ===== */}
+            <div className="flex flex-col md:hidden min-h-dvh w-full bg-background">
+                <div className="relative bg-primary overflow-hidden shrink-0 pb-10 min-h-[45dvh]">
+                    <div className="absolute -top-10 -right-10 w-44 h-44 rounded-full bg-white/10 pointer-events-none" />
+                    <div className="absolute top-16 left-4 w-10 h-10 rounded-full bg-white/10 pointer-events-none" />
+                    <div className="absolute top-28 right-10 w-6 h-6 rounded-full bg-white/10 pointer-events-none" />
+
+                    <div className="relative z-10 flex items-center justify-between px-6 pt-8">
+                        <div className="flex items-center gap-2">
+                            <div className="w-9 h-9 flex items-center justify-center shrink-0 overflow-hidden rounded-lg bg-white/10">
+                                <img src={logoUrl} alt="Valorizaciones Logo" className="h-6 w-6 object-contain" />
+                            </div>
+                            <span className="text-white font-bold text-base tracking-tight uppercase">Valorizaciones</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={toggleTheme}
+                                aria-label="Toggle theme"
+                                className="w-8 h-8 flex items-center justify-center rounded-full bg-white/15 text-white hover:bg-white/25 transition-colors cursor-pointer"
+                            >
+                                {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
+                            </button>
+                            <button
+                                onClick={toggleLanguage}
+                                className="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-white/15 text-white hover:bg-white/25 transition-colors text-xs font-medium cursor-pointer"
+                            >
+                                <Globe className="w-3.5 h-3.5" />
+                                {i18n.language === 'es' ? 'ES' : 'EN'}
+                            </button>
+                        </div>
                     </div>
 
-                    {isExpired && (
-                        <div className={SIATC_THEME.LOGIN_LAYOUT.ALERT_EXPIRED}>
-                            <Lock className="w-5 h-5 shrink-0 mt-0.5" />
-                            <div>
-                                <p className="font-bold">{t('auth.sessionExpired.title')}</p>
-                                <p className="opacity-90">{t('auth.sessionExpired.message')}</p>
+                    <div className="relative z-10 px-6 mt-10">
+                        <h1 className="text-white text-3xl font-bold leading-tight">{t('common.welcome')}</h1>
+                        <p className="text-white/80 text-sm mt-2 max-w-xs">{t('auth.subtitle')}</p>
+                    </div>
+
+                    <svg className="absolute bottom-0 left-0 w-full h-10" viewBox="0 0 375 48" preserveAspectRatio="none">
+                        <path d="M0,24 C90,52 285,-4 375,20 L375,48 L0,48 Z" fill="var(--background)" />
+                    </svg>
+                </div>
+
+                <div className="flex-1 flex flex-col justify-center px-6 py-6 bg-background">
+                    <div className="max-w-md mx-auto w-full space-y-6">
+                        {isExpired && (
+                            <div className={SIATC_THEME.LOGIN_LAYOUT.ALERT_EXPIRED}>
+                                <Lock className="w-5 h-5 shrink-0 mt-0.5" />
+                                <div>
+                                    <p className="font-bold">{t('auth.sessionExpired.title')}</p>
+                                    <p className="opacity-90">{t('auth.sessionExpired.message')}</p>
+                                </div>
+                            </div>
+                        )}
+                        {renderFormFields()}
+                    </div>
+                </div>
+            </div>
+
+            {/* ===== DESKTOP (>=768px): panel dividido existente, sin cambios ===== */}
+            <div className="hidden md:flex md:flex-row w-full">
+                {/* Left Side - Brand / Visual (Matches Ecosystem Standard) */}
+                <div className={SIATC_THEME.LOGIN_LAYOUT.LEFT_PANEL}>
+                    <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCI+IDxyZWN0IHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgZmlsbD0ibm9uZSIvPiA8ZyBmaWxsPSJub25lIiBzdHJva2U9IiNmZmYiIHN0cm9rZS1vcGFjaXR5PSIwLjA1IiBzdHJva2Utd2lkdGg9IjIiPiA8cGF0aCBkPSJNMCAzdjU0TTMgMGg1NCIvPiA8L2c+IDwvc3ZnPg==')] bg-[size:60px_60px]" />
+                    <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-900 to-blue-900/50" />
+
+                    <div className="relative z-10">
+                        <div className="flex items-center gap-3 mb-6">
+                            <div className="w-12 h-12 flex items-center justify-center shrink-0 overflow-hidden">
+                                <img src={logoUrl} alt="Valorizaciones Logo" className="h-full w-full object-contain" />
+                            </div>
+                            <span className="text-2xl font-bold tracking-tight text-white">Valorizaciones</span>
+                        </div>
+                        <h1 className="text-5xl font-bold mb-4 leading-tight text-white">
+                            Sistema<br />Gestión de<br />Valorizaciones
+                        </h1>
+                        <div className="text-slate-400 text-lg max-w-md space-y-6">
+                            <p>Control automatizado de pagos, penalidades<br />y servicios de terceros.</p>
+                            <div className="flex flex-col w-fit gap-2">
+                                <span className="text-2xl font-bold text-slate-100 tracking-tight">Gerencia de Atención al Cliente</span>
+                                <img
+                                    src="/Logo - Grupo Sole - Transparente blanco.png"
+                                    alt="Logo Grupo Sole"
+                                    className="h-auto max-w-[12rem] object-contain"
+                                />
                             </div>
                         </div>
-                    )}
+                    </div>
 
-                    <div className={SIATC_THEME.LOGIN_LAYOUT.CARD}>
-                        <form onSubmit={handleLogin} className="space-y-6">
-                            <div className="space-y-4">
-                                <div>
-                                    <label className="block text-sm font-medium mb-1.5 ml-1 text-cb-text-primary">
-                                        {t('auth.username')}
-                                    </label>
-                                    <div className={SIATC_THEME.LOGIN_LAYOUT.INPUT_WRAPPER}>
-                                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-muted-foreground">
-                                            <User className="w-5 h-5" />
-                                        </div>
-                                        <input
-                                            type="text"
-                                            value={username}
-                                            onChange={(e) => setUsername(e.target.value)}
-                                            className={SIATC_THEME.LOGIN_LAYOUT.INPUT}
-                                            placeholder="Ingrese usuario"
-                                            required
-                                            autoFocus
-                                        />
-                                    </div>
-                                </div>
+                    <div className="relative z-10 text-sm text-slate-500">
+                        © 2026 GAC - Grupo Sole. Rinnai Corporation. Todos los derechos reservados.
+                    </div>
+                </div>
 
+                {/* Right Side - Login Form */}
+                <div className={SIATC_THEME.LOGIN_LAYOUT.RIGHT_PANEL}>
+                    <div className="absolute top-6 right-6 flex items-center gap-4">
+                        <button
+                            onClick={toggleTheme}
+                            className="p-2 rounded-full hover:bg-accent text-muted-foreground transition-colors"
+                            title="Alternar Tema"
+                        >
+                            {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+                        </button>
+                        <button
+                            onClick={toggleLanguage}
+                            className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-border hover:bg-accent text-sm font-medium transition-colors cursor-pointer"
+                        >
+                            <Globe className="w-4 h-4" />
+                            {i18n.language === 'es' ? 'ES' : 'EN'}
+                        </button>
+                    </div>
+                    <div className="w-full max-w-md space-y-8">
+                        <div className="text-center">
+                            <h2 className={SIATC_THEME.LOGIN_LAYOUT.TITLE}>{t('common.welcome')}</h2>
+                            <p className={SIATC_THEME.LOGIN_LAYOUT.SUBTITLE}>
+                                {t('auth.subtitle')}
+                            </p>
+                        </div>
+
+                        {isExpired && (
+                            <div className={SIATC_THEME.LOGIN_LAYOUT.ALERT_EXPIRED}>
+                                <Lock className="w-5 h-5 shrink-0 mt-0.5" />
                                 <div>
-                                    <label className="block text-sm font-medium mb-1.5 ml-1 text-cb-text-primary">
-                                        {t('auth.password')}
-                                    </label>
-                                    <div className={SIATC_THEME.LOGIN_LAYOUT.INPUT_WRAPPER}>
-                                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-muted-foreground">
-                                            <Lock className="w-5 h-5" />
-                                        </div>
-                                        <input
-                                            type={showPassword ? 'text' : 'password'}
-                                            value={password}
-                                            onChange={(e) => setPassword(e.target.value)}
-                                            className={SIATC_THEME.LOGIN_LAYOUT.INPUT}
-                                            placeholder="Ingrese contraseña"
-                                            required
-                                        />
-                                        <button
-                                            type="button"
-                                            onClick={() => setShowPassword(!showPassword)}
-                                            className="absolute inset-y-0 right-0 pr-3 flex items-center text-muted-foreground hover:text-foreground transition-colors"
-                                        >
-                                            {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                                        </button>
-                                    </div>
+                                    <p className="font-bold">{t('auth.sessionExpired.title')}</p>
+                                    <p className="opacity-90">{t('auth.sessionExpired.message')}</p>
                                 </div>
                             </div>
+                        )}
 
-                            <div className="flex items-center justify-between text-sm">
-                                <label className="flex items-center gap-2 cursor-pointer">
-                                    <input type="checkbox" className="w-4 h-4 rounded border-input text-primary focus:ring-primary" />
-                                    <span className="text-cb-text-secondary">{t('auth.rememberMe')}</span>
-                                </label>
-                                <button
-                                    type="button"
-                                    onClick={() => setError(t('auth.forgotPasswordMessage'))}
-                                    className="font-medium text-primary hover:text-primary/80 transition-colors bg-transparent border-none p-0 cursor-pointer"
-                                >
-                                    {t('auth.forgotPassword')}
-                                </button>
-                            </div>
-
-                            {error && (
-                                <div className="p-3 rounded-lg bg-destructive/10 text-destructive text-sm font-medium text-center animate-in fade-in zoom-in-95">
-                                    {error}
-                                </div>
-                            )}
-
-                            <button
-                                type="submit"
-                                disabled={loading}
-                                className={cn(
-                                    SIATC_THEME.COMPONENTS.BUTTON_PRIMARY,
-                                    "w-full flex justify-center disabled:opacity-70 disabled:cursor-not-allowed"
-                                )}
-                            >
-                                {loading ? t('common.loading') : t('auth.loginButton')}
-                            </button>
-                        </form>
+                        <div className={SIATC_THEME.LOGIN_LAYOUT.CARD}>
+                            {renderFormFields()}
+                        </div>
                     </div>
                 </div>
             </div>
