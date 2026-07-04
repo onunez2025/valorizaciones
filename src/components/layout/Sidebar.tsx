@@ -71,7 +71,9 @@ export function Sidebar({ className, isEffectivelyExpanded = true, onNavigate }:
                         <img src={logoUrl} alt="Valorizaciones Logo" className="h-full w-full object-contain" />
                     </div>
                     <div className="flex flex-col min-w-0">
-                        <h1 className="font-bold text-lg leading-none tracking-tight text-foreground uppercase truncate">Valorizaciones</h1>
+                        {/* En móvil se usa "Valuations" (fijo en inglés, ES o EN) para no chocar con el botón de cerrar */}
+                        <h1 className="font-bold text-lg leading-none tracking-tight text-foreground uppercase truncate lg:hidden">Valuations</h1>
+                        <h1 className="hidden lg:block font-bold text-lg leading-none tracking-tight text-foreground uppercase truncate">Valorizaciones</h1>
                         <p className="text-[9px] font-black text-primary tracking-wider uppercase mt-1.5 opacity-70 truncate">Control Gestión</p>
                     </div>
                 </div>
