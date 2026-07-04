@@ -66,7 +66,7 @@ export function Sidebar({ className, isEffectivelyExpanded = true, onNavigate }:
         )}>
             {/* Header / Logo */}
             {showFull ? (
-                <div className="p-6 flex items-center gap-3 border-b border-border/50 bg-gradient-to-br from-primary/5 to-transparent">
+                <div className="p-4 pr-10 gap-2 lg:p-6 lg:gap-3 flex items-center border-b border-border/50 bg-gradient-to-br from-primary/5 to-transparent">
                     <div className="w-12 h-12 flex items-center justify-center shrink-0 overflow-hidden transition-transform hover:scale-105">
                         <img src={logoUrl} alt="Valorizaciones Logo" className="h-full w-full object-contain" />
                     </div>
