@@ -28,6 +28,7 @@ export const AppConfigProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     const [config, setConfig] = useState<AppConfig | null>(null);
 
     useEffect(() => {
+        const loadConfig = () => {
         const getSsoToken = () => { const m = document.cookie.match(/(?:^|;\s*)token=([^;]+)/); return m ? decodeURIComponent(m[1]) : null; };
         const token = StorageService.getToken() || getSsoToken();
         const headers: HeadersInit = token ? { Authorization: `Bearer ${token}` } : {};
@@ -179,6 +180,16 @@ export const AppConfigProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             .catch(() => {
                 // Silently fail — app falls back to local assets
             });
+        };
+
+        loadConfig();
+
+        // Este provider se monta una sola vez al cargar la página, antes de que
+        // exista sesión — si el login ocurre por navegación SPA (sin recargar),
+        // el fetch inicial ya falló sin token y nunca se reintentaba. Se vuelve
+        // a pedir la configuración en cuanto haya un token nuevo disponible.
+        window.addEventListener('siatc:token-updated', loadConfig);
+        return () => window.removeEventListener('siatc:token-updated', loadConfig);
     }, []);
 
     return (
