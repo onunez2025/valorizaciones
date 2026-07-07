@@ -1,5 +1,7 @@
 # SIATC — Reglas de Seguridad para Agentes AI
 
+> ⚠️ **Codificación de este archivo: UTF-8, sin BOM.** Guardar siempre en UTF-8 (no Windows-1252/Latin-1/ANSI). Antes de editar este archivo con cualquier herramienta o editor, confirmar que su codificación de guardado esté configurada como UTF-8 — de lo contrario los acentos, "—" y "✅/❌" se corrompen (mojibake) de forma silenciosa y acumulativa cada vez que se vuelve a guardar con la codificación incorrecta.
+
 Estas reglas aplican a todos los repos del ecosistema SIATC. Son obligatorias en cada cambio de código.
 
 ## 1. Autenticación — Dos middlewares, no uno
@@ -126,3 +128,32 @@ Estas medidas fueron evaluadas y **descartadas de forma deliberada**. No son olv
 **Por qué no es una brecha:** El JWT sigue siendo obligatorio en cada endpoint mediante `verifyToken`. Un request sin `Origin` y sin token válido recibe 401. La protección real es el JWT, no CORS.
 
 **Lo que CORS sí hace en este ecosistema:** Impide que scripts en dominios no autorizados usen las credenciales del usuario logueado para llamar a la API desde el browser del usuario. Eso funciona correctamente con el patrón actual.
+
+## 10. Reglas de Memoria y Documentación (Obsidian)
+
+- **Lectura Obligatoria al Iniciar**: Antes de realizar cualquier análisis de código, propuesta de mejora, o modificación en esta aplicación, el agente DEBE buscar y leer las notas relevantes de la bitácora, planes e informes ubicados en la carpeta D:\diego\Documentos\Antigravity\Ecosistema SIATC\SIATC Memory\ para entender el historial del proyecto, decisiones previas y patrones de diseño existentes.
+
+### 10.1 Bitácoras de Cambio (post-commit)
+- Al completar cualquier tarea o modificación, el agente DEBE abrir la nota autogenerada de Obsidian correspondiente a este cambio en D:\diego\Documentos\Antigravity\Ecosistema SIATC\SIATC Memory\bitacora-cambios\ y enriquecerla obligatoriamente con:
+  - **Arquitectura del Cambio**: Explicación técnica detallada de la lógica implementada y las decisiones tomadas.
+  - **Archivos y Funciones Clave**: Detalle de qué archivos y métodos principales fueron modificados o creados.
+  - **Modificaciones de BD o .env**: Registro explícito de cualquier script SQL ejecutado, nuevas columnas/tablas, o variables de entorno añadidas.
+
+### 10.2 Planes de Implementación
+- Cuando el usuario solicite un **Plan de Implementación**, el agente DEBE generar un documento .md estructurado en D:\diego\Documentos\Antigravity\Ecosistema SIATC\SIATC Memory\planes-implementacion\<Nombre-Plan>.md con el siguiente contenido:
+  - **Objetivo**: Descripción del problema, alcance y qué soluciona.
+  - **Cambios Propuestos en BD**: Tablas, columnas, tipos de datos SQL y scripts ALTER/CREATE.
+  - **Cambios Propuestos en Backend**: APIs, middlewares, controladores, types y nuevas variables .env.
+  - **Cambios Propuestos en Frontend**: Páginas, componentes, hooks y clases CSS/tokens de estilo.
+  - **Plan de Verificación**: Estrategia de pruebas locales y pasos para validar en el VPS.
+  - **Plan de Reversión (Rollback)**: Pasos técnicos detallados para deshacer los cambios si algo falla en producción.
+
+### 10.3 Informes de Análisis y Auditorías
+- Cuando el usuario solicite un **Informe de Análisis** o **Auditoría**, el agente DEBE generar un documento .md estructurado en D:\diego\Documentos\Antigravity\Ecosistema SIATC\SIATC Memory\auditorias-analisis\<Nombre-Informe>.md con el siguiente contenido:
+  - **Alcance**: Qué componentes, módulos o vulnerabilidades se auditan.
+  - **Hallazgos**: Lista detallada de fallos detectados, clasificados por gravedad (Alta, Media, Baja), con su impacto respectivo.
+  - **Recomendaciones**: Soluciones técnicas propuestas con código de ejemplo y mejores prácticas.
+  - **Conclusiones**: Estado de salud general del sistema respecto al análisis.
+
+### 10.4 Auto-Sincronización
+- Inmediatamente después de crear o editar cualquier archivo dentro de SIATC Memory (bitácora, plan de implementación o informe de auditoría), el agente DEBE abrir una terminal en la ruta de la memoria (D:\diego\Documentos\Antigravity\Ecosistema SIATC\SIATC Memory\), hacer git add, git commit y git push para sincronizar los cambios de inmediato con Forgejo y asegurar la disponibilidad en tiempo real para el equipo.
