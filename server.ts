@@ -14,6 +14,8 @@ import { z } from 'zod';
 import { assertCasRuc, enforceCasRuc } from './lib/casFilter.js';
 import { addInput } from './lib/db.js';
 import { validateBody } from './lib/validate.js';
+import { exchangeCodeForToken, getCasdoorUserInfo, getCasdoorAuthorizeUrl } from './lib/casdoorClient.js';
+import { sendSsoPendingEmail, sendSsoFirstRetryEmail, sendSsoFinalRetryEmail } from './lib/mailer.js';
 import bcrypt from 'bcrypt';
 import path from 'path';
 import crypto from 'crypto';
@@ -86,6 +88,7 @@ function getRedisClient(): Redis {
             host: process.env.REDIS_HOST || 'localhost',
             port: parseInt(process.env.REDIS_PORT || '6379'),
             password: process.env.REDIS_PASSWORD,
+            db: parseInt(process.env.REDIS_DB || '0'),
             lazyConnect: true,
             retryStrategy: (times: number) => Math.min(times * 100, 3000),
         };
@@ -219,6 +222,7 @@ interface JwtUserPayload {
     permissions?: string[];
     casId: string | null;
     casRUC: string | null;
+    ssoPilot?: boolean;
     iat?: number;
     exp?: number;
 }
@@ -390,9 +394,14 @@ app.get('/api/auth/me', verifyToken, async (req: Request, res: Response) => {
         addInput(permsReqMe, 'rid', sql.UniqueIdentifier, user.RoleId);
         addInput(permsReqMe, 'app', sql.NVarChar(20), APP_IDENTIFIER);
         const perms = (await permsReqMe.query("SELECT Permission FROM EBM.RolePermissions WHERE RoleId = @rid AND (Permission LIKE @app + '.%' OR Permission LIKE 'ebm.%')")).recordset.map(p => p.Permission);
+        // Los tokens del piloto Casdoor (ssoPilot=true) no deben reescribir la cookie compartida
+        // domain=.siatc.cloud aquí, ni propagarse sin el claim al freshToken — este endpoint se
+        // llama también desde SsoLoginPage justo después del login social, y el frontend reescribe
+        // document.cookie con el freshToken devuelto (ver validateSession() en useAuth.tsx).
+        const ssoPilot = (req as AuthRequest).user?.ssoPilot;
         // Emitir token fresco con casRUC para soporte SSO cross-app
         const freshToken = jwt.sign(
-            { id: user.Id, username: user.Username, role: user.RoleName, perms, casId: user.cas_id || null, casRUC: user.cas_ruc || null },
+            { id: user.Id, username: user.Username, role: user.RoleName, perms, casId: user.cas_id || null, casRUC: user.cas_ruc || null, ...(ssoPilot ? { ssoPilot: true } : {}) },
             JWT_SECRET,
             { expiresIn: '12h' }
         );
@@ -400,11 +409,148 @@ app.get('/api/auth/me', verifyToken, async (req: Request, res: Response) => {
             { id: user.Id, role: user.RoleName, role_name: user.RoleName, username: user.Username, apps: user.Apps || '', casId: user.cas_id || null },
             JWT_SECRET, { expiresIn: '12h' }
         );
-        if (process.env.NODE_ENV === 'production') {
+        if (process.env.NODE_ENV === 'production' && !ssoPilot) {
             res.cookie('token', ssoTokenMe, { domain: '.siatc.cloud', maxAge: 12 * 60 * 60 * 1000, httpOnly: false, secure: true, sameSite: 'lax', path: '/' });
         }
         res.json({ token: freshToken, user: { id: user.Id, username: user.Username, full_name: user.FullName, email: user.Email, role_name: user.RoleName, management_id: user.ManagementId, management_name: user.ManagementName, avatar_url: user.AvatarUrl, permissions: perms, apps: user.Apps, casId: user.cas_id || null, casRUC: user.cas_ruc || null } });
     } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
+});
+
+// --- SSO (piloto Casdoor: login social Google/Microsoft) ---
+// La aprobación/rechazo de solicitudes SSO está centralizada en SIATC Console — esta app
+// solo implementa el lado de login (autorizar/callback) y las notificaciones de solicitud.
+const SSO_APP_CODE = process.env.APP_CODE || APP_IDENTIFIER;
+const SSO_APP_LABEL = 'Valorizaciones';
+const FRONTEND_URL = process.env.FRONTEND_URL || '';
+const MAX_RESUBMIT_RETRIES = 2;
+
+function redirectToSsoStatus(res: Response, status: 'pending' | 'rejected' | 'error', reason?: string, retriesLeft?: number): void {
+    const params = new URLSearchParams({ status });
+    if (reason) params.set('reason', reason);
+    if (typeof retriesLeft === 'number') params.set('retriesLeft', String(retriesLeft));
+    res.redirect(`${FRONTEND_URL}/sso-status?${params.toString()}`);
+}
+
+// GET redirige al login social de Casdoor — mantiene client_id/redirect_uri solo del lado del servidor.
+// ?provider=google|microsoft salta la pantalla de selección de Casdoor y va directo a ese proveedor.
+// ?resubmit=true marca el intento como una re-solicitud explícita desde la pantalla de rechazo — el
+// marcador viaja en el "state" (sobrevive el viaje de ida y vuelta por Casdoor) y se valida en /callback.
+app.get('/api/auth/sso/authorize', (req: Request, res: Response) => {
+    const isResubmit = req.query.resubmit === 'true';
+    const state = isResubmit ? `resubmit-${crypto.randomBytes(8).toString('hex')}` : crypto.randomBytes(16).toString('hex');
+    const provider = typeof req.query.provider === 'string' ? req.query.provider : undefined;
+    res.redirect(getCasdoorAuthorizeUrl(state, provider));
+});
+
+// GET callback de Casdoor tras un login social (Google/Microsoft) — ruta pública, sin verifyToken.
+app.get('/api/auth/sso/callback', async (req: Request, res: Response) => {
+    const code = String(req.query.code || '');
+    if (!code) return redirectToSsoStatus(res, 'error', 'Falta el código de autorización.');
+
+    try {
+        const accessToken = await exchangeCodeForToken(code);
+        const profile = await getCasdoorUserInfo(accessToken);
+
+        const email = (profile.email || '').trim().toLowerCase();
+        if (!email) return redirectToSsoStatus(res, 'error', 'Casdoor no devolvió un correo verificado.');
+
+        const db = await getDb();
+
+        // 1. ¿Ya existe un usuario real con este correo y con acceso a Valorizaciones?
+        const userResult = await db.request()
+            .input('email', sql.NVarChar(sql.MAX), email)
+            .input('app', sql.NVarChar(sql.MAX), SSO_APP_CODE)
+            .query(`
+                SELECT u.Id as id, u.Username as username, u.RoleId as role_id, r.Name as role_name,
+                       u.Apps as apps, CAST(u.IsActive AS BIT) as is_active,
+                       uc.CASId as cas_id, TRIM(c.RUC) as cas_ruc
+                FROM EBM.Users u
+                LEFT JOIN EBM.Roles r ON u.RoleId = r.Id
+                LEFT JOIN EBM.UserCAS uc ON u.Id = uc.UserId
+                LEFT JOIN dbo.GAC_APP_TB_CAS c ON uc.CASId = c.ID_CAS
+                WHERE u.Email = @email AND (u.Apps LIKE '%' + @app + '%' OR u.Apps LIKE '%ADMIN%')
+            `);
+        const user = userResult.recordset[0];
+
+        if (user && user.is_active) {
+            const permsReq = db.request();
+            addInput(permsReq, 'rid', sql.UniqueIdentifier, user.role_id);
+            addInput(permsReq, 'app', sql.NVarChar(20), SSO_APP_CODE);
+            const perms = (await permsReq.query("SELECT Permission FROM EBM.RolePermissions WHERE RoleId = @rid AND (Permission LIKE @app + '.%' OR Permission LIKE 'ebm.%')")).recordset.map((p: { Permission: string }) => p.Permission);
+
+            const token = jwt.sign(
+                { id: user.id, username: user.username, role: user.role_name, perms, casId: user.cas_id || null, casRUC: user.cas_ruc || null, ssoPilot: true },
+                JWT_SECRET,
+                { expiresIn: '12h' }
+            );
+
+            // Nota: a propósito NO se setea la cookie compartida domain=.siatc.cloud en este piloto
+            // (mismo criterio que el resto del ecosistema — evita interferir con sesiones reales
+            // mientras esto corre en "Valorizaciones QA").
+            const params = new URLSearchParams({ ssoToken: token });
+            return res.redirect(`${FRONTEND_URL}/sso-login?${params.toString()}`);
+        }
+
+        if (user && !user.is_active) {
+            return redirectToSsoStatus(res, 'rejected', 'Tu cuenta está desactivada. Contacta a un administrador.');
+        }
+
+        // 2. No existe (o no tiene acceso a VAL aún): revisar si ya hay una solicitud previa
+        const pendingResult = await db.request()
+            .input('email', sql.NVarChar(sql.MAX), email)
+            .query(`SELECT TOP 1 Status, RejectionReason, RetryCount FROM EBM.PendingSSORequests WHERE Email = @email ORDER BY RequestedAt DESC`);
+        const existing = pendingResult.recordset[0];
+
+        if (existing?.Status === 'pending') {
+            return redirectToSsoStatus(res, 'pending');
+        }
+        if (existing?.Status === 'rejected') {
+            const retryCount: number = existing.RetryCount ?? 0;
+            const isResubmit = String(req.query.state || '').startsWith('resubmit-');
+
+            if (isResubmit && retryCount < MAX_RESUBMIT_RETRIES) {
+                const newRetryCount = retryCount + 1;
+                await db.request()
+                    .input('email', sql.NVarChar(sql.MAX), email)
+                    .input('retryCount', sql.Int, newRetryCount)
+                    .query(`
+                        UPDATE EBM.PendingSSORequests
+                        SET Status = 'pending', RetryCount = @retryCount, ReviewedBy = NULL,
+                            ReviewedAt = NULL, RejectionReason = NULL, AssignedRoleId = NULL,
+                            RequestedAt = SYSUTCDATETIME()
+                        WHERE Email = @email
+                    `);
+                if (newRetryCount >= MAX_RESUBMIT_RETRIES) {
+                    await sendSsoFinalRetryEmail(email, SSO_APP_LABEL);
+                } else {
+                    await sendSsoFirstRetryEmail(email, SSO_APP_LABEL);
+                }
+                return redirectToSsoStatus(res, 'pending');
+            }
+
+            const retriesLeft = Math.max(MAX_RESUBMIT_RETRIES - retryCount, 0);
+            return redirectToSsoStatus(res, 'rejected', existing.RejectionReason, retriesLeft);
+        }
+
+        // 3. Crear la solicitud nueva
+        await db.request()
+            .input('email', sql.VarChar(255), email)
+            .input('fullName', sql.VarChar(200), profile.name || profile.preferred_username || null)
+            .input('provider', sql.VarChar(50), 'sso')
+            .input('casdoorUserId', sql.VarChar(100), profile.sub || '')
+            .input('appCode', sql.VarChar(20), SSO_APP_CODE)
+            .query(`
+                INSERT INTO EBM.PendingSSORequests (Email, FullName, Provider, CasdoorUserId, AppCode)
+                VALUES (@email, @fullName, @provider, @casdoorUserId, @appCode)
+            `);
+
+        await sendSsoPendingEmail(email, SSO_APP_LABEL);
+
+        return redirectToSsoStatus(res, 'pending');
+    } catch (error: unknown) {
+        console.error('[SSO Callback] Error:', safeError(error), sanitizeLog(String(req.query.state || '')));
+        return redirectToSsoStatus(res, 'error', 'Ocurrió un error validando tu sesión. Intenta de nuevo.');
+    }
 });
 
 // --- CAS ---

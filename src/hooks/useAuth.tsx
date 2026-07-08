@@ -6,7 +6,7 @@ import { API_BASE_URL } from '../services/apiClient';
 interface AuthContextType {
     user: User | null;
     sessionConfig: SessionConfig | null;
-    login: (user: User, token?: string, remember?: boolean, sessionConfig?: SessionConfig) => void;
+    login: (user: User, token?: string, remember?: boolean, sessionConfig?: SessionConfig, skipSharedCookie?: boolean) => void;
     logout: () => void;
     isAuthenticated: boolean;
     isLoading: boolean;
@@ -124,9 +124,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                     // Almacenar token fresco del servidor (incluye casRUC para RLS cross-app SSO)
                     if (data.token) {
                         StorageService.setToken(data.token);
-                        const isProd = window.location.hostname.endsWith('.siatc.cloud');
-                        const cookieDomain = isProd ? '; domain=.siatc.cloud' : '';
-                        document.cookie = `token=${data.token}; path=/${cookieDomain}; max-age=${24 * 60 * 60}; SameSite=Lax; Secure=${isProd ? 'true' : 'false'}`;
+                        // No reescribir la cookie compartida si el token viene del piloto Casdoor
+                        // (claim ssoPilot=true, propagado por el backend en GET /api/auth/me)
+                        const freshPayload = decodeJwt(data.token);
+                        if (!freshPayload?.ssoPilot) {
+                            const isProd = window.location.hostname.endsWith('.siatc.cloud');
+                            const cookieDomain = isProd ? '; domain=.siatc.cloud' : '';
+                            document.cookie = `token=${data.token}; path=/${cookieDomain}; max-age=${24 * 60 * 60}; SameSite=Lax; Secure=${isProd ? 'true' : 'false'}`;
+                        }
                     }
                 } else {
                     logout();
@@ -142,7 +147,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         validateSession();
     }, [logout]);
 
-    const login = useCallback((newUser: User, token?: string, remember: boolean = true, newSessionConfig?: SessionConfig) => {
+    const login = useCallback((newUser: User, token?: string, remember: boolean = true, newSessionConfig?: SessionConfig, skipSharedCookie = false) => {
         setUser(newUser);
         StorageService.setCurrentUser(newUser, remember);
         if (newSessionConfig) {
@@ -152,10 +157,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         if (token) {
             StorageService.setToken(token, remember);
 
-            // Set shared cookie for SSO across subdomains
-            const isProd = window.location.hostname.endsWith('.siatc.cloud');
-            const cookieDomain = isProd ? '; domain=.siatc.cloud' : '';
-            document.cookie = `token=${token}; path=/${cookieDomain}; max-age=${24 * 60 * 60}; SameSite=Lax; Secure=${isProd ? 'true' : 'false'}`;
+            // Set shared cookie for SSO across subdomains — se omite en el piloto de Casdoor
+            // (SsoLoginPage) para no interferir con sesiones reales del resto del ecosistema
+            // mientras esto corre en "Valorizaciones QA".
+            if (!skipSharedCookie) {
+                const isProd = window.location.hostname.endsWith('.siatc.cloud');
+                const cookieDomain = isProd ? '; domain=.siatc.cloud' : '';
+                document.cookie = `token=${token}; path=/${cookieDomain}; max-age=${24 * 60 * 60}; SameSite=Lax; Secure=${isProd ? 'true' : 'false'}`;
+            }
         }
     }, []);
 

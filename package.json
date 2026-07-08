@@ -12,6 +12,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@azure/msal-node": "^5.4.0",
     "axios": "^1.14.0",
     "bcrypt": "^6.0.0",
     "clsx": "^2.1.1",
@@ -31,6 +32,7 @@
     "lucide-react": "^1.7.0",
     "mssql": "^12.2.1",
     "multer": "^2.1.1",
+    "nodemailer": "^9.0.3",
     "rate-limit-redis": "^5.0.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
@@ -51,6 +53,7 @@
     "@types/mssql": "^9.1.11",
     "@types/multer": "^2.1.0",
     "@types/node": "^24.12.2",
+    "@types/nodemailer": "^8.0.1",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@types/uuid": "^10.0.0",

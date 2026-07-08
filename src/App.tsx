@@ -9,6 +9,8 @@ import { useAppConfig } from './context/AppConfigContext';
 
 // Pages - Lazy loaded
 const LoginPage = lazy(() => import('./pages/LoginPage'));
+const SsoLoginPage = lazy(() => import('./pages/SsoLoginPage'));
+const SsoStatusPage = lazy(() => import('./pages/SsoStatusPage'));
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
 const ValuationsPage = lazy(() => import('./pages/ValuationsPage'));
 const TarifarioPage = lazy(() => import('./pages/TarifarioPage'));
@@ -61,7 +63,9 @@ function App() {
             <Suspense fallback={<LoadingFallback />}>
             <Routes>
               <Route path="/login" element={<LoginPage />} />
-              
+              <Route path="/sso-login" element={<SsoLoginPage />} />
+              <Route path="/sso-status" element={<SsoStatusPage />} />
+
               {/* Rutas protegidas se añadirán con MainLayout */}
               <Route element={<MainLayout />}>
                 <Route path="/dashboard" element={<DashboardPage />} />
