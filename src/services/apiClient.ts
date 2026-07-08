@@ -18,9 +18,8 @@ export class ApiClient {
     });
 
     if (!response.ok) {
-        if (response.status === 401 || response.status === 403) {
+        if (response.status === 401) {
              StorageService.clear();
-             // Redirigir al inicio para forzar re-autenticación
              window.location.href = '/login?expired=true';
              throw new Error('AUTH_EXPIRED');
         }
