@@ -262,7 +262,7 @@ const verifyToken = async (req: Request, res: Response, next: NextFunction) => {
         }
         (req as AuthRequest).user = decoded;
         next();
-    } catch (_err) { res.status(403).json({ error: 'Token inválido' }); }
+    } catch (_err) { res.status(401).json({ error: 'Token inválido o expirado' }); }
 };
 
 app.get('/api/applications', verifyToken, async (req: Request, res: Response) => {
@@ -1681,7 +1681,7 @@ app.post('/api/valuations/finalize/:id', verifyToken, async (req: Request, res: 
 });
 
 
-app.post('/api/valuations/reopen/:id', verifyToken, verifyPermission('VAL.REOPEN'), async (req: Request, res: Response) => {
+app.post('/api/valuations/reopen/:id', verifyToken, verifyPermission('val.reopen'), async (req: Request, res: Response) => {
     const { id } = req.params;
     const currentUser = (req as AuthRequest).user as JwtUserPayload;
     try {

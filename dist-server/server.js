@@ -237,7 +237,7 @@ const verifyToken = async (req, res, next) => {
         next();
     }
     catch (_err) {
-        res.status(403).json({ error: 'Token inválido' });
+        res.status(401).json({ error: 'Token inválido o expirado' });
     }
 };
 app.get('/api/applications', verifyToken, async (req, res) => {
@@ -1565,7 +1565,7 @@ app.post('/api/valuations/finalize/:id', verifyToken, async (req, res) => {
         res.status(500).json({ error: safeError(err) });
     }
 });
-app.post('/api/valuations/reopen/:id', verifyToken, verifyPermission('VAL.REOPEN'), async (req, res) => {
+app.post('/api/valuations/reopen/:id', verifyToken, verifyPermission('val.reopen'), async (req, res) => {
     const { id } = req.params;
     const currentUser = req.user;
     try {
