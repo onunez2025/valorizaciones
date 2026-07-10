@@ -30,8 +30,10 @@ export const SsoLoginPage: React.FC = () => {
                 if (!response.ok) throw new Error('SSO session validation failed');
                 const data = await response.json();
 
+                // Se usa data.token (el "freshToken" que /auth/me re-firma con full_name y demás
+                // campos completos), no el ssoToken crudo del callback.
                 // skipSharedCookie=true — este piloto no escribe la cookie domain=.siatc.cloud
-                login(data.user, token, undefined, undefined, true);
+                login(data.user, data.token, undefined, undefined, true);
                 navigate('/dashboard', { replace: true });
             } catch (err) {
                 console.error('SSO login error:', err);
