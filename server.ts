@@ -1933,6 +1933,7 @@ app.get('/api/tarifarios/:casId', verifyToken, async (req: Request, res: Respons
 
 app.post('/api/tarifarios/create', verifyToken, verifyPermission('val.tarifario.edit'), async (req: Request, res: Response) => {
     const { empresa, categoria, servicio, importe, fecha_inicio, fecha_fin, estado } = req.body;
+    const currentUser = (req as AuthRequest).user!;
     try {
         const db = await getDb();
         const newId = crypto.randomBytes(4).toString('hex');
@@ -1945,13 +1946,16 @@ app.post('/api/tarifarios/create', verifyToken, verifyPermission('val.tarifario.
         addInput(tarCrearReq, 'fecha_inicio', sql.DateTime, fecha_inicio);
         addInput(tarCrearReq, 'fecha_fin', sql.DateTime, fecha_fin || null);
         addInput(tarCrearReq, 'estado', sql.VarChar(1), estado || 'A');
+        addInput(tarCrearReq, 'creadoPor', sql.VarChar(100), currentUser.username);
         await tarCrearReq.query(`
                 INSERT INTO [dbo].[GAC_APP_TB_TARIFARIO] (
                     ID_Tarifario, Empresa, Categoria, Servicio,
-                    Fecha_inicio, Fecha_fin, Importe, Estado
+                    Fecha_inicio, Fecha_fin, Importe, Estado,
+                    Creado_El, Creado_Por
                 ) VALUES (
                     @id, @empresa, @categoria, @servicio,
-                    @fecha_inicio, @fecha_fin, @importe, @estado
+                    @fecha_inicio, @fecha_fin, @importe, @estado,
+                    GETDATE(), @creadoPor
                 )
             `);
         res.json({ success: true, id: newId });
@@ -2008,15 +2012,17 @@ app.post('/api/materials', verifyToken, async (req: Request, res: Response) => {
 
 app.post('/api/tarifarios/update', verifyToken, verifyPermission('val.tarifario.edit'), async (req: Request, res: Response) => {
     const { id, importe, estado } = req.body;
+    const currentUser = (req as AuthRequest).user!;
     try {
         const db = await getDb();
         const tarUpdReq = db.request();
         addInput(tarUpdReq, 'id', sql.VarChar(8), id);
         addInput(tarUpdReq, 'importe', sql.Decimal(18, 2), importe);
         addInput(tarUpdReq, 'estado', sql.VarChar(1), estado);
+        addInput(tarUpdReq, 'modificadoPor', sql.VarChar(100), currentUser.username);
         await tarUpdReq.query(`
                 UPDATE [dbo].[GAC_APP_TB_TARIFARIO]
-                SET Importe = @importe, Estado = @estado
+                SET Importe = @importe, Estado = @estado, Modificado_El = GETDATE(), Modificado_Por = @modificadoPor
                 WHERE ID_Tarifario = @id
             `);
         res.json({ success: true });
@@ -2025,11 +2031,12 @@ app.post('/api/tarifarios/update', verifyToken, verifyPermission('val.tarifario.
 
 app.post('/api/tarifarios/batch', verifyToken, verifyPermission('val.tarifario.edit'), async (req: Request, res: Response) => {
     const { casId, rates } = req.body;
+    const currentUser = (req as AuthRequest).user!;
     try {
         const db = await getDb();
         const transaction = new sql.Transaction(db);
         await transaction.begin();
-        
+
         try {
             for (const rate of rates) {
                 const batchReq = transaction.request();
@@ -2042,18 +2049,20 @@ app.post('/api/tarifarios/batch', verifyToken, verifyPermission('val.tarifario.e
                 addInput(batchReq, 'f_ini', sql.DateTime, rate.Fecha_inicio ? new Date(rate.Fecha_inicio) : new Date());
                 addInput(batchReq, 'f_fin', sql.DateTime, rate.Fecha_fin ? new Date(rate.Fecha_fin) : null);
                 addInput(batchReq, 'est', sql.VarChar(1), rate.Estado || 'A');
+                addInput(batchReq, 'user', sql.VarChar(100), currentUser.username);
                 await batchReq.query(`
                         IF EXISTS (SELECT 1 FROM [dbo].[GAC_APP_TB_TARIFARIO] WHERE ID_Tarifario = @id)
                         BEGIN
                             UPDATE [dbo].[GAC_APP_TB_TARIFARIO]
                             SET Importe = @imp, Categoria = @cat, Servicio = @serv,
-                                Fecha_inicio = @f_ini, Fecha_fin = @f_fin, Estado = @est
+                                Fecha_inicio = @f_ini, Fecha_fin = @f_fin, Estado = @est,
+                                Modificado_El = GETDATE(), Modificado_Por = @user
                             WHERE ID_Tarifario = @id
                         END
                         ELSE
                         BEGIN
-                            INSERT INTO [dbo].[GAC_APP_TB_TARIFARIO] (ID_Tarifario, Empresa, Categoria, Servicio, Importe, Fecha_inicio, Fecha_fin, Estado)
-                            VALUES (@id, @casId, @cat, @serv, @imp, @f_ini, @f_fin, @est)
+                            INSERT INTO [dbo].[GAC_APP_TB_TARIFARIO] (ID_Tarifario, Empresa, Categoria, Servicio, Importe, Fecha_inicio, Fecha_fin, Estado, Creado_El, Creado_Por)
+                            VALUES (@id, @casId, @cat, @serv, @imp, @f_ini, @f_fin, @est, GETDATE(), @user)
                         END
                     `);
             }
@@ -2143,6 +2152,15 @@ interface TarifarioImportRow {
     ID_Tarifario?: string;
 }
 
+async function resolveServicioCodigo(db: sql.ConnectionPool, servicio: string): Promise<string> {
+    const trimmed = (servicio || '').trim();
+    if (/^CA_\d+$/i.test(trimmed)) return trimmed;
+    const lookup = await db.request()
+        .input('nombre', sql.NVarChar(255), trimmed)
+        .query("SELECT TOP 1 Id FROM [SIATC].[FSM_TipoServicio] WHERE UPPER(TRIM(Descripcion)) = UPPER(@nombre)");
+    return lookup.recordset[0]?.Id || trimmed;
+}
+
 app.post('/api/tarifarios/import/preview', verifyToken, async (req: Request, res: Response) => {
     const { rows } = req.body as { rows: TarifarioImportRow[] };
     try {
@@ -2169,18 +2187,18 @@ app.post('/api/tarifarios/import/preview', verifyToken, async (req: Request, res
                 preview.push({ ...row, CAS_ID: casId, Status: 'ERROR', Message: `Importe inválido: "${row.Importe}"` });
                 continue;
             }
+            const servicioCodigo = await resolveServicioCodigo(db, row.Servicio);
             const existing = await db.request()
                 .input('casId', sql.VarChar(50), casId)
                 .input('cat', sql.VarChar(100), (row.Categoria || '').trim())
-                .input('serv', sql.VarChar(100), (row.Servicio || '').trim())
-                .input('fi', sql.Date, fi)
+                .input('serv', sql.VarChar(100), servicioCodigo)
                 .query(`
                     SELECT TOP 1 ID_Tarifario, CAST(Importe AS FLOAT) as Importe
                     FROM [dbo].[GAC_APP_TB_TARIFARIO]
                     WHERE Empresa = @casId
                       AND TRIM(Categoria) = TRIM(@cat)
                       AND TRIM(Servicio) = TRIM(@serv)
-                      AND Fecha_inicio = @fi
+                      AND Estado = 'A'
                 `);
             if (existing.recordset.length === 0) {
                 preview.push({ ...row, CAS_ID: casId, Status: 'INSERT', Message: 'Nueva tarifa', Importe_Actual: null });
@@ -2199,6 +2217,7 @@ app.post('/api/tarifarios/import/preview', verifyToken, async (req: Request, res
 
 app.post('/api/tarifarios/import/confirm', verifyToken, async (req: Request, res: Response) => {
     const { rows } = req.body as { rows: TarifarioImportRow[] };
+    const currentUser = (req as AuthRequest).user!;
     try {
         const db = await getDb();
         const transaction = new sql.Transaction(db);
@@ -2207,7 +2226,7 @@ app.post('/api/tarifarios/import/confirm', verifyToken, async (req: Request, res
         try {
             for (const row of rows) {
                 const cat = row.Categoria.trim();
-                const serv = row.Servicio.trim();
+                const serv = await resolveServicioCodigo(db, row.Servicio);
                 const casId = row.CAS_ID;
 
                 if (row.Status === 'INSERT') {
@@ -2236,10 +2255,11 @@ app.post('/api/tarifarios/import/confirm', verifyToken, async (req: Request, res
                         .input('fi', sql.Date, new Date(row.Fecha_inicio))
                         .input('ff', sql.Date, row.Fecha_fin ? new Date(row.Fecha_fin) : null)
                         .input('est', sql.VarChar(10), row.Estado || 'A')
+                        .input('user', sql.VarChar(100), currentUser.username)
                         .query(`
                             INSERT INTO [dbo].[GAC_APP_TB_TARIFARIO]
-                            (ID_Tarifario, Empresa, Categoria, Servicio, Importe, Fecha_inicio, Fecha_fin, Estado)
-                            VALUES (@id, @casId, @cat, @serv, @imp, @fi, @ff, @est)
+                            (ID_Tarifario, Empresa, Categoria, Servicio, Importe, Fecha_inicio, Fecha_fin, Estado, Creado_El, Creado_Por)
+                            VALUES (@id, @casId, @cat, @serv, @imp, @fi, @ff, @est, GETDATE(), @user)
                         `);
                     inserted++;
                 } else if (row.Status === 'UPDATE') {
@@ -2265,9 +2285,11 @@ app.post('/api/tarifarios/import/confirm', verifyToken, async (req: Request, res
                         .input('imp', sql.Decimal(18, 2), parseFloat(row.Importe))
                         .input('ff', sql.Date, row.Fecha_fin ? new Date(row.Fecha_fin) : null)
                         .input('est', sql.VarChar(10), row.Estado || 'A')
+                        .input('user', sql.VarChar(100), currentUser.username)
                         .query(`
                             UPDATE [dbo].[GAC_APP_TB_TARIFARIO]
-                            SET Importe = @imp, Fecha_fin = @ff, Estado = @est
+                            SET Importe = @imp, Fecha_fin = @ff, Estado = @est,
+                                Modificado_El = GETDATE(), Modificado_Por = @user
                             WHERE ID_Tarifario = @id
                         `);
                     updated++;
