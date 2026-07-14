@@ -3,6 +3,10 @@ import type { User, Permission, SessionConfig } from '../types';
 import { StorageService } from '../services/storageService';
 import { API_BASE_URL } from '../services/apiClient';
 
+// Fase 20: dominio de la cookie SSO compartida, configurable en build-time. Sin definir, el
+// comportamiento es idéntico al de siempre (.siatc.cloud) -- producción real no cambia.
+const COOKIE_DOMAIN = import.meta.env.VITE_COOKIE_DOMAIN || '.siatc.cloud';
+
 interface AuthContextType {
     user: User | null;
     sessionConfig: SessionConfig | null;
@@ -48,7 +52,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
         // Clear shared cookie
         const isProd = window.location.hostname.endsWith('.siatc.cloud');
-        const cookieDomain = isProd ? '; domain=.siatc.cloud' : '';
+        const cookieDomain = isProd ? `; domain=${COOKIE_DOMAIN}` : '';
         document.cookie = `token=; path=/${cookieDomain}; max-age=0; SameSite=Lax; Secure=${isProd ? 'true' : 'false'}`;
 
         window.location.href = '/login';
@@ -129,7 +133,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                         const freshPayload = decodeJwt(data.token);
                         if (!freshPayload?.ssoPilot) {
                             const isProd = window.location.hostname.endsWith('.siatc.cloud');
-                            const cookieDomain = isProd ? '; domain=.siatc.cloud' : '';
+                            const cookieDomain = isProd ? `; domain=${COOKIE_DOMAIN}` : '';
                             document.cookie = `token=${data.token}; path=/${cookieDomain}; max-age=${24 * 60 * 60}; SameSite=Lax; Secure=${isProd ? 'true' : 'false'}`;
                         }
                     }
@@ -162,7 +166,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             // mientras esto corre en "Valorizaciones QA".
             if (!skipSharedCookie) {
                 const isProd = window.location.hostname.endsWith('.siatc.cloud');
-                const cookieDomain = isProd ? '; domain=.siatc.cloud' : '';
+                const cookieDomain = isProd ? `; domain=${COOKIE_DOMAIN}` : '';
                 document.cookie = `token=${token}; path=/${cookieDomain}; max-age=${24 * 60 * 60}; SameSite=Lax; Secure=${isProd ? 'true' : 'false'}`;
             }
         }

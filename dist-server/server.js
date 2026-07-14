@@ -27,6 +27,10 @@ const APP_IDENTIFIER = 'VAL';
 const C4C_BASE_URL = process.env.C4C_BASE_URL;
 const C4C_AUTH = Buffer.from(`${process.env.C4C_USER}:${process.env.C4C_PASSWORD}`).toString('base64');
 const JWT_SECRET = process.env.JWT_SECRET || '';
+// Fase 20: dominio de la cookie SSO compartida configurable por entorno. Sin definir, el
+// comportamiento es idéntico al de siempre (.siatc.cloud) -- producción real no cambia.
+// En QA se configura como .qa.siatc.cloud para aislar la sesión compartida de producción.
+const COOKIE_DOMAIN = process.env.COOKIE_DOMAIN || '.siatc.cloud';
 if (process.env.NODE_ENV === 'production' && !JWT_SECRET) {
     console.error('CRITICAL FATAL ERROR: JWT_SECRET environment variable is not set. Server cannot start securely.');
     process.exit(1);
@@ -324,7 +328,7 @@ app.post('/api/auth/login', async (req, res) => {
         const token = jwt.sign({ id: user.Id, username: user.Username, role: user.RoleName, perms, casId: user.cas_id || null, casRUC: user.cas_ruc || null }, JWT_SECRET, { expiresIn: '12h' });
         const ssoToken = jwt.sign({ id: user.Id, role: user.RoleName, role_name: user.RoleName, username: user.Username, apps: user.Apps || '', casId: user.cas_id || null }, JWT_SECRET, { expiresIn: '12h' });
         if (process.env.NODE_ENV === 'production') {
-            res.cookie('token', ssoToken, { domain: '.siatc.cloud', maxAge: 12 * 60 * 60 * 1000, httpOnly: false, secure: true, sameSite: 'lax', path: '/' });
+            res.cookie('token', ssoToken, { domain: COOKIE_DOMAIN, maxAge: 12 * 60 * 60 * 1000, httpOnly: false, secure: true, sameSite: 'lax', path: '/' });
         }
         res.json({ token, user: { id: user.Id, username: user.Username, full_name: user.FullName, email: user.Email, role_name: user.RoleName, management_id: user.ManagementId, management_name: user.ManagementName, avatar_url: user.AvatarUrl, permissions: perms, apps: user.Apps, requires_password_change: user.RequiresPasswordChange === 1 }, sessionConfig: { timeoutMinutes, warningMinutes } });
     }
@@ -358,16 +362,17 @@ app.get('/api/auth/me', verifyToken, async (req, res) => {
         addInput(permsReqMe, 'rid', sql.UniqueIdentifier, user.RoleId);
         addInput(permsReqMe, 'app', sql.NVarChar(20), APP_IDENTIFIER);
         const perms = (await permsReqMe.query("SELECT Permission FROM EBM.RolePermissions WHERE RoleId = @rid AND (Permission LIKE @app + '.%' OR Permission LIKE 'ebm.%')")).recordset.map(p => p.Permission);
-        // Los tokens del piloto Casdoor (ssoPilot=true) no deben reescribir la cookie compartida
-        // domain=.siatc.cloud aquí, ni propagarse sin el claim al freshToken — este endpoint se
-        // llama también desde SsoLoginPage justo después del login social, y el frontend reescribe
-        // document.cookie con el freshToken devuelto (ver validateSession() en useAuth.tsx).
+        // Los tokens marcados ssoPilot=true no deben reescribir la cookie compartida aquí ni
+        // propagarse sin el claim al freshToken — hoy eso pasa solo cuando COOKIE_DOMAIN no está
+        // configurada (producción real, sin dominio QA propio). Cuando COOKIE_DOMAIN sí está
+        // configurada (Fase 20, entorno QA), el callback de Casdoor deja de firmar ssoPilot=true,
+        // así que esta cookie sí se escribe y el SSO cruzado real funciona.
         const ssoPilot = req.user?.ssoPilot;
         // Emitir token fresco con casRUC para soporte SSO cross-app
         const freshToken = jwt.sign({ id: user.Id, username: user.Username, role: user.RoleName, perms, casId: user.cas_id || null, casRUC: user.cas_ruc || null, ...(ssoPilot ? { ssoPilot: true } : {}) }, JWT_SECRET, { expiresIn: '12h' });
         const ssoTokenMe = jwt.sign({ id: user.Id, role: user.RoleName, role_name: user.RoleName, username: user.Username, apps: user.Apps || '', casId: user.cas_id || null }, JWT_SECRET, { expiresIn: '12h' });
         if (process.env.NODE_ENV === 'production' && !ssoPilot) {
-            res.cookie('token', ssoTokenMe, { domain: '.siatc.cloud', maxAge: 12 * 60 * 60 * 1000, httpOnly: false, secure: true, sameSite: 'lax', path: '/' });
+            res.cookie('token', ssoTokenMe, { domain: COOKIE_DOMAIN, maxAge: 12 * 60 * 60 * 1000, httpOnly: false, secure: true, sameSite: 'lax', path: '/' });
         }
         res.json({ token: freshToken, user: { id: user.Id, username: user.Username, full_name: user.FullName, email: user.Email, role_name: user.RoleName, management_id: user.ManagementId, management_name: user.ManagementName, avatar_url: user.AvatarUrl, permissions: perms, apps: user.Apps, casId: user.cas_id || null, casRUC: user.cas_ruc || null } });
     }
@@ -432,10 +437,15 @@ app.get('/api/auth/sso/callback', async (req, res) => {
             addInput(permsReq, 'rid', sql.UniqueIdentifier, user.role_id);
             addInput(permsReq, 'app', sql.NVarChar(20), SSO_APP_CODE);
             const perms = (await permsReq.query("SELECT Permission FROM EBM.RolePermissions WHERE RoleId = @rid AND (Permission LIKE @app + '.%' OR Permission LIKE 'ebm.%')")).recordset.map((p) => p.Permission);
-            const token = jwt.sign({ id: user.id, username: user.username, role: user.role_name, perms, casId: user.cas_id || null, casRUC: user.cas_ruc || null, ssoPilot: true }, JWT_SECRET, { expiresIn: '12h' });
-            // Nota: a propósito NO se setea la cookie compartida domain=.siatc.cloud en este piloto
-            // (mismo criterio que el resto del ecosistema — evita interferir con sesiones reales
-            // mientras esto corre en "Valorizaciones QA").
+            const token = jwt.sign({
+                id: user.id, username: user.username, role: user.role_name, perms,
+                casId: user.cas_id || null, casRUC: user.cas_ruc || null,
+                // Fase 20: ssoPilot solo se firma si no hay un COOKIE_DOMAIN propio configurado (ej.
+                // producción real todavía sin dominio QA aislado). Con COOKIE_DOMAIN configurada
+                // (entorno QA, dominio .qa.siatc.cloud), se omite para permitir la cookie compartida
+                // real entre las 10 apps QA sin arriesgar sesiones de producción.
+                ...(process.env.COOKIE_DOMAIN ? {} : { ssoPilot: true }),
+            }, JWT_SECRET, { expiresIn: '12h' });
             const params = new URLSearchParams({ ssoToken: token });
             return res.redirect(`${FRONTEND_URL}/sso-login?${params.toString()}`);
         }

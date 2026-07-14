@@ -32,8 +32,9 @@ export const SsoLoginPage: React.FC = () => {
 
                 // Se usa data.token (el "freshToken" que /auth/me re-firma con full_name y demás
                 // campos completos), no el ssoToken crudo del callback.
-                // skipSharedCookie=true — este piloto no escribe la cookie domain=.siatc.cloud
-                login(data.user, data.token, undefined, undefined, true);
+                // Fase 20: skipSharedCookie solo se activa si no hay VITE_COOKIE_DOMAIN configurada
+                // (producción real, sin dominio QA propio) — en QA sí se escribe la cookie compartida.
+                login(data.user, data.token, undefined, undefined, !import.meta.env.VITE_COOKIE_DOMAIN);
                 navigate('/dashboard', { replace: true });
             } catch (err) {
                 console.error('SSO login error:', err);
