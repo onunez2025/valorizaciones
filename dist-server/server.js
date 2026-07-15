@@ -225,6 +225,30 @@ async function blacklistToken(token, exp) {
         console.error('[Redis] Error al blacklistear token:', err);
     }
 }
+// Invalida TODOS los tokens de un usuario emitidos hasta ahora, sin importar cuántas apps del
+// ecosistema los hayan re-firmado (cada /auth/me emite un JWT nuevo con hash distinto, así que
+// blacklistToken() por sí solo no alcanza para un logout real entre apps -- ver bitácora Fase 20).
+// verifyToken rechaza cualquier token con iat <= este timestamp, sin importar su hash.
+async function invalidateAllUserSessions(userId) {
+    try {
+        const now = Math.floor(Date.now() / 1000);
+        await getRedisClient().set(`logout-after:${userId}`, String(now), 'EX', 30 * 24 * 60 * 60);
+    }
+    catch (err) {
+        console.error('[Redis] Error al invalidar sesiones del usuario:', err);
+    }
+}
+async function isSessionInvalidated(userId, iat) {
+    if (!iat)
+        return false;
+    try {
+        const logoutAfter = await getRedisClient().get(`logout-after:${userId}`);
+        return logoutAfter !== null && iat <= parseInt(logoutAfter, 10);
+    }
+    catch {
+        return false;
+    }
+}
 // --- SECURITY HELPERS (ver CLAUDE.md) ---
 const safeError = (err) => err instanceof Error ? `${err.message}\n${err.stack}` : String(err);
 const sanitizeLog = (val, maxLen = 200) => String(val ?? '').replace(/[\r\n\t\x00-\x1F\x7F]/g, ' ').slice(0, maxLen); // eslint-disable-line no-control-regex
@@ -235,6 +259,9 @@ const verifyToken = async (req, res, next) => {
     try {
         const decoded = jwt.verify(token, JWT_SECRET);
         if (await isTokenBlacklisted(token)) {
+            return res.status(401).json({ error: 'Sesión cerrada. Inicia sesión nuevamente.' });
+        }
+        if (await isSessionInvalidated(decoded.id, decoded.iat)) {
             return res.status(401).json({ error: 'Sesión cerrada. Inicia sesión nuevamente.' });
         }
         req.user = decoded;
@@ -339,6 +366,10 @@ app.post('/api/auth/login', async (req, res) => {
 app.post('/api/auth/logout', verifyToken, async (req, res) => {
     const token = req.headers['authorization'].split(' ')[1];
     await blacklistToken(token, req.user.exp ?? 0); // eslint-disable-line @typescript-eslint/no-explicit-any
+    // Invalida también cualquier otro token del mismo usuario (ej. re-firmado por otra app del
+    // ecosistema vía su propio /auth/me) -- un logout debe cerrar la sesión en todas las apps QA,
+    // no solo revocar el token puntual que se usó para llamar a este endpoint.
+    await invalidateAllUserSessions(req.user.id); // eslint-disable-line @typescript-eslint/no-explicit-any
     res.json({ message: 'Sesión cerrada correctamente.' });
 });
 app.get('/api/auth/me', verifyToken, async (req, res) => {
