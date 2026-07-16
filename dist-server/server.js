@@ -392,7 +392,10 @@ app.get('/api/auth/me', verifyToken, async (req, res) => {
     try {
         const { id } = req.user;
         const db = await getDb();
-        const result = await db.request().input('id', sql.UniqueIdentifier, id).query(`
+        const result = await db.request()
+            .input('id', sql.UniqueIdentifier, id)
+            .input('app', sql.NVarChar(20), APP_IDENTIFIER)
+            .query(`
             SELECT u.*, r.Name as RoleName, m.Name as ManagementName,
                 uc.CASId as cas_id, TRIM(c.RUC) as cas_ruc
             FROM EBM.Users u
@@ -400,7 +403,7 @@ app.get('/api/auth/me', verifyToken, async (req, res) => {
             LEFT JOIN EBM.Managements m ON u.ManagementId = m.Id
             LEFT JOIN EBM.UserCAS uc ON u.Id = uc.UserId
             LEFT JOIN dbo.GAC_APP_TB_CAS c ON uc.CASId = c.ID_CAS
-            WHERE u.Id = @id
+            WHERE u.Id = @id AND (u.Apps LIKE '%' + @app + '%' OR u.Apps LIKE '%ADMIN%')
         `);
         const user = result.recordset[0];
         if (!user)
