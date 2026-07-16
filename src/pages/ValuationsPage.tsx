@@ -46,7 +46,7 @@ export default function ValuationsPage() {
     const [isClosing, setIsClosing] = useState(false);
     const [activeTab, setActiveTab] = useState<'services' | 'penalties'>('services');
     const [globalSearch, setGlobalSearch] = useState('');
-    const [globalSearchResult, setGlobalSearchResult] = useState<{ error?: string; Ticket?: string; CAS_Nombre?: string; Fecha?: string; RUC?: string } | null>(null);
+    const [globalSearchResult, setGlobalSearchResult] = useState<{ error?: string; Ticket?: string; CAS_Nombre?: string; Fecha?: string; RUC?: string; TarifaBaseCalculada?: number; Adicionales?: number } | null>(null);
     const [isSearchingGlobal, setIsSearchingGlobal] = useState(false);
     
     // Historial de Cierres
@@ -1650,6 +1650,13 @@ export default function ValuationsPage() {
                             <div className="flex flex-col">
                                 <span className="text-[10px] font-bold opacity-40">Fecha</span>
                                 <span className="text-sm font-bold">{new Date(globalSearchResult.Fecha!).toLocaleDateString('es-PE', { timeZone: 'UTC' })}</span>
+                            </div>
+                            <div className="h-8 w-px bg-primary/10" />
+                            <div className="flex flex-col">
+                                <span className="text-[10px] font-bold opacity-40">Importe</span>
+                                <span className="text-sm font-bold font-data">
+                                    S/ {((globalSearchResult.TarifaBaseCalculada || 0) + (globalSearchResult.Adicionales || 0)).toLocaleString('es-PE', { minimumFractionDigits: 2 })}
+                                </span>
                             </div>
                             {hasPermission('val.penalties.create') && (
                                 <button
