@@ -2066,6 +2066,19 @@ async function resolveServicioCodigo(db: sql.ConnectionPool, servicio: string): 
     return lookup.recordset[0]?.Id || trimmed;
 }
 
+// Construye una sola vez el mapa Descripcion(mayus/trim) -> Id de FSM_TipoServicio,
+// para resolver códigos de servicio en memoria en vez de 1 query SQL por fila.
+async function buildServicioCodigoResolver(db: sql.ConnectionPool): Promise<(servicio: string) => string> {
+    const result = await db.request().query("SELECT Id, Descripcion FROM [SIATC].[FSM_TipoServicio]");
+    const map = new Map<string, string>();
+    result.recordset.forEach((r: { Id: string; Descripcion: string }) => map.set((r.Descripcion || '').trim().toUpperCase(), r.Id));
+    return (servicio: string) => {
+        const trimmed = (servicio || '').trim();
+        if (/^CA_\d+$/i.test(trimmed)) return trimmed;
+        return map.get(trimmed.toUpperCase()) || trimmed;
+    };
+}
+
 app.post('/api/tarifarios/import/preview', verifyToken, async (req: Request, res: Response) => {
     const { rows } = req.body as { rows: TarifarioImportRow[] };
     try {
@@ -2073,6 +2086,21 @@ app.post('/api/tarifarios/import/preview', verifyToken, async (req: Request, res
         const casResult = await db.request().query("SELECT ID_CAS, Nombre_CAS FROM [dbo].[GAC_APP_TB_CAS]");
         const casMap = new Map<string, number>();
         casResult.recordset.forEach((c: { Nombre_CAS: string; ID_CAS: number }) => casMap.set(c.Nombre_CAS.toUpperCase().trim(), c.ID_CAS));
+
+        const resolveServicio = await buildServicioCodigoResolver(db);
+
+        // Todas las tarifas activas en una sola consulta, para lookup en memoria
+        // en vez de 1 query SQL por fila (evita N+1 con archivos grandes).
+        const existingResult = await db.request().query(`
+            SELECT ID_Tarifario, Empresa, Categoria, Servicio, CAST(Importe AS FLOAT) as Importe
+            FROM [dbo].[GAC_APP_TB_TARIFARIO]
+            WHERE Estado = 'A'
+        `);
+        const existingMap = new Map<string, { ID_Tarifario: string; Importe: number }>();
+        existingResult.recordset.forEach((r: { ID_Tarifario: string; Empresa: number; Categoria: string; Servicio: string; Importe: number }) => {
+            const key = `${r.Empresa}|${(r.Categoria || '').trim()}|${(r.Servicio || '').trim()}`;
+            existingMap.set(key, { ID_Tarifario: r.ID_Tarifario, Importe: r.Importe });
+        });
 
         const preview: TarifarioImportRow[] = [];
         for (const row of rows) {
@@ -2092,28 +2120,15 @@ app.post('/api/tarifarios/import/preview', verifyToken, async (req: Request, res
                 preview.push({ ...row, CAS_ID: casId, Status: 'ERROR', Message: `Importe inválido: "${row.Importe}"` });
                 continue;
             }
-            const servicioCodigo = await resolveServicioCodigo(db, row.Servicio);
-            const existing = await db.request()
-                .input('casId', sql.VarChar(50), casId)
-                .input('cat', sql.VarChar(100), (row.Categoria || '').trim())
-                .input('serv', sql.VarChar(100), servicioCodigo)
-                .query(`
-                    SELECT TOP 1 ID_Tarifario, CAST(Importe AS FLOAT) as Importe
-                    FROM [dbo].[GAC_APP_TB_TARIFARIO]
-                    WHERE Empresa = @casId
-                      AND TRIM(Categoria) = TRIM(@cat)
-                      AND TRIM(Servicio) = TRIM(@serv)
-                      AND Estado = 'A'
-                `);
-            if (existing.recordset.length === 0) {
+            const servicioCodigo = resolveServicio(row.Servicio);
+            const key = `${casId}|${(row.Categoria || '').trim()}|${servicioCodigo.trim()}`;
+            const cur = existingMap.get(key);
+            if (!cur) {
                 preview.push({ ...row, CAS_ID: casId, Status: 'INSERT', Message: 'Nueva tarifa', Importe_Actual: null });
+            } else if (Math.abs(cur.Importe - importe) < 0.001) {
+                preview.push({ ...row, CAS_ID: casId, Status: 'OK', Message: 'Sin cambios', Importe_Actual: cur.Importe, ID_Tarifario: cur.ID_Tarifario });
             } else {
-                const cur = existing.recordset[0];
-                if (Math.abs(parseFloat(cur.Importe) - importe) < 0.001) {
-                    preview.push({ ...row, CAS_ID: casId, Status: 'OK', Message: 'Sin cambios', Importe_Actual: cur.Importe, ID_Tarifario: cur.ID_Tarifario });
-                } else {
-                    preview.push({ ...row, CAS_ID: casId, Status: 'UPDATE', Message: `${cur.Importe} → ${importe}`, Importe_Actual: cur.Importe, ID_Tarifario: cur.ID_Tarifario });
-                }
+                preview.push({ ...row, CAS_ID: casId, Status: 'UPDATE', Message: `${cur.Importe} → ${importe}`, Importe_Actual: cur.Importe, ID_Tarifario: cur.ID_Tarifario });
             }
         }
         res.json({ preview });
@@ -2125,13 +2140,14 @@ app.post('/api/tarifarios/import/confirm', verifyToken, async (req: Request, res
     const currentUser = (req as AuthRequest).user!;
     try {
         const db = await getDb();
+        const resolveServicio = await buildServicioCodigoResolver(db);
         const transaction = new sql.Transaction(db);
         await transaction.begin();
         let inserted = 0, updated = 0;
         try {
             for (const row of rows) {
                 const cat = row.Categoria.trim();
-                const serv = await resolveServicioCodigo(db, row.Servicio);
+                const serv = resolveServicio(row.Servicio);
                 const casId = row.CAS_ID;
 
                 if (row.Status === 'INSERT') {
