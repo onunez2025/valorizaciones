@@ -4,11 +4,20 @@ import { StorageService } from '../services/storageService';
 const APP_CODE = import.meta.env.VITE_APP_CODE || 'VAL';
 const API_BASE_URL = '/api';
 
+interface SidebarConfig {
+    expandedWidth?: string;
+    collapsedWidth?: string;
+    defaultState?: 'expanded' | 'collapsed';
+    hoverExpand?: boolean;
+    allowCollapse?: boolean;
+}
+
 interface AppConfig {
     code: string;
     label: string;
     logoUrl: string;
     url: string;
+    sidebarConfig?: SidebarConfig;
 }
 
 interface AppApiResponse {
@@ -17,6 +26,11 @@ interface AppApiResponse {
     logo_url?: string;
     url: string;
     theme_config?: Record<string, unknown>;
+    sidebar_width?: string;
+    sidebar_collapsed_width?: string;
+    sidebar_default_state?: string;
+    sidebar_hover_expand?: boolean;
+    sidebar_allow_collapse?: boolean;
 }
 
 const AppConfigContext = createContext<AppConfig | null>(null);
@@ -44,6 +58,13 @@ export const AppConfigProvider: React.FC<{ children: React.ReactNode }> = ({ chi
                         label: mine.label,
                         logoUrl: mine.logo_url || '',
                         url: mine.url,
+                        sidebarConfig: {
+                            expandedWidth: mine.sidebar_width || undefined,
+                            collapsedWidth: mine.sidebar_collapsed_width || undefined,
+                            defaultState: mine.sidebar_default_state === 'collapsed' ? 'collapsed' : 'expanded',
+                            hoverExpand: mine.sidebar_hover_expand !== false,
+                            allowCollapse: mine.sidebar_allow_collapse !== false,
+                        },
                     };
                     setConfig(appConf);
 

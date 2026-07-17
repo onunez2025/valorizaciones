@@ -22,10 +22,11 @@ export function MainLayout() {
     const COLLAPSED_KEY = 'val_sidebar_collapsed';
     const [isCollapsed, setIsCollapsed] = useState(() => localStorage.getItem(COLLAPSED_KEY) === 'true');
     const [isHovering,  setIsHovering]  = useState(false);
-    const allowCollapse  = SIATC_THEME.SIDEBAR.ALLOW_COLLAPSE;
-    const hoverExpand    = SIATC_THEME.SIDEBAR.HOVER_EXPAND;
-    const expandedWidth  = SIATC_THEME.SIDEBAR.EXPANDED_WIDTH;
-    const collapsedWidth = SIATC_THEME.SIDEBAR.COLLAPSED_WIDTH;
+    const sidebarCfg     = appConfig?.sidebarConfig;
+    const allowCollapse  = sidebarCfg?.allowCollapse  !== false;
+    const hoverExpand    = sidebarCfg?.hoverExpand    !== false;
+    const expandedWidth  = sidebarCfg?.expandedWidth  || SIATC_THEME.SIDEBAR.EXPANDED_WIDTH;
+    const collapsedWidth = sidebarCfg?.collapsedWidth || SIATC_THEME.SIDEBAR.COLLAPSED_WIDTH;
     const handleMobileNavClose = SIATC_THEME.SIDEBAR.MOBILE_CLOSE_ON_NAVIGATE
         ? () => setSidebarOpen(false)
         : undefined;
@@ -33,6 +34,12 @@ export function MainLayout() {
     const isEffectivelyExpanded = !isCollapsed || isHoverExpanded;
     const sidebarPanelWidth     = isEffectivelyExpanded ? expandedWidth : collapsedWidth;
     const spacerWidth           = (allowCollapse && isCollapsed) ? collapsedWidth : expandedWidth;
+
+    useEffect(() => {
+        if (sidebarCfg && localStorage.getItem(COLLAPSED_KEY) === null && sidebarCfg.defaultState === 'collapsed') {
+            setIsCollapsed(true);
+        }
+    }, [sidebarCfg]);
 
     const handleToggle = useCallback(() => {
         const next = !isCollapsed;
