@@ -2057,15 +2057,6 @@ interface TarifarioImportRow {
     ID_Tarifario?: string;
 }
 
-async function resolveServicioCodigo(db: sql.ConnectionPool, servicio: string): Promise<string> {
-    const trimmed = (servicio || '').trim();
-    if (/^CA_\d+$/i.test(trimmed)) return trimmed;
-    const lookup = await db.request()
-        .input('nombre', sql.NVarChar(255), trimmed)
-        .query("SELECT TOP 1 Id FROM [SIATC].[FSM_TipoServicio] WHERE UPPER(TRIM(Descripcion)) = UPPER(@nombre)");
-    return lookup.recordset[0]?.Id || trimmed;
-}
-
 // Construye una sola vez el mapa Descripcion(mayus/trim) -> Id de FSM_TipoServicio,
 // para resolver códigos de servicio en memoria en vez de 1 query SQL por fila.
 async function buildServicioCodigoResolver(db: sql.ConnectionPool): Promise<(servicio: string) => string> {

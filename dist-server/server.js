@@ -1953,15 +1953,6 @@ app.delete('/api/tarifarios/exceptions/:id', verifyToken, verifyPermission('val.
         res.status(500).json({ error: safeError(err) });
     }
 });
-async function resolveServicioCodigo(db, servicio) {
-    const trimmed = (servicio || '').trim();
-    if (/^CA_\d+$/i.test(trimmed))
-        return trimmed;
-    const lookup = await db.request()
-        .input('nombre', sql.NVarChar(255), trimmed)
-        .query("SELECT TOP 1 Id FROM [SIATC].[FSM_TipoServicio] WHERE UPPER(TRIM(Descripcion)) = UPPER(@nombre)");
-    return lookup.recordset[0]?.Id || trimmed;
-}
 // Construye una sola vez el mapa Descripcion(mayus/trim) -> Id de FSM_TipoServicio,
 // para resolver códigos de servicio en memoria en vez de 1 query SQL por fila.
 async function buildServicioCodigoResolver(db) {
