@@ -141,6 +141,7 @@
     "title": "Service Rate Schedule",
     "subtitle": "Dynamic price configuration per service center.",
     "importExcel": "Import from Excel",
+    "exportTemplate": "Export Template",
     "companyLabel": "Company in configuration",
     "selectCasPlaceholder": "-- Select a CAS to edit prices --",
     "searchPlaceholder": "Search by branch or identifier...",

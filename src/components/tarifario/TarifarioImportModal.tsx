@@ -5,6 +5,7 @@ import ExcelJS from 'exceljs';
 import { ApiClient } from '../../services/apiClient';
 import { cn } from '../../utils/cn';
 import { useDialog } from '../../context/DialogContext';
+import { downloadTarifarioTemplate } from '../../utils/tarifarioTemplate';
 
 interface PreviewRow {
     CAS_Nombre: string;
@@ -43,23 +44,6 @@ function parseExcelDate(value: unknown): string {
         if (/^\d{4}-\d{2}-\d{2}/.test(value)) return value.split('T')[0];
     }
     return String(value);
-}
-
-async function downloadTemplate() {
-    const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet('Tarifario');
-    const headers = ['CAS_Nombre', 'Categoria', 'Servicio', 'Fecha_inicio', 'Fecha_fin', 'Importe', 'Estado'];
-    worksheet.columns = headers.map(h => ({ header: h, width: Math.max(h.length + 4, 20) }));
-    worksheet.addRow(['Black', 'CALENTADORES A GAS', 'Instalación', '01/01/2025', '31/12/2026', 42, 'A']);
-    worksheet.addRow(['Silar', 'TERMAS ELECTRICAS -50LT', 'Revisión', '01/01/2025', '31/12/2026', 35, 'A']);
-    const buf = await workbook.xlsx.writeBuffer();
-    const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'Plantilla_Tarifario.xlsx';
-    a.click();
-    URL.revokeObjectURL(url);
 }
 
 export default function TarifarioImportModal({ isOpen, onClose, onSuccess }: Props) {
@@ -400,7 +384,7 @@ export default function TarifarioImportModal({ isOpen, onClose, onSuccess }: Pro
                 {/* Footer */}
                 <div className="px-8 py-5 border-t border-border/40 flex items-center justify-between bg-muted/5">
                     <button
-                        onClick={downloadTemplate}
+                        onClick={downloadTarifarioTemplate}
                         className="flex items-center gap-2 text-[10px] font-black text-muted-foreground/50 hover:text-primary transition-colors"
                     >
                         <Download className="w-4 h-4" />

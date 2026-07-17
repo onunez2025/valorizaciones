@@ -141,6 +141,7 @@
     "title": "Tarifario de Servicios",
     "subtitle": "Configuración dinámica de precios por centro de atención.",
     "importExcel": "Importar desde Excel",
+    "exportTemplate": "Exportar Plantilla",
     "companyLabel": "Empresa en configuración",
     "selectCasPlaceholder": "-- Seleccione un CAS para editar precios --",
     "searchPlaceholder": "Buscar por sede o identificador...",
