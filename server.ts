@@ -2307,12 +2307,14 @@ app.get('/api/dashboard/stats', verifyToken, async (req: Request, res: Response)
                            AND (ex.Zonas_Incluidas IS NULL OR ex.Zonas_Incluidas = 'null' OR EXISTS (SELECT 1 FROM OPENJSON(ex.Zonas_Incluidas) WHERE value = tc.Ciudad OR value = tc.Distrito))
                          ORDER BY ex.Prioridad DESC, ex.Creado_El DESC),
                         -- 2. Tarifario Base
-                        (SELECT TOP 1 t.Importe 
+                        (SELECT TOP 1 t.Importe
                          FROM [dbo].[GAC_APP_TB_TARIFARIO] t
                          WHERE t.Empresa = tc.ID_CAS
                            AND (t.Servicio = tc.IdServicio)
                            AND TRIM(t.Categoria) = TRIM(tc.Categoria)
                            AND t.Estado = 'A'
+                           AND tc.CheckOut >= t.Fecha_inicio
+                           AND (t.Fecha_fin IS NULL OR tc.CheckOut <= t.Fecha_fin)
                          ORDER BY t.Fecha_inicio DESC)
                     ) as ImporteAplicado,
                     -- Verificación de validos (mismos filtros que el original)
@@ -2396,12 +2398,14 @@ app.get('/api/dashboard/trends', verifyToken, async (req: Request, res: Response
                            AND (ex.Zonas_Incluidas IS NULL OR ex.Zonas_Incluidas = 'null' OR EXISTS (SELECT 1 FROM OPENJSON(ex.Zonas_Incluidas) WHERE value = tc.Ciudad OR value = tc.Distrito))
                          ORDER BY ex.Prioridad DESC, ex.Creado_El DESC),
                         -- 2. Tarifario Base
-                        (SELECT TOP 1 t.Importe 
+                        (SELECT TOP 1 t.Importe
                          FROM [dbo].[GAC_APP_TB_TARIFARIO] t
                          WHERE t.Empresa = tc.ID_CAS
                            AND (t.Servicio = tc.IdServicio)
                            AND TRIM(t.Categoria) = TRIM(tc.Categoria)
                            AND t.Estado = 'A'
+                           AND tc.CheckOut >= t.Fecha_inicio
+                           AND (t.Fecha_fin IS NULL OR tc.CheckOut <= t.Fecha_fin)
                          ORDER BY t.Fecha_inicio DESC)
                     ) as ImporteAplicado,
                     CASE 
