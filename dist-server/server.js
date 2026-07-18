@@ -287,11 +287,22 @@ app.get('/api/applications', verifyToken, async (req, res) => {
     try {
         const db = await getDb();
         const activeOnly = req.query.activeOnly === 'true';
-        let query = 'SELECT Id as id, Code as code, Label as label, Url as url, LogoUrl as logo_url, CAST(IsActive AS BIT) as is_active, DisplayOrder as display_order FROM [dbo].[GAC_APP_TB_CONSOLE_APPLICATIONS]';
+        let query = `
+            SELECT
+                a.Id as id, a.Code as code, a.Label as label, a.Url as url, a.LogoUrl as logo_url,
+                CAST(a.IsActive AS BIT) as is_active, a.DisplayOrder as display_order,
+                b.SidebarWidth as sidebar_width,
+                b.SidebarCollapsedWidth as sidebar_collapsed_width,
+                b.SidebarDefaultState as sidebar_default_state,
+                CAST(ISNULL(b.SidebarHoverExpand, 1) AS BIT) as sidebar_hover_expand,
+                CAST(ISNULL(b.SidebarAllowCollapse, 1) AS BIT) as sidebar_allow_collapse
+            FROM [dbo].[GAC_APP_TB_CONSOLE_APPLICATIONS] a
+            LEFT JOIN [dbo].[GAC_APP_TB_CONSOLE_APP_BRANDING] b ON a.Id = b.ApplicationId
+        `;
         if (activeOnly) {
-            query += ' WHERE IsActive = 1';
+            query += ' WHERE a.IsActive = 1';
         }
-        query += ' ORDER BY DisplayOrder ASC';
+        query += ' ORDER BY a.DisplayOrder ASC';
         const result = await db.request().query(query);
         res.json(result.recordset);
     }
