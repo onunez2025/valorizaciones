@@ -359,7 +359,7 @@ app.get('/api/applications', verifyToken, async (req: Request, res: Response) =>
         }
         query += ' ORDER BY a.DisplayOrder ASC';
         const result = await db.request().query(query);
-        const apps = result.recordset.map((row: any) => ({
+        const apps = result.recordset.map((row) => ({
             id: row.id,
             code: row.code,
             label: row.label,
