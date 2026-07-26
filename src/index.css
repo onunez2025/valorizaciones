@@ -217,29 +217,71 @@
   }
 }
 
-/* Base animations */
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(6px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes zoomIn95 {
-  from { opacity: 0; transform: scale(0.95); }
-  to { opacity: 1; transform: scale(1); }
+/* Base animations
+   Patron de una sola @keyframes "enter" que solo lee variables CSS: cada
+   clase utilitaria fija unicamente su propia variable, sin declarar un
+   "to {}" explicito por combinacion de clases. Deliberadamente SIN
+   animation-fill-mode (ni forwards ni both): con fill-mode activo, una
+   vez terminada la animacion el `transform` queda computado como una
+   matriz identidad (no como el literal `none`) y eso convierte al
+   elemento en el containing block de sus descendientes `position:fixed`,
+   rompiendo cualquier modal/drawer no portalado -- confirmado en vivo con
+   getComputedStyle (ver punto ciego #13 del plan de UI/UX movil). Sin
+   fill-mode, al terminar la animacion las propiedades animadas
+   simplemente dejan de estar sobreescritas y vuelven a su valor en
+   cascada (opacity:1 y transform:none reales), sin parpadeo porque no
+   se usa animation-delay en ningun lugar de la app. */
+@keyframes enter {
+  from {
+    opacity: var(--tw-enter-opacity, 1);
+    transform: translate3d(var(--tw-enter-translate-x, 0), var(--tw-enter-translate-y, 0), 0) scale3d(var(--tw-enter-scale, 1), var(--tw-enter-scale, 1), var(--tw-enter-scale, 1));
+  }
 }
 
 .animate-in {
+  animation-name: enter;
   animation-duration: 300ms;
-  animation-fill-mode: forwards;
   animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .fade-in {
-  animation-name: fadeIn;
+  --tw-enter-opacity: 0;
+}
+
+.fade-in-50 {
+  --tw-enter-opacity: 0.5;
 }
 
 .zoom-in-95 {
-  animation-name: zoomIn95;
+  --tw-enter-scale: 0.95;
+}
+
+.slide-in-from-top {
+  --tw-enter-translate-y: -100%;
+}
+
+.slide-in-from-top-2 {
+  --tw-enter-translate-y: -0.5rem;
+}
+
+.slide-in-from-top-4 {
+  --tw-enter-translate-y: -1rem;
+}
+
+.slide-in-from-bottom {
+  --tw-enter-translate-y: 100%;
+}
+
+.slide-in-from-bottom-2 {
+  --tw-enter-translate-y: 0.5rem;
+}
+
+.slide-in-from-right {
+  --tw-enter-translate-x: 100%;
+}
+
+.slide-in-from-left {
+  --tw-enter-translate-x: -100%;
 }
 
 @layer utilities {

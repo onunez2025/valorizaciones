@@ -181,6 +181,17 @@ export default function ValuationsPage() {
         }
     }, [viewMode, selectedCas]);
 
+    // Body scroll lock for this file's own inline modals (selectedClosure detail + close confirmation)
+    useEffect(() => {
+        const anyModalOpen = !!selectedClosure || showCloseModal;
+        if (anyModalOpen) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = '';
+        }
+        return () => { document.body.style.overflow = ''; };
+    }, [selectedClosure, showCloseModal]);
+
     const handleSearchTicket = async () => {
         if (!globalSearch) return;
         setIsSearchingGlobal(true);
@@ -1665,7 +1676,7 @@ export default function ValuationsPage() {
                             )}
                         </div>
                     )}
-                    <button onClick={() => setGlobalSearchResult(null)} className="p-2 hover:bg-primary/10 rounded-full transition-colors">
+                    <button onClick={() => setGlobalSearchResult(null)} className={cn(SIATC_THEME.MOBILE.TOUCH_TARGET, "p-2 hover:bg-primary/10 rounded-full transition-colors flex items-center justify-center")}>
                         <X className="w-5 h-5 text-muted-foreground" />
                     </button>
                 </div>
@@ -1691,7 +1702,7 @@ export default function ValuationsPage() {
                             </p>
                         </button>
                         {selectedCas && (
-                            <button onClick={(e) => { e.stopPropagation(); setSelectedCas(null); setTickets([]); setPenalties([]); }} className="p-2 text-muted-foreground hover:text-red-500 transition-all">
+                            <button onClick={(e) => { e.stopPropagation(); setSelectedCas(null); setTickets([]); setPenalties([]); }} className={cn(SIATC_THEME.MOBILE.TOUCH_TARGET, "p-2 text-muted-foreground hover:text-red-500 transition-all flex items-center justify-center")}>
                                 <X className="w-4 h-4" />
                             </button>
                         )}
@@ -1717,7 +1728,7 @@ export default function ValuationsPage() {
 
                 {/* Rango de Fechas */}
                 <div className="flex items-center gap-2 bg-muted/20 p-1 rounded-lg border border-border/30">
-                    <div className="flex items-center gap-2 px-3 py-2 bg-background rounded-lg border border-border shadow-sm">
+                    <div className="flex items-center gap-2 px-3 py-2 bg-background rounded-lg border border-border shadow-sm min-h-[44px]">
                         <Calendar className="w-4 h-4 text-primary" />
                         <input 
                             type="date" 
@@ -1888,6 +1899,8 @@ export default function ValuationsPage() {
                                                 <p className="text-xs font-bold">{t('valuations.emptyServices')}</p>
                                             </div>
                                         ) : (
+                                          <>
+                                            <div className="hidden md:block">
                                             <table className={SIATC_THEME.TABLE.TABLE_ELEMENT}>
                                                 <thead className={SIATC_THEME.TABLE.HEADER_ROW}>
                                                     <tr>
@@ -2104,7 +2117,7 @@ export default function ValuationsPage() {
                                                                                                                     "p-2 rounded-lg transition-all shadow-sm flex items-center justify-center",
                                                                                                                     (ticket.Adicionales || 0) > 0 
                                                                                                                         ? "bg-emerald-500/10 text-emerald-600 hover:bg-emerald-600 hover:text-white" 
-                                                                                                                        : "bg-emerald-500/5 text-emerald-500 hover:bg-emerald-600 hover:text-white opacity-0 group-hover/row:opacity-100"
+                                                                                                                        : "bg-emerald-500/5 text-emerald-500 hover:bg-emerald-600 hover:text-white"
                                                                                                                 )}
                                                                                                                 title="Pagos Adicionales"
                                                                                                             >
@@ -2147,7 +2160,7 @@ export default function ValuationsPage() {
                                                                                                                                                         existingData: item as unknown as Penalty
                                                                                                                                                     });
                                                                                                                                                 }}
-                                                                                                                                                className="p-1.5 text-indigo-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all opacity-0 group-hover/item:opacity-100 ml-2 flex-shrink-0"
+                                                                                                                                                className="p-1.5 text-indigo-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all ml-2 flex-shrink-0"
                                                                                                                                                 title={t('valuations.additionalEdit')}
                                                                                                                                             >
                                                                                                                                                 <Pencil className="w-3.5 h-3.5" />
@@ -2163,7 +2176,7 @@ export default function ValuationsPage() {
                                                                                                                                                         handleFetchValuation();
                                                                                                                                                     } catch (err) { console.error(err); }
                                                                                                                                                 }}
-                                                                                                                                                className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover/item:opacity-100 flex-shrink-0"
+                                                                                                                                                className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all flex-shrink-0"
                                                                                                                                                 title={t('valuations.additionalDelete')}
                                                                                                                                             >
                                                                                                                                                 <Trash2 className="w-3.5 h-3.5" />
@@ -2193,7 +2206,7 @@ export default function ValuationsPage() {
                                                                                                         {hasPermission('val.penalties.create') && (
                                                                                                             <button
                                                                                                                 onClick={() => setShowPenaltyModal({ show: true, type: 'penalty', ticket: ticket.Ticket, date: ticket.Fecha.split('T')[0] })}
-                                                                                                                className="p-2 bg-red-500/10 text-red-600 rounded-lg hover:bg-red-600 hover:text-white transition-all opacity-0 group-hover/row:opacity-100 shadow-sm flex items-center justify-center"
+                                                                                                                className="p-2 bg-red-500/10 text-red-600 rounded-lg hover:bg-red-600 hover:text-white transition-all shadow-sm flex items-center justify-center"
                                                                                                                 title="Aplicar Penalidad"
                                                                                                             >
                                                                                                                 <AlertTriangle className="w-3.5 h-3.5" />
@@ -2213,6 +2226,246 @@ export default function ValuationsPage() {
                                                         ))}
                                                     </tbody>
                                                 </table>
+                                            </div>
+
+                                            {/* Mobile Card View - Grupos por fecha */}
+                                            <div className="md:hidden space-y-3">
+                                                {sortedDates.map(date => (
+                                                    <div key={date} className={cn(SIATC_THEME.COMPONENTS.CARD_CONTAINER, "p-4 space-y-3")}>
+                                                        <button
+                                                            onClick={() => toggleDate(date)}
+                                                            className="w-full flex items-center justify-between gap-3 text-left"
+                                                        >
+                                                            <div className="flex items-center gap-3 min-w-0">
+                                                                <div className={cn(
+                                                                    "p-2 rounded-lg transition-all duration-300 shrink-0",
+                                                                    expandedDates.includes(date) ? "bg-primary text-white shadow-lg shadow-primary/20" : "bg-muted/60 text-muted-foreground"
+                                                                )}>
+                                                                    <Calendar className="w-4 h-4" />
+                                                                </div>
+                                                                <div className="min-w-0">
+                                                                    <div className="text-sm font-bold text-foreground truncate">{date}</div>
+                                                                    <div className="text-[10px] text-muted-foreground">{groupedTickets[date].count} servicios</div>
+                                                                </div>
+                                                            </div>
+                                                            <ChevronRight className={cn("w-5 h-5 shrink-0 transition-transform duration-300", expandedDates.includes(date) && "rotate-90 text-primary")} />
+                                                        </button>
+
+                                                        <div className="flex items-center justify-between gap-2 pt-2 border-t border-border/40">
+                                                            {groupedTickets[date].zeroPriceCount > 0 ? (
+                                                                <span className="px-2.5 py-1 bg-amber-50 text-amber-600 rounded-full text-[9px] font-bold border border-amber-100 flex items-center gap-1.5">
+                                                                    <AlertCircle className="w-3 h-3" />
+                                                                    {groupedTickets[date].zeroPriceCount} {t('valuations.statusToLink')}
+                                                                </span>
+                                                            ) : (
+                                                                <span className="px-2.5 py-1 bg-emerald-50 text-emerald-600 rounded-full text-[9px] font-bold border border-emerald-100 flex items-center gap-1.5">
+                                                                    <CheckCircle2 className="w-3 h-3" />
+                                                                    {t('valuations.statusAudited')}
+                                                                </span>
+                                                            )}
+                                                            <span className="text-sm font-data font-bold shrink-0">
+                                                                S/ {(groupedTickets[date].totalBase + groupedTickets[date].totalAdicional).toLocaleString('es-PE', { minimumFractionDigits: 2 })}
+                                                            </span>
+                                                        </div>
+
+                                                        {expandedDates.includes(date) && (
+                                                            <div className="space-y-2 pt-2 border-t border-border/40 animate-in slide-in-from-top-4 duration-300">
+                                                                {getSortedTickets(groupedTickets[date].tickets).map((ticket) => (
+                                                                    <div key={ticket.Ticket} className="p-3 bg-muted/20 rounded-xl border border-border/30 space-y-2">
+                                                                        <div className="flex items-start justify-between gap-2">
+                                                                            <div className="min-w-0">
+                                                                                <div className="text-sm font-bold text-primary font-data">#{ticket.Ticket}</div>
+                                                                                <div className="text-xs font-medium text-foreground truncate">{toTitleCase(ticket.ServicioNombre || 'General')}</div>
+                                                                            </div>
+                                                                            <span className={cn(
+                                                                                "px-2 py-0.5 rounded text-[9px] font-black shrink-0",
+                                                                                (ticket.DiasDiferencia || 0) > diasMaxCierre ? "bg-red-100 text-red-700" : "bg-blue-100 text-blue-700"
+                                                                            )}>
+                                                                                {ticket.DiasDiferencia ?? '-'} d.
+                                                                            </span>
+                                                                        </div>
+                                                                        <div className="flex flex-wrap items-center gap-1.5 text-[9px] font-bold text-muted-foreground">
+                                                                            <span>{t('valuations.detailTableVisitClosureDates')}: {ticket.FechaVisita ? new Date(ticket.FechaVisita).toLocaleDateString('es-PE', {day:'2-digit', month:'2-digit'}) : '-'} / {ticket.FechaCierre ? new Date(ticket.FechaCierre).toLocaleDateString('es-PE', {day:'2-digit', month:'2-digit'}) : '-'}</span>
+                                                                            {ticket.CodigoEquipo && <span className="uppercase opacity-60">{ticket.CodigoEquipo}</span>}
+                                                                            {ticket.Categoria && <span className="uppercase">{toTitleCase(ticket.Categoria)}</span>}
+                                                                            {ticket.CupoArea && (
+                                                                                <span className={cn(
+                                                                                    "px-1.5 py-0.5 rounded font-black",
+                                                                                    ticket.CupoArea === 'OBRAS' ? "bg-orange-500/10 text-orange-600" : ticket.CupoArea === 'TALLER' ? "bg-blue-500/10 text-blue-600" : "bg-muted text-muted-foreground"
+                                                                                )}>{ticket.CupoArea}</span>
+                                                                            )}
+                                                                        </div>
+                                                                        <div className="flex items-center justify-between gap-2 pt-1">
+                                                                            <div>
+                                                                                {!isValuable(ticket.CodigoEquipo) ? (
+                                                                                    <span className="text-[9px] font-bold text-muted-foreground/40 italic">{t('valuations.detailLabelExempt')}</span>
+                                                                                ) : (ticket.ServicioNombre || '').toLowerCase().includes('visita') ? (
+                                                                                    <span className="text-[9px] font-bold text-muted-foreground/40 italic">{t('valuations.detailLabelVisitFree')}</span>
+                                                                                ) : ticket.Categoria === 'N/A' ? (
+                                                                                    (ticket.DiasDiferencia || 0) > diasMaxCierre ? (
+                                                                                        <span className="text-[9px] font-bold text-red-500 italic">{t('valuations.detailLabelOutOfTime')}</span>
+                                                                                    ) : hasPermission('val.valuations.edit') ? (
+                                                                                        <button
+                                                                                            onClick={() => handleOpenMaterialModal(ticket)}
+                                                                                            className={cn(SIATC_THEME.MOBILE.TOUCH_TARGET, "px-3 bg-indigo-600 text-white rounded-lg text-[9px] font-black flex items-center gap-1.5")}
+                                                                                        >
+                                                                                            <Package className="w-3 h-3" /> {t('valuations.detailButtonRegisterProduct')}
+                                                                                        </button>
+                                                                                    ) : (
+                                                                                        <span className="text-[9px] font-bold text-muted-foreground/40 italic">{t('valuations.detailLabelNoAccess')}</span>
+                                                                                    )
+                                                                                ) : ticket.TarifaBase === 0 ? (
+                                                                                    (ticket.DiasDiferencia || 0) > diasMaxCierre ? (
+                                                                                        <span className="text-[9px] font-bold text-red-500 italic">{t('valuations.detailLabelOutOfTimeFree')}</span>
+                                                                                    ) : hasPermission('val.valuations.edit') ? (
+                                                                                        <button
+                                                                                            onClick={() => handleOpenTarifarioModal(ticket)}
+                                                                                            className={cn(SIATC_THEME.MOBILE.TOUCH_TARGET, "px-3 bg-amber-500 text-white rounded-lg text-[9px] font-black")}
+                                                                                        >
+                                                                                            {t('valuations.detailButtonLinkRate')}
+                                                                                        </button>
+                                                                                    ) : (
+                                                                                        <span className="text-[9px] font-bold text-muted-foreground/40 italic">{t('valuations.detailLabelNoAccess')}</span>
+                                                                                    )
+                                                                                ) : (
+                                                                                    <div className="flex flex-col">
+                                                                                        <span className="font-data text-sm text-foreground/80">
+                                                                                            S/ {(ticket.TarifaBase + (ticket.Adicionales || 0)).toLocaleString('es-PE', { minimumFractionDigits: 2 })}
+                                                                                        </span>
+                                                                                        {(ticket.Adicionales || 0) > 0 && (
+                                                                                            <span className="text-[9px] font-data text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded mt-0.5 border border-emerald-100 self-start">
+                                                                                                +S/ {ticket.Adicionales.toLocaleString('es-PE', { minimumFractionDigits: 2 })} adic.
+                                                                                            </span>
+                                                                                        )}
+                                                                                    </div>
+                                                                                )}
+                                                                            </div>
+                                                                            <div className="flex items-center gap-1 relative shrink-0">
+                                                                                <button
+                                                                                    onClick={() => handleViewC4CReport(ticket.Ticket)}
+                                                                                    disabled={loadingPdf === ticket.Ticket}
+                                                                                    className={cn(
+                                                                                        SIATC_THEME.MOBILE.TOUCH_TARGET,
+                                                                                        "w-11 bg-blue-500/5 text-blue-600 rounded-lg flex items-center justify-center",
+                                                                                        loadingPdf === ticket.Ticket ? "animate-pulse opacity-50 cursor-wait bg-blue-500/10" : ""
+                                                                                    )}
+                                                                                    title={t('valuations.detailButtonTechnicalReport')}
+                                                                                >
+                                                                                    {loadingPdf === ticket.Ticket ? <Activity className="w-3.5 h-3.5 animate-spin" /> : <FileText className="w-3.5 h-3.5" />}
+                                                                                </button>
+                                                                                <button
+                                                                                    onClick={(e) => {
+                                                                                        e.stopPropagation();
+                                                                                        if (adicionalesPopover?.ticket === ticket.Ticket) {
+                                                                                            setAdicionalesPopover(null);
+                                                                                        } else {
+                                                                                            setAdicionalesPopover({ ticket: ticket.Ticket, items: [], loading: true });
+                                                                                            ApiClient.request(`/adicionales/${ticket.Ticket}`)
+                                                                                                .then(items => setAdicionalesPopover(prev => prev ? { ...prev, items, loading: false } : null))
+                                                                                                .catch(() => setAdicionalesPopover(prev => prev ? { ...prev, loading: false } : null));
+                                                                                        }
+                                                                                    }}
+                                                                                    className={cn(
+                                                                                        SIATC_THEME.MOBILE.TOUCH_TARGET,
+                                                                                        "w-11 rounded-lg flex items-center justify-center",
+                                                                                        (ticket.Adicionales || 0) > 0 ? "bg-emerald-500/10 text-emerald-600" : "bg-emerald-500/5 text-emerald-500"
+                                                                                    )}
+                                                                                    title="Pagos Adicionales"
+                                                                                >
+                                                                                    <DollarSign className="w-3.5 h-3.5" />
+                                                                                    {(ticket.Adicionales || 0) > 0 && (
+                                                                                        <span className="absolute -top-1 -right-1 w-2 h-2 bg-emerald-500 rounded-full ring-2 ring-white" />
+                                                                                    )}
+                                                                                </button>
+                                                                                {adicionalesPopover?.ticket === ticket.Ticket && (
+                                                                                    <div className="absolute right-0 top-full mt-2 w-[min(320px,85vw)] bg-card border border-cb-border rounded-2xl shadow-2xl z-50 animate-in fade-in zoom-in-95 duration-200 overflow-hidden" onClick={e => e.stopPropagation()}>
+                                                                                        <div className="px-4 py-3 bg-gradient-to-r from-emerald-50 to-emerald-100/50 border-b border-emerald-100 flex items-center justify-between">
+                                                                                            <div className="flex items-center gap-2">
+                                                                                                <DollarSign className="w-4 h-4 text-emerald-600" />
+                                                                                                <span className="text-xs font-black text-emerald-800">{t('valuations.additionalsTitle')}</span>
+                                                                                            </div>
+                                                                                            <span className="text-[10px] font-bold text-emerald-600/60">Ticket {ticket.Ticket}</span>
+                                                                                        </div>
+                                                                                        <div className="p-3 max-h-[200px] overflow-y-auto custom-scrollbar">
+                                                                                            {adicionalesPopover.loading ? (
+                                                                                                <div className="py-4 flex justify-center"><Activity className="w-5 h-5 animate-spin text-emerald-500" /></div>
+                                                                                            ) : adicionalesPopover.items.length === 0 ? (
+                                                                                                <p className="text-xs text-muted-foreground text-center py-3 opacity-50 font-bold">{t('valuations.additionalsEmpty')}</p>
+                                                                                            ) : (
+                                                                                                <div className="space-y-2">
+                                                                                                    {adicionalesPopover.items.map((item: ValuationAdicional) => (
+                                                                                                        <div key={item.Id} className="flex items-center justify-between p-2.5 bg-muted/20 rounded-xl border border-border/30">
+                                                                                                            <div className="flex flex-col min-w-0 flex-1">
+                                                                                                                <span className="text-xs font-bold text-foreground truncate">{item.Motivo}</span>
+                                                                                                                <span className="text-[10px] font-bold text-emerald-600">S/ {Number(item.Importe).toLocaleString('es-PE', { minimumFractionDigits: 2 })}</span>
+                                                                                                            </div>
+                                                                                                            {hasPermission('val.valuations.edit') && (
+                                                                                                                <button
+                                                                                                                    onClick={(e) => {
+                                                                                                                        e.stopPropagation();
+                                                                                                                        setShowPenaltyModal({ show: true, type: 'additional', ticket: ticket.Ticket, existingData: item as unknown as Penalty });
+                                                                                                                    }}
+                                                                                                                    className={cn(SIATC_THEME.MOBILE.TOUCH_TARGET, "px-1.5 text-indigo-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg ml-2 flex-shrink-0 flex items-center justify-center")}
+                                                                                                                    title={t('valuations.additionalEdit')}
+                                                                                                                >
+                                                                                                                    <Pencil className="w-3.5 h-3.5" />
+                                                                                                                </button>
+                                                                                                            )}
+                                                                                                            {hasPermission('val.valuations.edit') && (
+                                                                                                                <button
+                                                                                                                    onClick={async (e) => {
+                                                                                                                        e.stopPropagation();
+                                                                                                                        try {
+                                                                                                                            await ApiClient.request(`/adicionales/${item.Id}`, { method: 'DELETE' });
+                                                                                                                            setAdicionalesPopover(prev => prev ? { ...prev, items: prev.items.filter(i => i.Id !== item.Id) } : null);
+                                                                                                                            handleFetchValuation();
+                                                                                                                        } catch (err) { console.error(err); }
+                                                                                                                    }}
+                                                                                                                    className={cn(SIATC_THEME.MOBILE.TOUCH_TARGET, "px-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg flex-shrink-0 flex items-center justify-center")}
+                                                                                                                    title={t('valuations.additionalDelete')}
+                                                                                                                >
+                                                                                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                                                                                </button>
+                                                                                                            )}
+                                                                                                        </div>
+                                                                                                    ))}
+                                                                                                </div>
+                                                                                            )}
+                                                                                        </div>
+                                                                                        {hasPermission('val.valuations.edit') && (
+                                                                                            <div className="p-2 border-t border-border/30">
+                                                                                                <button
+                                                                                                    onClick={() => {
+                                                                                                        setAdicionalesPopover(null);
+                                                                                                        setShowPenaltyModal({ show: true, type: 'additional', ticket: ticket.Ticket, date: ticket.Fecha.split('T')[0] });
+                                                                                                    }}
+                                                                                                    className="w-full flex items-center justify-center gap-2 py-2.5 bg-emerald-600 text-white rounded-xl text-[11px] font-black"
+                                                                                                >
+                                                                                                    <PlusCircle className="w-4 h-4" /> {t('valuations.additionalsAdd')}
+                                                                                                </button>
+                                                                                            </div>
+                                                                                        )}
+                                                                                    </div>
+                                                                                )}
+                                                                                {hasPermission('val.penalties.create') && (
+                                                                                    <button
+                                                                                        onClick={() => setShowPenaltyModal({ show: true, type: 'penalty', ticket: ticket.Ticket, date: ticket.Fecha.split('T')[0] })}
+                                                                                        className={cn(SIATC_THEME.MOBILE.TOUCH_TARGET, "w-11 bg-red-500/10 text-red-600 rounded-lg flex items-center justify-center")}
+                                                                                        title="Aplicar Penalidad"
+                                                                                    >
+                                                                                        <AlertTriangle className="w-3.5 h-3.5" />
+                                                                                    </button>
+                                                                                )}
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                          </>
                                         )}
                                     </div>
                                 ) : (
@@ -2387,8 +2640,9 @@ export default function ValuationsPage() {
 
             {/* Modal de Detalle de Cierre */}
             {selectedClosure && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
-                    <div className="bg-card w-full max-w-5xl rounded-[32px] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300 flex flex-col max-h-[90vh] border border-cb-border">
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 animate-in fade-in duration-300">
+                    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm touch-none" />
+                    <div className="relative z-10 bg-card w-full max-w-5xl rounded-[32px] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300 flex flex-col max-h-[90dvh] border border-cb-border">
                         <div className="p-6 border-b border-cb-border bg-card flex items-center justify-between gap-6 relative">
                             <div className="flex-1 flex items-center gap-4">
                                 <div className="p-3 bg-primary/10 rounded-2xl">
@@ -2414,7 +2668,7 @@ export default function ValuationsPage() {
                                         onChange={(e) => setDetailSearchQuery(e.target.value)}
                                     />
                                     {detailSearchQuery && (
-                                        <button onClick={() => setDetailSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-red-500">
+                                        <button onClick={() => setDetailSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-red-500 p-1 -m-1">
                                             <X className="w-3.5 h-3.5" />
                                         </button>
                                     )}
@@ -2454,7 +2708,7 @@ export default function ValuationsPage() {
                                     </button>
                                 )}
                                 
-                                <button onClick={() => { setSelectedClosure(null); setDetailSearchQuery(''); setDetailActiveTab('services'); }} className="p-2.5 hover:bg-red-50 hover:text-red-500 rounded-xl transition-all border border-transparent hover:border-red-100">
+                                <button onClick={() => { setSelectedClosure(null); setDetailSearchQuery(''); setDetailActiveTab('services'); }} className={cn(SIATC_THEME.MOBILE.TOUCH_TARGET, "p-2.5 hover:bg-red-50 hover:text-red-500 rounded-xl transition-all border border-transparent hover:border-red-100 flex items-center justify-center")}>
                                     <X className="w-5 h-5" />
                                 </button>
                             </div>
@@ -2514,6 +2768,7 @@ export default function ValuationsPage() {
                                         {t('valuations.modalDetailRecordsShown', { count: closureDetails.filter(d => detailActiveTab === 'services' ? d.Tipo === 'SERVICIO' : d.Tipo === 'PENALIDAD').length })}
                                     </div>
                                 </div>
+                                <div className="hidden md:block">
                                 <table className="w-full border-separate border-spacing-0">
                                     <thead className="sticky top-0 z-20 bg-card/95 backdrop-blur-md">
                                         <tr className="text-[14px] font-semibold text-muted-foreground text-left">
@@ -2561,7 +2816,7 @@ export default function ValuationsPage() {
                                                                 ticket: det.Ticket as string | undefined,
                                                                 date: (det.Fecha_Ticket as string).split('T')[0]
                                                             })}
-                                                            className="p-2 bg-red-500/10 text-red-600 rounded-lg hover:bg-red-600 hover:text-white transition-all opacity-0 group-hover/det:opacity-100 shadow-sm flex items-center justify-center mx-auto"
+                                                            className="p-2 bg-red-500/10 text-red-600 rounded-lg hover:bg-red-600 hover:text-white transition-all shadow-sm flex items-center justify-center mx-auto"
                                                             title={t('valuations.modalDetailPenalizeButton')}
                                                         >
                                                             <AlertTriangle className="w-3.5 h-3.5" />
@@ -2582,6 +2837,63 @@ export default function ValuationsPage() {
                                         )}
                                     </tbody>
                                 </table>
+                                </div>
+
+                                {/* Mobile Card View - Detalle de cierre */}
+                                <div className="md:hidden space-y-3 p-3">
+                                    {closureDetails
+                                        .filter(d => detailActiveTab === 'services' ? d.Tipo === 'SERVICIO' : d.Tipo === 'PENALIDAD')
+                                        .filter(d =>
+                                            (d.Ticket?.toString() || '').includes(detailSearchQuery) ||
+                                            ((d.Servicio_Nombre as string) || '').toLowerCase().includes(detailSearchQuery.toLowerCase())
+                                        ).length === 0 ? (
+                                        <div className="py-16 text-center text-muted-foreground opacity-40">
+                                            <Search className="w-10 h-10 mx-auto mb-3" />
+                                            <p className="text-xs font-bold">{t('valuations.modalDetailEmptySearch', { type: detailActiveTab === 'services' ? t('valuations.modalDetailEmptySearchServices') : t('valuations.modalDetailEmptySearchPenalties') })}</p>
+                                        </div>
+                                    ) : closureDetails
+                                        .filter(d => detailActiveTab === 'services' ? d.Tipo === 'SERVICIO' : d.Tipo === 'PENALIDAD')
+                                        .filter(d =>
+                                            (d.Ticket?.toString() || '').includes(detailSearchQuery) ||
+                                            ((d.Servicio_Nombre as string) || '').toLowerCase().includes(detailSearchQuery.toLowerCase())
+                                        ).map((det) => (
+                                        <div key={det.IdDetalle as string} className={cn(SIATC_THEME.COMPONENTS.CARD_CONTAINER, "p-4 space-y-2")}>
+                                            <div className="flex items-start justify-between gap-2">
+                                                <div className="min-w-0">
+                                                    <div className="text-sm font-bold text-primary">#{det.Ticket as string}</div>
+                                                    <p className="text-xs font-bold truncate">{det.Servicio_Nombre as string}</p>
+                                                </div>
+                                                <span className={cn("px-2 py-0.5 rounded text-[9px] font-black uppercase shrink-0", det.Tipo === 'SERVICIO' ? "bg-blue-100 text-blue-700" : "bg-red-500 text-white shadow-sm")}>
+                                                    {det.Tipo as string}
+                                                </span>
+                                            </div>
+                                            <div className="flex flex-wrap items-center gap-1.5 text-[9px] font-bold text-muted-foreground">
+                                                <span>{new Date(det.Fecha_Ticket as string).toLocaleDateString('es-PE', { timeZone: 'UTC' })}</span>
+                                                {det.Categoria ? <span>• {det.Categoria as string}</span> : null}
+                                                {det.Tipo === 'PENALIDAD' && <span>• {t('valuations.modalDetailClosedBy')}: {(det.CreadoPor as string) || 'N/D'}</span>}
+                                            </div>
+                                            <div className="flex items-center justify-between gap-2 pt-2 border-t border-border/40">
+                                                <span className={cn("text-sm font-black tracking-tight", (det.Monto as number) < 0 ? "text-red-600" : "text-slate-800")}>
+                                                    {(det.Monto as number) < 0 ? '-' : ''} S/ {Math.abs(det.Monto as number).toLocaleString('es-PE', { minimumFractionDigits: 2 })}
+                                                </span>
+                                                {det.Tipo === 'SERVICIO' && hasPermission('val.penalties.create') && (
+                                                    <button
+                                                        onClick={() => setShowPenaltyModal({
+                                                            show: true,
+                                                            type: 'penalty',
+                                                            ticket: det.Ticket as string | undefined,
+                                                            date: (det.Fecha_Ticket as string).split('T')[0]
+                                                        })}
+                                                        className={cn(SIATC_THEME.MOBILE.TOUCH_TARGET, "w-11 bg-red-500/10 text-red-600 rounded-lg flex items-center justify-center")}
+                                                        title={t('valuations.modalDetailPenalizeButton')}
+                                                    >
+                                                        <AlertTriangle className="w-3.5 h-3.5" />
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
                                 </>
                             )}
                         </div>
@@ -2654,11 +2966,12 @@ export default function ValuationsPage() {
 
             {/* Modal de Confirmación de Cierre */}
             {showCloseModal && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
-                    <div className="bg-card w-full max-w-lg rounded-[32px] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300 flex flex-col border border-cb-border">
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 animate-in fade-in duration-300">
+                    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm touch-none" />
+                    <div className="relative z-10 bg-card w-full max-w-lg rounded-[32px] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300 flex flex-col border border-cb-border">
                         <div className="p-8 border-b border-cb-border bg-cb-bg/30 flex items-center justify-between">
                             <h2 className="text-xl font-black text-cb-text-primary">{t('valuations.modalCloseTitle')}</h2>
-                            <button onClick={() => setShowCloseModal(false)} className="p-2 hover:bg-muted rounded-xl transition-all"><X className="w-5 h-5" /></button>
+                            <button onClick={() => setShowCloseModal(false)} className={cn(SIATC_THEME.MOBILE.TOUCH_TARGET, "p-2 hover:bg-muted rounded-xl transition-all flex items-center justify-center")}><X className="w-5 h-5" /></button>
                         </div>
                         
                         <div className="p-8 space-y-8">
@@ -2752,16 +3065,22 @@ interface BatchAdjustmentModalProps {
 }
 function BatchAdjustmentModal({ isOpen, onClose, onApply, tickets, setTickets, targetAmount, setTargetAmount, motivo, setMotivo, isApplying }: BatchAdjustmentModalProps) {
     const { t } = useTranslation();
+    useEffect(() => {
+        if (!isOpen) return;
+        document.body.style.overflow = 'hidden';
+        return () => { document.body.style.overflow = ''; };
+    }, [isOpen]);
     if (!isOpen) return null;
     return (
-        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
-            <div className="bg-card w-full max-w-lg rounded-[32px] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300 border border-cb-border">
+        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 animate-in fade-in duration-300">
+            <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm touch-none" />
+            <div className="relative z-10 bg-card w-full max-w-lg rounded-[32px] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300 border border-cb-border">
                 <div className="p-8 border-b border-cb-border bg-cb-bg/30 flex items-center justify-between">
                     <div className="flex items-center gap-3">
                         <div className="p-2 bg-amber-500 rounded-lg text-white shadow-lg shadow-amber-500/20"><Activity className="w-5 h-5" /></div>
                         <h2 className="text-xl font-black text-cb-text-primary">{t('valuations.modalBatchAdjustmentTitle')}</h2>
                     </div>
-                    <button onClick={onClose} className="p-2 hover:bg-muted rounded-xl transition-all"><X className="w-5 h-5" /></button>
+                    <button onClick={onClose} className={cn(SIATC_THEME.MOBILE.TOUCH_TARGET, "p-2 hover:bg-muted rounded-xl transition-all flex items-center justify-center")}><X className="w-5 h-5" /></button>
                 </div>
 
                 <div className="p-8 space-y-6">
@@ -2832,10 +3151,16 @@ interface EmailModalProps {
 }
 function EmailModal({ isOpen, onClose, onSend, emailTo, setEmailTo, isSending }: EmailModalProps) {
     const { t } = useTranslation();
+    useEffect(() => {
+        if (!isOpen) return;
+        document.body.style.overflow = 'hidden';
+        return () => { document.body.style.overflow = ''; };
+    }, [isOpen]);
     if (!isOpen) return null;
     return (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
-            <div className="bg-card w-full max-w-md rounded-[32px] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300 border border-cb-border">
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 animate-in fade-in duration-300">
+            <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm touch-none" />
+            <div className="relative z-10 bg-card w-full max-w-md rounded-[32px] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300 border border-cb-border">
                 <div className="p-8 border-b border-cb-border bg-cb-bg/30 flex items-center justify-between">
                     <div className="flex items-center gap-3">
                         <div className="p-2.5 bg-indigo-500 rounded-xl text-white shadow-lg shadow-indigo-500/20">
@@ -2843,7 +3168,7 @@ function EmailModal({ isOpen, onClose, onSend, emailTo, setEmailTo, isSending }:
                         </div>
                         <h2 className="text-xl font-black text-cb-text-primary tracking-tight">{t('valuations.modalEmailTitle')}</h2>
                     </div>
-                    <button onClick={onClose} className="p-2 hover:bg-muted rounded-xl transition-all"><X className="w-5 h-5" /></button>
+                    <button onClick={onClose} className={cn(SIATC_THEME.MOBILE.TOUCH_TARGET, "p-2 hover:bg-muted rounded-xl transition-all flex items-center justify-center")}><X className="w-5 h-5" /></button>
                 </div>
                 <div className="p-8 space-y-6">
                     <div className="space-y-2">
@@ -2907,16 +3232,22 @@ interface BatchDiscountModalProps {
 }
 function BatchDiscountModal({ isOpen, onClose, onApply, tickets, setTickets, amount, setAmount, motivo, setMotivo, descripcion, setDescripcion, isApplying, motivos }: BatchDiscountModalProps) {
     const { t } = useTranslation();
+    useEffect(() => {
+        if (!isOpen) return;
+        document.body.style.overflow = 'hidden';
+        return () => { document.body.style.overflow = ''; };
+    }, [isOpen]);
     if (!isOpen) return null;
     return (
-        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
-            <div className="bg-card w-full max-w-lg rounded-[32px] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300 border border-cb-border">
+        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 animate-in fade-in duration-300">
+            <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm touch-none" />
+            <div className="relative z-10 bg-card w-full max-w-lg rounded-[32px] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300 border border-cb-border">
                 <div className="p-8 border-b border-cb-border bg-cb-bg/30 flex items-center justify-between">
                     <div className="flex items-center gap-3">
                         <div className="p-2 bg-red-500 rounded-lg text-white shadow-lg shadow-red-500/20"><AlertTriangle className="w-5 h-5" /></div>
                         <h2 className="text-xl font-black text-cb-text-primary">{t('valuations.modalBatchDiscountTitle')}</h2>
                     </div>
-                    <button onClick={onClose} className="p-2 hover:bg-muted rounded-xl transition-all"><X className="w-5 h-5" /></button>
+                    <button onClick={onClose} className={cn(SIATC_THEME.MOBILE.TOUCH_TARGET, "p-2 hover:bg-muted rounded-xl transition-all flex items-center justify-center")}><X className="w-5 h-5" /></button>
                 </div>
 
                 <div className="p-8 space-y-6">

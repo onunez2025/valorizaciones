@@ -73,7 +73,7 @@ export function MainLayout() {
 
     if (isLoading) {
         return (
-            <div className="flex h-screen items-center justify-center bg-background">
+            <div className="flex h-dvh items-center justify-center bg-background">
                 <div className="flex flex-col items-center gap-6">
                     <img src={logoUrl} alt="Valorizaciones Logo" className="w-16 h-16 object-contain animate-pulse" />
                     <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
@@ -88,7 +88,7 @@ export function MainLayout() {
     }
 
     return (
-        <div className="h-screen bg-[#F8FAFC] dark:bg-[#020617] text-foreground flex overflow-hidden font-sans">
+        <div className="h-dvh bg-[#F8FAFC] dark:bg-[#020617] text-foreground flex overflow-hidden font-sans">
             {/* Mobile Sidebar Overlay */}
             <div
                 className={cn(

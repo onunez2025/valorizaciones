@@ -158,14 +158,14 @@ export default function ConfigCanalInstitucionalPage() {
                         <input
                             type="text"
                             placeholder={t('configInstitucional.searchPlaceholder')}
-                            className={cn(SIATC_THEME.COMPONENTS.INPUT, 'pl-11 pr-4')}
+                            className={cn(SIATC_THEME.COMPONENTS.INPUT, SIATC_THEME.MOBILE.TOUCH_INPUT, 'pl-11 pr-4')}
                             value={search}
                             onChange={e => { setSearch(e.target.value); setCurrentPage(1); }}
                         />
                     </div>
                 </div>
 
-                <SIATCTable containerClassName="relative">
+                <SIATCTable containerClassName="relative hidden md:block">
                     {loading ? (
                         <div className="absolute inset-0 flex flex-col items-center justify-center bg-card/60 backdrop-blur-md z-50">
                             <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
@@ -228,6 +228,50 @@ export default function ConfigCanalInstitucionalPage() {
                     )}
                 </SIATCTable>
 
+                {/* Mobile Card View */}
+                <div className="md:hidden space-y-3 p-3">
+                    {loading ? (
+                        <div className="flex flex-col items-center justify-center gap-4 py-12">
+                            <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+                            <span className="text-sm font-bold text-cb-text-secondary tracking-[0.2em] animate-pulse">{t('configInstitucional.loading')}</span>
+                        </div>
+                    ) : paginated.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center text-center py-12 opacity-30">
+                            <AlertCircle className="w-16 h-16 mb-4 text-cb-neutral" />
+                            <h3 className="text-sm font-bold uppercase tracking-widest text-cb-neutral">{t('configInstitucional.empty')}</h3>
+                            <p className="text-xs text-cb-text-secondary mt-2 max-w-xs">{t('configInstitucional.emptyHint')}</p>
+                        </div>
+                    ) : (
+                        paginated.map(c => (
+                            <div key={c.Id} className={cn(SIATC_THEME.COMPONENTS.CARD_CONTAINER, "p-4 space-y-3")}>
+                                <div className="flex items-start justify-between gap-3">
+                                    <span className={cn('px-3 py-1 rounded text-sm font-black tracking-tight', AREA_BADGE[c.Cupo_Area] ?? AREA_BADGE.GENERAL)}>
+                                        {c.Cupo_Area}
+                                    </span>
+                                    <span className="text-sm font-bold text-emerald-600 dark:text-emerald-500 font-mono shrink-0">S/. {c.Importe.toFixed(2)}</span>
+                                </div>
+                                <div className="text-xs font-medium text-cb-text-secondary whitespace-nowrap font-mono">
+                                    {formatDateUTC(c.Fecha_Inicio)} – {formatDateUTC(c.Fecha_Fin)}
+                                </div>
+                                <div className="flex justify-end gap-2 pt-1">
+                                    <button
+                                        onClick={() => openEdit(c)}
+                                        className={cn(SIATC_THEME.MOBILE.TOUCH_TARGET, "flex-1 flex items-center justify-center gap-2 bg-primary/10 text-primary rounded-lg text-xs font-bold")}
+                                    >
+                                        <Edit2 className="w-3.5 h-3.5" /> {t('common.edit')}
+                                    </button>
+                                    <button
+                                        onClick={() => handleDelete(c.Id)}
+                                        className={cn(SIATC_THEME.MOBILE.TOUCH_TARGET, "flex-1 flex items-center justify-center gap-2 bg-red-50 text-red-500 dark:bg-red-950/30 dark:text-red-400 rounded-lg text-xs font-bold")}
+                                    >
+                                        <Trash2 className="w-3.5 h-3.5" /> {t('common.delete')}
+                                    </button>
+                                </div>
+                            </div>
+                        ))
+                    )}
+                </div>
+
                 <SIATCTableFooter
                     totalRecords={filtered.length}
                     currentPage={currentPage}
@@ -247,7 +291,7 @@ export default function ConfigCanalInstitucionalPage() {
                         <div className="flex flex-col gap-2 md:col-span-2">
                             <label className="text-[10px] font-bold text-cb-text-secondary uppercase tracking-widest ml-1">{t('configInstitucional.modal.cupoArea')}</label>
                             <select
-                                className={cn(SIATC_THEME.COMPONENTS.INPUT, 'px-4')}
+                                className={cn(SIATC_THEME.COMPONENTS.INPUT, SIATC_THEME.MOBILE.TOUCH_INPUT, 'px-4')}
                                 value={editForm?.cupo_area ?? 'OBRAS'}
                                 onChange={e => setEditForm(f => f ? { ...f, cupo_area: e.target.value as CupoArea } : f)}
                                 required
@@ -262,7 +306,7 @@ export default function ConfigCanalInstitucionalPage() {
                             <label className="text-[10px] font-bold text-cb-text-secondary uppercase tracking-widest ml-1">{t('configInstitucional.modal.startDate')}</label>
                             <input
                                 type="date"
-                                className={cn(SIATC_THEME.COMPONENTS.INPUT, 'px-4')}
+                                className={cn(SIATC_THEME.COMPONENTS.INPUT, SIATC_THEME.MOBILE.TOUCH_INPUT, 'px-4')}
                                 value={editForm?.fecha_inicio ?? ''}
                                 onChange={e => setEditForm(f => f ? { ...f, fecha_inicio: e.target.value } : f)}
                                 required
@@ -273,7 +317,7 @@ export default function ConfigCanalInstitucionalPage() {
                             <label className="text-[10px] font-bold text-cb-text-secondary uppercase tracking-widest ml-1">{t('configInstitucional.modal.endDate')}</label>
                             <input
                                 type="date"
-                                className={cn(SIATC_THEME.COMPONENTS.INPUT, 'px-4')}
+                                className={cn(SIATC_THEME.COMPONENTS.INPUT, SIATC_THEME.MOBILE.TOUCH_INPUT, 'px-4')}
                                 value={editForm?.fecha_fin ?? ''}
                                 onChange={e => setEditForm(f => f ? { ...f, fecha_fin: e.target.value } : f)}
                                 required
@@ -288,7 +332,7 @@ export default function ConfigCanalInstitucionalPage() {
                                     type="number"
                                     step="0.01"
                                     min="0"
-                                    className={cn(SIATC_THEME.COMPONENTS.INPUT, 'pl-11 pr-4')}
+                                    className={cn(SIATC_THEME.COMPONENTS.INPUT, SIATC_THEME.MOBILE.TOUCH_INPUT, 'pl-11 pr-4')}
                                     value={editForm?.importe ?? 0}
                                     onChange={e => setEditForm(f => f ? { ...f, importe: parseFloat(e.target.value) } : f)}
                                     required

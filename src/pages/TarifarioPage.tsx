@@ -219,7 +219,7 @@ export default function TarifarioPage() {
                 </div>
                 <button
                     onClick={() => setIsImportModalOpen(true)}
-                    className="h-10 px-5 bg-blue-600 text-white rounded-lg font-bold text-[10px] shadow-lg flex items-center gap-2 transition-all hover:opacity-90 active:scale-95 self-start md:self-auto"
+                    className={cn("px-5 bg-blue-600 text-white rounded-lg font-bold text-[10px] shadow-lg flex items-center gap-2 transition-all hover:opacity-90 active:scale-95 self-start md:self-auto", SIATC_THEME.MOBILE.TOUCH_TARGET)}
                 >
                     <Upload className="w-3.5 h-3.5" /> {t('tarifario.importExcel')}
                 </button>
@@ -239,7 +239,7 @@ export default function TarifarioPage() {
 
                     <button
                         onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                        className="flex-1 text-left px-3 py-1"
+                        className={cn("flex-1 text-left px-3 py-1 flex flex-col justify-center", SIATC_THEME.MOBILE.TOUCH_TARGET)}
                     >
                         <p className="text-[9px] font-bold text-muted-foreground/60 mb-0">{t('tarifario.companyLabel')}</p>
                         <p className={cn(
@@ -347,14 +347,14 @@ export default function TarifarioPage() {
                                     <div className="flex items-center gap-3 animate-in zoom-in-95">
                                         <button
                                             onClick={() => { setIsEditing(false); setEditRates(rates); }}
-                                            className="px-5 py-2.5 bg-muted rounded-lg font-bold text-[10px] text-muted-foreground hover:bg-muted/80 transition-all"
+                                            className={cn("px-5 bg-muted rounded-lg font-bold text-[10px] text-muted-foreground hover:bg-muted/80 transition-all", SIATC_THEME.MOBILE.TOUCH_TARGET)}
                                         >
                                             {t('tarifario.discard')}
                                         </button>
                                         <button
                                             onClick={handleSave}
                                             disabled={saving}
-                                            className="px-6 py-2.5 bg-emerald-600 text-white rounded-lg font-bold text-[10px] shadow-lg flex items-center gap-2"
+                                            className={cn("px-6 bg-emerald-600 text-white rounded-lg font-bold text-[10px] shadow-lg flex items-center gap-2", SIATC_THEME.MOBILE.TOUCH_TARGET)}
                                         >
                                             {saving ? t('tarifario.saving') : <><Save className="w-4 h-4" /> {t('tarifario.saveRates')}</>}
                                         </button>
@@ -362,14 +362,14 @@ export default function TarifarioPage() {
                                 ) : (
                                     <button
                                         onClick={handleAddRow}
-                                        className="h-10 px-6 bg-foreground text-background rounded-lg font-bold text-[10px] shadow-lg flex items-center gap-2 transition-all hover:opacity-90 active:scale-95"
+                                        className={cn("px-6 bg-foreground text-background rounded-lg font-bold text-[10px] shadow-lg flex items-center gap-2 transition-all hover:opacity-90 active:scale-95", SIATC_THEME.MOBILE.TOUCH_TARGET)}
                                     >
                                         <Plus className="w-3.5 h-3.5" /> {t('tarifario.addRate')}
                                     </button>
                                 )}
                                 <button
                                     onClick={() => setIsExceptionsModalOpen(true)}
-                                    className="h-10 px-6 border border-amber-500/20 bg-amber-500/5 text-amber-600 rounded-lg font-bold text-[10px] shadow-sm flex items-center gap-2 transition-all hover:bg-amber-500/10 active:scale-95"
+                                    className={cn("px-6 border border-amber-500/20 bg-amber-500/5 text-amber-600 rounded-lg font-bold text-[10px] shadow-sm flex items-center gap-2 transition-all hover:bg-amber-500/10 active:scale-95", SIATC_THEME.MOBILE.TOUCH_TARGET)}
                                 >
                                     <AlertCircle className="w-3.5 h-3.5" /> {t('tarifario.specialCases')}
                                 </button>
@@ -413,6 +413,8 @@ export default function TarifarioPage() {
 
                                                  {isExpanded && (
                                                      <div className="animate-in slide-in-from-top-2 duration-300">
+                                                     {/* Desktop Table View */}
+                                                     <div className="hidden md:block">
                                                          <table className="w-full text-left">
                                                              <thead>
                                                                  <tr className="border-b border-border/20 bg-muted/5">
@@ -578,17 +580,19 @@ export default function TarifarioPage() {
                                                                                      </div>
                                                                                  </td>
                                                                                  {/* Acciones */}
-                                                                                 <td className="px-3 py-2.5 text-right opacity-0 group-hover:opacity-100 transition-all">
-                                                                                     <button
-                                                                                         onClick={() => {
-                                                                                             const newRates = editRates.filter((_, i) => i !== globalIdx);
-                                                                                             setEditRates(newRates);
-                                                                                             setIsEditing(true);
-                                                                                         }}
-                                                                                         className="p-1.5 text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 rounded-lg transition-all"
-                                                                                     >
-                                                                                         <Trash2 className="w-3.5 h-3.5" />
-                                                                                     </button>
+                                                                                 <td className="px-3 py-2.5 text-right transition-all">
+                                                                                     {isEditing && (
+                                                                                         <button
+                                                                                             onClick={() => {
+                                                                                                 const newRates = editRates.filter((_, i) => i !== globalIdx);
+                                                                                                 setEditRates(newRates);
+                                                                                                 setIsEditing(true);
+                                                                                             }}
+                                                                                             className="p-1.5 text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 rounded-lg transition-all"
+                                                                                         >
+                                                                                             <Trash2 className="w-3.5 h-3.5" />
+                                                                                         </button>
+                                                                                     )}
                                                                                  </td>
                                                                              </tr>
                                                                          );
@@ -596,6 +600,164 @@ export default function TarifarioPage() {
                                                                  })}
                                                              </tbody>
                                                          </table>
+                                                     </div>
+
+                                                     {/* Mobile Card View */}
+                                                     <div className="md:hidden space-y-3 p-3">
+                                                         {serviceNames.map(serviceName => {
+                                                             const serviceRates = serviceMap[serviceName];
+                                                             return serviceRates.map((rate, periodIdx) => {
+                                                                 const globalIdx = editRates.findIndex(r => r === rate);
+                                                                 const isInactive = (rate.Estado || 'A') !== 'A';
+                                                                 const fi = parseLocalDate(rate.Fecha_inicio);
+                                                                 const ff = parseLocalDate(rate.Fecha_fin);
+                                                                 const isVigente = fi && fi <= today && (!ff || ff >= today);
+                                                                 const isVencida = ff && ff < today && !isInactive;
+
+                                                                 return (
+                                                                     <div
+                                                                         key={`m-${category}-${serviceName}-${periodIdx}`}
+                                                                         className={cn(SIATC_THEME.COMPONENTS.CARD_CONTAINER, "p-4 space-y-3", isInactive && "opacity-60")}
+                                                                     >
+                                                                         <div className="flex items-start justify-between gap-3">
+                                                                             <div className="min-w-0 flex items-center gap-2">
+                                                                                 <div className={cn("w-[3px] h-5 rounded-full shrink-0", isInactive ? "bg-muted-foreground/20" : "bg-primary/40")} />
+                                                                                 {isEditing ? (
+                                                                                     <input
+                                                                                         type="text"
+                                                                                         value={rate.Servicio}
+                                                                                         onChange={(e) => {
+                                                                                             const newRates = [...editRates];
+                                                                                             newRates[globalIdx] = { ...newRates[globalIdx], Servicio: e.target.value.toUpperCase() };
+                                                                                             setEditRates(newRates);
+                                                                                             setIsEditing(true);
+                                                                                         }}
+                                                                                         className={cn("bg-transparent outline-none font-bold text-sm uppercase w-full focus:ring-1 focus:ring-primary/20 rounded px-1.5 border border-border/30", SIATC_THEME.MOBILE.TOUCH_INPUT)}
+                                                                                         title="Código SAP (ej: CA_1)"
+                                                                                     />
+                                                                                 ) : (
+                                                                                     <span className="font-bold text-sm text-foreground/80 truncate">
+                                                                                         {rate.ServicioNombre || rate.Servicio}
+                                                                                     </span>
+                                                                                 )}
+                                                                             </div>
+                                                                             <span className={cn(
+                                                                                 "shrink-0 text-[9px] font-black px-2 py-0.5 rounded-full",
+                                                                                 isInactive ? "bg-muted/40 text-muted-foreground/40"
+                                                                                     : isVencida ? "bg-amber-500/10 text-amber-600"
+                                                                                     : isVigente ? "bg-emerald-500/10 text-emerald-600"
+                                                                                     : "bg-blue-500/10 text-blue-600"
+                                                                             )}>
+                                                                                 {isInactive ? 'INACTIVO' : isVencida ? 'VENCIDO' : isVigente ? 'VIGENTE' : 'FUTURO'}
+                                                                             </span>
+                                                                         </div>
+
+                                                                         <div className="grid grid-cols-2 gap-3">
+                                                                             <div>
+                                                                                 <div className="text-[9px] font-bold text-muted-foreground/50 uppercase tracking-widest mb-1">{t('tarifario.table.startDate')}</div>
+                                                                                 {isEditing ? (
+                                                                                     <input
+                                                                                         type="date"
+                                                                                         value={rate.Fecha_inicio ? rate.Fecha_inicio.split('T')[0] : ''}
+                                                                                         onChange={(e) => {
+                                                                                             const newRates = [...editRates];
+                                                                                             newRates[globalIdx] = { ...newRates[globalIdx], Fecha_inicio: e.target.value };
+                                                                                             setEditRates(newRates);
+                                                                                             setIsEditing(true);
+                                                                                         }}
+                                                                                         className={cn("w-full bg-muted/30 px-2 py-1 rounded border border-transparent focus:border-primary/20 text-[11px] font-bold outline-none", SIATC_THEME.MOBILE.TOUCH_INPUT)}
+                                                                                     />
+                                                                                 ) : (
+                                                                                     <span className="text-[11px] font-bold text-foreground/50 tabular-nums">
+                                                                                         {fi ? fi.toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—'}
+                                                                                     </span>
+                                                                                 )}
+                                                                             </div>
+                                                                             <div>
+                                                                                 <div className="text-[9px] font-bold text-muted-foreground/50 uppercase tracking-widest mb-1">{t('tarifario.table.endDate')}</div>
+                                                                                 {isEditing ? (
+                                                                                     <input
+                                                                                         type="date"
+                                                                                         value={rate.Fecha_fin ? rate.Fecha_fin.split('T')[0] : ''}
+                                                                                         onChange={(e) => {
+                                                                                             const newRates = [...editRates];
+                                                                                             newRates[globalIdx] = { ...newRates[globalIdx], Fecha_fin: e.target.value };
+                                                                                             setEditRates(newRates);
+                                                                                             setIsEditing(true);
+                                                                                         }}
+                                                                                         className={cn("w-full bg-muted/30 px-2 py-1 rounded border border-transparent focus:border-primary/20 text-[11px] font-bold outline-none", SIATC_THEME.MOBILE.TOUCH_INPUT)}
+                                                                                     />
+                                                                                 ) : (
+                                                                                     <span className={cn("text-[11px] font-bold tabular-nums", isVencida ? "text-amber-500/70" : "text-foreground/50")}>
+                                                                                         {ff ? ff.toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '∞'}
+                                                                                     </span>
+                                                                                 )}
+                                                                             </div>
+                                                                         </div>
+
+                                                                         <div className="flex items-center justify-between gap-2 pt-2 border-t border-border/30">
+                                                                             {isEditing ? (
+                                                                                 <div className="flex items-center gap-1">
+                                                                                     <span className="text-[10px] font-bold text-primary/40">S/</span>
+                                                                                     <input
+                                                                                         type="number"
+                                                                                         value={rate.Importe}
+                                                                                         onChange={(e) => {
+                                                                                             const newRates = [...editRates];
+                                                                                             newRates[globalIdx] = { ...newRates[globalIdx], Importe: e.target.value };
+                                                                                             setEditRates(newRates);
+                                                                                             setIsEditing(true);
+                                                                                         }}
+                                                                                         className={cn("bg-primary/5 px-2 py-1 rounded border border-transparent focus:border-primary/20 text-left font-bold text-sm w-24 outline-none", SIATC_THEME.MOBILE.TOUCH_INPUT)}
+                                                                                     />
+                                                                                 </div>
+                                                                             ) : (
+                                                                                 <span className="font-black text-sm text-foreground tabular-nums">
+                                                                                     S/ {Number(rate.Importe).toFixed(2)}
+                                                                                 </span>
+                                                                             )}
+                                                                             <div className="flex items-center gap-2">
+                                                                                 <button
+                                                                                     disabled={togglingId === (rate.ID_TARIFARIO ?? '')}
+                                                                                     onClick={() => isEditing
+                                                                                         ? (() => {
+                                                                                             const newRates = [...editRates];
+                                                                                             newRates[globalIdx] = { ...newRates[globalIdx], Estado: isInactive ? 'A' : 'I' };
+                                                                                             setEditRates(newRates);
+                                                                                             setIsEditing(true);
+                                                                                         })()
+                                                                                         : handleToggleEstado(rate, globalIdx)
+                                                                                     }
+                                                                                     title={isInactive ? 'Activar tarifa' : 'Inactivar tarifa'}
+                                                                                     className={cn(
+                                                                                         "text-[10px] font-black px-3 rounded-full border transition-all disabled:opacity-40 disabled:cursor-not-allowed",
+                                                                                         SIATC_THEME.MOBILE.TOUCH_TARGET,
+                                                                                         isInactive
+                                                                                             ? "bg-muted/40 border-border/40 text-muted-foreground/50 hover:bg-emerald-500/10 hover:border-emerald-500/20 hover:text-emerald-600"
+                                                                                             : "bg-muted/10 border-border/30 text-muted-foreground/40 hover:bg-red-500/10 hover:border-red-500/20 hover:text-red-500"
+                                                                                     )}
+                                                                                 >
+                                                                                     {togglingId === (rate.ID_TARIFARIO ?? '') ? '...' : isInactive ? 'Activar' : 'Inactivar'}
+                                                                                 </button>
+                                                                                 {isEditing && (
+                                                                                     <button
+                                                                                         onClick={() => {
+                                                                                             const newRates = editRates.filter((_, i) => i !== globalIdx);
+                                                                                             setEditRates(newRates);
+                                                                                             setIsEditing(true);
+                                                                                         }}
+                                                                                         className={cn("text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 rounded-lg transition-all px-2.5 flex items-center justify-center", SIATC_THEME.MOBILE.TOUCH_TARGET)}
+                                                                                     >
+                                                                                         <Trash2 className="w-4 h-4" />
+                                                                                     </button>
+                                                                                 )}
+                                                                             </div>
+                                                                         </div>
+                                                                     </div>
+                                                                 );
+                                                             });
+                                                         })}
+                                                     </div>
                                                      </div>
                                                  )}
                                              </div>

@@ -153,6 +153,7 @@ export default function DashboardPage() {
                             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                             className={cn(
                                 "flex items-center justify-between gap-3 bg-background px-4 py-2 border shadow-sm transition-all min-w-[200px]",
+                                SIATC_THEME.MOBILE.TOUCH_TARGET,
                                 SIATC_THEME.TOKENS.COMPONENT_ROUNDNESS,
                                 isDropdownOpen ? "ring-2 ring-primary/20 border-primary/50" : "border-border hover:border-primary/40"
                             )}
@@ -175,7 +176,7 @@ export default function DashboardPage() {
                                             autoFocus
                                             type="text" 
                                             placeholder={t('dashboard.searchPlaceholder')}
-                                            className={cn(SIATC_THEME.COMPONENTS.INPUT, "pl-9 text-[11px] font-bold")}
+                                            className={cn(SIATC_THEME.COMPONENTS.INPUT, SIATC_THEME.MOBILE.TOUCH_INPUT, "pl-9 text-[11px] font-bold")}
                                             value={searchQuery}
                                             onChange={(e) => setSearchQuery(e.target.value)}
                                         />
@@ -186,6 +187,7 @@ export default function DashboardPage() {
                                         onClick={() => { setSelectedCas('all'); setIsDropdownOpen(false); }}
                                         className={cn(
                                             "w-full flex items-center justify-between px-4 py-3 rounded-lg text-[10px] font-black transition-colors mb-1",
+                                            SIATC_THEME.MOBILE.TOUCH_TARGET,
                                             selectedCas === 'all' ? "bg-primary text-white" : "hover:bg-muted text-muted-foreground"
                                         )}
                                     >
@@ -199,6 +201,7 @@ export default function DashboardPage() {
                                             onClick={() => { setSelectedCas(cas.RUC); setIsDropdownOpen(false); }}
                                             className={cn(
                                                 "w-full flex items-center justify-between px-4 py-3 rounded-lg text-[10px] font-black transition-colors text-left",
+                                                SIATC_THEME.MOBILE.TOUCH_TARGET,
                                                 selectedCas === cas.RUC ? "bg-primary text-white shadow-md shadow-primary/20" : "hover:bg-muted text-foreground/80"
                                             )}
                                         >
@@ -228,8 +231,9 @@ export default function DashboardPage() {
                                 onClick={() => setPeriod(p.id)}
                                 className={cn(
                                     "px-3 py-1.5 rounded-md text-[10px] font-bold transition-all",
-                                    period === p.id 
-                                        ? "bg-foreground text-background shadow-md" 
+                                    SIATC_THEME.MOBILE.TOUCH_TARGET,
+                                    period === p.id
+                                        ? "bg-foreground text-background shadow-md"
                                         : "text-muted-foreground hover:bg-muted"
                                 )}
                             >
@@ -243,21 +247,21 @@ export default function DashboardPage() {
             {/* Selector de Rango Personalizado */}
             {period === 'custom' && (
                 <div className="flex flex-wrap items-center gap-4 bg-muted/30 p-3 rounded-xl border border-border/40 animate-in slide-in-from-top-2">
-                    <div className="flex items-center gap-3 bg-background px-3 py-1.5 rounded-lg border border-border shadow-sm">
-                        <Calendar className="w-3.5 h-3.5 text-primary" />
-                        <input 
-                            type="date" 
-                            className="bg-transparent border-none text-[10px] font-bold focus:ring-0 outline-none cursor-pointer"
+                    <div className={cn("flex items-center gap-3 bg-background px-3 py-1.5 rounded-lg border border-border shadow-sm", SIATC_THEME.MOBILE.TOUCH_TARGET)}>
+                        <Calendar className="w-3.5 h-3.5 text-primary shrink-0" />
+                        <input
+                            type="date"
+                            className={cn("bg-transparent border-none text-[10px] font-bold focus:ring-0 outline-none cursor-pointer", SIATC_THEME.MOBILE.TOUCH_INPUT)}
                             value={customRange.start}
                             onChange={(e) => setCustomRange({...customRange, start: e.target.value})}
                         />
                     </div>
                     <span className="text-muted-foreground text-[9px] font-bold opacity-40">{t('dashboard.period.to')}</span>
-                    <div className="flex items-center gap-3 bg-background px-3 py-1.5 rounded-lg border border-border shadow-sm">
-                        <Calendar className="w-3.5 h-3.5 text-primary" />
-                        <input 
-                            type="date" 
-                            className="bg-transparent border-none text-[10px] font-bold focus:ring-0 outline-none cursor-pointer"
+                    <div className={cn("flex items-center gap-3 bg-background px-3 py-1.5 rounded-lg border border-border shadow-sm", SIATC_THEME.MOBILE.TOUCH_TARGET)}>
+                        <Calendar className="w-3.5 h-3.5 text-primary shrink-0" />
+                        <input
+                            type="date"
+                            className={cn("bg-transparent border-none text-[10px] font-bold focus:ring-0 outline-none cursor-pointer", SIATC_THEME.MOBILE.TOUCH_INPUT)}
                             value={customRange.end}
                             onChange={(e) => setCustomRange({...customRange, end: e.target.value})}
                         />

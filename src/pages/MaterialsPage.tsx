@@ -110,8 +110,8 @@ export default function MaterialsPage() {
                 </div>
                 <div className="flex items-center gap-2 bg-muted/20 p-1 rounded-xl border border-border/30">
                     <Filter className="w-4 h-4 ml-3 text-muted-foreground" />
-                    <select 
-                        className="bg-transparent border-none text-sm font-bold px-3 py-2 outline-none cursor-pointer"
+                    <select
+                        className={cn("bg-transparent border-none text-sm font-bold px-3 py-2 outline-none cursor-pointer", SIATC_THEME.MOBILE.TOUCH_INPUT)}
                         value={selectedCategory}
                         onChange={(e) => setSelectedCategory(e.target.value)}
                     >
@@ -135,72 +135,125 @@ export default function MaterialsPage() {
             {/* Table */}
             <div className={cn("flex-1 overflow-hidden flex flex-col", SIATC_THEME.COMPONENTS.CARD_CONTAINER)}>
                 <div className="flex-1 overflow-auto custom-scrollbar">
-                    {loading ? (
-                        <div className="h-full flex flex-col items-center justify-center gap-4 opacity-40">
-                            <Activity className="w-10 h-10 animate-spin text-primary" />
-                            <p className="text-sm font-black">{t('materials.loading')}</p>
-                        </div>
-                    ) : filteredMaterials.length === 0 ? (
-                        <div className="h-full flex flex-col items-center justify-center text-center py-20 opacity-30">
-                            <Package className="w-16 h-16 mb-6" />
-                            <h3 className="text-lg font-black">{t('materials.empty')}</h3>
-                            <p className="text-xs font-bold mt-2">{t('materials.emptyHint')}</p>
-                        </div>
-                    ) : (
-                        <table className="w-full border-separate border-spacing-0">
-                            <thead className="bg-muted/30 sticky top-0 z-10 border-b border-border">
-                                <tr className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">
-                                    <th className="px-6 py-4 text-left">{t('materials.table.externalCode')}</th>
-                                    <th className="px-6 py-4 text-left">{t('materials.table.productName')}</th>
-                                    <th className="px-6 py-4 text-left">{t('materials.table.category')}</th>
-                                    <th className="px-6 py-4 text-center">{t('materials.table.status')}</th>
-                                    <th className="px-6 py-4 text-right">{t('materials.table.actions')}</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-border/10">
-                                {filteredMaterials.map(m => (
-                                    <tr key={m.ID_Material} className="hover:bg-primary/[0.02] transition-colors group">
-                                        <td className="px-6 py-4 font-black text-primary text-sm tracking-tighter">
-                                            {m.ID_Externo}
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <span className="font-bold text-foreground text-sm block max-w-[400px] truncate" title={m.Nombre}>
-                                                {toTitleCase(m.Nombre)}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <span className="px-3 py-1 bg-primary/5 text-primary rounded-lg text-[10px] font-black border border-primary/10">
-                                                {m.Categoria || t('materials.noCategory')}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4 text-center">
-                                            <span className={cn(
-                                                "px-2.5 py-1 rounded-lg text-[10px] font-black",
-                                                m.Estado === 'Activo' ? "bg-emerald-50 text-emerald-600 border border-emerald-100" : "bg-red-50 text-red-600 border border-red-100"
-                                            )}>
-                                                {m.Estado}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4 text-right">
-                                            <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <button 
-                                                    onClick={() => { 
-                                                        setEditingMaterial(m); 
-                                                        setIsManualCategory(false);
-                                                        setIsEditModalOpen(true); 
-                                                    }}
-                                                    className="p-2 bg-primary/10 text-primary rounded-lg hover:bg-primary hover:text-white transition-all shadow-sm"
-                                                    title="Editar"
-                                                >
-                                                    <Edit2 className="w-3.5 h-3.5" />
-                                                </button>
-                                            </div>
-                                        </td>
+                    {/* Desktop Table View */}
+                    <div className="hidden md:block h-full">
+                        {loading ? (
+                            <div className="h-full flex flex-col items-center justify-center gap-4 opacity-40">
+                                <Activity className="w-10 h-10 animate-spin text-primary" />
+                                <p className="text-sm font-black">{t('materials.loading')}</p>
+                            </div>
+                        ) : filteredMaterials.length === 0 ? (
+                            <div className="h-full flex flex-col items-center justify-center text-center py-20 opacity-30">
+                                <Package className="w-16 h-16 mb-6" />
+                                <h3 className="text-lg font-black">{t('materials.empty')}</h3>
+                                <p className="text-xs font-bold mt-2">{t('materials.emptyHint')}</p>
+                            </div>
+                        ) : (
+                            <table className="w-full border-separate border-spacing-0">
+                                <thead className="bg-muted/30 sticky top-0 z-10 border-b border-border">
+                                    <tr className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">
+                                        <th className="px-6 py-4 text-left">{t('materials.table.externalCode')}</th>
+                                        <th className="px-6 py-4 text-left">{t('materials.table.productName')}</th>
+                                        <th className="px-6 py-4 text-left">{t('materials.table.category')}</th>
+                                        <th className="px-6 py-4 text-center">{t('materials.table.status')}</th>
+                                        <th className="px-6 py-4 text-right">{t('materials.table.actions')}</th>
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    )}
+                                </thead>
+                                <tbody className="divide-y divide-border/10">
+                                    {filteredMaterials.map(m => (
+                                        <tr key={m.ID_Material} className="hover:bg-primary/[0.02] transition-colors group">
+                                            <td className="px-6 py-4 font-black text-primary text-sm tracking-tighter">
+                                                {m.ID_Externo}
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <span className="font-bold text-foreground text-sm block max-w-[400px] truncate" title={m.Nombre}>
+                                                    {toTitleCase(m.Nombre)}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <span className="px-3 py-1 bg-primary/5 text-primary rounded-lg text-[10px] font-black border border-primary/10">
+                                                    {m.Categoria || t('materials.noCategory')}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4 text-center">
+                                                <span className={cn(
+                                                    "px-2.5 py-1 rounded-lg text-[10px] font-black",
+                                                    m.Estado === 'Activo' ? "bg-emerald-50 text-emerald-600 border border-emerald-100" : "bg-red-50 text-red-600 border border-red-100"
+                                                )}>
+                                                    {m.Estado}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4 text-right">
+                                                <div className="flex justify-end gap-2 transition-opacity">
+                                                    <button
+                                                        onClick={() => {
+                                                            setEditingMaterial(m);
+                                                            setIsManualCategory(false);
+                                                            setIsEditModalOpen(true);
+                                                        }}
+                                                        className="p-2 bg-primary/10 text-primary rounded-lg hover:bg-primary hover:text-white transition-all shadow-sm"
+                                                        title="Editar"
+                                                    >
+                                                        <Edit2 className="w-3.5 h-3.5" />
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        )}
+                    </div>
+
+                    {/* Mobile Card View */}
+                    <div className="md:hidden space-y-3 p-3">
+                        {loading ? (
+                            <div className="flex flex-col items-center justify-center gap-4 py-12 opacity-40">
+                                <Activity className="w-10 h-10 animate-spin text-primary" />
+                                <p className="text-sm font-black">{t('materials.loading')}</p>
+                            </div>
+                        ) : filteredMaterials.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center text-center py-20 opacity-30">
+                                <Package className="w-16 h-16 mb-6" />
+                                <h3 className="text-lg font-black">{t('materials.empty')}</h3>
+                                <p className="text-xs font-bold mt-2">{t('materials.emptyHint')}</p>
+                            </div>
+                        ) : filteredMaterials.map(m => (
+                            <div key={m.ID_Material} className={cn(SIATC_THEME.COMPONENTS.CARD_CONTAINER, "p-4 space-y-3")}>
+                                <div className="flex items-start justify-between gap-3">
+                                    <div className="min-w-0">
+                                        <span className="font-black text-primary text-[11px] tracking-tighter font-mono">{m.ID_Externo}</span>
+                                        <div className="text-sm font-bold text-foreground truncate mt-1" title={m.Nombre}>
+                                            {toTitleCase(m.Nombre)}
+                                        </div>
+                                    </div>
+                                    <span className={cn(
+                                        "shrink-0 px-2.5 py-1 rounded-lg text-[10px] font-black",
+                                        m.Estado === 'Activo' ? "bg-emerald-50 text-emerald-600 border border-emerald-100" : "bg-red-50 text-red-600 border border-red-100"
+                                    )}>
+                                        {m.Estado}
+                                    </span>
+                                </div>
+                                <div className="flex items-center justify-between gap-2 pt-2 border-t border-border/40">
+                                    <span className="px-3 py-1 bg-primary/5 text-primary rounded-lg text-[10px] font-black border border-primary/10 truncate max-w-[60%]">
+                                        {m.Categoria || t('materials.noCategory')}
+                                    </span>
+                                    <button
+                                        onClick={() => {
+                                            setEditingMaterial(m);
+                                            setIsManualCategory(false);
+                                            setIsEditModalOpen(true);
+                                        }}
+                                        className={cn("px-3 bg-primary/10 text-primary rounded-lg hover:bg-primary hover:text-white transition-all shadow-sm flex items-center gap-1.5 shrink-0", SIATC_THEME.MOBILE.TOUCH_TARGET)}
+                                        title="Editar"
+                                    >
+                                        <Edit2 className="w-3.5 h-3.5" />
+                                        <span className="text-[11px] font-black">{t('common.edit')}</span>
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
                 </div>
             </div>
 
@@ -224,10 +277,10 @@ export default function MaterialsPage() {
                             </div>
                             <div className="flex flex-col gap-1.5">
                                 <label className="text-[10px] font-black text-muted-foreground ml-1">{t('materials.modal.externalCode')}</label>
-                                <input 
+                                <input
                                     disabled={!!editingMaterial.ID_Material}
-                                    type="text" 
-                                    className="w-full px-4 py-2.5 bg-card border border-border rounded-xl text-sm font-bold focus:ring-4 focus:ring-primary/5 focus:border-primary outline-none transition-all disabled:opacity-50"
+                                    type="text"
+                                    className={cn("w-full px-4 py-2.5 bg-card border border-border rounded-xl text-sm font-bold focus:ring-4 focus:ring-primary/5 focus:border-primary outline-none transition-all disabled:opacity-50", SIATC_THEME.MOBILE.TOUCH_INPUT)}
                                     value={editingMaterial.ID_Externo}
                                     onChange={(e) => setEditingMaterial({...editingMaterial, ID_Externo: e.target.value})}
                                     required
@@ -239,15 +292,15 @@ export default function MaterialsPage() {
                                     <button
                                         type="button"
                                         onClick={() => setIsManualCategory(!isManualCategory)}
-                                        className="text-[9px] font-black text-primary hover:underline"
+                                        className={cn("text-[9px] font-black text-primary hover:underline flex items-center", SIATC_THEME.MOBILE.TOUCH_TARGET)}
                                     >
                                         {isManualCategory ? t('materials.modal.viewList') : t('materials.modal.newCategory')}
                                     </button>
                                 </div>
                                 {isManualCategory ? (
-                                    <input 
-                                        type="text" 
-                                        className="w-full px-4 py-2.5 bg-card border border-border rounded-xl text-sm font-black focus:ring-4 focus:ring-primary/5 focus:border-primary outline-none transition-all"
+                                    <input
+                                        type="text"
+                                        className={cn("w-full px-4 py-2.5 bg-card border border-border rounded-xl text-sm font-black focus:ring-4 focus:ring-primary/5 focus:border-primary outline-none transition-all", SIATC_THEME.MOBILE.TOUCH_INPUT)}
                                         value={editingMaterial.Categoria}
                                         onChange={(e) => setEditingMaterial({...editingMaterial, Categoria: e.target.value})}
                                         placeholder={t('materials.modal.newCategoryPlaceholder')}
@@ -255,8 +308,8 @@ export default function MaterialsPage() {
                                         required
                                     />
                                 ) : (
-                                    <select 
-                                        className="w-full px-4 py-2.5 bg-card border border-border rounded-xl text-sm font-black focus:ring-4 focus:ring-primary/5 focus:border-primary outline-none transition-all cursor-pointer appearance-none"
+                                    <select
+                                        className={cn("w-full px-4 py-2.5 bg-card border border-border rounded-xl text-sm font-black focus:ring-4 focus:ring-primary/5 focus:border-primary outline-none transition-all cursor-pointer appearance-none", SIATC_THEME.MOBILE.TOUCH_INPUT)}
                                         value={editingMaterial.Categoria}
                                         onChange={(e) => {
                                             if (e.target.value === 'NEW') {

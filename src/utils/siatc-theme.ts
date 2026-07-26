@@ -164,7 +164,7 @@ export const SIATC_THEME = {
         BANNER_OVERLAY: "absolute inset-0 bg-white/10 opacity-30 backdrop-blur-3xl",
         AVATAR_CONTAINER: "flex flex-col items-center -mt-14 px-6 pb-6",
         AVATAR_RING: "w-28 h-28 rounded-full border-4 border-card bg-card flex items-center justify-center overflow-hidden shadow-xl ring-2 ring-primary/20",
-        CAMERA_BUTTON: "absolute bottom-1 right-1 p-2 bg-primary text-primary-foreground rounded-full shadow-lg hover:bg-primary/90 hover:scale-110 transition-all duration-200 ring-2 ring-card",
+        CAMERA_BUTTON: "absolute bottom-1 right-1 min-h-[44px] min-w-[44px] flex items-center justify-center bg-primary text-primary-foreground rounded-full shadow-lg hover:bg-primary/90 hover:scale-110 transition-all duration-200 ring-2 ring-card",
         ROLE_BADGE: "mt-4 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-xs font-bold border border-primary/20",
         QUICK_INFO_CARD: "p-6 space-y-5",
         INFO_LIST: "space-y-4",
@@ -185,7 +185,7 @@ export const SIATC_THEME = {
         FIELD_WRAPPER: "relative",
         FIELD_ICON: "absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-cb-neutral/60",
         INPUT_DISABLED: "block w-full pl-10 pr-3 py-2.5 bg-cb-bg/60 border border-transparent rounded-cb-btn text-cb-text-secondary text-sm font-medium cursor-not-allowed",
-        INPUT_ACTIVE: "block w-full pl-10 pr-3 py-2.5 bg-card border border-cb-border rounded-cb-btn focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all text-sm font-bold text-cb-text-primary",
+        INPUT_ACTIVE: "block w-full min-h-[44px] pl-10 pr-3 py-2.5 bg-card border border-cb-border rounded-cb-btn focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all text-base md:text-sm font-bold text-cb-text-primary",
         INPUT_ERROR: "border-[#DF2935] focus:border-[#DF2935] focus:ring-[#DF2935]/10 bg-[#FDECEE]/20",
         READONLY_ALERT: "p-3 bg-primary/5 dark:bg-primary/20 rounded-cb-btn border border-primary/20",
         READONLY_ALERT_TEXT: "text-[11px] text-primary dark:text-primary font-medium flex items-center gap-2",
@@ -201,6 +201,12 @@ export const SIATC_THEME = {
         ALLOW_COLLAPSE:           true,
         HOVER_EXPAND:             true,
         MOBILE_CLOSE_ON_NAVIGATE: true,
+    },
+
+    MOBILE: {
+        // Área táctil mínima en móvil/tablet: 44px, vs. 36px en escritorio.
+        TOUCH_TARGET: "min-h-[44px]",
+        TOUCH_INPUT: "min-h-[44px] text-base md:text-sm",
     },
 };
 

@@ -146,13 +146,13 @@ export default function AuditLogPage() {
                             value={search}
                             onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
                             placeholder={t('audit.searchPlaceholder')}
-                            className={cn(SIATC_THEME.COMPONENTS.INPUT, "pl-11 pr-4 dark:bg-cb-bg text-cb-text-primary border-cb-border")}
+                            className={cn(SIATC_THEME.COMPONENTS.INPUT, SIATC_THEME.MOBILE.TOUCH_INPUT, "pl-11 pr-4 dark:bg-cb-bg text-cb-text-primary border-cb-border")}
                         />
                     </div>
                     <div className="relative w-full sm:w-64">
                         <Database className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-primary/60 pointer-events-none" />
                         <select
-                            className={cn(SIATC_THEME.COMPONENTS.INPUT, "pl-11 pr-8 dark:bg-cb-bg text-cb-text-primary border-cb-border appearance-none cursor-pointer text-xs uppercase tracking-wider")}
+                            className={cn(SIATC_THEME.COMPONENTS.INPUT, SIATC_THEME.MOBILE.TOUCH_INPUT, "pl-11 pr-8 dark:bg-cb-bg text-cb-text-primary border-cb-border appearance-none cursor-pointer text-xs uppercase tracking-wider")}
                             value={filterAction}
                             onChange={(e) => { setFilterAction(e.target.value); setCurrentPage(1); }}
                         >
@@ -168,7 +168,7 @@ export default function AuditLogPage() {
                 </div>
 
                 {/* Table Area */}
-                <SIATCTable containerClassName="relative">
+                <SIATCTable containerClassName="relative hidden md:block">
                     {isLoading ? (
                         <div className="absolute inset-0 flex flex-col items-center justify-center bg-card/60 backdrop-blur-md z-50">
                             <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
@@ -302,7 +302,92 @@ export default function AuditLogPage() {
                         </>
                     )}
                 </SIATCTable>
-                
+
+                {/* Mobile Card View */}
+                <div className="md:hidden space-y-3 p-3">
+                    {isLoading ? (
+                        <div className="flex flex-col items-center justify-center gap-4 py-12">
+                            <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+                            <span className="text-sm font-bold text-cb-text-secondary tracking-[0.2em] animate-pulse">{t('audit.loading')}</span>
+                        </div>
+                    ) : paginatedLogs.length === 0 ? (
+                        <div className="flex flex-col items-center gap-4 py-12 opacity-30">
+                            <Activity className="w-16 h-16 text-cb-neutral" />
+                            <p className="text-xs font-bold tracking-widest text-cb-neutral">{t('audit.empty')}</p>
+                        </div>
+                    ) : (
+                        paginatedLogs.map((log) => (
+                            <div
+                                key={log.id}
+                                onClick={() => setExpandedLogId(expandedLogId === log.id ? null : log.id)}
+                                className={cn(
+                                    SIATC_THEME.COMPONENTS.CARD_CONTAINER,
+                                    SIATC_THEME.MOBILE.TOUCH_TARGET,
+                                    "p-4 space-y-3 cursor-pointer",
+                                    expandedLogId === log.id && "bg-primary/[0.02]"
+                                )}
+                            >
+                                <div className="flex items-start justify-between gap-3">
+                                    <div className="flex items-center gap-3 min-w-0">
+                                        <div className="w-10 h-10 rounded-full bg-primary/10 dark:bg-primary/20 flex items-center justify-center text-primary shrink-0 border border-cb-border">
+                                            <User className="w-5 h-5 stroke-[2]" />
+                                        </div>
+                                        <div className="min-w-0">
+                                            <div className="text-sm font-bold text-cb-text-primary truncate">{toTitleCase(log.user_name)}</div>
+                                            <div className="text-[9px] text-cb-text-secondary font-bold tracking-tighter opacity-60 font-mono">ID: {log.user_id}</div>
+                                        </div>
+                                    </div>
+                                    <ChevronDown className={cn(
+                                        "w-4 h-4 text-cb-neutral transition-transform duration-300 shrink-0 mt-1",
+                                        expandedLogId === log.id && "rotate-180 text-primary"
+                                    )} />
+                                </div>
+
+                                <div className="flex items-center justify-between gap-2 flex-wrap">
+                                    {getActionBadge(log.action)}
+                                    <div className="flex items-center gap-1.5 text-[10px] text-cb-text-secondary font-bold">
+                                        <Clock className="w-3 h-3 text-primary/60 shrink-0" />
+                                        {new Date(log.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} · {new Date(log.created_at).toLocaleDateString()}
+                                    </div>
+                                </div>
+
+                                <div className="flex items-center gap-2 min-w-0">
+                                    <FileText className="w-3.5 h-3.5 text-primary/60 shrink-0" />
+                                    <span className="text-xs font-bold text-cb-text-primary truncate">{log.entity}</span>
+                                    {log.entity_id && (
+                                        <span className="text-[9px] text-cb-text-secondary font-bold tracking-widest italic shrink-0">Ref_{log.entity_id}</span>
+                                    )}
+                                </div>
+
+                                <div className="text-[11px] text-cb-text-secondary font-bold bg-cb-bg/30 px-3 py-2 rounded-cb-btn border border-cb-border truncate" title={log.details}>
+                                    {log.details}
+                                </div>
+
+                                {expandedLogId === log.id && (
+                                    <div
+                                        className="bg-slate-900 rounded-cb-card p-4 shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-300"
+                                        onClick={(e) => e.stopPropagation()}
+                                    >
+                                        <div className="flex items-center gap-2 text-[10px] font-bold text-slate-500 mb-2">
+                                            <Terminal className="w-3.5 h-3.5" /> Metadata Raw
+                                        </div>
+                                        <pre className="text-[11px] font-mono text-emerald-400 overflow-x-auto custom-scrollbar leading-relaxed">
+                                            {JSON.stringify({
+                                                id: log.id,
+                                                action: log.action,
+                                                resource: log.entity,
+                                                origin: 'VAL_ENGINE_V2.1.0',
+                                                meta: log.details,
+                                                timestamp: log.created_at
+                                            }, null, 4)}
+                                        </pre>
+                                    </div>
+                                )}
+                            </div>
+                        ))
+                    )}
+                </div>
+
                 {/* Footer Stats: SIATC Standard */}
                 <SIATCTableFooter 
                     totalRecords={filteredLogs.length} 

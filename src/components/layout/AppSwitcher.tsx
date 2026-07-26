@@ -93,7 +93,7 @@ export function AppSwitcher({ currentAppId }: AppSwitcherProps) {
                 isMobile ? (
                     createPortal(
                         <div className={cn(
-                            "fixed inset-0 w-screen h-screen rounded-none border-none bg-card z-[100] flex flex-col p-0 overflow-y-auto"
+                            "fixed inset-0 w-screen h-dvh rounded-none border-none bg-card z-[100] flex flex-col p-0 overflow-y-auto"
                         )}>
                             {/* Switcher Header */}
                             <div className={cn(theme.HEADER, "px-6 pt-6 pb-4")}>
