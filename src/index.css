@@ -215,6 +215,15 @@
   .dark ::-webkit-scrollbar-thumb:hover {
     background-color: rgba(156, 163, 175, 0.4);
   }
+
+  .no-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 /* Base animations
