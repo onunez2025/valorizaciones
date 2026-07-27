@@ -2923,6 +2923,47 @@ app.post('/api/users', verifyToken, verifyPermission('val.config.users'), async 
     } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
 
+// ─── Perfil propio (autoservicio) ────────────────────────────────────────────
+// Solo verifyToken -- cualquier usuario autenticado puede guardar SU PROPIO
+// avatar y/o contraseña. A diferencia de PUT /api/users/:id (abajo, gateado
+// por val.config.users), nunca acepta un id por parametro: siempre opera sobre
+// (req as any).user.id, y solo toca AvatarUrl/PasswordHash -- nunca
+// full_name/username/email/role_id/management_id/apps de nadie.
+app.put('/api/profile', verifyToken, async (req: any, res: Response) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+    try {
+        const userId = req.user.id;
+        const { avatar_url, password_hash } = req.body;
+
+        const db = await getDb();
+        const request = db.request();
+        addInput(request, 'id', sql.UniqueIdentifier, userId);
+
+        const sets: string[] = [];
+        if (avatar_url !== undefined) {
+            addInput(request, 'avatarUrl', sql.NVarChar(500), avatar_url || null);
+            sets.push('AvatarUrl = @avatarUrl');
+        }
+        if (password_hash && String(password_hash).trim() !== '') {
+            const salt = await bcrypt.genSalt(10);
+            const hashedPwd = await bcrypt.hash(password_hash, salt);
+            addInput(request, 'password', sql.NVarChar(255), hashedPwd);
+            sets.push('PasswordHash = @password', 'RequiresPasswordChange = 0');
+        }
+
+        if (sets.length > 0) {
+            await request.query(`UPDATE EBM.Users SET ${sets.join(', ')} WHERE Id = @id`);
+        }
+
+        const selectRequest = db.request();
+        addInput(selectRequest, 'id', sql.UniqueIdentifier, userId);
+        const result = await selectRequest.query('SELECT FullName as full_name, AvatarUrl as avatar_url, CAST(RequiresPasswordChange AS BIT) as requires_password_change FROM EBM.Users WHERE Id = @id');
+        if (result.recordset.length === 0) return res.status(404).json({ error: 'Usuario no encontrado' });
+        res.json(result.recordset[0]);
+    } catch (err: unknown) {
+        res.status(500).json({ error: safeError(err) });
+    }
+});
+
 app.put('/api/users/:id', verifyToken, verifyPermission('val.config.users'), async (req: Request, res: Response) => {
     try {
         const { id } = req.params;

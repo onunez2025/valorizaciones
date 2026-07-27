@@ -5,7 +5,7 @@ import {
     Shield, Building2, BadgeCheck, Loader2
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
-import { UsersService } from '../services/usersService';
+import { ApiClient } from '../services/apiClient';
 import { cn } from '../utils/cn';
 import { SIATC_THEME } from '../utils/siatc-theme';
 
@@ -112,20 +112,20 @@ export function ProfilePage() {
 
         setIsSaving(true);
         try {
-            const updatedUser = {
-                ...user,
-                avatar_url: formData.avatar_url,
-                password_hash: formData.password || undefined
-            };
-
-            const savedUser = await UsersService.saveUser(updatedUser);
+            const savedUser = await ApiClient.request('/profile', {
+                method: 'PUT',
+                body: JSON.stringify({
+                    avatar_url: formData.avatar_url,
+                    password_hash: formData.password || undefined
+                })
+            });
 
             // Merge only visual/profile fields — preserve session state
             const mergedUser = {
                 ...user,
                 avatar_url: savedUser.avatar_url,
                 full_name: savedUser.full_name,
-                requires_password_change: formData.password ? false : user.requires_password_change
+                requires_password_change: savedUser.requires_password_change
             };
             login(mergedUser);
 
