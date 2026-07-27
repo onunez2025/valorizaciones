@@ -3054,21 +3054,8 @@ app.delete('/api/roles/:id', verifyToken, verifyPermission('val.config.roles'), 
 });
 
 
-// AUDIT LOGS
-app.get('/api/config/audit-logs', verifyToken, verifyPermission('val.config.audit'), async (req: Request, res: Response) => {
-    try {
-        const db = await getDb();
-        const auditLogReq = db.request();
-        addInput(auditLogReq, 'app', sql.NVarChar(20), APP_IDENTIFIER);
-        const result = await auditLogReq.query(`
-            SELECT ID as id, UsuarioID as user_id, UsuarioNombre as user_name, Accion as action, Entidad as entity, Detalle as details, Fecha as created_at
-            FROM [dbo].[GAC_APP_TB_AUDIT_LOG]
-            WHERE Accion LIKE @app + ':%' OR Entidad LIKE @app + ':%' OR Detalle LIKE '%' + @app + '%'
-            ORDER BY Fecha DESC
-        `);
-        res.json(result.recordset);
-    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
-});
+// AUDIT LOGS: solo servia a la pagina local AuditLogPage.tsx (eliminada) -- la escritura de
+// auditoria sigue viva via logAudit(), sin relacion con este endpoint de lectura.
 
 app.get('/api/diagnose/redis', async (req: Request, res: Response) => {
     try {

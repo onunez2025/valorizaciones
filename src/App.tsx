@@ -19,7 +19,6 @@ const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 
 // Configuration Pages
 const ConfigLayout = lazy(() => import('./pages/config/ConfigLayout'));
-const AuditLogPage = lazy(() => import('./pages/config/AuditLogPage'));
 
 const consoleUrl = import.meta.env.VITE_CONSOLE_URL || (import.meta.env.PROD ? 'https://console.siatc.cloud' : 'http://localhost:3008');
 
@@ -79,7 +78,7 @@ function App() {
                     <Route path="settings" element={<SettingsPage />} />
                     <Route path="users" element={<ExternalRedirect url={`${consoleUrl}/users`} />} />
                     <Route path="roles" element={<ExternalRedirect url={`${consoleUrl}/roles`} />} />
-                    <Route path="audit" element={<AuditLogPage />} />
+                    <Route path="audit" element={<ExternalRedirect url={`${consoleUrl}/audit`} />} />
                     <Route path="distritos" element={<ConfigDistritosPage />} />
                     <Route path="institucional" element={<ConfigCanalInstitucionalPage />} />
                     <Route index element={<Navigate to="settings" replace />} />

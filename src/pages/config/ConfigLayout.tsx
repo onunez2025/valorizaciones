@@ -1,7 +1,7 @@
 import { NavLink, Outlet, useLocation, Navigate } from 'react-router-dom';
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Terminal, ChevronRight, Settings2, MapPin, Briefcase } from 'lucide-react';
+import { ChevronRight, Settings2, MapPin, Briefcase } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { useAuth } from '../../hooks/useAuth';
 import { SIATC_THEME } from '../../utils/siatc-theme';
@@ -15,7 +15,6 @@ export default function ConfigLayout() {
         { to: '/config/settings', icon: Settings2, label: t('config.nav.settings'), permission: 'val.config.users' as const },
         { to: '/config/institucional', icon: Briefcase, label: t('config.nav.institutional'), permission: 'val.config.users' as const },
         { to: '/config/distritos', icon: MapPin, label: t('config.nav.districts'), permission: 'val.config.users' as const },
-        { to: '/config/audit', icon: Terminal, label: t('config.nav.audit'), permission: 'val.config.audit' as const },
     ];
 
     const filteredItems = configItems.filter(item =>
