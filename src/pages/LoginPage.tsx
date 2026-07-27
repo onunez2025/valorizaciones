@@ -43,7 +43,10 @@ export default function LoginPage() {
             }
 
             const data = await response.json();
-            login(data.user, data.token, undefined, data.sessionConfig);
+            // skipSharedCookie=true: el backend ya escribe la cookie compartida via Set-Cookie
+            // -- reescribirla aca duplica la cookie "token" y rompe su parseo en cualquier
+            // otra app a la que se navegue despues.
+            login(data.user, data.token, undefined, data.sessionConfig, true);
 
             if (data.user.requires_password_change) {
                 navigate('/force-change-password');
