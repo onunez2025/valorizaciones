@@ -66,7 +66,7 @@ async function logAudit(req: Request, action: string, entity: string, entityId: 
   try {
     const user = (req as AuthRequest).user;
     if (!user) return;
-    const db = await getDb();
+    const db = await getWritePool();
     const auditReq = db.request();
     addInput(auditReq, 'uid', sql.UniqueIdentifier, user.id);
     addInput(auditReq, 'un', sql.NVarChar(255), user.full_name || user.username);
@@ -176,6 +176,12 @@ const dbConfig: sql.config = {
 
 let pool: sql.ConnectionPool | null = null;
 
+// Etapa 6 -- pool admin. getDb() dispara runMigrations() (ALTER TABLE/CREATE TABLE) en su
+// primera conexion -- se sigue llamando explicitamente una vez al arrancar el server (ver
+// app.listen mas abajo) para garantizar que las migraciones corran, independientemente de
+// que los endpoints de negocio ahora usen getReadPool()/getWritePool() en su lugar. Ni
+// siatc_reader ni siatc_writer pueden ejecutar DDL (privilegio minimo), por eso este pool
+// admin queda reservado solo para esto.
 async function getDb() {
     if (!pool) {
         try {
@@ -189,6 +195,52 @@ async function getDb() {
         }
     }
     return pool;
+}
+
+// Etapa 6 -- usuarios de BD de privilegio minimo (siatc_reader/siatc_writer). Si las env
+// vars DB_USER_READ/DB_USER_WRITE todavia no estan configuradas en Dokploy, caen de vuelta
+// al usuario admin original -- permite desplegar este codigo antes de agregar esas env vars,
+// y revertir a admin-only con solo quitarlas, sin tocar codigo.
+const readDbConfig: sql.config = {
+    ...dbConfig,
+    user: process.env.DB_USER_READ || process.env.DB_USER,
+    password: process.env.DB_PASS_READ || process.env.DB_PASSWORD,
+};
+const writeDbConfig: sql.config = {
+    ...dbConfig,
+    user: process.env.DB_USER_WRITE || process.env.DB_USER,
+    password: process.env.DB_PASS_WRITE || process.env.DB_PASSWORD,
+};
+
+let readPool: sql.ConnectionPool | null = null;
+let writePool: sql.ConnectionPool | null = null;
+
+/** Endpoints GET -- solo lectura, usa siatc_reader (privilegio minimo). */
+async function getReadPool() {
+    if (!readPool) {
+        try {
+            readPool = await new sql.ConnectionPool(readDbConfig).connect();
+        } catch (err: unknown) {
+            console.error('❌ Error de conexión DB (read pool):', safeError(err));
+            readPool = null;
+            throw err;
+        }
+    }
+    return readPool;
+}
+
+/** Endpoints POST/PUT/DELETE/PATCH -- usa siatc_writer (lectura + escritura en dbo/EBM). */
+async function getWritePool() {
+    if (!writePool) {
+        try {
+            writePool = await new sql.ConnectionPool(writeDbConfig).connect();
+        } catch (err: unknown) {
+            console.error('❌ Error de conexión DB (write pool):', safeError(err));
+            writePool = null;
+            throw err;
+        }
+    }
+    return writePool;
 }
 
 let _migrationsRan = false;
@@ -305,7 +357,7 @@ const verifyToken = async (req: Request, res: Response, next: NextFunction) => {
 
 app.get('/api/applications', verifyToken, async (req: Request, res: Response) => {
     try {
-        const db = await getDb();
+        const db = await getReadPool();
         const activeOnly = req.query.activeOnly === 'true';
         let query = `
             SELECT
@@ -467,7 +519,7 @@ app.post('/api/auth/login', async (req: Request, res: Response) => {
     }
     const { username, password } = parseResult.data;
     try {
-        const db = await getDb();
+        const db = await getWritePool();
         const result = await db.request().input('u', sql.NVarChar(sql.MAX), username).input('app', sql.NVarChar(sql.MAX), APP_IDENTIFIER).query(`
             SELECT u.*, r.Name as RoleName, m.Name as ManagementName,
                 uc.CASId as cas_id, TRIM(c.RUC) as cas_ruc,
@@ -534,7 +586,7 @@ app.post('/api/auth/logout', verifyToken, async (req: any, res: any) => { // esl
 app.get('/api/auth/me', verifyToken, async (req: Request, res: Response) => {
     try {
         const { id } = (req as AuthRequest).user!;
-        const db = await getDb();
+        const db = await getReadPool();
         const result = await db.request()
             .input('id', sql.UniqueIdentifier, id)
             .input('app', sql.NVarChar(20), APP_IDENTIFIER)
@@ -616,7 +668,7 @@ app.get('/api/auth/sso/callback', async (req: Request, res: Response) => {
         const email = (profile.email || '').trim().toLowerCase();
         if (!email) return redirectToSsoStatus(res, 'error', 'Casdoor no devolvió un correo verificado.');
 
-        const db = await getDb();
+        const db = await getReadPool();
 
         // 1. ¿Ya existe un usuario real con este correo y con acceso a Valorizaciones?
         const userResult = await db.request()
@@ -723,7 +775,7 @@ app.get('/api/auth/sso/callback', async (req: Request, res: Response) => {
 app.get('/api/cas', verifyToken, async (req: Request, res: Response) => {
     try {
         const currentUser = (req as AuthRequest).user as JwtUserPayload;
-        const db = await getDb();
+        const db = await getReadPool();
 
         if (currentUser.casId) {
             const casReq = db.request();
@@ -740,7 +792,7 @@ app.get('/api/cas', verifyToken, async (req: Request, res: Response) => {
 // --- CONFIGURATION ---
 app.get('/api/config', verifyToken, async (req: Request, res: Response) => {
     try {
-        const db = await getDb();
+        const db = await getReadPool();
         const result = await db.request().query("SELECT * FROM [dbo].[GAC_APP_TB_VALORIZACIONES_CONFIG]");
         res.json(result.recordset);
     } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
@@ -754,7 +806,7 @@ const crearConfigSchema = z.object({
 app.post('/api/config', verifyToken, verifyPermission('val.config.admin'), validateBody(crearConfigSchema), async (req: Request, res: Response) => {
     try {
         const { clave, valor, descripcion } = req.body;
-        const db = await getDb();
+        const db = await getWritePool();
         const configReq = db.request();
         addInput(configReq, 'clave', sql.NVarChar(100), clave);
         addInput(configReq, 'valor', sql.NVarChar(500), valor);
@@ -776,7 +828,7 @@ app.post('/api/config', verifyToken, verifyPermission('val.config.admin'), valid
 // --- CONFIG ADICIONAL POR DISTRITO ---
 app.get('/api/config-distritos', verifyToken, async (req: Request, res: Response) => {
     try {
-        const db = await getDb();
+        const db = await getReadPool();
         const result = await db.request().query("SELECT * FROM [dbo].[GAC_APP_TB_CONFIG_VALORIZACION_DISTRITO] ORDER BY Creado_El DESC");
         res.json(result.recordset);
     } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
@@ -786,7 +838,7 @@ app.post('/api/config-distritos', verifyToken, async (req: Request, res: Respons
     try {
         const { id, cas_ids, distritos, importe, fecha_inicio, fecha_fin, activo } = req.body;
         const user = (req as AuthRequest).user!.username;
-        const db = await getDb();
+        const db = await getWritePool();
         const request = db.request();
         addInput(request, 'cas', sql.NVarChar(sql.MAX), JSON.stringify(cas_ids));
         addInput(request, 'dist', sql.NVarChar(sql.MAX), JSON.stringify(distritos));
@@ -818,7 +870,7 @@ app.delete('/api/config-distritos/:id', verifyToken, async (req: Request, res: R
         const idNum = parseInt(req.params.id as string, 10);
         if (isNaN(idNum) || idNum <= 0) return res.status(400).json({ error: 'ID inválido' });
         const user = (req as AuthRequest).user!;
-        const db = await getDb();
+        const db = await getWritePool();
         const existing = await db.request()
             .input('id', sql.Int, idNum)
             .query("SELECT Creado_Por FROM [dbo].[GAC_APP_TB_CONFIG_VALORIZACION_DISTRITO] WHERE Id = @id");
@@ -836,7 +888,7 @@ app.delete('/api/config-distritos/:id', verifyToken, async (req: Request, res: R
 
 app.get('/api/distritos', verifyToken, async (req: Request, res: Response) => {
     try {
-        const db = await getDb();
+        const db = await getReadPool();
         const result = await db.request().query('SELECT DISTINCT Ciudad, Distrito FROM APPGAC.ServiciosViewSQL WHERE Ciudad IS NOT NULL AND Distrito IS NOT NULL ORDER BY Ciudad, Distrito');
         res.json(result.recordset);
     } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
@@ -845,7 +897,7 @@ app.get('/api/distritos', verifyToken, async (req: Request, res: Response) => {
 // --- CONFIG CANAL INSTITUCIONAL ---
 app.get('/api/config-canal-institucional', verifyToken, async (req: Request, res: Response) => {
     try {
-        const db = await getDb();
+        const db = await getReadPool();
         const result = await db.request().query("SELECT * FROM [dbo].[GAC_APP_TB_CONFIG_CANAL_INSTITUCIONAL] ORDER BY Creado_El DESC");
         res.json(result.recordset);
     } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
@@ -855,7 +907,7 @@ app.post('/api/config-canal-institucional', verifyToken, async (req: Request, re
     try {
         const { id, cupo_area, fecha_inicio, fecha_fin, importe, activo } = req.body;
         const user = (req as AuthRequest).user!.username;
-        const db = await getDb();
+        const db = await getWritePool();
         const request = db.request();
         addInput(request, 'ca', sql.NVarChar(50), cupo_area);
         addInput(request, 'fi', sql.DateTime, fecha_inicio);
@@ -888,7 +940,7 @@ app.post('/api/config-canal-institucional', verifyToken, async (req: Request, re
 app.delete('/api/config-canal-institucional/:id', verifyToken, async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
-        const db = await getDb();
+        const db = await getWritePool();
         const idNum = parseInt(String(id), 10);
         if (isNaN(idNum) || idNum <= 0) return res.status(400).json({ error: 'ID inválido' });
         console.log(`[CONFIG] Deleting rule ID: ${idNum}`);
@@ -984,7 +1036,7 @@ app.get('/api/valuations/:ruc', verifyToken, async (req: Request, res: Response)
     console.log(`[VALUATION] Starting request - RUC: ${sanitizeLog(ruc)}, Range: ${sanitizeLog(start)} to ${sanitizeLog(end)}`);
 
     try {
-        const db = await getDb();
+        const db = await getReadPool();
         const request = db.request();
         addInput(request, 'ruc', sql.VarChar(20), ruc);
         addInput(request, 'start', sql.VarChar(30), `${start} 00:00:00`);
@@ -1132,7 +1184,7 @@ app.get('/api/valuations/:ruc', verifyToken, async (req: Request, res: Response)
 
 app.get('/api/penalty-motives', verifyToken, async (req: Request, res: Response) => {
     try {
-        const db = await getDb();
+        const db = await getReadPool();
         const result = await db.request().query('SELECT IdMotivo, Motivo FROM [dbo].[GAC_APP_TB_TICKETS_DESCUENTOS_MOTIVOS] ORDER BY Motivo');
         res.json(result.recordset);
     } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
@@ -1152,7 +1204,7 @@ app.post('/api/penalties', verifyToken, validateBody(crearPenalidadSchema), asyn
     const userId = currentUser.username;
     const penaltyId = crypto.randomBytes(4).toString('hex');
     try {
-        const db = await getDb();
+        const db = await getWritePool();
 
         if (currentUser.casId) {
             if (!currentUser.casRUC || String(ruc).trim() !== String(currentUser.casRUC).trim()) {
@@ -1181,7 +1233,7 @@ app.put('/api/penalties/:id', verifyToken, async (req: Request, res: Response) =
     const { fecha, motivo, descripcion, importe } = req.body;
     const currentUser = (req as AuthRequest).user as JwtUserPayload;
     try {
-        const db = await getDb();
+        const db = await getWritePool();
 
         if (currentUser.casId) {
             const ownerCheck = await db.request()
@@ -1240,7 +1292,7 @@ app.post('/api/adicionales', verifyToken, validateBody(crearAdicionalSchema), as
     const currentUser = (req as AuthRequest).user as JwtUserPayload;
     const id = crypto.randomBytes(4).toString('hex');
     try {
-        const db = await getDb();
+        const db = await getWritePool();
 
         if (currentUser.casId) {
             if (!currentUser.casRUC) return res.status(403).json({ error: 'Usuario CAS sin empresa asignada.' });
@@ -1277,7 +1329,7 @@ app.put('/api/adicionales/:id', verifyToken, async (req: Request, res: Response)
     const { motivo, importe } = req.body;
     const currentUser = (req as AuthRequest).user as JwtUserPayload;
     try {
-        const db = await getDb();
+        const db = await getWritePool();
 
         if (currentUser.casId) {
             if (!currentUser.casRUC) return res.status(403).json({ error: 'Usuario CAS sin empresa asignada.' });
@@ -1322,7 +1374,7 @@ app.get('/api/adicionales/:ticket', verifyToken, async (req: Request, res: Respo
     const { ticket } = req.params;
     const currentUser = (req as AuthRequest).user as JwtUserPayload;
     try {
-        const db = await getDb();
+        const db = await getReadPool();
 
         // Verificar que el ticket pertenece al CAS del usuario
         if (currentUser.casId) {
@@ -1356,7 +1408,7 @@ app.delete('/api/adicionales/:id', verifyToken, async (req: Request, res: Respon
     const { id } = req.params;
     const currentUser = (req as AuthRequest).user as JwtUserPayload;
     try {
-        const db = await getDb();
+        const db = await getWritePool();
 
         if (currentUser.casId) {
             if (!currentUser.casRUC) return res.status(403).json({ error: 'Usuario CAS sin empresa asignada.' });
@@ -1395,8 +1447,8 @@ app.post('/api/valuations/batch-adjustment', verifyToken, async (req: Request, r
     }
 
     try {
-        const db = await getDb();
-        const pool = await getDb();
+        const db = await getWritePool();
+        const pool = await getWritePool();
         
         // 1. Fetch TarifaBase for these tickets to calculate Delta
         // Replicating logic from /api/valuations/:ruc
@@ -1490,7 +1542,7 @@ app.post('/api/valuations/batch-adjustment', verifyToken, async (req: Request, r
 
 app.get('/api/discount-motivos', verifyToken, async (req: Request, res: Response) => {
     try {
-        const db = await getDb();
+        const db = await getReadPool();
         const result = await db.request().query('SELECT * FROM [dbo].[GAC_APP_TB_TICKETS_DESCUENTOS_MOTIVOS] ORDER BY Motivo ASC');
         res.json(result.recordset);
     } catch (err: unknown) {
@@ -1509,7 +1561,7 @@ app.post('/api/valuations/batch-discount', verifyToken, async (req: Request, res
     }
 
     try {
-        const db = await getDb();
+        const db = await getWritePool();
         const transaction = new sql.Transaction(db);
         await transaction.begin();
 
@@ -1561,7 +1613,7 @@ app.post('/api/penalties/:id/status', verifyToken, async (req: Request, res: Res
     const { status, observation, isCas } = req.body;
     const currentUser = (req as AuthRequest).user as JwtUserPayload;
     try {
-        const db = await getDb();
+        const db = await getWritePool();
 
         if (currentUser.casId) {
             const ownerCheck = await db.request()
@@ -1594,7 +1646,7 @@ app.get('/api/tickets/find/:ticket', verifyToken, async (req: Request, res: Resp
     if (!ticket) return res.status(400).json({ error: 'Ticket es requerido' });
 
     try {
-        const db = await getDb();
+        const db = await getReadPool();
         const result = await db.request()
             .input('ticket', sql.NVarChar(sql.MAX), ticket)
             .query(`
@@ -1625,7 +1677,7 @@ app.get('/api/tickets/search/:ruc', verifyToken, async (req: Request, res: Respo
     }
     const { q } = req.query;
     try {
-        const db = await getDb();
+        const db = await getReadPool();
         const searchReq = db.request();
         addInput(searchReq, 'ruc', sql.VarChar(20), ruc);
         addInput(searchReq, 'q', sql.NVarChar(255), `%${q}%`);
@@ -1661,7 +1713,7 @@ app.post('/api/valuations/close', verifyToken, async (req: Request, res: Respons
     const finalEstado = estado || 'CERRADO';
 
     try {
-        const db = await getDb();
+        const db = await getWritePool();
         const transaction = new sql.Transaction(db);
         await transaction.begin();
 
@@ -1821,7 +1873,7 @@ app.post('/api/valuations/finalize/:id', verifyToken, async (req: Request, res: 
     const { id } = req.params;
     const currentUser = (req as AuthRequest).user as JwtUserPayload;
     try {
-        const db = await getDb();
+        const db = await getWritePool();
 
         // Verificar ownership para usuarios CAS
         if (currentUser.casId) {
@@ -1851,7 +1903,7 @@ app.post('/api/valuations/reopen/:id', verifyToken, verifyPermission('val.reopen
     const { id } = req.params;
     const currentUser = (req as AuthRequest).user as JwtUserPayload;
     try {
-        const db = await getDb();
+        const db = await getWritePool();
 
         // Verificar ownership para usuarios CAS antes de abrir la transacción
         if (currentUser.casId) {
@@ -1957,7 +2009,7 @@ app.get('/api/penalties/:ruc', verifyToken, async (req: Request, res: Response) 
     }
     const { start, end } = req.query;
     try {
-        const db = await getDb();
+        const db = await getReadPool();
         const penListReq = db.request();
         addInput(penListReq, 'ruc', sql.VarChar(20), ruc);
         addInput(penListReq, 'start', sql.VarChar(30), `${start} 00:00:00`);
@@ -1993,7 +2045,7 @@ app.get('/api/closures', verifyToken, async (req: Request, res: Response) => {
     const currentUser = (req as AuthRequest).user as JwtUserPayload;
     const efectiveRuc = enforceCasRuc(currentUser, req.query.ruc as string | undefined);
     try {
-        const db = await getDb();
+        const db = await getReadPool();
         const request = db.request();
         let query = `SELECT * FROM [dbo].[GAC_APP_TB_VALORIZACIONES_CIERRES]`;
 
@@ -2025,7 +2077,7 @@ app.get('/api/valuations/details/:id', verifyToken, async (req: Request, res: Re
     const { id } = req.params;
     const currentUser = (req as AuthRequest).user as JwtUserPayload;
     try {
-        const db = await getDb();
+        const db = await getReadPool();
 
         // Verificar ownership del cierre para usuarios CAS
         if (currentUser.casId) {
@@ -2075,7 +2127,7 @@ app.get('/api/tarifarios/:casId', verifyToken, async (req: Request, res: Respons
         return res.status(403).json({ error: 'Acceso denegado.' });
     }
     try {
-        const db = await getDb();
+        const db = await getReadPool();
         const tarListReq = db.request();
         addInput(tarListReq, 'casId', sql.VarChar(50), casId);
         const result = await tarListReq.query(`
@@ -2101,7 +2153,7 @@ app.post('/api/tarifarios/create', verifyToken, verifyPermission('val.tarifario.
     const { empresa, categoria, servicio, importe, fecha_inicio, fecha_fin, estado } = req.body;
     const currentUser = (req as AuthRequest).user!;
     try {
-        const db = await getDb();
+        const db = await getWritePool();
         const newId = crypto.randomBytes(4).toString('hex');
         const tarCrearReq = db.request();
         addInput(tarCrearReq, 'id', sql.VarChar(8), newId);
@@ -2131,7 +2183,7 @@ app.post('/api/tarifarios/create', verifyToken, verifyPermission('val.tarifario.
 // --- MATERIALES ---
 app.get('/api/materials', verifyToken, async (req: Request, res: Response) => {
     try {
-        const db = await getDb();
+        const db = await getReadPool();
         const result = await db.request().query("SELECT ID_Material, ID_Externo, Nombre, Categoria, Estado, Sector FROM [dbo].[GAC_APP_TB_MATERIALES] ORDER BY Categoria, Nombre");
         res.json(result.recordset);
     } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
@@ -2139,7 +2191,7 @@ app.get('/api/materials', verifyToken, async (req: Request, res: Response) => {
 
 app.get('/api/materials/categories', verifyToken, async (req: Request, res: Response) => {
     try {
-        const db = await getDb();
+        const db = await getReadPool();
         const result = await db.request().query("SELECT DISTINCT Categoria FROM [dbo].[GAC_APP_TB_MATERIALES] WHERE Categoria IS NOT NULL AND Categoria != '' ORDER BY Categoria");
         res.json(result.recordset.map(r => r.Categoria));
     } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
@@ -2148,7 +2200,7 @@ app.get('/api/materials/categories', verifyToken, async (req: Request, res: Resp
 app.post('/api/materials', verifyToken, async (req: Request, res: Response) => {
     const { idExterno, nombre, categoria, sector } = req.body;
     try {
-        const db = await getDb();
+        const db = await getWritePool();
         const checkReq = db.request();
         addInput(checkReq, 'ext', sql.VarChar(50), idExterno);
         const check = await checkReq.query("SELECT ID_Material FROM [dbo].[GAC_APP_TB_MATERIALES] WHERE ID_Externo = @ext");
@@ -2180,7 +2232,7 @@ app.post('/api/tarifarios/update', verifyToken, verifyPermission('val.tarifario.
     const { id, importe, estado } = req.body;
     const currentUser = (req as AuthRequest).user!;
     try {
-        const db = await getDb();
+        const db = await getWritePool();
         const tarUpdReq = db.request();
         addInput(tarUpdReq, 'id', sql.VarChar(8), id);
         addInput(tarUpdReq, 'importe', sql.Decimal(18, 2), importe);
@@ -2199,7 +2251,7 @@ app.post('/api/tarifarios/batch', verifyToken, verifyPermission('val.tarifario.e
     const { casId, rates } = req.body;
     const currentUser = (req as AuthRequest).user!;
     try {
-        const db = await getDb();
+        const db = await getWritePool();
         const transaction = new sql.Transaction(db);
         await transaction.begin();
 
@@ -2246,7 +2298,7 @@ app.post('/api/tarifarios/batch', verifyToken, verifyPermission('val.tarifario.e
 app.get('/api/tarifarios/exceptions/:casId', verifyToken, async (req: Request, res: Response) => {
     const { casId } = req.params;
     try {
-        const db = await getDb();
+        const db = await getReadPool();
         const excReq = db.request();
         addInput(excReq, 'casId', sql.VarChar(50), casId);
         const result = await excReq.query("SELECT * FROM [dbo].[GAC_APP_TB_TARIFARIO_EXCEPCIONES] WHERE Empresa = @casId AND Estado = 'A' ORDER BY Prioridad DESC, Creado_El DESC");
@@ -2257,7 +2309,7 @@ app.get('/api/tarifarios/exceptions/:casId', verifyToken, async (req: Request, r
 app.post('/api/tarifarios/exceptions/save', verifyToken, verifyPermission('val.tarifario.edit'), async (req: Request, res: Response) => {
     const { id, empresa, nombre, zonasIncluidas, zonasExcluidas, categorias, servicios, importe, prioridad, estado } = req.body;
     try {
-        const db = await getDb();
+        const db = await getWritePool();
         const finalId = id || crypto.randomBytes(4).toString('hex');
 
         const excSaveReq = db.request();
@@ -2294,7 +2346,7 @@ app.post('/api/tarifarios/exceptions/save', verifyToken, verifyPermission('val.t
 app.delete('/api/tarifarios/exceptions/:id', verifyToken, verifyPermission('val.tarifario.edit'), async (req: Request, res: Response) => {
     const { id } = req.params;
     try {
-        const db = await getDb();
+        const db = await getWritePool();
         const excDelReq = db.request();
         addInput(excDelReq, 'id', sql.VarChar(8), id);
         await excDelReq.query("UPDATE [dbo].[GAC_APP_TB_TARIFARIO_EXCEPCIONES] SET Estado = 'I' WHERE IdExcepcion = @id");
@@ -2330,7 +2382,7 @@ async function resolveServicioCodigo(db: sql.ConnectionPool, servicio: string): 
 app.post('/api/tarifarios/import/preview', verifyToken, async (req: Request, res: Response) => {
     const { rows } = req.body as { rows: TarifarioImportRow[] };
     try {
-        const db = await getDb();
+        const db = await getWritePool();
         const casResult = await db.request().query("SELECT ID_CAS, Nombre_CAS FROM [dbo].[GAC_APP_TB_CAS]");
         const casMap = new Map<string, number>();
         casResult.recordset.forEach((c: { Nombre_CAS: string; ID_CAS: number }) => casMap.set(c.Nombre_CAS.toUpperCase().trim(), c.ID_CAS));
@@ -2385,7 +2437,7 @@ app.post('/api/tarifarios/import/confirm', verifyToken, async (req: Request, res
     const { rows } = req.body as { rows: TarifarioImportRow[] };
     const currentUser = (req as AuthRequest).user!;
     try {
-        const db = await getDb();
+        const db = await getWritePool();
         const transaction = new sql.Transaction(db);
         await transaction.begin();
         let inserted = 0, updated = 0;
@@ -2476,7 +2528,7 @@ app.get('/api/dashboard/stats', verifyToken, async (req: Request, res: Response)
         const { start, end } = req.query as { start?: string; end?: string; ruc?: string };
         const currentUser = (req as AuthRequest).user as JwtUserPayload;
         const efectiveRuc = enforceCasRuc(currentUser, req.query.ruc as string | undefined);
-        const db = await getDb();
+        const db = await getReadPool();
         const request = db.request();
 
         request.input('start', sql.DateTime, start || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000));
@@ -2610,7 +2662,7 @@ app.get('/api/dashboard/trends', verifyToken, async (req: Request, res: Response
         const { months = 6 } = req.query as { months?: string; ruc?: string };
         const currentUser = (req as AuthRequest).user as JwtUserPayload;
         const efectiveRuc = enforceCasRuc(currentUser, req.query.ruc as string | undefined);
-        const db = await getDb();
+        const db = await getReadPool();
         const request = db.request();
 
         request.input('m', sql.Int, -Number(months));
@@ -2708,7 +2760,7 @@ app.get('/api/dashboard/top-cas', verifyToken, async (req: Request, res: Respons
         const { start, end } = req.query as { start?: string; end?: string; ruc?: string };
         const currentUser = (req as AuthRequest).user as JwtUserPayload;
         const efectiveRuc = enforceCasRuc(currentUser, req.query.ruc as string | undefined);
-        const db = await getDb();
+        const db = await getReadPool();
         const request = db.request();
 
         request.input('start', sql.DateTime, start || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000));
@@ -2844,7 +2896,7 @@ app.get('/api/c4c/report/:ticketId', verifyToken, async (req: Request, res: Resp
 // MANAGEMENTS
 app.get('/api/managements', verifyToken, async (req: Request, res: Response) => {
     try {
-        const db = await getDb();
+        const db = await getReadPool();
         const result = await db.request().query('SELECT Id as id, Name as name, Code as code FROM EBM.Managements');
         res.json(result.recordset);
     } catch (err: unknown) {
@@ -2864,7 +2916,7 @@ app.post('/api/config/preferences', verifyToken, (req: Request, res: Response) =
 // USERS
 app.get('/api/users', verifyToken, verifyPermission('val.config.users'), async (req: Request, res: Response) => {
     try {
-        const db = await getDb();
+        const db = await getReadPool();
         const result = await db.request().query(`
             SELECT u.Id as id, u.FullName as full_name, u.Username as username, u.Email as email,
                    u.RoleId as role_id, r.Name as role_name, CAST(u.IsActive AS BIT) as is_active, 
@@ -2879,7 +2931,7 @@ app.get('/api/users', verifyToken, verifyPermission('val.config.users'), async (
 app.post('/api/users', verifyToken, verifyPermission('val.config.users'), async (req: Request, res: Response) => {
     try {
         const { full_name, username, email, password_hash, role_id, apps, avatar_url } = req.body;
-        const db = await getDb();
+        const db = await getWritePool();
 
         const userChkReq = db.request();
         addInput(userChkReq, 'u', sql.NVarChar(255), username);
@@ -2934,7 +2986,7 @@ app.put('/api/profile', verifyToken, async (req: any, res: Response) => { // esl
         const userId = req.user.id;
         const { avatar_url, password_hash } = req.body;
 
-        const db = await getDb();
+        const db = await getWritePool();
         const request = db.request();
         addInput(request, 'id', sql.UniqueIdentifier, userId);
 
@@ -2968,7 +3020,7 @@ app.put('/api/users/:id', verifyToken, verifyPermission('val.config.users'), asy
     try {
         const { id } = req.params;
         const { full_name, username, email, role_id, is_active, apps, avatar_url } = req.body;
-        const db = await getDb();
+        const db = await getWritePool();
         const appsSave = cleanApps(apps);
 
         const userUpdReq = db.request();
@@ -2990,7 +3042,7 @@ app.put('/api/users/:id', verifyToken, verifyPermission('val.config.users'), asy
 app.delete('/api/users/:id', verifyToken, verifyPermission('val.config.users'), async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
-        const db = await getDb();
+        const db = await getWritePool();
         const userDelReq = db.request();
         addInput(userDelReq, 'id', sql.UniqueIdentifier, id);
         await userDelReq.query("UPDATE EBM.Users SET IsActive = 0 WHERE Id = @id");
@@ -3002,7 +3054,7 @@ app.delete('/api/users/:id', verifyToken, verifyPermission('val.config.users'), 
 // ROLES
 app.get('/api/roles', verifyToken, verifyPermission('val.config.roles'), async (req: Request, res: Response) => {
     try {
-        const db = await getDb();
+        const db = await getReadPool();
         const roles = (await db.request().query("SELECT Id as id, Name as name, Apps as apps FROM EBM.Roles")).recordset;
         const allPerms = (await db.request().query("SELECT RoleId, Permission FROM EBM.RolePermissions")).recordset;
         const result = roles.map((r: { id: string; name: string; apps: string }) => ({
@@ -3016,7 +3068,7 @@ app.get('/api/roles', verifyToken, verifyPermission('val.config.roles'), async (
 app.post('/api/roles', verifyToken, verifyPermission('val.config.roles'), async (req: Request, res: Response) => {
     try {
         const { name, permissions, apps } = req.body;
-        const db = await getDb();
+        const db = await getWritePool();
         const appsSave = cleanApps(apps || APP_IDENTIFIER);
         const roleId = crypto.randomUUID().toUpperCase();
 
@@ -3043,7 +3095,7 @@ app.put('/api/roles/:id', verifyToken, verifyPermission('val.config.roles'), asy
     try {
         const { id } = req.params;
         const { name, permissions, apps } = req.body;
-        const db = await getDb();
+        const db = await getWritePool();
         const appsSave = cleanApps(apps || APP_IDENTIFIER);
 
         const roleUpdReq = db.request();
@@ -3071,7 +3123,7 @@ app.put('/api/roles/:id', verifyToken, verifyPermission('val.config.roles'), asy
 app.delete('/api/roles/:id', verifyToken, verifyPermission('val.config.roles'), async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
-        const db = await getDb();
+        const db = await getWritePool();
         
         // Check if users are assigned to this role
         const usersChkReq = db.request();
@@ -3164,7 +3216,7 @@ let appMeta: AppMeta | null = null;
 
 async function fetchAppMeta(): Promise<void> {
     try {
-        const db = await getDb();
+        const db = await getReadPool();
         const code = process.env.APP_CODE || APP_IDENTIFIER;
         const metaReq = db.request();
         addInput(metaReq, 'code', sql.NVarChar(20), code);
@@ -3183,7 +3235,7 @@ interface SessionConfig { rateLimitMaxAttempts: number; rateLimitWindowMinutes: 
 
 async function fetchSessionConfig(): Promise<SessionConfig> {
     try {
-        const db = await getDb();
+        const db = await getReadPool();
         const r = db.request();
         addInput(r, 'code', sql.VarChar(20), APP_IDENTIFIER);
         const result = await r.query('SELECT RateLimitMaxAttempts, RateLimitWindowMinutes FROM EBM.AppSessionConfig WHERE UPPER(AppCode) = UPPER(@code)');
@@ -3241,6 +3293,9 @@ app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
 
 app.listen(port, () => {
     console.log(`Server Valorizaciones running on http://localhost:${port}`);
+    // Etapa 6 -- dispara runMigrations() via el pool admin al arrancar, independientemente
+    // de que los endpoints de negocio ahora usen getReadPool()/getWritePool().
+    getDb().catch(err => console.error('❌ Error ejecutando migraciones al arrancar:', safeError(err)));
     fetchAppMeta();
     fetchSessionConfig().then(cfg => {
         authLimiter = rateLimit({
