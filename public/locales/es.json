@@ -442,27 +442,36 @@
   "profile": {
     "title": "Mi Perfil",
     "subtitle": "Gestiona tu información personal y credenciales.",
+    "changePhoto": "Cambiar foto de perfil",
     "noRole": "Sin rol",
-    "infoTitle": "Información",
-    "emailLabel": "Email",
-    "managementLabel": "Gerencia",
-    "noManagement": "Sin gerencia",
-    "statusLabel": "Estado",
-    "activeStatus": "Activo",
-    "accountTitle": "Cuenta",
-    "accountSubtitle": "Tu nombre de usuario y correo electrónico.",
-    "userLabel": "Usuario",
-    "readOnlyNote": "Estos campos son de solo lectura. Si necesitas un cambio, contacta al administrador del sistema.",
-    "securityTitle": "Seguridad",
-    "securitySubtitle": "Cambia tu contraseña de acceso.",
-    "newPasswordLabel": "Nueva Contraseña",
-    "confirmPasswordLabel": "Confirmar Contraseña",
-    "passwordHint": "Deja los campos vacíos para mantener tu contraseña actual. Mínimo 4 caracteres.",
+    "info": {
+      "title": "Información",
+      "email": "Email",
+      "management": "Gerencia",
+      "noManagement": "Sin gerencia",
+      "status": "Estado",
+      "active": "Activo"
+    },
+    "account": {
+      "title": "Cuenta",
+      "subtitle": "Tu nombre de usuario y correo electrónico."
+    },
+    "fields": {
+      "username": "Usuario",
+      "email": "Email",
+      "newPassword": "Nueva Contraseña",
+      "confirmPassword": "Confirmar Contraseña"
+    },
+    "readonlyAlert": "Estos campos son de solo lectura. Si necesitas un cambio, contacta al administrador del sistema.",
+    "security": {
+      "title": "Seguridad",
+      "subtitle": "Cambia tu contraseña de acceso."
+    },
+    "passwordNote": "Deja los campos vacíos para mantener tu contraseña actual. Mínimo 4 caracteres.",
     "saving": "Guardando...",
     "saveChanges": "Guardar Cambios",
-    "changeAvatar": "Cambiar foto de perfil",
     "errors": {
-      "imageProcessing": "Error al procesar la imagen",
+      "imageProcess": "Error al procesar la imagen",
       "passwordMismatch": "Las contraseñas no coinciden",
       "passwordTooShort": "La contraseña debe tener al menos 4 caracteres",
       "updateFailed": "Error al actualizar el perfil"

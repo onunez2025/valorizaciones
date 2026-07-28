@@ -442,27 +442,36 @@
   "profile": {
     "title": "My Profile",
     "subtitle": "Manage your personal information and credentials.",
+    "changePhoto": "Change profile picture",
     "noRole": "No role",
-    "infoTitle": "Information",
-    "emailLabel": "Email",
-    "managementLabel": "Management",
-    "noManagement": "No management",
-    "statusLabel": "Status",
-    "activeStatus": "Active",
-    "accountTitle": "Account",
-    "accountSubtitle": "Your username and email address.",
-    "userLabel": "User",
-    "readOnlyNote": "These fields are read-only. If you need a change, contact the system administrator.",
-    "securityTitle": "Security",
-    "securitySubtitle": "Change your access password.",
-    "newPasswordLabel": "New Password",
-    "confirmPasswordLabel": "Confirm Password",
-    "passwordHint": "Leave fields empty to keep your current password. Minimum 4 characters.",
+    "info": {
+      "title": "Information",
+      "email": "Email",
+      "management": "Management",
+      "noManagement": "No management",
+      "status": "Status",
+      "active": "Active"
+    },
+    "account": {
+      "title": "Account",
+      "subtitle": "Your username and email address."
+    },
+    "fields": {
+      "username": "User",
+      "email": "Email",
+      "newPassword": "New Password",
+      "confirmPassword": "Confirm Password"
+    },
+    "readonlyAlert": "These fields are read-only. If you need a change, contact the system administrator.",
+    "security": {
+      "title": "Security",
+      "subtitle": "Change your access password."
+    },
+    "passwordNote": "Leave fields empty to keep your current password. Minimum 4 characters.",
     "saving": "Saving...",
     "saveChanges": "Save Changes",
-    "changeAvatar": "Change profile picture",
     "errors": {
-      "imageProcessing": "Error processing the image",
+      "imageProcess": "Error processing the image",
       "passwordMismatch": "Passwords do not match",
       "passwordTooShort": "Password must be at least 4 characters",
       "updateFailed": "Error updating the profile"
