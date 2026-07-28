@@ -2851,7 +2851,7 @@ app.put('/api/profile', verifyToken, async (req, res) => {
         addInput(request, 'id', sql.UniqueIdentifier, userId);
         const sets = [];
         if (avatar_url !== undefined) {
-            addInput(request, 'avatarUrl', sql.NVarChar(500), avatar_url || null);
+            addInput(request, 'avatarUrl', sql.NVarChar(sql.MAX), avatar_url || null);
             sets.push('AvatarUrl = @avatarUrl');
         }
         if (password_hash && String(password_hash).trim() !== '') {
