@@ -6,6 +6,7 @@ import { NavLink, Navigate, Outlet } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { AppSwitcher } from './AppSwitcher';
 import { AuthTransitionOverlay } from '../common/AuthTransitionOverlay';
+import { LottiePlayer } from '../common/LottiePlayer';
 import { useAuth } from '../../hooks/useAuth';
 import { useTheme } from '../../context/ThemeContext';
 import { useAppConfig } from '../../context/AppConfigContext';
@@ -81,9 +82,16 @@ export function MainLayout() {
     if (isLoading) {
         return (
             <div className="flex h-dvh items-center justify-center bg-background">
-                <div className="flex flex-col items-center gap-6">
+                <div className="flex flex-col items-center gap-4">
                     <img src={logoUrl} alt="Valorizaciones Logo" className="w-16 h-16 object-contain animate-pulse" />
-                    <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+                    <div className="w-40 h-40">
+                        <LottiePlayer
+                            src={() => import('../../assets/lottie/loading.json')}
+                            fallback={<div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />}
+                            className="w-40 h-40"
+                            loop
+                        />
+                    </div>
                     <p className="text-muted-foreground font-medium animate-pulse">Cargando Valorizaciones...</p>
                 </div>
             </div>
