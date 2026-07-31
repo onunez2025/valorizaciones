@@ -9,6 +9,9 @@ import { cn } from '../utils/cn';
 import { API_BASE_URL } from '../services/apiClient';
 import { SIATC_THEME } from '../utils/siatc-theme';
 
+const prefersReducedMotion = () =>
+    typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
 export default function LoginPage() {
     const { t, i18n } = useTranslation();
     const { login } = useAuth();
@@ -51,6 +54,12 @@ export default function LoginPage() {
             if (data.user.requires_password_change) {
                 navigate('/force-change-password');
             } else {
+                // La bienvenida se muestra en /dashboard (ver MainLayout), no aca -- demorar
+                // el navigate() dejaria al usuario "autenticado pero todavia en /login" por
+                // un rato, una ventana que ProtectedRoute podria interpretar mal.
+                if (!prefersReducedMotion()) {
+                    sessionStorage.setItem('siatc_welcome_user', data.user.full_name || data.user.username || '');
+                }
                 navigate('/dashboard');
             }
 

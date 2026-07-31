@@ -18,6 +18,10 @@
     "configuration": "Configuration"
   },
   "auth": {
+    "transition": {
+      "welcomeTitle": "Welcome{{name}}!",
+      "farewellTitle": "See you soon{{name}}"
+    },
     "subtitle": "Enter your credentials to access the system.",
     "username": "Username",
     "password": "Password",

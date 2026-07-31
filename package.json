@@ -13,7 +13,7 @@
   },
   "dependencies": {
     "@azure/msal-node": "^5.4.0",
-    "axios": "^1.14.0",
+    "axios": "^1.19.0",
     "bcrypt": "^6.0.0",
     "clsx": "^2.1.1",
     "cors": "^2.8.6",
@@ -33,16 +33,16 @@
     "lucide-react": "^1.7.0",
     "motion": "^12.38.0",
     "mssql": "^12.2.1",
-    "multer": "^2.1.1",
+    "multer": "^2.2.0",
     "nodemailer": "^9.0.3",
     "rate-limit-redis": "^5.0.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "react-i18next": "^16.6.6",
-    "react-router-dom": "^7.14.0",
+    "react-router-dom": "^7.18.2",
     "recharts": "^3.8.1",
     "tailwind-merge": "^3.5.0",
-    "uuid": "^13.0.0",
+    "uuid": "^13.0.2",
     "zod": "^4.4.3"
   },
   "devDependencies": {
@@ -65,13 +65,23 @@
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^17.4.0",
-    "postcss": "^8.5.8",
+    "postcss": "^8.5.25",
     "prop-types": "^15.8.1",
     "react-is": "^19.2.4",
     "tailwindcss": "^4.2.2",
     "tsx": "^4.21.0",
     "typescript": "~6.0.2",
     "typescript-eslint": "^8.58.0",
-    "vite": "^8.0.4"
+    "vite": "^8.2.0"
+  },
+  "overrides": {
+    "@babel/core": "^7.29.6",
+    "esbuild": "^0.28.1",
+    "js-yaml": "^4.3.0",
+    "postcss": "$postcss",
+    "qs": "^6.15.2",
+    "body-parser": "^2.3.0",
+    "tmp": "^0.2.7",
+    "uuid": "$uuid"
   }
 }

@@ -5,6 +5,7 @@ import { useInactivityTimer } from '../../hooks/useInactivityTimer';
 import { NavLink, Navigate, Outlet } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { AppSwitcher } from './AppSwitcher';
+import { AuthTransitionOverlay } from '../common/AuthTransitionOverlay';
 import { useAuth } from '../../hooks/useAuth';
 import { useTheme } from '../../context/ThemeContext';
 import { useAppConfig } from '../../context/AppConfigContext';
@@ -13,11 +14,17 @@ import { SIATC_THEME } from '../../utils/siatc-theme';
 
 export function MainLayout() {
     const { t } = useTranslation();
-    const { isAuthenticated, isLoading, user, hasPermission, logout, sessionConfig } = useAuth();
+    const { isAuthenticated, isLoading, user, hasPermission, logout, requestLogout, isLoggingOut, sessionConfig } = useAuth();
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const { theme, setTheme } = useTheme();
     const appConfig = useAppConfig();
     const logoUrl = appConfig?.logoUrl || '/logo.png';
+
+    const [welcomeUser, setWelcomeUser] = useState<string | null>(() => {
+        const stored = sessionStorage.getItem('siatc_welcome_user');
+        if (stored !== null) sessionStorage.removeItem('siatc_welcome_user');
+        return stored;
+    });
 
     const COLLAPSED_KEY = 'val_sidebar_collapsed';
     const [isCollapsed, setIsCollapsed] = useState(() => localStorage.getItem(COLLAPSED_KEY) === 'true');
@@ -89,6 +96,20 @@ export function MainLayout() {
 
     return (
         <div className="h-dvh bg-[#F8FAFC] dark:bg-[#020617] text-foreground flex overflow-hidden font-sans">
+            {isLoggingOut && (
+                <AuthTransitionOverlay
+                    variant="farewell"
+                    userName={user?.full_name || user?.username}
+                    onComplete={() => { logout(); }}
+                />
+            )}
+            {welcomeUser !== null && (
+                <AuthTransitionOverlay
+                    variant="welcome"
+                    userName={welcomeUser}
+                    onComplete={() => setWelcomeUser(null)}
+                />
+            )}
             {/* Mobile Sidebar Overlay */}
             <div
                 className={cn(
@@ -266,7 +287,7 @@ export function MainLayout() {
                                 {t('mainLayout.continueSession')}
                             </button>
                             <button
-                                onClick={logout}
+                                onClick={requestLogout}
                                 className="flex-1 bg-secondary text-secondary-foreground rounded-lg py-2 text-sm font-medium hover:bg-secondary/80 transition-colors"
                             >
                                 {t('mainLayout.closeSession')}

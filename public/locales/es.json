@@ -18,6 +18,10 @@
     "configuration": "Configuración"
   },
   "auth": {
+    "transition": {
+      "welcomeTitle": "¡Bienvenido{{name}}!",
+      "farewellTitle": "Hasta pronto{{name}}"
+    },
     "subtitle": "Ingresa tus credenciales para acceder al sistema.",
     "username": "Usuario",
     "password": "Contraseña",
