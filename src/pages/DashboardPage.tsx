@@ -11,6 +11,7 @@ import { ApiClient } from '../services/apiClient';
 import { cn } from '../utils/cn';
 import { toTitleCase } from '../utils/formatters';
 import { SIATC_THEME } from '../utils/siatc-theme';
+import { LottiePlayer } from '../components/common/LottiePlayer';
 
 interface DashboardStats {
     TotalTickets: number;
@@ -380,7 +381,14 @@ export default function DashboardPage() {
                                 </div>
                             )) : (
                                 <div className="text-center py-10">
-                                    <AlertCircle className="w-8 h-8 text-muted-foreground mx-auto mb-2 opacity-20" />
+                                    <div className="w-20 h-20 mx-auto mb-2 opacity-40">
+                                        <LottiePlayer
+                                            src={() => import('../assets/lottie/empty-state.json')}
+                                            fallback={<AlertCircle className="w-8 h-8 text-muted-foreground mx-auto" />}
+                                            className="w-20 h-20"
+                                            loop
+                                        />
+                                    </div>
                                     <p className="text-[10px] font-black text-muted-foreground opacity-40">{t('dashboard.noData')}</p>
                                 </div>
                             )}

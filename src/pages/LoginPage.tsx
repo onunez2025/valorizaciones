@@ -144,7 +144,7 @@ export default function LoginPage() {
             </div>
 
             {error && (
-                <div className="p-3 rounded-lg bg-destructive/10 text-destructive text-sm font-medium text-center animate-in fade-in zoom-in-95">
+                <div className="p-3 rounded-lg bg-destructive/10 text-destructive text-sm font-medium text-center error-shake">
                     {error}
                 </div>
             )}
