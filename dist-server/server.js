@@ -68,8 +68,10 @@ async function logAudit(req, action, entity, entityId, details) {
         addInput(auditReq, 'ent', sql.NVarChar(100), entity);
         addInput(auditReq, 'eid', sql.NVarChar(100), entityId);
         addInput(auditReq, 'det', sql.NVarChar(4000), JSON.stringify(details));
-        await auditReq.query(`INSERT INTO [dbo].[GAC_APP_TB_AUDIT_LOG] (UsuarioID, UsuarioNombre, Accion, Entidad, EntidadID, Detalle, Fecha)
-              VALUES (@uid, @un, @acc, @ent, @eid, @det, GETDATE())`);
+        addInput(auditReq, 'app', sql.VarChar(20), 'VAL');
+        addInput(auditReq, 'ip', sql.VarChar(50), req.ip || null);
+        await auditReq.query(`INSERT INTO [dbo].[GAC_APP_TB_AUDIT_LOG] (UsuarioID, UsuarioNombre, Accion, Entidad, EntidadID, Detalle, ApplicationCode, IPAddress, Fecha)
+              VALUES (@uid, @un, @acc, @ent, @eid, @det, @app, @ip, GETDATE())`);
     }
     catch (err) {
         console.error('❌ Falla en Log de Auditoría VAL:', err);
