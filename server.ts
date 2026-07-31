@@ -1650,21 +1650,72 @@ app.get('/api/tickets/find/:ticket', verifyToken, async (req: Request, res: Resp
         const result = await db.request()
             .input('ticket', sql.NVarChar(sql.MAX), ticket)
             .query(`
+                DECLARE @diasMax INT;
+                SELECT @diasMax = CAST(Valor AS INT) FROM [dbo].[GAC_APP_TB_VALORIZACIONES_CONFIG] WHERE Clave = 'DIAS_MAX_CIERRE';
+                IF @diasMax IS NULL SET @diasMax = 1;
+
                 SELECT TOP 1
                     s.Ticket, s.CheckOut as Fecha, s.Servicio as ServicioNombre,
-                    s.IdServicio as Servicio, cas.RUC, cas.Nombre_CAS as CAS_Nombre
+                    s.IdServicio as Servicio, cas.RUC, cas.Nombre_CAS as CAS_Nombre,
+                    CASE
+                        WHEN UPPER(TRIM(s.Servicio)) = 'VISITA' THEN 0
+                        WHEN DATEDIFF(day, s.FechaVisita, s.CheckOut) > @diasMax THEN 0
+                        WHEN LEFT(s.CodigoExternoEquipo, 4) NOT IN ('3120', '3121', '5120', '5121') THEN 0
+                        ELSE ISNULL(rate.Importe, 0)
+                    END as TarifaBaseCalculada,
+                    CASE
+                        WHEN LEFT(s.CodigoExternoEquipo, 4) NOT IN ('3120', '3121', '5120', '5121') THEN 0
+                        ELSE (
+                            ISNULL((SELECT SUM(CAST(Importe AS FLOAT)) FROM [dbo].[GAC_APP_TB_TICKETS_VALORIZACION_ADICIONAL] WHERE Ticket = s.Ticket), 0) +
+                            ISNULL((
+                                SELECT SUM(Importe)
+                                FROM [dbo].[GAC_APP_TB_CONFIG_VALORIZACION_DISTRITO] cfg
+                                WHERE cfg.Activo = 1
+                                  AND EXISTS (SELECT 1 FROM OPENJSON(cfg.CAS_Ids) WHERE value = s.IdCAS)
+                                  AND EXISTS (SELECT 1 FROM OPENJSON(cfg.Distritos) WHERE value = s.Distrito)
+                                  AND s.CheckOut >= cfg.Fecha_Inicio
+                                  AND (cfg.Fecha_Fin IS NULL OR s.CheckOut <= cfg.Fecha_Fin)
+                            ), 0)
+                        )
+                    END as Adicionales
                 FROM [APPGAC].[ServiciosViewSQL] s
                 JOIN [dbo].[GAC_APP_TB_CAS] cas ON s.IdCAS = cas.ID_CAS
+                OUTER APPLY (
+                    SELECT TOP 1 Categoria FROM [dbo].[GAC_APP_TB_MATERIALES] WHERE ID_Externo = s.CodigoExternoEquipo
+                ) m
+                OUTER APPLY (
+                    SELECT TOP 1 CAST(Importe AS FLOAT) as Importe
+                    FROM (
+                        SELECT ex.Importe, ex.Prioridad, ex.Creado_El, 1 as Source
+                        FROM [dbo].[GAC_APP_TB_TARIFARIO_EXCEPCIONES] ex
+                        WHERE ex.Empresa = s.IdCAS
+                          AND ex.Estado = 'A'
+                          AND (ex.Categorias IS NULL OR ex.Categorias = 'null' OR EXISTS (SELECT 1 FROM OPENJSON(ex.Categorias) WHERE value = ISNULL(m.Categoria, 'N/A')))
+                          AND (ex.Servicios IS NULL OR ex.Servicios = 'null' OR EXISTS (SELECT 1 FROM OPENJSON(ex.Servicios) WHERE value = s.IdServicio OR value = s.Servicio))
+                          AND (ex.Zonas_Excluidas IS NULL OR ex.Zonas_Excluidas = 'null' OR NOT EXISTS (SELECT 1 FROM OPENJSON(ex.Zonas_Excluidas) WHERE value = s.Ciudad OR value = s.Distrito))
+                          AND (ex.Zonas_Incluidas IS NULL OR ex.Zonas_Incluidas = 'null' OR EXISTS (SELECT 1 FROM OPENJSON(ex.Zonas_Incluidas) WHERE value = s.Ciudad OR value = s.Distrito))
+                        UNION ALL
+                        SELECT t.Importe, 0 as Prioridad, t.Fecha_inicio as Creado_El, 0 as Source
+                        FROM [dbo].[GAC_APP_TB_TARIFARIO] t
+                        WHERE t.Empresa = s.IdCAS
+                          AND (t.Servicio = s.IdServicio OR t.Servicio = s.Servicio)
+                          AND TRIM(t.Categoria) = TRIM(ISNULL(m.Categoria, 'N/A'))
+                          AND s.CheckOut >= t.Fecha_inicio
+                          AND (t.Fecha_fin IS NULL OR s.CheckOut <= t.Fecha_fin)
+                          AND t.Estado = 'A'
+                    ) all_rates
+                    ORDER BY Source DESC, Prioridad DESC, Creado_El DESC
+                ) rate
                 WHERE TRIM(s.Ticket) = @ticket
             `);
-        
+
         if (result.recordset.length === 0) {
             return res.status(404).json({ error: 'Ticket no encontrado' });
         }
         res.json(result.recordset[0]);
-    } catch (err: unknown) { 
+    } catch (err: unknown) {
         console.error('Error in ticket find:', err);
-        res.status(500).json({ error: safeError(err) }); 
+        res.status(500).json({ error: safeError(err) });
     }
 });
 
@@ -2370,13 +2421,17 @@ interface TarifarioImportRow {
     ID_Tarifario?: string;
 }
 
-async function resolveServicioCodigo(db: sql.ConnectionPool, servicio: string): Promise<string> {
-    const trimmed = (servicio || '').trim();
-    if (/^CA_\d+$/i.test(trimmed)) return trimmed;
-    const lookup = await db.request()
-        .input('nombre', sql.NVarChar(255), trimmed)
-        .query("SELECT TOP 1 Id FROM [SIATC].[FSM_TipoServicio] WHERE UPPER(TRIM(Descripcion)) = UPPER(@nombre)");
-    return lookup.recordset[0]?.Id || trimmed;
+// Construye una sola vez el mapa Descripcion(mayus/trim) -> Id de FSM_TipoServicio,
+// para resolver códigos de servicio en memoria en vez de 1 query SQL por fila.
+async function buildServicioCodigoResolver(db: sql.ConnectionPool): Promise<(servicio: string) => string> {
+    const result = await db.request().query("SELECT Id, Descripcion FROM [SIATC].[FSM_TipoServicio]");
+    const map = new Map<string, string>();
+    result.recordset.forEach((r: { Id: string; Descripcion: string }) => map.set((r.Descripcion || '').trim().toUpperCase(), r.Id));
+    return (servicio: string) => {
+        const trimmed = (servicio || '').trim();
+        if (/^CA_\d+$/i.test(trimmed)) return trimmed;
+        return map.get(trimmed.toUpperCase()) || trimmed;
+    };
 }
 
 app.post('/api/tarifarios/import/preview', verifyToken, async (req: Request, res: Response) => {
@@ -2386,6 +2441,21 @@ app.post('/api/tarifarios/import/preview', verifyToken, async (req: Request, res
         const casResult = await db.request().query("SELECT ID_CAS, Nombre_CAS FROM [dbo].[GAC_APP_TB_CAS]");
         const casMap = new Map<string, number>();
         casResult.recordset.forEach((c: { Nombre_CAS: string; ID_CAS: number }) => casMap.set(c.Nombre_CAS.toUpperCase().trim(), c.ID_CAS));
+
+        const resolveServicio = await buildServicioCodigoResolver(db);
+
+        // Todas las tarifas activas en una sola consulta, para lookup en memoria
+        // en vez de 1 query SQL por fila (evita N+1 con archivos grandes).
+        const existingResult = await db.request().query(`
+            SELECT ID_Tarifario, Empresa, Categoria, Servicio, CAST(Importe AS FLOAT) as Importe
+            FROM [dbo].[GAC_APP_TB_TARIFARIO]
+            WHERE Estado = 'A'
+        `);
+        const existingMap = new Map<string, { ID_Tarifario: string; Importe: number }>();
+        existingResult.recordset.forEach((r: { ID_Tarifario: string; Empresa: number; Categoria: string; Servicio: string; Importe: number }) => {
+            const key = `${r.Empresa}|${(r.Categoria || '').trim()}|${(r.Servicio || '').trim()}`;
+            existingMap.set(key, { ID_Tarifario: r.ID_Tarifario, Importe: r.Importe });
+        });
 
         const preview: TarifarioImportRow[] = [];
         for (const row of rows) {
@@ -2405,28 +2475,15 @@ app.post('/api/tarifarios/import/preview', verifyToken, async (req: Request, res
                 preview.push({ ...row, CAS_ID: casId, Status: 'ERROR', Message: `Importe inválido: "${row.Importe}"` });
                 continue;
             }
-            const servicioCodigo = await resolveServicioCodigo(db, row.Servicio);
-            const existing = await db.request()
-                .input('casId', sql.VarChar(50), casId)
-                .input('cat', sql.VarChar(100), (row.Categoria || '').trim())
-                .input('serv', sql.VarChar(100), servicioCodigo)
-                .query(`
-                    SELECT TOP 1 ID_Tarifario, CAST(Importe AS FLOAT) as Importe
-                    FROM [dbo].[GAC_APP_TB_TARIFARIO]
-                    WHERE Empresa = @casId
-                      AND TRIM(Categoria) = TRIM(@cat)
-                      AND TRIM(Servicio) = TRIM(@serv)
-                      AND Estado = 'A'
-                `);
-            if (existing.recordset.length === 0) {
+            const servicioCodigo = resolveServicio(row.Servicio);
+            const key = `${casId}|${(row.Categoria || '').trim()}|${servicioCodigo.trim()}`;
+            const cur = existingMap.get(key);
+            if (!cur) {
                 preview.push({ ...row, CAS_ID: casId, Status: 'INSERT', Message: 'Nueva tarifa', Importe_Actual: null });
+            } else if (Math.abs(cur.Importe - importe) < 0.001) {
+                preview.push({ ...row, CAS_ID: casId, Status: 'OK', Message: 'Sin cambios', Importe_Actual: cur.Importe, ID_Tarifario: cur.ID_Tarifario });
             } else {
-                const cur = existing.recordset[0];
-                if (Math.abs(parseFloat(cur.Importe) - importe) < 0.001) {
-                    preview.push({ ...row, CAS_ID: casId, Status: 'OK', Message: 'Sin cambios', Importe_Actual: cur.Importe, ID_Tarifario: cur.ID_Tarifario });
-                } else {
-                    preview.push({ ...row, CAS_ID: casId, Status: 'UPDATE', Message: `${cur.Importe} → ${importe}`, Importe_Actual: cur.Importe, ID_Tarifario: cur.ID_Tarifario });
-                }
+                preview.push({ ...row, CAS_ID: casId, Status: 'UPDATE', Message: `${cur.Importe} → ${importe}`, Importe_Actual: cur.Importe, ID_Tarifario: cur.ID_Tarifario });
             }
         }
         res.json({ preview });
@@ -2438,13 +2495,14 @@ app.post('/api/tarifarios/import/confirm', verifyToken, async (req: Request, res
     const currentUser = (req as AuthRequest).user!;
     try {
         const db = await getWritePool();
+        const resolveServicio = await buildServicioCodigoResolver(db);
         const transaction = new sql.Transaction(db);
         await transaction.begin();
         let inserted = 0, updated = 0;
         try {
             for (const row of rows) {
                 const cat = row.Categoria.trim();
-                const serv = await resolveServicioCodigo(db, row.Servicio);
+                const serv = resolveServicio(row.Servicio);
                 const casId = row.CAS_ID;
 
                 if (row.Status === 'INSERT') {
@@ -2620,12 +2678,14 @@ app.get('/api/dashboard/stats', verifyToken, async (req: Request, res: Response)
                            AND (ex.Zonas_Incluidas IS NULL OR ex.Zonas_Incluidas = 'null' OR EXISTS (SELECT 1 FROM OPENJSON(ex.Zonas_Incluidas) WHERE value = tc.Ciudad OR value = tc.Distrito))
                          ORDER BY ex.Prioridad DESC, ex.Creado_El DESC),
                         -- 2. Tarifario Base
-                        (SELECT TOP 1 t.Importe 
+                        (SELECT TOP 1 t.Importe
                          FROM [dbo].[GAC_APP_TB_TARIFARIO] t
                          WHERE t.Empresa = tc.ID_CAS
                            AND (t.Servicio = tc.IdServicio)
                            AND TRIM(t.Categoria) = TRIM(tc.Categoria)
                            AND t.Estado = 'A'
+                           AND tc.CheckOut >= t.Fecha_inicio
+                           AND (t.Fecha_fin IS NULL OR tc.CheckOut <= t.Fecha_fin)
                          ORDER BY t.Fecha_inicio DESC)
                     ) as ImporteAplicado,
                     -- Verificación de validos (mismos filtros que el original)
@@ -2709,12 +2769,14 @@ app.get('/api/dashboard/trends', verifyToken, async (req: Request, res: Response
                            AND (ex.Zonas_Incluidas IS NULL OR ex.Zonas_Incluidas = 'null' OR EXISTS (SELECT 1 FROM OPENJSON(ex.Zonas_Incluidas) WHERE value = tc.Ciudad OR value = tc.Distrito))
                          ORDER BY ex.Prioridad DESC, ex.Creado_El DESC),
                         -- 2. Tarifario Base
-                        (SELECT TOP 1 t.Importe 
+                        (SELECT TOP 1 t.Importe
                          FROM [dbo].[GAC_APP_TB_TARIFARIO] t
                          WHERE t.Empresa = tc.ID_CAS
                            AND (t.Servicio = tc.IdServicio)
                            AND TRIM(t.Categoria) = TRIM(tc.Categoria)
                            AND t.Estado = 'A'
+                           AND tc.CheckOut >= t.Fecha_inicio
+                           AND (t.Fecha_fin IS NULL OR tc.CheckOut <= t.Fecha_fin)
                          ORDER BY t.Fecha_inicio DESC)
                     ) as ImporteAplicado,
                     CASE 

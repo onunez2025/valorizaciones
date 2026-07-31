@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
     Search, Plus, Save, Trash2, History, DollarSign, Building2,
-    ChevronDown, Check, Target, AlertCircle, FileText, Activity, Upload
+    ChevronDown, Check, Target, AlertCircle, FileText, Activity, Upload, Download
 } from 'lucide-react';
 import { ApiClient } from '../services/apiClient';
 import { cn } from '../utils/cn';
@@ -10,6 +10,7 @@ import { toTitleCase } from '../utils/formatters';
 import { useDialog } from '../context/DialogContext';
 import TarifarioExceptionsModal from '../components/tarifario/TarifarioExceptionsModal';
 import TarifarioImportModal from '../components/tarifario/TarifarioImportModal';
+import { downloadTarifarioTemplate } from '../utils/tarifarioTemplate';
 import { SIATC_THEME } from '../utils/siatc-theme';
 
 interface CAS {
@@ -217,12 +218,20 @@ export default function TarifarioPage() {
                     <h1 className={SIATC_THEME.TYPOGRAPHY.PAGE_TITLE}>{t('tarifario.title')}</h1>
                     <p className={SIATC_THEME.TYPOGRAPHY.PAGE_SUBTITLE}>{t('tarifario.subtitle')}</p>
                 </div>
-                <button
-                    onClick={() => setIsImportModalOpen(true)}
-                    className={cn("px-5 bg-blue-600 text-white rounded-lg font-bold text-[10px] shadow-lg flex items-center gap-2 transition-all hover:opacity-90 active:scale-95 self-start md:self-auto", SIATC_THEME.MOBILE.TOUCH_TARGET)}
-                >
-                    <Upload className="w-3.5 h-3.5" /> {t('tarifario.importExcel')}
-                </button>
+                <div className="flex items-center gap-3 self-start md:self-auto">
+                    <button
+                        onClick={() => downloadTarifarioTemplate()}
+                        className={cn("px-5 border border-border/60 bg-card text-foreground/70 rounded-lg font-bold text-[10px] shadow-sm flex items-center gap-2 transition-all hover:bg-muted/40 active:scale-95", SIATC_THEME.MOBILE.TOUCH_TARGET)}
+                    >
+                        <Download className="w-3.5 h-3.5" /> {t('tarifario.exportTemplate')}
+                    </button>
+                    <button
+                        onClick={() => setIsImportModalOpen(true)}
+                        className={cn("px-5 bg-blue-600 text-white rounded-lg font-bold text-[10px] shadow-lg flex items-center gap-2 transition-all hover:opacity-90 active:scale-95", SIATC_THEME.MOBILE.TOUCH_TARGET)}
+                    >
+                        <Upload className="w-3.5 h-3.5" /> {t('tarifario.importExcel')}
+                    </button>
+                </div>
             </div>
 
             <div className="relative" ref={dropdownRef}>
