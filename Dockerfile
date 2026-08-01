@@ -2,27 +2,29 @@
 FROM node:22-slim AS builder
 
 WORKDIR /app
+RUN corepack enable && corepack prepare pnpm@11.18.0 --activate
 
 # Install build dependencies
-COPY package*.json ./
-RUN npm install
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+RUN pnpm install --frozen-lockfile
 
 # Copy source and build
 COPY . .
-RUN npm run build
+RUN pnpm run build
 
 # Final production image
 FROM node:22-slim
 
 WORKDIR /app
+RUN corepack enable && corepack prepare pnpm@11.18.0 --activate
 
 # Copy built files
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/dist-server ./dist-server
-COPY --from=builder /app/package*.json ./
+COPY --from=builder /app/package.json /app/pnpm-lock.yaml /app/pnpm-workspace.yaml ./
 
 # Install only production dependencies
-RUN npm install --omit=dev
+RUN pnpm install --frozen-lockfile --prod
 
 # Set environment variables
 ENV NODE_ENV=production
