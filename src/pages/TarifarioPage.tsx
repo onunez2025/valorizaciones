@@ -12,6 +12,7 @@ import TarifarioExceptionsModal from '../components/tarifario/TarifarioException
 import TarifarioImportModal from '../components/tarifario/TarifarioImportModal';
 import { downloadTarifarioTemplate } from '../utils/tarifarioTemplate';
 import { SIATC_THEME } from '../utils/siatc-theme';
+import { LottiePlayer } from '../components/common/LottiePlayer';
 
 interface CAS {
     ID_CAS: number;
@@ -321,24 +322,28 @@ export default function TarifarioPage() {
 
             <div className={cn("flex-1 min-h-0 overflow-hidden flex flex-col relative", SIATC_THEME.COMPONENTS.CARD_CONTAINER)}>
                 {!selectedCas ? (
-                    <div className="h-full flex flex-col items-center justify-center p-12 text-center">
-                        <div className="w-32 h-32 bg-primary/[0.03] rounded-full flex items-center justify-center mb-10 border border-primary/5 relative">
-                            <History className="w-14 h-14 text-primary opacity-20" />
-                            <div className="absolute inset-0 bg-primary/10 rounded-full animate-pulse blur-2xl opacity-20" />
+                    <div className="h-full flex flex-col items-center justify-center p-6 sm:p-12 text-center">
+                        <div className="w-28 h-28 sm:w-32 sm:h-32 mb-6 sm:mb-10 opacity-60">
+                            <LottiePlayer
+                                src={() => import('../assets/lottie/empty-state.json')}
+                                fallback={<History className="w-14 h-14 text-primary opacity-20 mx-auto" />}
+                                className="w-full h-full"
+                                loop
+                            />
                         </div>
-                        <h3 className="text-3xl font-black tracking-tight mb-4">{t('tarifario.empty.title')}</h3>
+                        <h3 className="text-2xl sm:text-3xl font-black tracking-tight mb-4">{t('tarifario.empty.title')}</h3>
                         <p className="text-muted-foreground max-w-sm font-bold opacity-50 leading-relaxed text-[11px]">{t('tarifario.empty.subtitle')}</p>
                     </div>
                 ) : (
                     <>
-                        <div className="p-6 border-b border-border/40 flex items-center justify-between bg-muted/5">
+                        <div className="p-4 sm:p-6 border-b border-border/40 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-muted/5">
                             <div className="flex items-center gap-5">
-                                <div className="p-3 bg-emerald-500/10 rounded-lg text-emerald-600 border border-emerald-500/10">
+                                <div className="p-3 bg-emerald-500/10 rounded-lg text-emerald-600 border border-emerald-500/10 shrink-0">
                                     <DollarSign className="w-5 h-5" />
                                 </div>
                                 <div>
                                     <h3 className="text-[9px] font-bold text-muted-foreground/60 mb-0.5">{t('tarifario.ratesLabel')}</h3>
-                                    <div className="flex items-center gap-3">
+                                    <div className="flex items-center gap-3 flex-wrap">
                                         <p className="text-xl font-bold tracking-tight">
                                             <span className="text-emerald-600">{activeCount}</span>
                                             <span className="text-muted-foreground/40 text-sm font-bold"> {t('tarifario.activeLabel')}</span>
@@ -351,9 +356,9 @@ export default function TarifarioPage() {
                                     </div>
                                 </div>
                             </div>
-                            <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-3 flex-wrap">
                                 {isEditing ? (
-                                    <div className="flex items-center gap-3 animate-in zoom-in-95">
+                                    <div className="flex items-center gap-3 flex-wrap animate-in zoom-in-95">
                                         <button
                                             onClick={() => { setIsEditing(false); setEditRates(rates); }}
                                             className={cn("px-5 bg-muted rounded-lg font-bold text-[10px] text-muted-foreground hover:bg-muted/80 transition-all", SIATC_THEME.MOBILE.TOUCH_TARGET)}
@@ -404,19 +409,19 @@ export default function TarifarioPage() {
                                                  <button
                                                      onClick={() => toggleCategory(category)}
                                                      className={cn(
-                                                         "w-full px-6 py-4 flex items-center justify-between transition-colors",
+                                                         "w-full px-4 sm:px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4 transition-colors text-left",
                                                          isExpanded ? "bg-muted/20 border-b border-border/40" : "hover:bg-muted/10"
                                                      )}
                                                  >
-                                                     <div className="flex items-center gap-4">
-                                                         <div className={cn("w-2 h-2 rounded-full transition-all duration-500", isExpanded ? "bg-primary scale-125" : "bg-muted-foreground/30")} />
-                                                         <h4 className="text-[12px] font-black uppercase tracking-[0.2em] text-foreground/80">{category}</h4>
+                                                     <div className="flex items-center gap-4 min-w-0">
+                                                         <div className={cn("w-2 h-2 rounded-full transition-all duration-500 shrink-0", isExpanded ? "bg-primary scale-125" : "bg-muted-foreground/30")} />
+                                                         <h4 className="text-[12px] font-black uppercase tracking-[0.08em] sm:tracking-[0.2em] text-foreground/80">{category}</h4>
                                                      </div>
-                                                     <div className="flex items-center gap-6">
+                                                     <div className="flex items-center justify-between sm:justify-start gap-3 sm:gap-6 pl-6 sm:pl-0">
                                                          <span className="text-[10px] font-bold text-muted-foreground opacity-40 uppercase tracking-widest">
                                                              {t('tarifario.servicesCount', { services: serviceNames.length, periods: totalPeriods })}
                                                          </span>
-                                                         <ChevronDown className={cn("w-4 h-4 text-muted-foreground/30 transition-transform duration-500", isExpanded && "rotate-180 text-primary")} />
+                                                         <ChevronDown className={cn("w-4 h-4 text-muted-foreground/30 transition-transform duration-500 shrink-0", isExpanded && "rotate-180 text-primary")} />
                                                      </div>
                                                  </button>
 

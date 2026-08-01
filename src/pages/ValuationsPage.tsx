@@ -13,6 +13,7 @@ import MaterialRegisterModal from '../components/materials/MaterialRegisterModal
 import { Modal } from '../components/common/Modal';
 import { SIATC_THEME } from '../utils/siatc-theme';
 import { useAuth } from '../hooks/useAuth';
+import { LottiePlayer } from '../components/common/LottiePlayer';
 import { useTranslation } from 'react-i18next';
 
 const isValuable = (code?: string) => ['3120', '3121', '5120', '5121'].some(prefix => code?.startsWith(prefix));
@@ -1893,8 +1894,15 @@ export default function ValuationsPage() {
 
                             <div className="flex-1 overflow-auto p-5 custom-scrollbar">
                                 {!selectedCas ? (
-                                    <div className="h-full flex flex-col items-center justify-center text-center py-20 opacity-30">
-                                        <div className="w-20 h-20 bg-muted rounded-full flex items-center justify-center mb-6"><Building2 className="w-10 h-10" /></div>
+                                    <div className="h-full flex flex-col items-center justify-center text-center py-20 opacity-60">
+                                        <div className="w-20 h-20 mb-6">
+                                            <LottiePlayer
+                                                src={() => import('../assets/lottie/empty-state.json')}
+                                                fallback={<Building2 className="w-10 h-10 mx-auto" />}
+                                                className="w-full h-full"
+                                                loop
+                                            />
+                                        </div>
                                         <h3 className="text-lg font-black">{t('valuations.emptyStateTitle')}</h3>
                                         <p className="text-xs font-bold max-w-[250px] mt-2">{t('valuations.emptyStateMessage')}</p>
                                     </div>

@@ -270,8 +270,8 @@ export default function DashboardPage() {
                 </div>
             )}
 
-            {/* Metricas Principales - Idéntico a Liquidaciones */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            {/* Metricas Principales - carrusel horizontal compacto en mobile, grid desde md (igual que Liquidaciones) */}
+            <div className="flex items-start md:grid md:grid-cols-2 lg:grid-cols-4 gap-2.5 md:gap-3 shrink-0 overflow-x-auto no-scrollbar pb-1 md:pb-0 [&>*]:shrink-0 [&>*]:w-[150px] md:[&>*]:w-auto">
                 <StatCard
                     title={t('dashboard.kpi.grossTotal')}
                     value={`S/ ${(stats?.Bruto || 0).toLocaleString()}`}
@@ -436,26 +436,26 @@ function StatCard({ title, value, subtitle, icon, trend, trendUp, color }: StatC
     };
 
     return (
-        <div className={SIATC_THEME.COMPONENTS.KPI_CARD_CONTAINER}>
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                    <div className={cn("p-1.5 rounded-lg transition-transform group-hover:scale-110", bgClasses[color ?? 'blue'], colorClasses[color ?? 'blue'])}>
+        <div className={cn(SIATC_THEME.COMPONENTS.KPI_CARD_CONTAINER, "h-auto min-h-[92px] md:h-[121px] py-3 px-3 md:py-2.5 md:px-6")}>
+            <div className="flex items-center justify-between gap-1.5">
+                <div className="flex items-center gap-2 md:gap-3 min-w-0">
+                    <div className={cn("p-1.5 md:p-1.5 rounded-lg transition-transform group-hover:scale-110 shrink-0", bgClasses[color ?? 'blue'], colorClasses[color ?? 'blue'])}>
                         {icon}
                     </div>
-                    <span className={SIATC_THEME.COMPONENTS.KPI_CARD_LABEL}>{title}</span>
+                    <span className={cn(SIATC_THEME.COMPONENTS.KPI_CARD_LABEL, "text-[9px] md:text-[11px] leading-tight line-clamp-2")}>{title}</span>
                 </div>
                 <div className={cn(
-                    "flex items-center gap-1 text-[8px] font-bold px-1.5 py-0.5 rounded-full border",
+                    "flex items-center gap-1 text-[8px] font-bold px-1.5 py-0.5 rounded-full border shrink-0",
                     trendUp ? "bg-emerald-500/5 text-emerald-600 border-emerald-200/20" : "bg-red-500/5 text-red-600 border-red-200/20"
                 )}>
                     {trendUp ? <ArrowUpRight className="w-2.5 h-2.5" /> : <ArrowDownRight className="w-2.5 h-2.5" />}
                     {trend}
                 </div>
             </div>
-            
-            <p className={SIATC_THEME.COMPONENTS.KPI_CARD_VALUE}>{value}</p>
-            
-            <div className="flex items-center gap-1.5 opacity-60">
+
+            <p className={cn(SIATC_THEME.COMPONENTS.KPI_CARD_VALUE, "text-base md:text-2xl truncate")}>{value}</p>
+
+            <div className="hidden md:flex items-center gap-1.5 opacity-60">
                 <AlertCircle className="w-2.5 h-2.5 text-muted-foreground shrink-0" />
                 <p className={SIATC_THEME.COMPONENTS.KPI_CARD_SUB}>{subtitle}</p>
             </div>
