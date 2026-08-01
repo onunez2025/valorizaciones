@@ -54,6 +54,19 @@ export default function DashboardPage() {
     const [searchQuery, setSearchQuery] = useState('');
     const dropdownRef = useRef<HTMLDivElement>(null);
 
+    // Estado para el Dropdown de Periodo (boton compacto en la misma fila del titulo)
+    const [isPeriodOpen, setIsPeriodOpen] = useState(false);
+    const periodDropdownRef = useRef<HTMLDivElement>(null);
+
+    const periodOptions = [
+        { id: '7', label: '7D' },
+        { id: '30', label: '30D' },
+        { id: '90', label: '90D' },
+        { id: 'year', label: t('dashboard.period.year') },
+        { id: 'custom', label: t('dashboard.period.range') },
+    ];
+    const activePeriodLabel = periodOptions.find(p => p.id === period)?.label || '';
+
     useEffect(() => {
         const fetchCas = async () => {
             try {
@@ -64,11 +77,14 @@ export default function DashboardPage() {
             }
         };
         fetchCas();
-        
-        // Cerrar dropdown al hacer click fuera
+
+        // Cerrar dropdowns al hacer click fuera
         const handleClickOutside = (event: MouseEvent) => {
             if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
                 setIsDropdownOpen(false);
+            }
+            if (periodDropdownRef.current && !periodDropdownRef.current.contains(event.target as Node)) {
+                setIsPeriodOpen(false);
             }
         };
         document.addEventListener('mousedown', handleClickOutside);
@@ -137,35 +153,34 @@ export default function DashboardPage() {
 
     return (
         <div className={SIATC_THEME.LAYOUT.PAGE_WRAPPER}>
-            {/* Header Section - Estilo Liquidaciones */}
-            <div className={SIATC_THEME.LAYOUT.HEADER_WRAPPER}>
-                <div>
-                    <h1 className={cn(SIATC_THEME.TYPOGRAPHY.PAGE_TITLE, "flex items-center gap-3")}>
+            {/* Header Section - titulo + 2 botones compactos de filtro en la misma fila (siempre, tambien en mobile) */}
+            <div className="flex items-center justify-between gap-2 shrink-0 px-1">
+                <div className="min-w-0">
+                    <h1 className={cn(SIATC_THEME.TYPOGRAPHY.PAGE_TITLE, "flex items-center gap-2 sm:gap-3 truncate")}>
                         {t('dashboard.title')}
-                        <div className="w-2 h-2 bg-primary rounded-full animate-pulse shadow-[0_0_10px_rgba(var(--primary-rgb),0.5)]" />
+                        <div className="w-2 h-2 bg-primary rounded-full animate-pulse shadow-[0_0_10px_rgba(var(--primary-rgb),0.5)] shrink-0" />
                     </h1>
-                    <p className={SIATC_THEME.TYPOGRAPHY.PAGE_SUBTITLE}>{t('dashboard.subtitle')}</p>
+                    <p className={cn(SIATC_THEME.TYPOGRAPHY.PAGE_SUBTITLE, "hidden sm:block")}>{t('dashboard.subtitle')}</p>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-4">
-                    {/* Filtro Empresa Custom Popover */}
+                <div className="flex items-center gap-2 shrink-0">
+                    {/* Boton compacto: Filtro Empresa (se expande a texto+chevron desde sm:, icono solo en mobile) */}
                     <div className="relative" ref={dropdownRef}>
-                        <button 
-                            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                        <button
+                            onClick={() => { setIsDropdownOpen(!isDropdownOpen); setIsPeriodOpen(false); }}
+                            title={toTitleCase(activeCasName || '')}
                             className={cn(
-                                "flex items-center justify-between gap-3 bg-background px-4 py-2 border shadow-sm transition-all min-w-[200px]",
+                                "flex items-center justify-center gap-2 bg-background border shadow-sm transition-all",
+                                "w-10 h-10 sm:w-auto sm:h-auto sm:px-4 sm:py-2 rounded-full sm:rounded-lg",
                                 SIATC_THEME.MOBILE.TOUCH_TARGET,
-                                SIATC_THEME.TOKENS.COMPONENT_ROUNDNESS,
                                 isDropdownOpen ? "ring-2 ring-primary/20 border-primary/50" : "border-border hover:border-primary/40"
                             )}
                         >
-                            <div className="flex items-center gap-2 truncate">
-                                <Building2 className="w-4 h-4 text-primary shrink-0" />
-                                <span className="text-[11px] font-bold truncate">
-                                    {toTitleCase(activeCasName || '')}
-                                </span>
-                            </div>
-                            <ChevronDown className={cn("w-3.5 h-3.5 text-muted-foreground transition-transform duration-300", isDropdownOpen && "rotate-180")} />
+                            <Building2 className="w-4 h-4 text-primary shrink-0" />
+                            <span className="hidden sm:inline text-[11px] font-bold truncate max-w-[140px]">
+                                {toTitleCase(activeCasName || '')}
+                            </span>
+                            <ChevronDown className={cn("hidden sm:inline w-3.5 h-3.5 text-muted-foreground transition-transform duration-300", isDropdownOpen && "rotate-180")} />
                         </button>
 
                         {isDropdownOpen && (
@@ -173,9 +188,9 @@ export default function DashboardPage() {
                                 <div className="p-3 border-b border-border/50">
                                     <div className="relative">
                                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-                                        <input 
+                                        <input
                                             autoFocus
-                                            type="text" 
+                                            type="text"
                                             placeholder={t('dashboard.searchPlaceholder')}
                                             className={cn(SIATC_THEME.COMPONENTS.INPUT, SIATC_THEME.MOBILE.TOUCH_INPUT, "pl-9 text-[11px] font-bold")}
                                             value={searchQuery}
@@ -184,7 +199,7 @@ export default function DashboardPage() {
                                     </div>
                                 </div>
                                 <div className="max-h-[300px] overflow-y-auto overflow-x-hidden p-2 custom-scrollbar">
-                                    <button 
+                                    <button
                                         onClick={() => { setSelectedCas('all'); setIsDropdownOpen(false); }}
                                         className={cn(
                                             "w-full flex items-center justify-between px-4 py-3 rounded-lg text-[10px] font-black transition-colors mb-1",
@@ -197,7 +212,7 @@ export default function DashboardPage() {
                                     </button>
                                     <div className="h-px bg-border/30 my-1 mx-2" />
                                     {filteredCasList.map(cas => (
-                                        <button 
+                                        <button
                                             key={cas.ID_CAS}
                                             onClick={() => { setSelectedCas(cas.RUC); setIsDropdownOpen(false); }}
                                             className={cn(
@@ -218,29 +233,41 @@ export default function DashboardPage() {
                         )}
                     </div>
 
-                    {/* Filtro Periodo Custom */}
-                    <div className="flex items-center gap-1 bg-muted/40 p-1 rounded-lg border border-border shadow-inner">
-                        {[
-                            { id: '7', label: '7D' },
-                            { id: '30', label: '30D' },
-                            { id: '90', label: '90D' },
-                            { id: 'year', label: t('dashboard.period.year') },
-                            { id: 'custom', label: t('dashboard.period.range') },
-                        ].map((p) => (
-                            <button
-                                key={p.id}
-                                onClick={() => setPeriod(p.id)}
-                                className={cn(
-                                    "px-3 py-1.5 rounded-md text-[10px] font-bold transition-all",
-                                    SIATC_THEME.MOBILE.TOUCH_TARGET,
-                                    period === p.id
-                                        ? "bg-foreground text-background shadow-md"
-                                        : "text-muted-foreground hover:bg-muted"
-                                )}
-                            >
-                                {p.label}
-                            </button>
-                        ))}
+                    {/* Boton compacto: Filtro Periodo (icono solo en mobile, se expande desde sm:) */}
+                    <div className="relative" ref={periodDropdownRef}>
+                        <button
+                            onClick={() => { setIsPeriodOpen(!isPeriodOpen); setIsDropdownOpen(false); }}
+                            title={activePeriodLabel}
+                            className={cn(
+                                "flex items-center justify-center gap-2 bg-muted/40 border shadow-inner transition-all",
+                                "w-10 h-10 sm:w-auto sm:h-auto sm:px-4 sm:py-2 rounded-full sm:rounded-lg",
+                                SIATC_THEME.MOBILE.TOUCH_TARGET,
+                                isPeriodOpen ? "ring-2 ring-primary/20 border-primary/50" : "border-border hover:border-primary/40"
+                            )}
+                        >
+                            <Calendar className="w-4 h-4 text-primary shrink-0" />
+                            <span className="hidden sm:inline text-[11px] font-bold">{activePeriodLabel}</span>
+                            <ChevronDown className={cn("hidden sm:inline w-3.5 h-3.5 text-muted-foreground transition-transform duration-300", isPeriodOpen && "rotate-180")} />
+                        </button>
+
+                        {isPeriodOpen && (
+                            <div className={cn("absolute top-full right-0 mt-2 w-[180px] shadow-xl z-50 animate-in fade-in zoom-in-95 duration-200 overflow-hidden", SIATC_THEME.COMPONENTS.MODAL_CONTENT, "p-2")}>
+                                {periodOptions.map((p) => (
+                                    <button
+                                        key={p.id}
+                                        onClick={() => { setPeriod(p.id); setIsPeriodOpen(false); }}
+                                        className={cn(
+                                            "w-full flex items-center justify-between px-4 py-3 rounded-lg text-[10px] font-black transition-colors mb-1 last:mb-0 text-left",
+                                            SIATC_THEME.MOBILE.TOUCH_TARGET,
+                                            period === p.id ? "bg-foreground text-background shadow-md" : "hover:bg-muted text-muted-foreground"
+                                        )}
+                                    >
+                                        {p.label}
+                                        {period === p.id && <Check className="w-3 h-3" />}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
