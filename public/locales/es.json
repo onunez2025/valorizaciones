@@ -59,6 +59,8 @@
     "subtitle": "Inteligencia de negocios CAS en tiempo real.",
     "searchPlaceholder": "Buscar centro o RUC...",
     "allCompanies": "Todas las Empresas",
+    "filterCompanyTitle": "Filtrar por Empresa",
+    "filterPeriodTitle": "Filtrar por Periodo",
     "period": {
       "year": "Año",
       "range": "Rango",

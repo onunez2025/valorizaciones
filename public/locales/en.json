@@ -59,6 +59,8 @@
     "subtitle": "Real-time CAS business intelligence.",
     "searchPlaceholder": "Search by center or RUC...",
     "allCompanies": "All Companies",
+    "filterCompanyTitle": "Filter by Company",
+    "filterPeriodTitle": "Filter by Period",
     "period": {
       "year": "Year",
       "range": "Range",

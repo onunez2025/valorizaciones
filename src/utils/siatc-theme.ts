@@ -106,6 +106,14 @@ export const SIATC_THEME = {
         KPI_CARD_VALUE: "text-2xl font-bold tracking-tighter text-cb-text-primary",
         KPI_CARD_LABEL: "text-[11px] font-bold text-cb-neutral uppercase tracking-wider",
         KPI_CARD_SUB: "text-[11px] font-bold text-cb-text-secondary opacity-80",
+
+        // Bottom sheet — reemplaza popovers flotantes en <768px, alcanzable con el
+        // pulgar y anclado al borde inferior (mismo token set que Technical).
+        BOTTOM_SHEET_OVERLAY: "fixed inset-0 z-[100] bg-slate-900/50 backdrop-blur-xs",
+        BOTTOM_SHEET_CONTAINER: "fixed inset-x-0 bottom-0 z-[100] bg-card rounded-t-[1.5rem] shadow-2xl flex flex-col max-h-[92dvh] animate-in slide-in-from-bottom duration-300",
+        BOTTOM_SHEET_HANDLE: "mx-auto mt-2.5 mb-1 h-1.5 w-10 rounded-full bg-cb-border shrink-0",
+        BOTTOM_SHEET_HEADER: "px-5 pb-4 border-b border-border shrink-0",
+        BOTTOM_SHEET_BODY: "flex-1 overflow-y-auto custom-scrollbar px-5 py-4",
     },
 
     // 6. ESTADOS Y BADGES

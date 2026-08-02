@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-    TrendingUp, TrendingDown, DollarSign, Activity, 
-    ArrowUpRight, ArrowDownRight, Calendar, AlertCircle, Building2, Search, ChevronDown, Check
+    TrendingUp, TrendingDown, DollarSign, Activity,
+    ArrowUpRight, ArrowDownRight, Calendar, AlertCircle, Building2, Search, ChevronDown, Check, X
 } from 'lucide-react';
 import { 
     AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
@@ -143,6 +143,73 @@ export default function DashboardPage() {
         ? t('dashboard.allCompanies')
         : casList.find(c => c.RUC === selectedCas)?.Nombre_CAS;
 
+    const renderCasSearchInput = (autoFocusInput: boolean) => (
+        <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+            <input
+                autoFocus={autoFocusInput}
+                type="text"
+                placeholder={t('dashboard.searchPlaceholder')}
+                className={cn(SIATC_THEME.COMPONENTS.INPUT, SIATC_THEME.MOBILE.TOUCH_INPUT, "pl-9 text-[11px] font-bold")}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+            />
+        </div>
+    );
+
+    const casOptionsList = (
+        <>
+            <button
+                onClick={() => { setSelectedCas('all'); setIsDropdownOpen(false); }}
+                className={cn(
+                    "w-full flex items-center justify-between px-4 py-3 rounded-lg text-[10px] font-black transition-colors mb-1",
+                    SIATC_THEME.MOBILE.TOUCH_TARGET,
+                    selectedCas === 'all' ? "bg-primary text-white" : "hover:bg-muted text-muted-foreground"
+                )}
+            >
+                {t('dashboard.allCompanies')}
+                {selectedCas === 'all' && <Check className="w-3 h-3" />}
+            </button>
+            <div className="h-px bg-border/30 my-1 mx-2" />
+            {filteredCasList.map(cas => (
+                <button
+                    key={cas.ID_CAS}
+                    onClick={() => { setSelectedCas(cas.RUC); setIsDropdownOpen(false); }}
+                    className={cn(
+                        "w-full flex items-center justify-between px-4 py-3 rounded-lg text-[10px] font-black transition-colors text-left",
+                        SIATC_THEME.MOBILE.TOUCH_TARGET,
+                        selectedCas === cas.RUC ? "bg-primary text-white shadow-md shadow-primary/20" : "hover:bg-muted text-foreground/80"
+                    )}
+                >
+                    <div className="flex flex-col gap-0.5">
+                        <span className="truncate max-w-[200px]">{toTitleCase(cas.Nombre_CAS)}</span>
+                        <span className={cn("text-[9px] opacity-60", selectedCas === cas.RUC ? "text-white" : "text-muted-foreground")}>{cas.RUC}</span>
+                    </div>
+                    {selectedCas === cas.RUC && <Check className="w-3 h-3" />}
+                </button>
+            ))}
+        </>
+    );
+
+    const periodOptionsList = (
+        <>
+            {periodOptions.map((p) => (
+                <button
+                    key={p.id}
+                    onClick={() => { setPeriod(p.id); setIsPeriodOpen(false); }}
+                    className={cn(
+                        "w-full flex items-center justify-between px-4 py-3 rounded-lg text-[10px] font-black transition-colors mb-1 last:mb-0 text-left",
+                        SIATC_THEME.MOBILE.TOUCH_TARGET,
+                        period === p.id ? "bg-foreground text-background shadow-md" : "hover:bg-muted text-muted-foreground"
+                    )}
+                >
+                    {p.label}
+                    {period === p.id && <Check className="w-3 h-3" />}
+                </button>
+            ))}
+        </>
+    );
+
     const netAmount = (stats?.Bruto || 0) - (stats?.Sanciones || 0);
 
     if (loading && !stats) return (
@@ -184,52 +251,35 @@ export default function DashboardPage() {
                         </button>
 
                         {isDropdownOpen && (
-                            <div className={cn("absolute top-full right-0 mt-2 w-[300px] shadow-xl z-50 animate-in fade-in zoom-in-95 duration-200 overflow-hidden", SIATC_THEME.COMPONENTS.MODAL_CONTENT, "p-0")}>
-                                <div className="p-3 border-b border-border/50">
-                                    <div className="relative">
-                                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-                                        <input
-                                            autoFocus
-                                            type="text"
-                                            placeholder={t('dashboard.searchPlaceholder')}
-                                            className={cn(SIATC_THEME.COMPONENTS.INPUT, SIATC_THEME.MOBILE.TOUCH_INPUT, "pl-9 text-[11px] font-bold")}
-                                            value={searchQuery}
-                                            onChange={(e) => setSearchQuery(e.target.value)}
-                                        />
+                            <>
+                                {/* Desktop/tablet: popover anclado al boton, desde md: (sm: nunca se activa en celular real) */}
+                                <div className={cn("hidden md:block absolute top-full right-0 mt-2 w-[300px] shadow-xl z-50 animate-in fade-in zoom-in-95 duration-200 overflow-hidden", SIATC_THEME.COMPONENTS.MODAL_CONTENT, "p-0")}>
+                                    <div className="p-3 border-b border-border/50">
+                                        {renderCasSearchInput(true)}
+                                    </div>
+                                    <div className="max-h-[300px] overflow-y-auto overflow-x-hidden p-2 custom-scrollbar">
+                                        {casOptionsList}
                                     </div>
                                 </div>
-                                <div className="max-h-[300px] overflow-y-auto overflow-x-hidden p-2 custom-scrollbar">
-                                    <button
-                                        onClick={() => { setSelectedCas('all'); setIsDropdownOpen(false); }}
-                                        className={cn(
-                                            "w-full flex items-center justify-between px-4 py-3 rounded-lg text-[10px] font-black transition-colors mb-1",
-                                            SIATC_THEME.MOBILE.TOUCH_TARGET,
-                                            selectedCas === 'all' ? "bg-primary text-white" : "hover:bg-muted text-muted-foreground"
-                                        )}
-                                    >
-                                        {t('dashboard.allCompanies')}
-                                        {selectedCas === 'all' && <Check className="w-3 h-3" />}
-                                    </button>
-                                    <div className="h-px bg-border/30 my-1 mx-2" />
-                                    {filteredCasList.map(cas => (
-                                        <button
-                                            key={cas.ID_CAS}
-                                            onClick={() => { setSelectedCas(cas.RUC); setIsDropdownOpen(false); }}
-                                            className={cn(
-                                                "w-full flex items-center justify-between px-4 py-3 rounded-lg text-[10px] font-black transition-colors text-left",
-                                                SIATC_THEME.MOBILE.TOUCH_TARGET,
-                                                selectedCas === cas.RUC ? "bg-primary text-white shadow-md shadow-primary/20" : "hover:bg-muted text-foreground/80"
-                                            )}
-                                        >
-                                            <div className="flex flex-col gap-0.5">
-                                                <span className="truncate max-w-[200px]">{toTitleCase(cas.Nombre_CAS)}</span>
-                                                <span className={cn("text-[9px] opacity-60", selectedCas === cas.RUC ? "text-white" : "text-muted-foreground")}>{cas.RUC}</span>
-                                            </div>
-                                            {selectedCas === cas.RUC && <Check className="w-3 h-3" />}
+
+                                {/* Mobile: bottom sheet a ancho completo, siempre pegado al borde inferior */}
+                                <div className={cn(SIATC_THEME.COMPONENTS.BOTTOM_SHEET_OVERLAY, "md:hidden")} onClick={() => setIsDropdownOpen(false)} />
+                                <div className={cn(SIATC_THEME.COMPONENTS.BOTTOM_SHEET_CONTAINER, "md:hidden")}>
+                                    <div className={SIATC_THEME.COMPONENTS.BOTTOM_SHEET_HANDLE} />
+                                    <div className={cn(SIATC_THEME.COMPONENTS.BOTTOM_SHEET_HEADER, "flex items-center justify-between gap-3")}>
+                                        <span className="text-sm font-black">{t('dashboard.filterCompanyTitle')}</span>
+                                        <button onClick={() => setIsDropdownOpen(false)} className={cn("p-1.5 rounded-full hover:bg-muted text-muted-foreground shrink-0", SIATC_THEME.MOBILE.TOUCH_TARGET)}>
+                                            <X className="w-4 h-4" />
                                         </button>
-                                    ))}
+                                    </div>
+                                    <div className="px-5 pb-3 pt-3 shrink-0 border-b border-border/50">
+                                        {renderCasSearchInput(false)}
+                                    </div>
+                                    <div className={SIATC_THEME.COMPONENTS.BOTTOM_SHEET_BODY}>
+                                        {casOptionsList}
+                                    </div>
                                 </div>
-                            </div>
+                            </>
                         )}
                     </div>
 
@@ -251,22 +301,27 @@ export default function DashboardPage() {
                         </button>
 
                         {isPeriodOpen && (
-                            <div className={cn("absolute top-full right-0 mt-2 w-[180px] shadow-xl z-50 animate-in fade-in zoom-in-95 duration-200 overflow-hidden", SIATC_THEME.COMPONENTS.MODAL_CONTENT, "p-2")}>
-                                {periodOptions.map((p) => (
-                                    <button
-                                        key={p.id}
-                                        onClick={() => { setPeriod(p.id); setIsPeriodOpen(false); }}
-                                        className={cn(
-                                            "w-full flex items-center justify-between px-4 py-3 rounded-lg text-[10px] font-black transition-colors mb-1 last:mb-0 text-left",
-                                            SIATC_THEME.MOBILE.TOUCH_TARGET,
-                                            period === p.id ? "bg-foreground text-background shadow-md" : "hover:bg-muted text-muted-foreground"
-                                        )}
-                                    >
-                                        {p.label}
-                                        {period === p.id && <Check className="w-3 h-3" />}
-                                    </button>
-                                ))}
-                            </div>
+                            <>
+                                {/* Desktop/tablet: popover anclado al boton, desde md: (sm: nunca se activa en celular real) */}
+                                <div className={cn("hidden md:block absolute top-full right-0 mt-2 w-[180px] shadow-xl z-50 animate-in fade-in zoom-in-95 duration-200 overflow-hidden", SIATC_THEME.COMPONENTS.MODAL_CONTENT, "p-2")}>
+                                    {periodOptionsList}
+                                </div>
+
+                                {/* Mobile: bottom sheet a ancho completo, siempre pegado al borde inferior */}
+                                <div className={cn(SIATC_THEME.COMPONENTS.BOTTOM_SHEET_OVERLAY, "md:hidden")} onClick={() => setIsPeriodOpen(false)} />
+                                <div className={cn(SIATC_THEME.COMPONENTS.BOTTOM_SHEET_CONTAINER, "md:hidden")}>
+                                    <div className={SIATC_THEME.COMPONENTS.BOTTOM_SHEET_HANDLE} />
+                                    <div className={cn(SIATC_THEME.COMPONENTS.BOTTOM_SHEET_HEADER, "flex items-center justify-between gap-3")}>
+                                        <span className="text-sm font-black">{t('dashboard.filterPeriodTitle')}</span>
+                                        <button onClick={() => setIsPeriodOpen(false)} className={cn("p-1.5 rounded-full hover:bg-muted text-muted-foreground shrink-0", SIATC_THEME.MOBILE.TOUCH_TARGET)}>
+                                            <X className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                    <div className={SIATC_THEME.COMPONENTS.BOTTOM_SHEET_BODY}>
+                                        {periodOptionsList}
+                                    </div>
+                                </div>
+                            </>
                         )}
                     </div>
                 </div>
