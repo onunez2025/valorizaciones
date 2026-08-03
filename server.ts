@@ -750,17 +750,19 @@ app.get('/api/valuations/:ruc', verifyToken, async (req: Request, res: Response)
                               AND (cfg.Fecha_Fin IS NULL OR s.CheckOut <= cfg.Fecha_Fin)
                         ), 0)
                     )
-                END as Adicionales
+                END as Adicionales,
+                rate.ServicioInicial as ServicioInicial,
+                rate.Nombre as ReglaAplicada
             FROM [APPGAC].[ServiciosViewSQL] s
             JOIN [dbo].[GAC_APP_TB_CAS] cas ON s.IdCAS = cas.ID_CAS
             OUTER APPLY (
                 SELECT TOP 1 Categoria FROM [dbo].[GAC_APP_TB_MATERIALES] WHERE ID_Externo = s.CodigoExternoEquipo
             ) m
             OUTER APPLY (
-                SELECT TOP 1 CAST(Importe AS FLOAT) as Importe 
+                SELECT TOP 1 CAST(Importe AS FLOAT) as Importe, ServicioInicial, Nombre
                 FROM (
                     -- 1. Buscar en Excepciones
-                    SELECT ex.Importe, ex.Prioridad, ex.Creado_El, 1 as Source
+                    SELECT ex.Importe, ex.Prioridad, ex.Creado_El, 1 as Source, ex.ServicioInicial, ex.Nombre
                     FROM [dbo].[GAC_APP_TB_TARIFARIO_EXCEPCIONES] ex
                     WHERE ex.Empresa = s.IdCAS
                       AND ex.Estado = 'A'
@@ -768,22 +770,24 @@ app.get('/api/valuations/:ruc', verifyToken, async (req: Request, res: Response)
                       AND (ex.Servicios IS NULL OR ex.Servicios = 'null' OR EXISTS (SELECT 1 FROM OPENJSON(ex.Servicios) WHERE value = s.IdServicio OR value = s.Servicio))
                       AND (ex.Zonas_Excluidas IS NULL OR ex.Zonas_Excluidas = 'null' OR NOT EXISTS (SELECT 1 FROM OPENJSON(ex.Zonas_Excluidas) WHERE value = s.Ciudad OR value = s.Distrito))
                       AND (ex.Zonas_Incluidas IS NULL OR ex.Zonas_Incluidas = 'null' OR EXISTS (SELECT 1 FROM OPENJSON(ex.Zonas_Incluidas) WHERE value = s.Ciudad OR value = s.Distrito))
-                    
+                      AND (ex.Fecha_Inicio IS NULL OR s.CheckOut >= ex.Fecha_Inicio)
+                      AND (ex.Fecha_Fin IS NULL OR s.CheckOut <= ex.Fecha_Fin)
+
                     UNION ALL
-                    
+
                     -- 2. Tarifario Base
-                    SELECT t.Importe, 0 as Prioridad, t.Fecha_inicio as Creado_El, 0 as Source
-                    FROM [dbo].[GAC_APP_TB_TARIFARIO] t 
-                    WHERE t.Empresa = s.IdCAS 
+                    SELECT t.Importe, 0 as Prioridad, t.Fecha_inicio as Creado_El, 0 as Source, NULL as ServicioInicial, NULL as Nombre
+                    FROM [dbo].[GAC_APP_TB_TARIFARIO] t
+                    WHERE t.Empresa = s.IdCAS
                       AND (t.Servicio = s.IdServicio OR t.Servicio = s.Servicio)
                       AND TRIM(t.Categoria) = TRIM(ISNULL(m.Categoria, 'N/A'))
-                      AND s.CheckOut >= t.Fecha_inicio 
+                      AND s.CheckOut >= t.Fecha_inicio
                       AND (t.Fecha_fin IS NULL OR s.CheckOut <= t.Fecha_fin)
                       AND t.Estado = 'A'
                 ) all_rates
                 ORDER BY Source DESC, Prioridad DESC, Creado_El DESC
             ) rate
-            WHERE TRIM(cas.RUC) = TRIM(@ruc) 
+            WHERE TRIM(cas.RUC) = TRIM(@ruc)
               AND s.CheckOut BETWEEN @start AND @end
               AND s.Estado = 'Closed'
               AND s.VisitaRealizada = 'true'
@@ -2348,7 +2352,7 @@ app.get('/api/dashboard/stats', verifyToken, async (req: Request, res: Response)
                     tc.Distrito,
                     COALESCE(
                         -- 1. Buscar en Excepciones
-                        (SELECT TOP 1 ex.Importe 
+                        (SELECT TOP 1 ex.Importe
                          FROM [dbo].[GAC_APP_TB_TARIFARIO_EXCEPCIONES] ex
                          WHERE ex.Empresa = tc.ID_CAS
                            AND ex.Estado = 'A'
@@ -2356,6 +2360,8 @@ app.get('/api/dashboard/stats', verifyToken, async (req: Request, res: Response)
                            AND (ex.Servicios IS NULL OR ex.Servicios = 'null' OR EXISTS (SELECT 1 FROM OPENJSON(ex.Servicios) WHERE value = tc.IdServicio))
                            AND (ex.Zonas_Excluidas IS NULL OR ex.Zonas_Excluidas = 'null' OR NOT EXISTS (SELECT 1 FROM OPENJSON(ex.Zonas_Excluidas) WHERE value = tc.Ciudad OR value = tc.Distrito))
                            AND (ex.Zonas_Incluidas IS NULL OR ex.Zonas_Incluidas = 'null' OR EXISTS (SELECT 1 FROM OPENJSON(ex.Zonas_Incluidas) WHERE value = tc.Ciudad OR value = tc.Distrito))
+                           AND (ex.Fecha_Inicio IS NULL OR tc.CheckOut >= ex.Fecha_Inicio)
+                           AND (ex.Fecha_Fin IS NULL OR tc.CheckOut <= ex.Fecha_Fin)
                          ORDER BY ex.Prioridad DESC, ex.Creado_El DESC),
                         -- 2. Tarifario Base
                         (SELECT TOP 1 t.Importe
@@ -2439,7 +2445,7 @@ app.get('/api/dashboard/trends', verifyToken, async (req: Request, res: Response
                     MONTH(tc.CheckOut) as MesNum,
                     COALESCE(
                         -- 1. Buscar en Excepciones
-                        (SELECT TOP 1 ex.Importe 
+                        (SELECT TOP 1 ex.Importe
                          FROM [dbo].[GAC_APP_TB_TARIFARIO_EXCEPCIONES] ex
                          WHERE ex.Empresa = tc.ID_CAS
                            AND ex.Estado = 'A'
@@ -2447,6 +2453,8 @@ app.get('/api/dashboard/trends', verifyToken, async (req: Request, res: Response
                            AND (ex.Servicios IS NULL OR ex.Servicios = 'null' OR EXISTS (SELECT 1 FROM OPENJSON(ex.Servicios) WHERE value = tc.IdServicio))
                            AND (ex.Zonas_Excluidas IS NULL OR ex.Zonas_Excluidas = 'null' OR NOT EXISTS (SELECT 1 FROM OPENJSON(ex.Zonas_Excluidas) WHERE value = tc.Ciudad OR value = tc.Distrito))
                            AND (ex.Zonas_Incluidas IS NULL OR ex.Zonas_Incluidas = 'null' OR EXISTS (SELECT 1 FROM OPENJSON(ex.Zonas_Incluidas) WHERE value = tc.Ciudad OR value = tc.Distrito))
+                           AND (ex.Fecha_Inicio IS NULL OR tc.CheckOut >= ex.Fecha_Inicio)
+                           AND (ex.Fecha_Fin IS NULL OR tc.CheckOut <= ex.Fecha_Fin)
                          ORDER BY ex.Prioridad DESC, ex.Creado_El DESC),
                         -- 2. Tarifario Base
                         (SELECT TOP 1 t.Importe
