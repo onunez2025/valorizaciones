@@ -193,6 +193,36 @@ async function runMigrations(db) {
             END
         `);
         console.log('[Migration] Canal Institucional → Cupo_Area OK');
+        // Migración: Casos Especiales gana Servicio Inicial (documental) y vigencia por fecha
+        await db.request().query(`
+            IF NOT EXISTS (
+                SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
+                WHERE TABLE_NAME = 'GAC_APP_TB_TARIFARIO_EXCEPCIONES'
+                AND COLUMN_NAME = 'ServicioInicial'
+            )
+            BEGIN
+                ALTER TABLE [dbo].[GAC_APP_TB_TARIFARIO_EXCEPCIONES]
+                    ADD ServicioInicial NVARCHAR(100) NULL,
+                        Fecha_Inicio DATE NULL,
+                        Fecha_Fin DATE NULL;
+                PRINT 'Migración Excepciones ServicioInicial/Fechas completada';
+            END
+        `);
+        console.log('[Migration] Excepciones → ServicioInicial/Fecha_Inicio/Fecha_Fin OK');
+        // Migración: Detalle de valorización guarda el Servicio Inicial documental
+        await db.request().query(`
+            IF NOT EXISTS (
+                SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
+                WHERE TABLE_NAME = 'GAC_APP_TB_VALORIZACIONES_DETALLE'
+                AND COLUMN_NAME = 'Servicio_Inicial'
+            )
+            BEGIN
+                ALTER TABLE [dbo].[GAC_APP_TB_VALORIZACIONES_DETALLE]
+                    ADD Servicio_Inicial VARCHAR(100) NULL;
+                PRINT 'Migración Detalle Servicio_Inicial completada';
+            END
+        `);
+        console.log('[Migration] Detalle Valorización → Servicio_Inicial OK');
     }
     catch (err) {
         console.error('[Migration] Error:', err);
