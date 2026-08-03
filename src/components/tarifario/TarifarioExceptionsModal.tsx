@@ -325,14 +325,14 @@ export default function TarifarioExceptionsModal({ cas, isOpen, onClose }: Props
                                                                 const current = newEx[idx].Servicios || [];
                                                                 newEx[idx] = {
                                                                     ...newEx[idx],
-                                                                    Servicios: current.includes(svc.Descripcion)
-                                                                        ? current.filter(s => s !== svc.Descripcion)
-                                                                        : [...current, svc.Descripcion]
+                                                                    Servicios: current.includes(svc.Id)
+                                                                        ? current.filter(s => s !== svc.Id)
+                                                                        : [...current, svc.Id]
                                                                 };
                                                                 setExceptions(newEx);
                                                             }}
                                                             className={cn(
-                                                                ex.Servicios?.includes(svc.Descripcion)
+                                                                ex.Servicios?.includes(svc.Id)
                                                                     ? cn(SIATC_THEME.STATES.BADGE_BASE, SIATC_THEME.STATES.PRIMARY, "cursor-pointer")
                                                                     : cn(SIATC_THEME.STATES.BADGE_BASE, "bg-transparent border-dashed border-cb-border text-cb-neutral hover:border-primary/40 cursor-pointer")
                                                             )}
