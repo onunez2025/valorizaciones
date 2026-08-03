@@ -1547,6 +1547,7 @@ app.post('/api/valuations/close', verifyToken, async (req: Request, res: Respons
                 table.columns.add('Distrito', sql.VarChar(100), { nullable: true });
                 table.columns.add('Departamento', sql.VarChar(100), { nullable: true });
                 table.columns.add('Nombre_Equipo', sql.NVarChar(255), { nullable: true });
+                table.columns.add('Servicio_Inicial', sql.VarChar(100), { nullable: true });
 
                 for (const item of details) {
                     table.rows.add(
@@ -1566,7 +1567,8 @@ app.post('/api/valuations/close', verifyToken, async (req: Request, res: Respons
                         item.idReferencia ? item.idReferencia.toString() : null,
                         item.distrito,
                         item.departamento,
-                        item.nombreEquipo
+                        item.nombreEquipo,
+                        item.servicioInicial || null
                     );
                 }
 
@@ -1834,7 +1836,8 @@ app.get('/api/valuations/details/:id', verifyToken, async (req: Request, res: Re
                     d.ID_Referencia,
                     d.Distrito,
                     d.Departamento,
-                    d.Nombre_Equipo
+                    d.Nombre_Equipo,
+                    d.Servicio_Inicial
                 FROM [dbo].[GAC_APP_TB_VALORIZACIONES_DETALLE] d
                 WHERE d.IdCierre = @id
             `);

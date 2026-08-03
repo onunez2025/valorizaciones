@@ -1471,8 +1471,9 @@ app.post('/api/valuations/close', verifyToken, async (req, res) => {
                 table.columns.add('Distrito', sql.VarChar(100), { nullable: true });
                 table.columns.add('Departamento', sql.VarChar(100), { nullable: true });
                 table.columns.add('Nombre_Equipo', sql.NVarChar(255), { nullable: true });
+                table.columns.add('Servicio_Inicial', sql.VarChar(100), { nullable: true });
                 for (const item of details) {
-                    table.rows.add(actualIdCierre, item.ticket, item.monto, item.fecha ? new Date(item.fecha) : null, item.tipo, item.servicio, item.categoria, item.fechaVisita ? new Date(item.fechaVisita) : null, item.fechaCierre ? new Date(item.fechaCierre) : null, item.diasDiferencia, item.codigoExterno, item.tarifaBase, item.adicionales, item.idReferencia ? item.idReferencia.toString() : null, item.distrito, item.departamento, item.nombreEquipo);
+                    table.rows.add(actualIdCierre, item.ticket, item.monto, item.fecha ? new Date(item.fecha) : null, item.tipo, item.servicio, item.categoria, item.fechaVisita ? new Date(item.fechaVisita) : null, item.fechaCierre ? new Date(item.fechaCierre) : null, item.diasDiferencia, item.codigoExterno, item.tarifaBase, item.adicionales, item.idReferencia ? item.idReferencia.toString() : null, item.distrito, item.departamento, item.nombreEquipo, item.servicioInicial || null);
                 }
                 const request = new sql.Request(transaction);
                 await request.bulk(table);
@@ -1725,7 +1726,8 @@ app.get('/api/valuations/details/:id', verifyToken, async (req, res) => {
                     d.ID_Referencia,
                     d.Distrito,
                     d.Departamento,
-                    d.Nombre_Equipo
+                    d.Nombre_Equipo,
+                    d.Servicio_Inicial
                 FROM [dbo].[GAC_APP_TB_VALORIZACIONES_DETALLE] d
                 WHERE d.IdCierre = @id
             `);
