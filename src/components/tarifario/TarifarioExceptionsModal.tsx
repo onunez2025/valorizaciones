@@ -21,6 +21,14 @@ interface Exception {
     Importe: number;
     Prioridad: number;
     Estado: string;
+    ServicioInicial: string | null;
+    Fecha_Inicio: string | null;
+    Fecha_Fin: string | null;
+}
+
+interface ServiceOption {
+    Id: string;
+    Descripcion: string;
 }
 
 interface Props {
@@ -37,12 +45,14 @@ export default function TarifarioExceptionsModal({ cas, isOpen, onClose }: Props
     const [saving, setSaving] = useState(false);
     const [availableCategories, setAvailableCategories] = useState<string[]>([]);
     const [availableDistritos, setAvailableDistritos] = useState<string[]>([]);
+    const [availableServices, setAvailableServices] = useState<ServiceOption[]>([]);
 
     useEffect(() => {
         if (isOpen) {
             fetchExceptions();
             fetchCategories();
             fetchDistritos();
+            fetchServices();
         }
     }, [isOpen, cas.ID_CAS]);
 
@@ -84,6 +94,15 @@ export default function TarifarioExceptionsModal({ cas, isOpen, onClose }: Props
         }
     };
 
+    const fetchServices = async () => {
+        try {
+            const data = await ApiClient.request('/services');
+            setAvailableServices(data);
+        } catch (err) {
+            console.error("Error fetching services:", err);
+        }
+    };
+
     const handleAdd = () => {
         const newEx: Exception = {
             Empresa: cas.ID_CAS.toString(),
@@ -94,7 +113,10 @@ export default function TarifarioExceptionsModal({ cas, isOpen, onClose }: Props
             Servicios: [],
             Importe: 0,
             Prioridad: 1,
-            Estado: 'A'
+            Estado: 'A',
+            ServicioInicial: null,
+            Fecha_Inicio: null,
+            Fecha_Fin: null
         };
         setExceptions([newEx, ...exceptions]);
     };
@@ -114,7 +136,10 @@ export default function TarifarioExceptionsModal({ cas, isOpen, onClose }: Props
                     servicios: ex.Servicios,
                     importe: ex.Importe,
                     prioridad: ex.Prioridad,
-                    estado: ex.Estado
+                    estado: ex.Estado,
+                    servicioInicial: ex.ServicioInicial,
+                    fechaInicio: ex.Fecha_Inicio,
+                    fechaFin: ex.Fecha_Fin
                 })
             });
             alert({ title: "Guardado", message: "Regla actualizada correctamente.", type: 'success' });
@@ -283,6 +308,87 @@ export default function TarifarioExceptionsModal({ cas, isOpen, onClose }: Props
                                                     >
                                                         {t('tarifarioExceptions.clearAll')}
                                                     </button>
+                                                </div>
+                                            </div>
+
+                                            <div className="space-y-2">
+                                                <label className="text-[11px] font-bold uppercase text-cb-neutral tracking-wider flex items-center gap-2">
+                                                    <Tag className="w-3 h-3" /> Servicio(s) Final(es)
+                                                </label>
+                                                <div className="flex flex-wrap gap-2">
+                                                    {availableServices.map(svc => (
+                                                        <button
+                                                            key={svc.Id}
+                                                            type="button"
+                                                            onClick={() => {
+                                                                const newEx = [...exceptions];
+                                                                const current = newEx[idx].Servicios || [];
+                                                                newEx[idx] = {
+                                                                    ...newEx[idx],
+                                                                    Servicios: current.includes(svc.Descripcion)
+                                                                        ? current.filter(s => s !== svc.Descripcion)
+                                                                        : [...current, svc.Descripcion]
+                                                                };
+                                                                setExceptions(newEx);
+                                                            }}
+                                                            className={cn(
+                                                                ex.Servicios?.includes(svc.Descripcion)
+                                                                    ? cn(SIATC_THEME.STATES.BADGE_BASE, SIATC_THEME.STATES.PRIMARY, "cursor-pointer")
+                                                                    : cn(SIATC_THEME.STATES.BADGE_BASE, "bg-transparent border-dashed border-cb-border text-cb-neutral hover:border-primary/40 cursor-pointer")
+                                                            )}
+                                                        >
+                                                            {svc.Descripcion}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+
+                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                                <div className="space-y-2">
+                                                    <label className="text-[11px] font-bold uppercase text-cb-neutral tracking-wider">
+                                                        Servicio Inicial (informativo)
+                                                    </label>
+                                                    <input
+                                                        type="text"
+                                                        value={ex.ServicioInicial || ''}
+                                                        onChange={e => {
+                                                            const newEx = [...exceptions];
+                                                            newEx[idx] = { ...newEx[idx], ServicioInicial: e.target.value || null };
+                                                            setExceptions(newEx);
+                                                        }}
+                                                        placeholder="Ej: Instalación"
+                                                        className={cn(SIATC_THEME.COMPONENTS.INPUT, "w-full dark:bg-cb-bg text-cb-text-primary border-cb-border")}
+                                                    />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <label className="text-[11px] font-bold uppercase text-cb-neutral tracking-wider">
+                                                        Vigente desde
+                                                    </label>
+                                                    <input
+                                                        type="date"
+                                                        value={ex.Fecha_Inicio ? ex.Fecha_Inicio.split('T')[0] : ''}
+                                                        onChange={e => {
+                                                            const newEx = [...exceptions];
+                                                            newEx[idx] = { ...newEx[idx], Fecha_Inicio: e.target.value || null };
+                                                            setExceptions(newEx);
+                                                        }}
+                                                        className={cn(SIATC_THEME.COMPONENTS.INPUT, "w-full dark:bg-cb-bg text-cb-text-primary border-cb-border")}
+                                                    />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <label className="text-[11px] font-bold uppercase text-cb-neutral tracking-wider">
+                                                        Vigente hasta
+                                                    </label>
+                                                    <input
+                                                        type="date"
+                                                        value={ex.Fecha_Fin ? ex.Fecha_Fin.split('T')[0] : ''}
+                                                        onChange={e => {
+                                                            const newEx = [...exceptions];
+                                                            newEx[idx] = { ...newEx[idx], Fecha_Fin: e.target.value || null };
+                                                            setExceptions(newEx);
+                                                        }}
+                                                        className={cn(SIATC_THEME.COMPONENTS.INPUT, "w-full dark:bg-cb-bg text-cb-text-primary border-cb-border")}
+                                                    />
                                                 </div>
                                             </div>
                                         </div>
