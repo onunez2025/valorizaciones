@@ -2034,7 +2034,7 @@ app.get('/api/tarifarios/exceptions/:casId', verifyToken, async (req: Request, r
 });
 
 app.post('/api/tarifarios/exceptions/save', verifyToken, verifyPermission('val.tarifario.edit'), async (req: Request, res: Response) => {
-    const { id, empresa, nombre, zonasIncluidas, zonasExcluidas, categorias, servicios, importe, prioridad, estado } = req.body;
+    const { id, empresa, nombre, zonasIncluidas, zonasExcluidas, categorias, servicios, importe, prioridad, estado, servicioInicial, fechaInicio, fechaFin } = req.body;
     try {
         const db = await getDb();
         const finalId = id || crypto.randomBytes(4).toString('hex');
@@ -2050,20 +2050,24 @@ app.post('/api/tarifarios/exceptions/save', verifyToken, verifyPermission('val.t
         addInput(excSaveReq, 'imp', sql.Decimal(18, 2), importe);
         addInput(excSaveReq, 'prio', sql.Int, prioridad || 0);
         addInput(excSaveReq, 'est', sql.VarChar(1), estado || 'A');
+        addInput(excSaveReq, 'servInicial', sql.NVarChar(100), servicioInicial || null);
+        addInput(excSaveReq, 'fechaIni', sql.Date, fechaInicio || null);
+        addInput(excSaveReq, 'fechaFin', sql.Date, fechaFin || null);
         await excSaveReq.query(`
                 IF EXISTS (SELECT 1 FROM [dbo].[GAC_APP_TB_TARIFARIO_EXCEPCIONES] WHERE IdExcepcion = @id)
                 BEGIN
                     UPDATE [dbo].[GAC_APP_TB_TARIFARIO_EXCEPCIONES]
-                    SET Nombre = @nombre, Zonas_Incluidas = @zi, Zonas_Excluidas = @ze, 
-                        Categorias = @cat, Servicios = @serv, Importe = @imp, 
-                        Prioridad = @prio, Estado = @est
+                    SET Nombre = @nombre, Zonas_Incluidas = @zi, Zonas_Excluidas = @ze,
+                        Categorias = @cat, Servicios = @serv, Importe = @imp,
+                        Prioridad = @prio, Estado = @est,
+                        ServicioInicial = @servInicial, Fecha_Inicio = @fechaIni, Fecha_Fin = @fechaFin
                     WHERE IdExcepcion = @id
                 END
                 ELSE
                 BEGIN
-                    INSERT INTO [dbo].[GAC_APP_TB_TARIFARIO_EXCEPCIONES] 
-                    (IdExcepcion, Empresa, Nombre, Zonas_Incluidas, Zonas_Excluidas, Categorias, Servicios, Importe, Prioridad, Estado)
-                    VALUES (@id, @empresa, @nombre, @zi, @ze, @cat, @serv, @imp, @prio, @est)
+                    INSERT INTO [dbo].[GAC_APP_TB_TARIFARIO_EXCEPCIONES]
+                    (IdExcepcion, Empresa, Nombre, Zonas_Incluidas, Zonas_Excluidas, Categorias, Servicios, Importe, Prioridad, Estado, ServicioInicial, Fecha_Inicio, Fecha_Fin)
+                    VALUES (@id, @empresa, @nombre, @zi, @ze, @cat, @serv, @imp, @prio, @est, @servInicial, @fechaIni, @fechaFin)
                 END
             `);
         res.json({ success: true, id: finalId });
