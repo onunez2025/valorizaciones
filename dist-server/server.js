@@ -1304,6 +1304,8 @@ app.get('/api/tickets/find/:ticket', verifyToken, async (req, res) => {
                           AND (ex.Servicios IS NULL OR ex.Servicios = 'null' OR EXISTS (SELECT 1 FROM OPENJSON(ex.Servicios) WHERE value = s.IdServicio OR value = s.Servicio))
                           AND (ex.Zonas_Excluidas IS NULL OR ex.Zonas_Excluidas = 'null' OR NOT EXISTS (SELECT 1 FROM OPENJSON(ex.Zonas_Excluidas) WHERE value = s.Ciudad OR value = s.Distrito))
                           AND (ex.Zonas_Incluidas IS NULL OR ex.Zonas_Incluidas = 'null' OR EXISTS (SELECT 1 FROM OPENJSON(ex.Zonas_Incluidas) WHERE value = s.Ciudad OR value = s.Distrito))
+                          AND (ex.Fecha_Inicio IS NULL OR s.CheckOut >= ex.Fecha_Inicio)
+                          AND (ex.Fecha_Fin IS NULL OR s.CheckOut <= ex.Fecha_Fin)
                         UNION ALL
                         SELECT t.Importe, 0 as Prioridad, t.Fecha_inicio as Creado_El, 0 as Source
                         FROM [dbo].[GAC_APP_TB_TARIFARIO] t
@@ -1953,14 +1955,18 @@ app.post('/api/tarifarios/exceptions/save', verifyToken, verifyPermission('val.t
     try {
         const db = await getDb();
         const finalId = id || crypto.randomBytes(4).toString('hex');
+        // Un array vacio ([]) significa "sin restriccion" (aplica a todo), igual que null/ausente.
+        // JSON.stringify([]) produce '[]', que NO matchea el comodin ('null'/IS NULL) usado en las
+        // queries de resolucion de precio, asi que se normaliza a null antes de guardar.
+        const arr = (v) => JSON.stringify(Array.isArray(v) && v.length ? v : null);
         const excSaveReq = db.request();
         addInput(excSaveReq, 'id', sql.VarChar(8), finalId);
         addInput(excSaveReq, 'empresa', sql.VarChar(50), empresa);
         addInput(excSaveReq, 'nombre', sql.NVarChar(255), nombre);
-        addInput(excSaveReq, 'zi', sql.NVarChar(sql.MAX), JSON.stringify(zonasIncluidas || null));
-        addInput(excSaveReq, 'ze', sql.NVarChar(sql.MAX), JSON.stringify(zonasExcluidas || null));
-        addInput(excSaveReq, 'cat', sql.NVarChar(sql.MAX), JSON.stringify(categorias || null));
-        addInput(excSaveReq, 'serv', sql.NVarChar(sql.MAX), JSON.stringify(servicios || null));
+        addInput(excSaveReq, 'zi', sql.NVarChar(sql.MAX), arr(zonasIncluidas));
+        addInput(excSaveReq, 'ze', sql.NVarChar(sql.MAX), arr(zonasExcluidas));
+        addInput(excSaveReq, 'cat', sql.NVarChar(sql.MAX), arr(categorias));
+        addInput(excSaveReq, 'serv', sql.NVarChar(sql.MAX), arr(servicios));
         addInput(excSaveReq, 'imp', sql.Decimal(18, 2), importe);
         addInput(excSaveReq, 'prio', sql.Int, prioridad || 0);
         addInput(excSaveReq, 'est', sql.VarChar(1), estado || 'A');
