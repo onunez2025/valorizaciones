@@ -1816,6 +1816,16 @@ app.get('/api/materials/categories', verifyToken, async (req, res) => {
         res.status(500).json({ error: safeError(err) });
     }
 });
+app.get('/api/services', verifyToken, async (req, res) => {
+    try {
+        const db = await getDb();
+        const result = await db.request().query("SELECT Id, Descripcion FROM [SIATC].[FSM_TipoServicio] ORDER BY Descripcion");
+        res.json(result.recordset);
+    }
+    catch (err) {
+        res.status(500).json({ error: safeError(err) });
+    }
+});
 app.post('/api/materials', verifyToken, async (req, res) => {
     const { idExterno, nombre, categoria, sector } = req.body;
     try {
