@@ -247,7 +247,8 @@ export default function ValuationsPage() {
                             Adicionales: row.Adicionales,
                             Distrito: row.Distrito,
                             Departamento: row.Departamento,
-                            NombreEquipo: row.Nombre_Equipo
+                            NombreEquipo: row.Nombre_Equipo,
+                            ServicioInicial: row.Servicio_Inicial
                         }));
 
                     const savedPenalties = detailResult.tickets
@@ -1271,7 +1272,7 @@ export default function ValuationsPage() {
             }
             row.eachCell(c => { c.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} }; });
         });
-        sheetDetalle.autoFilter = { from: 'A1', to: 'M1' };
+        sheetDetalle.autoFilter = { from: 'A1', to: 'Q1' };
         sheetDetalle.columns.forEach(col => { col.width = 18; });
 
         // --- HOJA PENALIDADES ---
@@ -1468,7 +1469,7 @@ export default function ValuationsPage() {
             row.getCell(16).numFmt = '"S/" #,##0.00';
             row.eachCell(c => { c.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} }; });
         });
-        sheetDetalle.autoFilter = { from: 'A1', to: 'M1' };
+        sheetDetalle.autoFilter = { from: 'A1', to: 'Q1' };
         sheetDetalle.columns.forEach(col => { col.width = 15; });
 
         // --- HOJA PENALIDADES ---
