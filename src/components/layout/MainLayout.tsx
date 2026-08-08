@@ -7,6 +7,9 @@ import { Sidebar } from './Sidebar';
 import { AppSwitcher } from './AppSwitcher';
 import { AuthTransitionOverlay } from '../common/AuthTransitionOverlay';
 import { LottiePlayer } from '../common/LottiePlayer';
+import { useCargaMinima } from '../../hooks/useCargaMinima';
+import { useTemaOscuro } from '../../hooks/useTemaOscuro';
+import { COLORES_LOTTIE_OSCURO, cargarAnimacionCarga } from '../../utils/lottie-carga';
 import { useAuth } from '../../hooks/useAuth';
 import { useTheme } from '../../context/ThemeContext';
 import { useAppConfig } from '../../context/AppConfigContext';
@@ -79,14 +82,20 @@ export function MainLayout() {
         enabled: !!user,
     });
 
-    if (isLoading) {
+    // La pantalla de carga se sostiene un minimo aunque la sesion resuelva antes:
+    // sin eso aparece y desaparece en unos pocos fotogramas y se percibe como un destello.
+    const mostrandoCarga = useCargaMinima(isLoading);
+    const temaOscuro = useTemaOscuro();
+
+    if (mostrandoCarga) {
         return (
             <div className="flex h-dvh items-center justify-center bg-background">
                 <div className="flex flex-col items-center gap-4">
                     <img src={logoUrl} alt="Valorizaciones Logo" className="w-16 h-16 object-contain animate-pulse" />
-                    <div className="w-40 h-40">
+                    <div className="w-40 h-40 flex items-center justify-center">
                         <LottiePlayer
-                            src={() => import('../../assets/lottie/loading.json')}
+                            src={cargarAnimacionCarga}
+                            colores={temaOscuro ? COLORES_LOTTIE_OSCURO : undefined}
                             fallback={<div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />}
                             className="w-40 h-40"
                             loop
