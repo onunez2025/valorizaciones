@@ -25,3 +25,9 @@ dist-ssr
 
 .env
 .env.*
+
+# Salida compilada del servidor. La genera `pnpm run build` y el Dockerfile la compila de cero
+# dentro de la imagen, asi que versionarla solo produce un artefacto que se desfasa en silencio:
+# el que habia en git llevaba sin recompilarse desde el 2026-08-08 y mostraba codigo que ya no
+# corria en ninguna parte.
+dist-server/

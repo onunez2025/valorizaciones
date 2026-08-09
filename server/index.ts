@@ -1,12 +1,13 @@
+import './lib/env.js';   // PRIMERO: carga el .env antes de que ningun modulo lea process.env
 import express from 'express';
 import { fileURLToPath } from 'url';
+import type { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import { Redis } from 'ioredis';
 import { createHash } from 'crypto';
 import { RedisStore } from 'rate-limit-redis';
-import dotenv from 'dotenv';
 import sql from 'mssql';
 import jwt from 'jsonwebtoken';
 import { z } from 'zod';
@@ -20,7 +21,8 @@ import path from 'path';
 import crypto from 'crypto';
 import axios from 'axios';
 import fs from 'fs';
-dotenv.config();
+
+
 const app = express();
 const port = process.env.PORT || 3000;
 const APP_IDENTIFIER = 'VAL';
@@ -43,28 +45,27 @@ const JWT_SECRET = process.env.JWT_SECRET || '';
  * EL ORDEN IMPORTA: "flow.qa.siatc.cloud" tambien termina en ".siatc.cloud", asi que preguntar
  * primero por produccion da verdadero en QA y no separa nada. QA se comprueba PRIMERO.
  */
-function dominioCookie(req) {
-    if (process.env.COOKIE_DOMAIN)
-        return process.env.COOKIE_DOMAIN;
+function dominioCookie(req: { headers: Record<string, unknown> }): string | undefined {
+    if (process.env.COOKIE_DOMAIN) return process.env.COOKIE_DOMAIN;
     const reenviado = req.headers['x-forwarded-host'];
     const original = req.headers.host;
     const host = String((typeof reenviado === 'string' ? reenviado : original) ?? '');
     const nombre = host.split(':')[0].toLowerCase();
-    if (nombre.endsWith('.qa.siatc.cloud'))
-        return '.qa.siatc.cloud';
-    if (nombre.endsWith('.siatc.cloud'))
-        return '.siatc.cloud';
+    if (nombre.endsWith('.qa.siatc.cloud')) return '.qa.siatc.cloud';
+    if (nombre.endsWith('.siatc.cloud')) return '.siatc.cloud';
     return undefined;
 }
 if (process.env.NODE_ENV === 'production' && !JWT_SECRET) {
     console.error('CRITICAL FATAL ERROR: JWT_SECRET environment variable is not set. Server cannot start securely.');
     process.exit(1);
 }
+
 // MS Graph API Config
 const MS_GRAPH_TENANT_ID = process.env.MS_GRAPH_TENANT_ID;
 const MS_GRAPH_CLIENT_ID = process.env.MS_GRAPH_CLIENT_ID;
 const MS_GRAPH_CLIENT_SECRET = process.env.MS_GRAPH_CLIENT_SECRET;
 const MS_GRAPH_SENDER_EMAIL = process.env.MS_GRAPH_SENDER_EMAIL;
+
 async function getGraphToken() {
     const url = `https://login.microsoftonline.com/${MS_GRAPH_TENANT_ID}/oauth2/v2.0/token`;
     const params = new URLSearchParams({
@@ -78,52 +79,55 @@ async function getGraphToken() {
     });
     return resp.data.access_token;
 }
-const cleanApps = (str) => [...new Set((str || '').split(',').map(s => s.trim()).filter(Boolean))].join(', ');
+
+const cleanApps = (str: string) => [...new Set((str || '').split(',').map(s => s.trim()).filter(Boolean))].join(', ');
+
 // Helper for Auditing
-async function logAudit(req, action, entity, entityId, details) {
-    try {
-        const user = req.user;
-        if (!user)
-            return;
-        const db = await getWritePool();
-        const auditReq = db.request();
-        addInput(auditReq, 'uid', sql.UniqueIdentifier, user.id);
-        addInput(auditReq, 'un', sql.NVarChar(255), user.full_name || user.username);
-        addInput(auditReq, 'acc', sql.NVarChar(100), action);
-        addInput(auditReq, 'ent', sql.NVarChar(100), entity);
-        addInput(auditReq, 'eid', sql.NVarChar(100), entityId);
-        addInput(auditReq, 'det', sql.NVarChar(4000), JSON.stringify(details));
-        addInput(auditReq, 'app', sql.VarChar(20), 'VAL');
-        addInput(auditReq, 'ip', sql.VarChar(50), req.ip || null);
-        await auditReq.query(`INSERT INTO [dbo].[GAC_APP_TB_AUDIT_LOG] (UsuarioID, UsuarioNombre, Accion, Entidad, EntidadID, Detalle, ApplicationCode, IPAddress, Fecha)
+async function logAudit(req: Request, action: string, entity: string, entityId: string, details: Record<string, unknown>) {
+  try {
+    const user = (req as AuthRequest).user;
+    if (!user) return;
+    const db = await getWritePool();
+    const auditReq = db.request();
+    addInput(auditReq, 'uid', sql.UniqueIdentifier, user.id);
+    addInput(auditReq, 'un', sql.NVarChar(255), user.full_name || user.username);
+    addInput(auditReq, 'acc', sql.NVarChar(100), action);
+    addInput(auditReq, 'ent', sql.NVarChar(100), entity);
+    addInput(auditReq, 'eid', sql.NVarChar(100), entityId);
+    addInput(auditReq, 'det', sql.NVarChar(4000), JSON.stringify(details));
+    addInput(auditReq, 'app', sql.VarChar(20), 'VAL');
+    addInput(auditReq, 'ip', sql.VarChar(50), req.ip || null);
+    await auditReq.query(`INSERT INTO [dbo].[GAC_APP_TB_AUDIT_LOG] (UsuarioID, UsuarioNombre, Accion, Entidad, EntidadID, Detalle, ApplicationCode, IPAddress, Fecha)
               VALUES (@uid, @un, @acc, @ent, @eid, @det, @app, @ip, GETDATE())`);
-    }
-    catch (err) {
-        console.error('❌ Falla en Log de Auditoría VAL:', err);
-    }
+  } catch (err) {
+    console.error('❌ Falla en Log de Auditoría VAL:', err);
+  }
 }
+
 app.set('trust proxy', 1);
+
 // --- REDIS CLIENT (declarado antes de rateLimit para evitar TDZ) ---
-let _redis = null;
-function getRedisClient() {
+let _redis: Redis | null = null;
+function getRedisClient(): Redis {
     if (!_redis) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const redisOptions = {
+        const redisOptions: any = {
             host: process.env.REDIS_HOST || 'localhost',
             port: parseInt(process.env.REDIS_PORT || '6379'),
             password: process.env.REDIS_PASSWORD,
             db: parseInt(process.env.REDIS_DB || '0'),
             lazyConnect: true,
-            retryStrategy: (times) => Math.min(times * 100, 3000),
+            retryStrategy: (times: number) => Math.min(times * 100, 3000),
         };
         if (process.env.REDIS_USERNAME) {
             redisOptions.username = process.env.REDIS_USERNAME;
         }
         _redis = new Redis(redisOptions);
-        _redis.on('error', (err) => console.error('[Redis] Error:', err.message));
+        _redis.on('error', (err: Error) => console.error('[Redis] Error:', err.message));
     }
     return _redis;
 }
+
 app.use(helmet({
     contentSecurityPolicy: {
         directives: {
@@ -142,16 +146,18 @@ app.use(helmet({
     },
     hsts: process.env.NODE_ENV === 'production' ? { maxAge: 31536000, includeSubDomains: true } : false,
 }));
+
 const limiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 1000,
     message: { error: 'Too many requests from this IP, please try again later.' },
-    store: new RedisStore({ sendCommand: (...args) => getRedisClient().call(...args), prefix: 'rl:val:' }), // eslint-disable-line @typescript-eslint/no-explicit-any
+    store: new RedisStore({ sendCommand: (...args: string[]) => (getRedisClient() as any).call(...args) as any, prefix: 'rl:val:' }), // eslint-disable-line @typescript-eslint/no-explicit-any
 });
 app.use(limiter);
+
 // Auth rate limiter — starts with safe defaults, overwritten from EBM.AppSessionConfig at startup
 // keyGenerator: IP + username — cada usuario tiene su propio contador (evita que IP compartida de oficina bloquee a todos)
-const authKeyGenerator = (req) => {
+const authKeyGenerator = (req: Request) => {
     const username = String(req.body?.username || '').toLowerCase().trim().substring(0, 50);
     return `${req.ip}:${username}`;
 };
@@ -161,18 +167,17 @@ let authLimiter = rateLimit({
     skipSuccessfulRequests: true,
     keyGenerator: authKeyGenerator,
     message: { error: 'Too many login attempts, please try again later.' },
-    store: new RedisStore({ sendCommand: (...args) => getRedisClient().call(...args), prefix: 'rl:val:auth:' }), // eslint-disable-line @typescript-eslint/no-explicit-any
+    store: new RedisStore({ sendCommand: (...args: string[]) => (getRedisClient() as any).call(...args) as any, prefix: 'rl:val:auth:' }), // eslint-disable-line @typescript-eslint/no-explicit-any
 });
-app.use('/api/auth/login', (req, res, next) => authLimiter(req, res, next));
+app.use('/api/auth/login', (req: Request, res: Response, next: NextFunction) => authLimiter(req, res, next));
+
 app.use(cors({
     origin: (origin, callback) => {
-        if (process.env.NODE_ENV !== 'production')
-            return callback(null, true);
+        if (process.env.NODE_ENV !== 'production') return callback(null, true);
         const allowedOrigins = (process.env.ALLOWED_ORIGINS || '').split(',').map(s => s.trim()).filter(Boolean);
         if (!origin || allowedOrigins.includes(origin)) {
             callback(null, true);
-        }
-        else {
+        } else {
             console.error(`Blocked CORS attempt from: ${sanitizeLog(origin)}`);
             callback(new Error('Not allowed by CORS'));
         }
@@ -181,7 +186,8 @@ app.use(cors({
 }));
 app.use(express.json({ limit: '2mb' }));
 app.use(express.urlencoded({ limit: '2mb', extended: true }));
-const dbConfig = {
+
+const dbConfig: sql.config = {
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
     database: process.env.DB_DATABASE,
@@ -190,7 +196,9 @@ const dbConfig = {
     pool: { max: 30, min: 0, idleTimeoutMillis: 30000 },
     options: { encrypt: true, trustServerCertificate: false, requestTimeout: 60000 }
 };
-let pool = null;
+
+let pool: sql.ConnectionPool | null = null;
+
 // Etapa 6 -- pool admin. getDb() dispara runMigrations() (ALTER TABLE/CREATE TABLE) en su
 // primera conexion -- se sigue llamando explicitamente una vez al arrancar el server (ver
 // app.listen mas abajo) para garantizar que las migraciones corran, independientemente de
@@ -203,8 +211,7 @@ async function getDb() {
             pool = await new sql.ConnectionPool(dbConfig).connect();
             console.log('✅ Conectado a Azure SQL: ' + dbConfig.database);
             runMigrations(pool);
-        }
-        catch (err) {
+        } catch (err: unknown) {
             console.error('❌ Error de conexión DB:', safeError(err));
             pool = null;
             throw err;
@@ -212,29 +219,31 @@ async function getDb() {
     }
     return pool;
 }
+
 // Etapa 6 -- usuarios de BD de privilegio minimo (siatc_reader/siatc_writer). Si las env
 // vars DB_USER_READ/DB_USER_WRITE todavia no estan configuradas en Dokploy, caen de vuelta
 // al usuario admin original -- permite desplegar este codigo antes de agregar esas env vars,
 // y revertir a admin-only con solo quitarlas, sin tocar codigo.
-const readDbConfig = {
+const readDbConfig: sql.config = {
     ...dbConfig,
     user: process.env.DB_USER_READ || process.env.DB_USER,
     password: process.env.DB_PASS_READ || process.env.DB_PASSWORD,
 };
-const writeDbConfig = {
+const writeDbConfig: sql.config = {
     ...dbConfig,
     user: process.env.DB_USER_WRITE || process.env.DB_USER,
     password: process.env.DB_PASS_WRITE || process.env.DB_PASSWORD,
 };
-let readPool = null;
-let writePool = null;
+
+let readPool: sql.ConnectionPool | null = null;
+let writePool: sql.ConnectionPool | null = null;
+
 /** Endpoints GET -- solo lectura, usa siatc_reader (privilegio minimo). */
 async function getReadPool() {
     if (!readPool) {
         try {
             readPool = await new sql.ConnectionPool(readDbConfig).connect();
-        }
-        catch (err) {
+        } catch (err: unknown) {
             console.error('❌ Error de conexión DB (read pool):', safeError(err));
             readPool = null;
             throw err;
@@ -242,13 +251,13 @@ async function getReadPool() {
     }
     return readPool;
 }
+
 /** Endpoints POST/PUT/DELETE/PATCH -- usa siatc_writer (lectura + escritura en dbo/EBM). */
 async function getWritePool() {
     if (!writePool) {
         try {
             writePool = await new sql.ConnectionPool(writeDbConfig).connect();
-        }
-        catch (err) {
+        } catch (err: unknown) {
             console.error('❌ Error de conexión DB (write pool):', safeError(err));
             writePool = null;
             throw err;
@@ -256,10 +265,10 @@ async function getWritePool() {
     }
     return writePool;
 }
+
 let _migrationsRan = false;
-async function runMigrations(db) {
-    if (_migrationsRan)
-        return;
+async function runMigrations(db: sql.ConnectionPool) {
+    if (_migrationsRan) return;
     _migrationsRan = true;
     try {
         // Migración: Canal Institucional pasa de Usuario_Creador a Cupo_Area
@@ -277,61 +286,68 @@ async function runMigrations(db) {
             END
         `);
         console.log('[Migration] Canal Institucional → Cupo_Area OK');
-    }
-    catch (err) {
+    } catch (err) {
         console.error('[Migration] Error:', err);
     }
 }
-async function isTokenBlacklisted(token) {
+
+interface JwtUserPayload {
+    id: string;
+    username: string;
+    full_name?: string;
+    role: string;
+    role_name?: string;
+    perms: string[];
+    permissions?: string[];
+    casId: string | null;
+    casRUC: string | null;
+    ssoPilot?: boolean;
+    iat?: number;
+    exp?: number;
+}
+
+interface AuthRequest extends Request {
+    user?: JwtUserPayload;
+}
+
+async function isTokenBlacklisted(token: string): Promise<boolean> {
     try {
         const hash = createHash('sha256').update(token).digest('hex');
         return (await getRedisClient().exists(`bl:${hash}`)) === 1;
-    }
-    catch {
-        return false;
-    }
+    } catch { return false; }
 }
-async function blacklistToken(token, exp) {
+async function blacklistToken(token: string, exp: number): Promise<void> {
     try {
         const hash = createHash('sha256').update(token).digest('hex');
         const ttl = Math.max(exp - Math.floor(Date.now() / 1000), 0);
-        if (ttl > 0)
-            await getRedisClient().set(`bl:${hash}`, '1', 'EX', ttl);
-    }
-    catch (err) {
-        console.error('[Redis] Error al blacklistear token:', err);
-    }
+        if (ttl > 0) await getRedisClient().set(`bl:${hash}`, '1', 'EX', ttl);
+    } catch (err) { console.error('[Redis] Error al blacklistear token:', err); }
 }
+
 // Invalida TODOS los tokens de un usuario emitidos hasta ahora, sin importar cuántas apps del
 // ecosistema los hayan re-firmado (cada /auth/me emite un JWT nuevo con hash distinto, así que
 // blacklistToken() por sí solo no alcanza para un logout real entre apps -- ver bitácora Fase 20).
 // verifyToken rechaza cualquier token con iat <= este timestamp, sin importar su hash.
-async function invalidateAllUserSessions(userId) {
+async function invalidateAllUserSessions(userId: string): Promise<void> {
     try {
         const now = Math.floor(Date.now() / 1000);
         await getRedisClient().set(`logout-after:${userId}`, String(now), 'EX', 30 * 24 * 60 * 60);
-    }
-    catch (err) {
-        console.error('[Redis] Error al invalidar sesiones del usuario:', err);
-    }
+    } catch (err) { console.error('[Redis] Error al invalidar sesiones del usuario:', err); }
 }
-async function isSessionInvalidated(userId, iat) {
-    if (!iat)
-        return false;
+async function isSessionInvalidated(userId: string, iat: number | undefined): Promise<boolean> {
+    if (!iat) return false;
     try {
         const logoutAfter = await getRedisClient().get(`logout-after:${userId}`);
         return logoutAfter !== null && iat <= parseInt(logoutAfter, 10);
-    }
-    catch {
-        return false;
-    }
+    } catch { return false; }
 }
+
 // Borra la cookie compartida del lado del servidor (Set-Cookie en la respuesta) cuando se
 // detecta un token invalidado/blacklisteado. No depende de que el JS del cliente logre borrarla
 // antes de la siguiente navegación -- evita el bucle de recarga infinita que eso puede causar
 // (ver bitácora Fase 20: la limpieza vía document.cookie + window.location.href en el mismo
 // tick no siempre alcanza a comprometerse antes de que la página navegue).
-function clearSharedCookie(res, req) {
+function clearSharedCookie(res: Response, req?: Request): void {
     // La cookie compartida se escribe segun el DOMINIO de la peticion, no segun NODE_ENV: esa
     // variable puede faltar en el despliegue sin que nada avise, y entonces la cookie no se
     // escribe nunca -- se entra a la app pero el salto a cualquier otra pide login.
@@ -340,15 +356,19 @@ function clearSharedCookie(res, req) {
         res.cookie('token', '', { domain: dominioCompartido, maxAge: 0, httpOnly: false, secure: true, sameSite: 'lax', path: '/' });
     }
 }
+
 // --- SECURITY HELPERS (ver CLAUDE.md) ---
-const safeError = (err) => err instanceof Error ? `${err.message}\n${err.stack}` : String(err);
-const sanitizeLog = (val, maxLen = 200) => String(val ?? '').replace(/[\r\n\t\x00-\x1F\x7F]/g, ' ').slice(0, maxLen); // eslint-disable-line no-control-regex
-const verifyToken = async (req, res, next) => {
+const safeError = (err: unknown): string =>
+    err instanceof Error ? `${err.message}\n${err.stack}` : String(err);
+
+const sanitizeLog = (val: unknown, maxLen = 200): string =>
+    String(val ?? '').replace(/[\r\n\t\x00-\x1F\x7F]/g, ' ').slice(0, maxLen); // eslint-disable-line no-control-regex
+
+const verifyToken = async (req: Request, res: Response, next: NextFunction) => {
     const token = req.headers.authorization?.split(' ')[1];
-    if (!token)
-        return res.status(401).json({ error: 'Token no encontrado' });
+    if (!token) return res.status(401).json({ error: 'Token no encontrado' });
     try {
-        const decoded = jwt.verify(token, JWT_SECRET);
+        const decoded = jwt.verify(token, JWT_SECRET) as JwtUserPayload;
         if (await isTokenBlacklisted(token)) {
             clearSharedCookie(res, req);
             return res.status(401).json({ error: 'Sesión cerrada. Inicia sesión nuevamente.' });
@@ -357,14 +377,12 @@ const verifyToken = async (req, res, next) => {
             clearSharedCookie(res, req);
             return res.status(401).json({ error: 'Sesión cerrada. Inicia sesión nuevamente.' });
         }
-        req.user = decoded;
+        (req as AuthRequest).user = decoded;
         next();
-    }
-    catch (_err) {
-        res.status(401).json({ error: 'Token inválido o expirado' });
-    }
+    } catch (_err) { res.status(401).json({ error: 'Token inválido o expirado' }); }
 };
-app.get('/api/applications', verifyToken, async (req, res) => {
+
+app.get('/api/applications', verifyToken, async (req: Request, res: Response) => {
     try {
         const db = await getReadPool();
         const activeOnly = req.query.activeOnly === 'true';
@@ -487,38 +505,41 @@ app.get('/api/applications', verifyToken, async (req, res) => {
             } : null
         }));
         res.json(apps);
-    }
-    catch (err) {
+    } catch (err: unknown) {
         res.status(500).json({ error: safeError(err) });
     }
 });
-const verifyPermission = (permission) => {
-    return async (req, res, next) => {
-        const user = req.user;
-        if (!user)
-            return res.status(401).json({ error: 'No autenticado' });
+
+const verifyPermission = (permission: string) => {
+    return async (req: Request, res: Response, next: NextFunction) => {
+        const user = (req as AuthRequest).user;
+        if (!user) return res.status(401).json({ error: 'No autenticado' });
+
         // Handles both local and SSO token payloads
         const roleName = (user.role || user.role_name || '').trim().toLowerCase();
-        if (roleName === 'administrador')
-            return next();
+        if (roleName === 'administrador') return next();
+
         const perms = user.perms || user.permissions || [];
-        if (perms.includes(permission))
-            return next();
+        if (perms.includes(permission)) return next();
+
         await logAudit(req, 'ACCESO_DENEGADO', `Endpoint: ${req.method} ${req.path}`, permission, {
             ip: req.ip,
             userAgent: req.get('user-agent'),
             params: req.params,
             query: req.query
         });
+
         res.status(403).json({ error: `Permiso denegado: ${permission}` });
     };
 };
+
 // --- AUTH ---
 const loginSchema = z.object({
     username: z.string().min(1, 'Usuario requerido').max(255),
     password: z.string().min(1, 'Contraseña requerida').max(255),
 });
-app.post('/api/auth/login', async (req, res) => {
+
+app.post('/api/auth/login', async (req: Request, res: Response) => {
     const parseResult = loginSchema.safeParse(req.body);
     if (!parseResult.success) {
         return res.status(400).json({ error: 'Datos de login inválidos', details: parseResult.error.issues });
@@ -541,24 +562,32 @@ app.post('/api/auth/login', async (req, res) => {
         if (!user || !(await bcrypt.compare(password, user.PasswordHash))) {
             return res.status(401).json({ error: 'Credenciales inválidas' });
         }
+        
         // Check access to Valuations (VAL) or Admin
         const isAdmin = user.RoleName?.toLowerCase() === 'administrador';
         const apps = (user.Apps || '').toUpperCase();
         if (!isAdmin && !apps.includes('VAL')) {
             return res.status(403).json({ error: 'Sin acceso a la aplicación de Valorizaciones' });
         }
+
         const permsReqLogin = db.request();
         addInput(permsReqLogin, 'rid', sql.UniqueIdentifier, user.RoleId);
         addInput(permsReqLogin, 'app', sql.NVarChar(20), APP_IDENTIFIER);
         const perms = (await permsReqLogin.query("SELECT Permission FROM EBM.RolePermissions WHERE RoleId = @rid AND (Permission LIKE @app + '.%' OR Permission LIKE 'ebm.%')")).recordset.map(p => p.Permission);
+
         const appCfgReq = db.request();
         addInput(appCfgReq, 'appCode', sql.VarChar(20), APP_IDENTIFIER);
         const appCfgResult = await appCfgReq.query('SELECT DefaultInactivityTimeoutMinutes, DefaultWarningBeforeMinutes FROM EBM.AppSessionConfig WHERE UPPER(AppCode) = UPPER(@appCode)');
         const appCfg = appCfgResult.recordset[0];
-        const timeoutMinutes = user.role_timeout ?? appCfg?.DefaultInactivityTimeoutMinutes ?? 30;
-        const warningMinutes = user.role_warning ?? appCfg?.DefaultWarningBeforeMinutes ?? 2;
+        const timeoutMinutes: number = user.role_timeout ?? appCfg?.DefaultInactivityTimeoutMinutes ?? 30;
+        const warningMinutes: number = user.role_warning ?? appCfg?.DefaultWarningBeforeMinutes ?? 2;
+
         const token = jwt.sign({ id: user.Id, username: user.Username, role: user.RoleName, perms, casId: user.cas_id || null, casRUC: user.cas_ruc || null }, JWT_SECRET, { expiresIn: '12h' });
-        const ssoToken = jwt.sign({ id: user.Id, role: user.RoleName, role_name: user.RoleName, username: user.Username, apps: user.Apps || '', casId: user.cas_id || null }, JWT_SECRET, { expiresIn: '12h' });
+
+        const ssoToken = jwt.sign(
+            { id: user.Id, role: user.RoleName, role_name: user.RoleName, username: user.Username, apps: user.Apps || '', casId: user.cas_id || null },
+            JWT_SECRET, { expiresIn: '12h' }
+        );
         // La cookie compartida se escribe segun el DOMINIO de la peticion, no segun NODE_ENV: esa
         // variable puede faltar en el despliegue sin que nada avise, y entonces la cookie no se
         // escribe nunca -- se entra a la app pero el salto a cualquier otra pide login.
@@ -566,28 +595,28 @@ app.post('/api/auth/login', async (req, res) => {
         if (dominioCompartido) {
             res.cookie('token', ssoToken, { domain: dominioCompartido, maxAge: 12 * 60 * 60 * 1000, httpOnly: false, secure: true, sameSite: 'lax', path: '/' });
         }
+
         res.json({ token, user: { id: user.Id, username: user.Username, full_name: user.FullName, email: user.Email, role_name: user.RoleName, management_id: user.ManagementId, management_name: user.ManagementName, avatar_url: user.AvatarUrl, permissions: perms, apps: user.Apps, requires_password_change: user.RequiresPasswordChange === 1 }, sessionConfig: { timeoutMinutes, warningMinutes } });
-    }
-    catch (err) {
-        res.status(500).json({ error: safeError(err) });
-    }
+    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
-app.post('/api/auth/logout', verifyToken, async (req, res) => {
-    const token = req.headers['authorization'].split(' ')[1];
-    await blacklistToken(token, req.user.exp ?? 0); // eslint-disable-line @typescript-eslint/no-explicit-any
+
+app.post('/api/auth/logout', verifyToken, async (req: any, res: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+    const token = req.headers['authorization']!.split(' ')[1];
+    await blacklistToken(token, (req.user as any).exp ?? 0); // eslint-disable-line @typescript-eslint/no-explicit-any
     // Invalida también cualquier otro token del mismo usuario (ej. re-firmado por otra app del
     // ecosistema vía su propio /auth/me) -- un logout debe cerrar la sesión en todas las apps QA,
     // no solo revocar el token puntual que se usó para llamar a este endpoint.
-    await invalidateAllUserSessions(req.user.id); // eslint-disable-line @typescript-eslint/no-explicit-any
+    await invalidateAllUserSessions((req.user as any).id); // eslint-disable-line @typescript-eslint/no-explicit-any
     // Borrar la cookie compartida aquí mismo (Set-Cookie de la respuesta) en vez de depender
     // solo del document.cookie del cliente, que puede no alcanzar a comprometerse antes de que
     // la página navegue tras el logout.
     clearSharedCookie(res, req);
     res.json({ message: 'Sesión cerrada correctamente.' });
 });
-app.get('/api/auth/me', verifyToken, async (req, res) => {
+
+app.get('/api/auth/me', verifyToken, async (req: Request, res: Response) => {
     try {
-        const { id } = req.user;
+        const { id } = (req as AuthRequest).user!;
         const db = await getReadPool();
         const result = await db.request()
             .input('id', sql.UniqueIdentifier, id)
@@ -603,8 +632,8 @@ app.get('/api/auth/me', verifyToken, async (req, res) => {
             WHERE u.Id = @id AND (u.Apps LIKE '%' + @app + '%' OR u.Apps LIKE '%ADMIN%')
         `);
         const user = result.recordset[0];
-        if (!user)
-            return res.status(404).json({ error: 'Usuario no encontrado' });
+        if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
+        
         const permsReqMe = db.request();
         addInput(permsReqMe, 'rid', sql.UniqueIdentifier, user.RoleId);
         addInput(permsReqMe, 'app', sql.NVarChar(20), APP_IDENTIFIER);
@@ -614,10 +643,17 @@ app.get('/api/auth/me', verifyToken, async (req, res) => {
         // configurada (producción real, sin dominio QA propio). Cuando COOKIE_DOMAIN sí está
         // configurada (Fase 20, entorno QA), el callback de Casdoor deja de firmar ssoPilot=true,
         // así que esta cookie sí se escribe y el SSO cruzado real funciona.
-        const ssoPilot = req.user?.ssoPilot;
+        const ssoPilot = (req as AuthRequest).user?.ssoPilot;
         // Emitir token fresco con casRUC para soporte SSO cross-app
-        const freshToken = jwt.sign({ id: user.Id, username: user.Username, role: user.RoleName, perms, casId: user.cas_id || null, casRUC: user.cas_ruc || null, ...(ssoPilot ? { ssoPilot: true } : {}) }, JWT_SECRET, { expiresIn: '12h' });
-        const ssoTokenMe = jwt.sign({ id: user.Id, role: user.RoleName, role_name: user.RoleName, username: user.Username, apps: user.Apps || '', casId: user.cas_id || null }, JWT_SECRET, { expiresIn: '12h' });
+        const freshToken = jwt.sign(
+            { id: user.Id, username: user.Username, role: user.RoleName, perms, casId: user.cas_id || null, casRUC: user.cas_ruc || null, ...(ssoPilot ? { ssoPilot: true } : {}) },
+            JWT_SECRET,
+            { expiresIn: '12h' }
+        );
+        const ssoTokenMe = jwt.sign(
+            { id: user.Id, role: user.RoleName, role_name: user.RoleName, username: user.Username, apps: user.Apps || '', casId: user.cas_id || null },
+            JWT_SECRET, { expiresIn: '12h' }
+        );
         // La cookie compartida se escribe segun el DOMINIO de la peticion, no segun NODE_ENV: esa
         // variable puede faltar en el despliegue sin que nada avise, y entonces la cookie no se
         // escribe nunca -- se entra a la app pero el salto a cualquier otra pide login.
@@ -626,11 +662,9 @@ app.get('/api/auth/me', verifyToken, async (req, res) => {
             res.cookie('token', ssoTokenMe, { domain: dominioCompartido, maxAge: 12 * 60 * 60 * 1000, httpOnly: false, secure: true, sameSite: 'lax', path: '/' });
         }
         res.json({ token: freshToken, user: { id: user.Id, username: user.Username, full_name: user.FullName, email: user.Email, role_name: user.RoleName, management_id: user.ManagementId, management_name: user.ManagementName, avatar_url: user.AvatarUrl, permissions: perms, apps: user.Apps, casId: user.cas_id || null, casRUC: user.cas_ruc || null } });
-    }
-    catch (err) {
-        res.status(500).json({ error: safeError(err) });
-    }
+    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
+
 // --- SSO (piloto Casdoor: login social Google/Microsoft) ---
 // La aprobación/rechazo de solicitudes SSO está centralizada en SIATC Console — esta app
 // solo implementa el lado de login (autorizar/callback) y las notificaciones de solicitud.
@@ -638,36 +672,39 @@ const SSO_APP_CODE = process.env.APP_CODE || APP_IDENTIFIER;
 const SSO_APP_LABEL = 'Valorizaciones';
 const FRONTEND_URL = process.env.FRONTEND_URL || '';
 const MAX_RESUBMIT_RETRIES = 2;
-function redirectToSsoStatus(res, status, reason, retriesLeft) {
+
+function redirectToSsoStatus(res: Response, status: 'pending' | 'rejected' | 'error', reason?: string, retriesLeft?: number): void {
     const params = new URLSearchParams({ status });
-    if (reason)
-        params.set('reason', reason);
-    if (typeof retriesLeft === 'number')
-        params.set('retriesLeft', String(retriesLeft));
+    if (reason) params.set('reason', reason);
+    if (typeof retriesLeft === 'number') params.set('retriesLeft', String(retriesLeft));
     res.redirect(`${FRONTEND_URL}/sso-status?${params.toString()}`);
 }
+
 // GET redirige al login social de Casdoor — mantiene client_id/redirect_uri solo del lado del servidor.
 // ?provider=google|microsoft salta la pantalla de selección de Casdoor y va directo a ese proveedor.
 // ?resubmit=true marca el intento como una re-solicitud explícita desde la pantalla de rechazo — el
 // marcador viaja en el "state" (sobrevive el viaje de ida y vuelta por Casdoor) y se valida en /callback.
-app.get('/api/auth/sso/authorize', (req, res) => {
+app.get('/api/auth/sso/authorize', (req: Request, res: Response) => {
     const isResubmit = req.query.resubmit === 'true';
     const state = isResubmit ? `resubmit-${crypto.randomBytes(8).toString('hex')}` : crypto.randomBytes(16).toString('hex');
     const provider = typeof req.query.provider === 'string' ? req.query.provider : undefined;
     res.redirect(getCasdoorAuthorizeUrl(state, provider));
 });
+
 // GET callback de Casdoor tras un login social (Google/Microsoft) — ruta pública, sin verifyToken.
-app.get('/api/auth/sso/callback', async (req, res) => {
+app.get('/api/auth/sso/callback', async (req: Request, res: Response) => {
     const code = String(req.query.code || '');
-    if (!code)
-        return redirectToSsoStatus(res, 'error', 'Falta el código de autorización.');
+    if (!code) return redirectToSsoStatus(res, 'error', 'Falta el código de autorización.');
+
     try {
         const accessToken = await exchangeCodeForToken(code);
         const profile = await getCasdoorUserInfo(accessToken);
+
         const email = (profile.email || '').trim().toLowerCase();
-        if (!email)
-            return redirectToSsoStatus(res, 'error', 'Casdoor no devolvió un correo verificado.');
+        if (!email) return redirectToSsoStatus(res, 'error', 'Casdoor no devolvió un correo verificado.');
+
         const db = await getReadPool();
+
         // 1. ¿Ya existe un usuario real con este correo y con acceso a Valorizaciones?
         const userResult = await db.request()
             .input('email', sql.NVarChar(sql.MAX), email)
@@ -683,38 +720,48 @@ app.get('/api/auth/sso/callback', async (req, res) => {
                 WHERE u.Email = @email AND (u.Apps LIKE '%' + @app + '%' OR u.Apps LIKE '%ADMIN%')
             `);
         const user = userResult.recordset[0];
+
         if (user && user.is_active) {
             const permsReq = db.request();
             addInput(permsReq, 'rid', sql.UniqueIdentifier, user.role_id);
             addInput(permsReq, 'app', sql.NVarChar(20), SSO_APP_CODE);
-            const perms = (await permsReq.query("SELECT Permission FROM EBM.RolePermissions WHERE RoleId = @rid AND (Permission LIKE @app + '.%' OR Permission LIKE 'ebm.%')")).recordset.map((p) => p.Permission);
-            const token = jwt.sign({
-                id: user.id, username: user.username, role: user.role_name, perms,
-                casId: user.cas_id || null, casRUC: user.cas_ruc || null,
-                // El flag `ssoPilot` marca que la sesion sale del piloto de Casdoor y NO debe
-                // compartirse. Se omite en QA, donde el dominio de cookie esta aislado y el SSO
-                // cruzado entre las apps de QA es justamente lo que se quiere probar.
-                // El chequeo era `process.env.COOKIE_DOMAIN`: bastaba olvidar esa variable en un
-                // despliegue para que QA se comportara como produccion, en silencio.
-                ...(dominioCookie(req) === '.qa.siatc.cloud' ? {} : { ssoPilot: true }),
-            }, JWT_SECRET, { expiresIn: '12h' });
+            const perms = (await permsReq.query("SELECT Permission FROM EBM.RolePermissions WHERE RoleId = @rid AND (Permission LIKE @app + '.%' OR Permission LIKE 'ebm.%')")).recordset.map((p: { Permission: string }) => p.Permission);
+
+            const token = jwt.sign(
+                {
+                    id: user.id, username: user.username, role: user.role_name, perms,
+                    casId: user.cas_id || null, casRUC: user.cas_ruc || null,
+                    // El flag `ssoPilot` marca que la sesion sale del piloto de Casdoor y NO debe
+                    // compartirse. Se omite en QA, donde el dominio de cookie esta aislado y el SSO
+                    // cruzado entre las apps de QA es justamente lo que se quiere probar.
+                    // El chequeo era `process.env.COOKIE_DOMAIN`: bastaba olvidar esa variable en un
+                    // despliegue para que QA se comportara como produccion, en silencio.
+                    ...(dominioCookie(req) === '.qa.siatc.cloud' ? {} : { ssoPilot: true }),
+                },
+                JWT_SECRET,
+                { expiresIn: '12h' }
+            );
             const params = new URLSearchParams({ ssoToken: token });
             return res.redirect(`${FRONTEND_URL}/sso-login?${params.toString()}`);
         }
+
         if (user && !user.is_active) {
             return redirectToSsoStatus(res, 'rejected', 'Tu cuenta está desactivada. Contacta a un administrador.');
         }
+
         // 2. No existe (o no tiene acceso a VAL aún): revisar si ya hay una solicitud previa
         const pendingResult = await db.request()
             .input('email', sql.NVarChar(sql.MAX), email)
             .query(`SELECT TOP 1 Status, RejectionReason, RetryCount FROM EBM.PendingSSORequests WHERE Email = @email ORDER BY RequestedAt DESC`);
         const existing = pendingResult.recordset[0];
+
         if (existing?.Status === 'pending') {
             return redirectToSsoStatus(res, 'pending');
         }
         if (existing?.Status === 'rejected') {
-            const retryCount = existing.RetryCount ?? 0;
+            const retryCount: number = existing.RetryCount ?? 0;
             const isResubmit = String(req.query.state || '').startsWith('resubmit-');
+
             if (isResubmit && retryCount < MAX_RESUBMIT_RETRIES) {
                 const newRetryCount = retryCount + 1;
                 await db.request()
@@ -729,15 +776,16 @@ app.get('/api/auth/sso/callback', async (req, res) => {
                     `);
                 if (newRetryCount >= MAX_RESUBMIT_RETRIES) {
                     await sendSsoFinalRetryEmail(email, SSO_APP_LABEL);
-                }
-                else {
+                } else {
                     await sendSsoFirstRetryEmail(email, SSO_APP_LABEL);
                 }
                 return redirectToSsoStatus(res, 'pending');
             }
+
             const retriesLeft = Math.max(MAX_RESUBMIT_RETRIES - retryCount, 0);
             return redirectToSsoStatus(res, 'rejected', existing.RejectionReason, retriesLeft);
         }
+
         // 3. Crear la solicitud nueva
         try {
             await db.request()
@@ -751,59 +799,56 @@ app.get('/api/auth/sso/callback', async (req, res) => {
                     VALUES (@email, @fullName, @provider, @casdoorUserId, @appCode)
                 `);
             await sendSsoPendingEmail(email, SSO_APP_LABEL);
-        }
-        catch (insertErr) {
+        } catch (insertErr: unknown) {
             // Condición de carrera: dos requests casi simultáneas (doble click, doble pestaña)
             // pueden pasar el chequeo de "no existe" de arriba antes de que cualquiera inserte.
             // El índice único filtrado UX_PendingSSORequests_Email_Pending (Email, WHERE
             // Status='pending') rechaza la segunda con "duplicate key" -- se trata como éxito
             // (alguien más ya ganó la carrera y creó la fila), no como error real.
-            const msg = insertErr?.message || '';
-            if (!msg.includes('duplicate key'))
-                throw insertErr;
+            const msg = (insertErr as Error)?.message || '';
+            if (!msg.includes('duplicate key')) throw insertErr;
         }
+
         return redirectToSsoStatus(res, 'pending');
-    }
-    catch (error) {
+    } catch (error: unknown) {
         console.error('[SSO Callback] Error:', safeError(error), sanitizeLog(String(req.query.state || '')));
         return redirectToSsoStatus(res, 'error', 'Ocurrió un error validando tu sesión. Intenta de nuevo.');
     }
 });
+
 // --- CAS ---
-app.get('/api/cas', verifyToken, async (req, res) => {
+app.get('/api/cas', verifyToken, async (req: Request, res: Response) => {
     try {
-        const currentUser = req.user;
+        const currentUser = (req as AuthRequest).user as JwtUserPayload;
         const db = await getReadPool();
+
         if (currentUser.casId) {
             const casReq = db.request();
             addInput(casReq, 'casId', sql.VarChar(50), currentUser.casId);
             const result = await casReq.query("SELECT * FROM [dbo].[GAC_APP_TB_CAS] WHERE ID_CAS = @casId");
             return res.json(result.recordset);
         }
+
         const result = await db.request().query("SELECT * FROM [dbo].[GAC_APP_TB_CAS] ORDER BY Nombre_CAS");
         res.json(result.recordset);
-    }
-    catch (err) {
-        res.status(500).json({ error: safeError(err) });
-    }
+    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
+
 // --- CONFIGURATION ---
-app.get('/api/config', verifyToken, async (req, res) => {
+app.get('/api/config', verifyToken, async (req: Request, res: Response) => {
     try {
         const db = await getReadPool();
         const result = await db.request().query("SELECT * FROM [dbo].[GAC_APP_TB_VALORIZACIONES_CONFIG]");
         res.json(result.recordset);
-    }
-    catch (err) {
-        res.status(500).json({ error: safeError(err) });
-    }
+    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
+
 const crearConfigSchema = z.object({
     clave: z.string().min(1).max(100),
     valor: z.string().max(500),
     descripcion: z.string().max(200).optional(),
 });
-app.post('/api/config', verifyToken, verifyPermission('val.config.admin'), validateBody(crearConfigSchema), async (req, res) => {
+app.post('/api/config', verifyToken, verifyPermission('val.config.admin'), validateBody(crearConfigSchema), async (req: Request, res: Response) => {
     try {
         const { clave, valor, descripcion } = req.body;
         const db = await getWritePool();
@@ -822,26 +867,22 @@ app.post('/api/config', verifyToken, verifyPermission('val.config.admin'), valid
                 END
             `);
         res.json({ message: 'Config updated' });
-    }
-    catch (err) {
-        res.status(500).json({ error: safeError(err) });
-    }
+    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
+
 // --- CONFIG ADICIONAL POR DISTRITO ---
-app.get('/api/config-distritos', verifyToken, async (req, res) => {
+app.get('/api/config-distritos', verifyToken, async (req: Request, res: Response) => {
     try {
         const db = await getReadPool();
         const result = await db.request().query("SELECT * FROM [dbo].[GAC_APP_TB_CONFIG_VALORIZACION_DISTRITO] ORDER BY Creado_El DESC");
         res.json(result.recordset);
-    }
-    catch (err) {
-        res.status(500).json({ error: safeError(err) });
-    }
+    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
-app.post('/api/config-distritos', verifyToken, async (req, res) => {
+
+app.post('/api/config-distritos', verifyToken, async (req: Request, res: Response) => {
     try {
         const { id, cas_ids, distritos, importe, fecha_inicio, fecha_fin, activo } = req.body;
-        const user = req.user.username;
+        const user = (req as AuthRequest).user!.username;
         const db = await getWritePool();
         const request = db.request();
         addInput(request, 'cas', sql.NVarChar(sql.MAX), JSON.stringify(cas_ids));
@@ -851,6 +892,7 @@ app.post('/api/config-distritos', verifyToken, async (req, res) => {
         addInput(request, 'ff', sql.DateTime, fecha_fin ?? null);
         addInput(request, 'act', sql.Bit, activo ? 1 : 0);
         addInput(request, 'usr', sql.NVarChar(255), user);
+
         if (id) {
             addInput(request, 'id', sql.Int, Number(id));
             await request.query(`
@@ -858,31 +900,26 @@ app.post('/api/config-distritos', verifyToken, async (req, res) => {
                 SET CAS_Ids = @cas, Distritos = @dist, Importe = @imp, Fecha_Inicio = @fi, Fecha_Fin = @ff, Activo = @act
                 WHERE Id = @id
             `);
-        }
-        else {
+        } else {
             await request.query(`
                 INSERT INTO [dbo].[GAC_APP_TB_CONFIG_VALORIZACION_DISTRITO] (CAS_Ids, Distritos, Importe, Fecha_Inicio, Fecha_Fin, Activo, Creado_Por)
                 VALUES (@cas, @dist, @imp, @fi, @ff, @act, @usr)
             `);
         }
         res.json({ success: true });
-    }
-    catch (err) {
-        res.status(500).json({ error: safeError(err) });
-    }
+    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
-app.delete('/api/config-distritos/:id', verifyToken, async (req, res) => {
+
+app.delete('/api/config-distritos/:id', verifyToken, async (req: Request, res: Response) => {
     try {
-        const idNum = parseInt(req.params.id, 10);
-        if (isNaN(idNum) || idNum <= 0)
-            return res.status(400).json({ error: 'ID inválido' });
-        const user = req.user;
+        const idNum = parseInt(req.params.id as string, 10);
+        if (isNaN(idNum) || idNum <= 0) return res.status(400).json({ error: 'ID inválido' });
+        const user = (req as AuthRequest).user!;
         const db = await getWritePool();
         const existing = await db.request()
             .input('id', sql.Int, idNum)
             .query("SELECT Creado_Por FROM [dbo].[GAC_APP_TB_CONFIG_VALORIZACION_DISTRITO] WHERE Id = @id");
-        if (!existing.recordset[0])
-            return res.status(404).json({ error: 'Registro no encontrado' });
+        if (!existing.recordset[0]) return res.status(404).json({ error: 'Registro no encontrado' });
         const isAdmin = (user.role || '').toLowerCase() === 'administrador';
         if (!isAdmin && existing.recordset[0].Creado_Por !== user.username) {
             return res.status(403).json({ error: 'Sin permiso para eliminar este registro' });
@@ -891,36 +928,30 @@ app.delete('/api/config-distritos/:id', verifyToken, async (req, res) => {
             .input('id', sql.Int, idNum)
             .query("DELETE FROM [dbo].[GAC_APP_TB_CONFIG_VALORIZACION_DISTRITO] WHERE Id = @id");
         res.json({ success: true });
-    }
-    catch (err) {
-        res.status(500).json({ error: safeError(err) });
-    }
+    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
-app.get('/api/distritos', verifyToken, async (req, res) => {
+
+app.get('/api/distritos', verifyToken, async (req: Request, res: Response) => {
     try {
         const db = await getReadPool();
         const result = await db.request().query('SELECT DISTINCT Ciudad, Distrito FROM APPGAC.ServiciosViewSQL WHERE Ciudad IS NOT NULL AND Distrito IS NOT NULL ORDER BY Ciudad, Distrito');
         res.json(result.recordset);
-    }
-    catch (err) {
-        res.status(500).json({ error: safeError(err) });
-    }
+    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
+
 // --- CONFIG CANAL INSTITUCIONAL ---
-app.get('/api/config-canal-institucional', verifyToken, async (req, res) => {
+app.get('/api/config-canal-institucional', verifyToken, async (req: Request, res: Response) => {
     try {
         const db = await getReadPool();
         const result = await db.request().query("SELECT * FROM [dbo].[GAC_APP_TB_CONFIG_CANAL_INSTITUCIONAL] ORDER BY Creado_El DESC");
         res.json(result.recordset);
-    }
-    catch (err) {
-        res.status(500).json({ error: safeError(err) });
-    }
+    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
-app.post('/api/config-canal-institucional', verifyToken, async (req, res) => {
+
+app.post('/api/config-canal-institucional', verifyToken, async (req: Request, res: Response) => {
     try {
         const { id, cupo_area, fecha_inicio, fecha_fin, importe, activo } = req.body;
-        const user = req.user.username;
+        const user = (req as AuthRequest).user!.username;
         const db = await getWritePool();
         const request = db.request();
         addInput(request, 'ca', sql.NVarChar(50), cupo_area);
@@ -929,15 +960,16 @@ app.post('/api/config-canal-institucional', verifyToken, async (req, res) => {
         addInput(request, 'imp', sql.Decimal(18, 2), importe);
         addInput(request, 'act', sql.Bit, activo ? 1 : 0);
         addInput(request, 'usr', sql.NVarChar(255), user);
+
         console.log(`[CONFIG] Saving rule for ${sanitizeLog(user)}, ID: ${id || 'NEW'}`);
+
         if (id) {
             await request.input('id', sql.Int, Number(id)).query(`
                 UPDATE [dbo].[GAC_APP_TB_CONFIG_CANAL_INSTITUCIONAL]
                 SET Cupo_Area = @ca, Fecha_Inicio = @fi, Fecha_Fin = @ff, Importe = @imp, Activo = @act
                 WHERE Id = @id
             `);
-        }
-        else {
+        } else {
             await request.query(`
                 INSERT INTO [dbo].[GAC_APP_TB_CONFIG_CANAL_INSTITUCIONAL]
                 (Cupo_Area, Usuario_Creador, Keywords, Validacion_Tipo, Fecha_Inicio, Fecha_Fin, Importe, Activo, Creado_Por)
@@ -945,110 +977,116 @@ app.post('/api/config-canal-institucional', verifyToken, async (req, res) => {
             `);
         }
         res.json({ success: true });
-    }
-    catch (err) {
+    } catch (err: unknown) {
         res.status(500).json({ error: safeError(err) });
     }
 });
-app.delete('/api/config-canal-institucional/:id', verifyToken, async (req, res) => {
+
+app.delete('/api/config-canal-institucional/:id', verifyToken, async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
         const db = await getWritePool();
         const idNum = parseInt(String(id), 10);
-        if (isNaN(idNum) || idNum <= 0)
-            return res.status(400).json({ error: 'ID inválido' });
+        if (isNaN(idNum) || idNum <= 0) return res.status(400).json({ error: 'ID inválido' });
         console.log(`[CONFIG] Deleting rule ID: ${idNum}`);
         await db.request().input('id', sql.Int, idNum).query("DELETE FROM [dbo].[GAC_APP_TB_CONFIG_CANAL_INSTITUCIONAL] WHERE Id = @id");
         res.json({ success: true });
-    }
-    catch (err) {
+    } catch (err: unknown) { 
         console.error('[CONFIG] Error deleting rule:', err);
-        res.status(500).json({ error: safeError(err) });
+        res.status(500).json({ error: safeError(err) }); 
     }
 });
+
+
 // --- VALORIZACIONES ---
 // --- VALORIZACIONES HELPERS ---
+
 // Mapeo de códigos de área C4C → nombre legible
 // Agregar nuevos códigos según se identifiquen en el sistema C4C
-const C4C_AREA_NAMES = {
-    8: 'TALLER',
+const C4C_AREA_NAMES: Record<number, string> = {
+    8:  'TALLER',
     11: 'OBRAS',
     // Cualquier otro código no listado aquí se muestra como 'GENERAL'
 };
-async function getC4CDetails(ticketIds) {
-    if (ticketIds.length === 0)
-        return {};
-    const results = {};
+
+async function getC4CDetails(ticketIds: string[]) {
+    if (ticketIds.length === 0) return {};
+    const results: Record<string, { creator: string; subject: string; cupoArea: string }> = {};
     const chunkSize = 50;
     const promises = [];
+
     for (let i = 0; i < ticketIds.length; i += chunkSize) {
         const chunk = ticketIds.slice(i, i + chunkSize);
         const filter = chunk.map(id => `ID eq '${id}'`).join(' or ');
         const url = `${C4C_BASE_URL}/ServiceRequestCollection?$filter=${encodeURIComponent(filter)}&$select=ID,CreatedBy,Name,CupoTomado_SDK,zTicketArea_SDK&$format=json`;
-        if (i === 0)
-            console.log('[C4C] URL base:', url.split('?')[0]);
-        promises.push(axios.get(url, {
-            headers: { 'Authorization': `Basic ${C4C_AUTH}`, 'Accept': 'application/json' },
-            timeout: 20000
-        })
+
+        if (i === 0) console.log('[C4C] URL base:', url.split('?')[0]);
+
+        promises.push(
+            axios.get(url, {
+                headers: { 'Authorization': `Basic ${C4C_AUTH}`, 'Accept': 'application/json' },
+                timeout: 20000
+            })
             .then(resp => {
-            const items = resp.data?.d?.results ?? resp.data?.value ?? [];
-            if (i === 0 && items.length > 0) {
-                console.log('[C4C DEBUG] Campos disponibles:', Object.keys(items[0]).join(', '));
-            }
-            items.forEach(item => {
-                results[item.ID] = {
-                    creator: item.CreatedBy || '',
-                    subject: item.Name || '',
-                    cupoArea: (() => {
-                        const code = parseInt(item.zTicketArea_SDK, 10);
-                        if (!code)
-                            return 'GENERAL';
-                        return C4C_AREA_NAMES[code] ?? 'GENERAL';
-                    })()
-                };
-            });
-        })
+                const items: Record<string, string>[] = resp.data?.d?.results ?? resp.data?.value ?? [];
+                if (i === 0 && items.length > 0) {
+                    console.log('[C4C DEBUG] Campos disponibles:', Object.keys(items[0]).join(', '));
+                }
+                items.forEach(item => {
+                    results[item.ID] = {
+                        creator: item.CreatedBy || '',
+                        subject: item.Name || '',
+                        cupoArea: (() => {
+                            const code = parseInt(item.zTicketArea_SDK, 10);
+                            if (!code) return 'GENERAL';
+                            return C4C_AREA_NAMES[code] ?? 'GENERAL';
+                        })()
+                    };
+                });
+            })
             .catch(err => {
-            const status = err.response?.status;
-            const body = JSON.stringify(err.response?.data)?.slice(0, 300);
-            console.error(`[C4C] Error chunk ${i}-${i + chunkSize}: HTTP ${status ?? 'N/A'} — ${body ?? err.message}`);
-        }));
+                const status = err.response?.status;
+                const body = JSON.stringify(err.response?.data)?.slice(0, 300);
+                console.error(`[C4C] Error chunk ${i}-${i + chunkSize}: HTTP ${status ?? 'N/A'} — ${body ?? err.message}`);
+            })
+        );
     }
+
     await Promise.all(promises);
     return results;
 }
-app.get('/api/c4c-creators', verifyToken, async (req, res) => {
+app.get('/api/c4c-creators', verifyToken, async (req: Request, res: Response) => {
     try {
         const url = `${C4C_BASE_URL}/ServiceRequestCollection?$select=CreatedBy&$top=2000&$orderby=CreationDateTime desc`;
         const resp = await axios.get(url, { headers: { 'Authorization': `Basic ${C4C_AUTH}` } });
         const items = resp.data.d.results;
-        const creators = Array.from(new Set(items.map((item) => item.CreatedBy))).sort();
+        const creators = Array.from(new Set(items.map((item: { CreatedBy: string }) => item.CreatedBy))).sort();
         res.json(creators);
-    }
-    catch (err) {
+    } catch (err: unknown) {
         console.error('C4C Creators Error:', safeError(err));
         res.status(500).json({ error: "No se pudieron obtener los creadores de C4C." });
     }
 });
+
 // --- VALORIZACIONES ---
-app.get('/api/valuations/:ruc', verifyToken, async (req, res) => {
+app.get('/api/valuations/:ruc', verifyToken, async (req: Request, res: Response) => {
     const { ruc } = req.params;
-    const currentUser = req.user;
+    const currentUser = (req as AuthRequest).user as JwtUserPayload;
     if (currentUser.casId) {
-        if (!currentUser.casRUC)
-            return res.status(403).json({ error: 'Usuario CAS sin empresa asignada' });
-        if (currentUser.casRUC !== String(ruc).trim())
-            return res.status(403).json({ error: 'Acceso denegado' });
+        if (!currentUser.casRUC) return res.status(403).json({ error: 'Usuario CAS sin empresa asignada' });
+        if (currentUser.casRUC !== String(ruc).trim()) return res.status(403).json({ error: 'Acceso denegado' });
     }
     const { start, end } = req.query;
+
     console.log(`[VALUATION] Starting request - RUC: ${sanitizeLog(ruc)}, Range: ${sanitizeLog(start)} to ${sanitizeLog(end)}`);
+
     try {
         const db = await getReadPool();
         const request = db.request();
         addInput(request, 'ruc', sql.VarChar(20), ruc);
         addInput(request, 'start', sql.VarChar(30), `${start} 00:00:00`);
         addInput(request, 'end', sql.VarChar(30), `${end} 23:59:59`);
+
         const sqlResult = await request.query(`
             DECLARE @diasMax INT;
             SELECT @diasMax = CAST(Valor AS INT) FROM [dbo].[GAC_APP_TB_VALORIZACIONES_CONFIG] WHERE Clave = 'DIAS_MAX_CIERRE';
@@ -1129,10 +1167,14 @@ app.get('/api/valuations/:ruc', verifyToken, async (req, res) => {
               AND s.TrabajoRealizado = 'true'
               AND s.Ticket NOT IN (SELECT Ticket FROM [dbo].[GAC_APP_TB_VALORIZACIONES_DETALLE] WHERE Tipo = 'SERVICIO')
         `);
-        let tickets = sqlResult.recordset;
+
+        interface SqlTicket { Ticket: string; TarifaBaseCalculada: number; FechaCierre: string; [key: string]: unknown; }
+        let tickets: SqlTicket[] = sqlResult.recordset;
         console.log(`[VALUATION] SQL query returned ${tickets.length} tickets`);
+
         // Fetch Institutional Rules
         const rules = (await db.request().query("SELECT * FROM [dbo].[GAC_APP_TB_CONFIG_CANAL_INSTITUCIONAL] WHERE Activo = 1")).recordset;
+
         if (tickets.length > 0) {
             // Siempre consultar C4C para obtener CupoArea y UsuarioCreador,
             // independientemente de si hay reglas institucionales activas.
@@ -1141,10 +1183,12 @@ app.get('/api/valuations/:ruc', verifyToken, async (req, res) => {
             const c4cDetails = await getC4CDetails(ticketIds);
             const detailCount = Object.keys(c4cDetails).length;
             console.log(`[VALUATION] OData results: ${detailCount}/${tickets.length} found`);
+
             tickets = tickets.map(t => {
                 const details = c4cDetails[t.Ticket];
                 let finalTarifaBase = t.TarifaBaseCalculada;
                 let esInstitucional = false;
+
                 if (rules.length > 0) {
                     const cupoArea = (details?.cupoArea || 'GENERAL').trim().toUpperCase();
                     const matchingRule = rules.find(r => {
@@ -1158,11 +1202,13 @@ app.get('/api/valuations/:ruc', verifyToken, async (req, res) => {
                         const areaMatch = r.Cupo_Area?.trim().toUpperCase() === cupoArea;
                         return dateMatch && areaMatch;
                     });
+
                     if (matchingRule) {
                         finalTarifaBase = matchingRule.Importe;
                         esInstitucional = true;
                     }
                 }
+
                 return {
                     ...t,
                     TarifaBase: finalTarifaBase,
@@ -1173,23 +1219,22 @@ app.get('/api/valuations/:ruc', verifyToken, async (req, res) => {
                 };
             });
         }
+
         res.json(tickets);
-    }
-    catch (err) {
+    } catch (err: unknown) {
         console.error('[VALUATION] Server Error:', safeError(err));
         res.status(500).json({ error: safeError(err) });
     }
 });
-app.get('/api/penalty-motives', verifyToken, async (req, res) => {
+
+app.get('/api/penalty-motives', verifyToken, async (req: Request, res: Response) => {
     try {
         const db = await getReadPool();
         const result = await db.request().query('SELECT IdMotivo, Motivo FROM [dbo].[GAC_APP_TB_TICKETS_DESCUENTOS_MOTIVOS] ORDER BY Motivo');
         res.json(result.recordset);
-    }
-    catch (err) {
-        res.status(500).json({ error: safeError(err) });
-    }
+    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
+
 const crearPenalidadSchema = z.object({
     ticket: z.string().min(1).max(50),
     fecha: z.string().min(1),
@@ -1198,13 +1243,14 @@ const crearPenalidadSchema = z.object({
     importe: z.number().positive(),
     ruc: z.string().min(1).max(20),
 });
-app.post('/api/penalties', verifyToken, validateBody(crearPenalidadSchema), async (req, res) => {
+app.post('/api/penalties', verifyToken, validateBody(crearPenalidadSchema), async (req: Request, res: Response) => {
     const { ticket, fecha, motivo, descripcion, importe, ruc } = req.body;
-    const currentUser = req.user;
+    const currentUser = (req as AuthRequest).user as JwtUserPayload;
     const userId = currentUser.username;
     const penaltyId = crypto.randomBytes(4).toString('hex');
     try {
         const db = await getWritePool();
+
         if (currentUser.casId) {
             if (!currentUser.casRUC || String(ruc).trim() !== String(currentUser.casRUC).trim()) {
                 return res.status(403).json({ error: 'No puede crear penalidades para otra empresa.' });
@@ -1224,17 +1270,16 @@ app.post('/api/penalties', verifyToken, validateBody(crearPenalidadSchema), asyn
                 VALUES (@id, @ticket, @fecha, @motivo, @desc, @importe, @user, GETDATE(), 'Pendiente')
             `);
         res.status(201).json({ id: penaltyId });
-    }
-    catch (err) {
-        res.status(500).json({ error: safeError(err) });
-    }
+    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
-app.put('/api/penalties/:id', verifyToken, async (req, res) => {
+
+app.put('/api/penalties/:id', verifyToken, async (req: Request, res: Response) => {
     const { id } = req.params;
     const { fecha, motivo, descripcion, importe } = req.body;
-    const currentUser = req.user;
+    const currentUser = (req as AuthRequest).user as JwtUserPayload;
     try {
         const db = await getWritePool();
+
         if (currentUser.casId) {
             const ownerCheck = await db.request()
                 .input('id', sql.VarChar(8), id)
@@ -1249,6 +1294,7 @@ app.put('/api/penalties/:id', verifyToken, async (req, res) => {
                 return res.status(403).json({ error: 'La penalidad no pertenece a su empresa.' });
             }
         }
+
         // Validation: Check if already in a closure
         const check = await db.request().input('id', sql.VarChar(8), id).query(`
             SELECT 1 FROM [dbo].[GAC_APP_TB_VALORIZACIONES_DETALLE]
@@ -1257,7 +1303,9 @@ app.put('/api/penalties/:id', verifyToken, async (req, res) => {
         if (check.recordset.length > 0) {
             return res.status(403).json({ error: "No se puede editar una penalidad que ya ha sido cerrada en una valorización." });
         }
+
         const existing = await db.request().input('id', sql.VarChar(8), id).query("SELECT * FROM [dbo].[GAC_APP_TB_TICKETS_DESCUENTOS] WHERE ID_Descuentos_CAS = @id");
+
         const updPenReq = db.request();
         addInput(updPenReq, 'id', sql.VarChar(8), id);
         addInput(updPenReq, 'fecha', sql.Date, fecha);
@@ -1269,30 +1317,30 @@ app.put('/api/penalties/:id', verifyToken, async (req, res) => {
                 SET Fecha = @fecha, Motivo = @motivo, Descripcion = @desc, Importe = @importe
                 WHERE ID_Descuentos_CAS = @id
             `);
-        await logAudit(req, 'UPDATE', 'PENALTY', id, {
-            before: existing.recordset[0],
-            after: { fecha, motivo, descripcion, importe }
+            
+        await logAudit(req, 'UPDATE', 'PENALTY', id as string, { 
+            before: existing.recordset[0], 
+            after: { fecha, motivo, descripcion, importe } 
         });
+        
         res.json({ success: true });
-    }
-    catch (err) {
-        res.status(500).json({ error: safeError(err) });
-    }
+    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
+
 const crearAdicionalSchema = z.object({
     ticket: z.string().min(1).max(50),
     motivo: z.string().min(1).max(200),
     importe: z.number().positive(),
 });
-app.post('/api/adicionales', verifyToken, validateBody(crearAdicionalSchema), async (req, res) => {
+app.post('/api/adicionales', verifyToken, validateBody(crearAdicionalSchema), async (req: Request, res: Response) => {
     const { ticket, motivo, importe } = req.body;
-    const currentUser = req.user;
+    const currentUser = (req as AuthRequest).user as JwtUserPayload;
     const id = crypto.randomBytes(4).toString('hex');
     try {
         const db = await getWritePool();
+
         if (currentUser.casId) {
-            if (!currentUser.casRUC)
-                return res.status(403).json({ error: 'Usuario CAS sin empresa asignada.' });
+            if (!currentUser.casRUC) return res.status(403).json({ error: 'Usuario CAS sin empresa asignada.' });
             const ticketCheck = await db.request()
                 .input('ticket', sql.NVarChar(50), ticket)
                 .input('casRUC', sql.VarChar(20), currentUser.casRUC)
@@ -1305,6 +1353,7 @@ app.post('/api/adicionales', verifyToken, validateBody(crearAdicionalSchema), as
             if (ticketCheck.recordset.length === 0)
                 return res.status(403).json({ error: 'El ticket no pertenece a su empresa.' });
         }
+
         const addReq = db.request();
         addInput(addReq, 'id', sql.VarChar(8), id);
         addInput(addReq, 'ticket', sql.VarChar(50), ticket);
@@ -1317,20 +1366,18 @@ app.post('/api/adicionales', verifyToken, validateBody(crearAdicionalSchema), as
             `);
         await logAudit(req, 'CREATE', 'ADICIONAL', ticket, { id, motivo, importe });
         res.status(201).json({ id });
-    }
-    catch (err) {
-        res.status(500).json({ error: safeError(err) });
-    }
+    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
-app.put('/api/adicionales/:id', verifyToken, async (req, res) => {
+
+app.put('/api/adicionales/:id', verifyToken, async (req: Request, res: Response) => {
     const { id } = req.params;
     const { motivo, importe } = req.body;
-    const currentUser = req.user;
+    const currentUser = (req as AuthRequest).user as JwtUserPayload;
     try {
         const db = await getWritePool();
+
         if (currentUser.casId) {
-            if (!currentUser.casRUC)
-                return res.status(403).json({ error: 'Usuario CAS sin empresa asignada.' });
+            if (!currentUser.casRUC) return res.status(403).json({ error: 'Usuario CAS sin empresa asignada.' });
             const ownerCheck = await db.request()
                 .input('id', sql.VarChar(8), id)
                 .input('casRUC', sql.VarChar(20), currentUser.casRUC)
@@ -1344,9 +1391,11 @@ app.put('/api/adicionales/:id', verifyToken, async (req, res) => {
             if (ownerCheck.recordset.length === 0)
                 return res.status(403).json({ error: 'El adicional no pertenece a su empresa.' });
         }
+
         const existing = await db.request()
             .input('id', sql.VarChar(8), id)
             .query("SELECT * FROM [dbo].[GAC_APP_TB_TICKETS_VALORIZACION_ADICIONAL] WHERE ID_valorizacion_adicional = @id");
+
         const updAddReq = db.request();
         addInput(updAddReq, 'id', sql.VarChar(8), id);
         addInput(updAddReq, 'motivo', sql.NVarChar(200), motivo);
@@ -1356,21 +1405,22 @@ app.put('/api/adicionales/:id', verifyToken, async (req, res) => {
                 SET Motivo = @motivo, Importe = @importe
                 WHERE ID_valorizacion_adicional = @id
             `);
-        await logAudit(req, 'UPDATE', 'ADICIONAL', id, {
-            before: existing.recordset[0],
-            after: { motivo, importe }
+            
+        await logAudit(req, 'UPDATE', 'ADICIONAL', id as string, { 
+            before: existing.recordset[0], 
+            after: { motivo, importe } 
         });
+        
         res.json({ success: true });
-    }
-    catch (err) {
-        res.status(500).json({ error: safeError(err) });
-    }
+    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
-app.get('/api/adicionales/:ticket', verifyToken, async (req, res) => {
+
+app.get('/api/adicionales/:ticket', verifyToken, async (req: Request, res: Response) => {
     const { ticket } = req.params;
-    const currentUser = req.user;
+    const currentUser = (req as AuthRequest).user as JwtUserPayload;
     try {
         const db = await getReadPool();
+
         // Verificar que el ticket pertenece al CAS del usuario
         if (currentUser.casId) {
             const ticketCheck = await db.request()
@@ -1386,6 +1436,7 @@ app.get('/api/adicionales/:ticket', verifyToken, async (req, res) => {
                 return res.status(403).json({ error: 'Acceso denegado' });
             }
         }
+
         const result = await db.request()
             .input('ticket', sql.NVarChar(50), ticket)
             .query(`
@@ -1395,19 +1446,17 @@ app.get('/api/adicionales/:ticket', verifyToken, async (req, res) => {
                 ORDER BY ID_valorizacion_adicional
             `);
         res.json(result.recordset);
-    }
-    catch (err) {
-        res.status(500).json({ error: safeError(err) });
-    }
+    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
-app.delete('/api/adicionales/:id', verifyToken, async (req, res) => {
+
+app.delete('/api/adicionales/:id', verifyToken, async (req: Request, res: Response) => {
     const { id } = req.params;
-    const currentUser = req.user;
+    const currentUser = (req as AuthRequest).user as JwtUserPayload;
     try {
         const db = await getWritePool();
+
         if (currentUser.casId) {
-            if (!currentUser.casRUC)
-                return res.status(403).json({ error: 'Usuario CAS sin empresa asignada.' });
+            if (!currentUser.casRUC) return res.status(403).json({ error: 'Usuario CAS sin empresa asignada.' });
             const ownerCheck = await db.request()
                 .input('id', sql.VarChar(8), id)
                 .input('casRUC', sql.VarChar(20), currentUser.casRUC)
@@ -1421,37 +1470,40 @@ app.delete('/api/adicionales/:id', verifyToken, async (req, res) => {
             if (ownerCheck.recordset.length === 0)
                 return res.status(403).json({ error: 'El adicional no pertenece a su empresa.' });
         }
+
         const existing = await db.request()
             .input('id', sql.VarChar(8), id)
             .query("SELECT Ticket, Motivo, Importe FROM [dbo].[GAC_APP_TB_TICKETS_VALORIZACION_ADICIONAL] WHERE ID_valorizacion_adicional = @id");
         await db.request()
             .input('id', sql.VarChar(8), id)
             .query("DELETE FROM [dbo].[GAC_APP_TB_TICKETS_VALORIZACION_ADICIONAL] WHERE ID_valorizacion_adicional = @id");
-        await logAudit(req, 'DELETE', 'ADICIONAL', id, existing.recordset[0] || {});
+        await logAudit(req, 'DELETE', 'ADICIONAL', id as string, existing.recordset[0] || {});
         res.json({ success: true });
-    }
-    catch (err) {
-        res.status(500).json({ error: safeError(err) });
-    }
+    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
-app.post('/api/valuations/batch-adjustment', verifyToken, async (req, res) => {
+
+app.post('/api/valuations/batch-adjustment', verifyToken, async (req: Request, res: Response) => {
     const { tickets, targetAmount, motivo, ruc } = req.body;
-    const currentUser = req.user;
-    if (!assertCasRuc(currentUser, ruc, res))
-        return;
+    const currentUser = (req as AuthRequest).user as JwtUserPayload;
+    if (!assertCasRuc(currentUser, ruc, res)) return;
+
     if (!tickets || !Array.isArray(tickets) || tickets.length === 0) {
         return res.status(400).json({ error: "Debe proporcionar una lista de tickets." });
     }
+
     try {
         const db = await getWritePool();
         const pool = await getWritePool();
+        
         // 1. Fetch TarifaBase for these tickets to calculate Delta
         // Replicating logic from /api/valuations/:ruc
         const request = pool.request();
         addInput(request, 'ruc', sql.VarChar(20), ruc);
+
         // Create parameter list for the IN clause
-        const paramNames = tickets.map((_, i) => `@t${i}`);
-        tickets.forEach((t, i) => addInput(request, `t${i}`, sql.VarChar(50), t));
+        const paramNames = tickets.map((_: string, i: number) => `@t${i}`);
+        tickets.forEach((t: string, i: number) => addInput(request, `t${i}`, sql.VarChar(50), t));
+
         const query = `
             SELECT 
                 s.Ticket,
@@ -1474,21 +1526,26 @@ app.post('/api/valuations/batch-adjustment', verifyToken, async (req, res) => {
             WHERE TRIM(cas.RUC) = @ruc 
               AND s.Ticket IN (${paramNames.join(',')})
         `;
+
         const ratesResult = await request.query(query);
         const foundTickets = ratesResult.recordset;
+
         // Start transaction for updates
         const transaction = new sql.Transaction(db);
         await transaction.begin();
+
         try {
             for (const item of foundTickets) {
                 const ticket = item.Ticket;
                 const base = item.TarifaBaseCalculada;
                 const delta = targetAmount - base;
                 const adjustmentId = crypto.randomBytes(4).toString('hex');
+
                 // Delete existing adicionales for this ticket
                 const delReq = transaction.request();
                 addInput(delReq, 'ticket', sql.VarChar(50), ticket);
                 await delReq.query("DELETE FROM [dbo].[GAC_APP_TB_TICKETS_VALORIZACION_ADICIONAL] WHERE Ticket = @ticket");
+
                 // Insert new delta
                 if (delta !== 0) {
                     const insReq = transaction.request();
@@ -1503,60 +1560,66 @@ app.post('/api/valuations/batch-adjustment', verifyToken, async (req, res) => {
                         `);
                 }
             }
+
             await transaction.commit();
-            await logAudit(req, 'BATCH_ADJUST', 'VALUATION', ruc, {
-                tickets_total: tickets.length,
+            await logAudit(req, 'BATCH_ADJUST', 'VALUATION', ruc, { 
+                tickets_total: tickets.length, 
                 processed: foundTickets.length,
-                targetAmount,
-                motivo
+                targetAmount, 
+                motivo 
             });
-            res.json({
-                success: true,
-                processed: foundTickets.length,
-                ignored: tickets.length - foundTickets.length
+            
+            res.json({ 
+                success: true, 
+                processed: foundTickets.length, 
+                ignored: tickets.length - foundTickets.length 
             });
-        }
-        catch (err) {
+
+        } catch (err) {
             await transaction.rollback();
             throw err;
         }
-    }
-    catch (err) {
+    } catch (err: unknown) {
         console.error("Batch Adjustment Error:", err);
         res.status(500).json({ error: safeError(err) });
     }
 });
-app.get('/api/discount-motivos', verifyToken, async (req, res) => {
+
+app.get('/api/discount-motivos', verifyToken, async (req: Request, res: Response) => {
     try {
         const db = await getReadPool();
         const result = await db.request().query('SELECT * FROM [dbo].[GAC_APP_TB_TICKETS_DESCUENTOS_MOTIVOS] ORDER BY Motivo ASC');
         res.json(result.recordset);
-    }
-    catch (err) {
+    } catch (err: unknown) {
         res.status(500).json({ error: safeError(err) });
     }
 });
-app.post('/api/valuations/batch-discount', verifyToken, async (req, res) => {
+
+app.post('/api/valuations/batch-discount', verifyToken, async (req: Request, res: Response) => {
     const { tickets, motivo, descripcion, ruc } = req.body;
-    const user = req.user;
-    const currentUser = user;
-    if (!assertCasRuc(currentUser, ruc, res))
-        return;
+    const user = (req as AuthRequest).user!;
+    const currentUser = user as JwtUserPayload;
+    if (!assertCasRuc(currentUser, ruc, res)) return;
+
     if (!tickets || !Array.isArray(tickets) || tickets.length === 0) {
         return res.status(400).json({ error: "Debe proporcionar una lista de tickets." });
     }
+
     try {
         const db = await getWritePool();
         const transaction = new sql.Transaction(db);
         await transaction.begin();
+
         try {
             for (const item of tickets) {
                 const ticketId = item.id;
                 const ticketAmount = item.amount;
-                if (!ticketId || isNaN(ticketAmount))
-                    continue;
+
+                if (!ticketId || isNaN(ticketAmount)) continue;
+
                 const penaltyId = crypto.randomBytes(4).toString('hex');
                 const fecha = new Date().toISOString().split('T')[0];
+
                 await transaction.request()
                     .input('id', sql.VarChar(255), penaltyId)
                     .input('ticket', sql.VarChar(255), ticketId)
@@ -1571,29 +1634,32 @@ app.post('/api/valuations/batch-discount', verifyToken, async (req, res) => {
                         VALUES (@id, @ticket, @fecha, @motivo, @desc, @importe, @user, GETDATE(), 'Pendiente')
                     `);
             }
+
             await transaction.commit();
-            await logAudit(req, 'BATCH_DISCOUNT', 'VALUATION', ruc, {
-                tickets_total: tickets.length,
-                motivo
+            await logAudit(req, 'BATCH_DISCOUNT', 'VALUATION', ruc, { 
+                tickets_total: tickets.length, 
+                motivo 
             });
+            
             res.json({ success: true, processed: tickets.length });
-        }
-        catch (err) {
+
+        } catch (err) {
             await transaction.rollback();
             throw err;
         }
-    }
-    catch (error) {
+    } catch (error) {
         console.error("Error applying batch discount:", error);
         res.status(500).json({ message: "Error al aplicar el descuento masivo" });
     }
 });
-app.post('/api/penalties/:id/status', verifyToken, async (req, res) => {
+
+app.post('/api/penalties/:id/status', verifyToken, async (req: Request, res: Response) => {
     const { id } = req.params;
     const { status, observation, isCas } = req.body;
-    const currentUser = req.user;
+    const currentUser = (req as AuthRequest).user as JwtUserPayload;
     try {
         const db = await getWritePool();
+
         if (currentUser.casId) {
             const ownerCheck = await db.request()
                 .input('id', sql.VarChar(8), id)
@@ -1607,6 +1673,7 @@ app.post('/api/penalties/:id/status', verifyToken, async (req, res) => {
             if (ownerCheck.recordset.length === 0)
                 return res.status(403).json({ error: 'La penalidad no pertenece a su empresa.' });
         }
+
         const _field = isCas ? 'Adjunto_motivo' : 'Adjunto_motivo';
         const statusReq = db.request();
         addInput(statusReq, 'id', sql.VarChar(8), id);
@@ -1614,15 +1681,15 @@ app.post('/api/penalties/:id/status', verifyToken, async (req, res) => {
         addInput(statusReq, 'obs', sql.NVarChar(1000), observation ?? null);
         await statusReq.query(`UPDATE [dbo].[GAC_APP_TB_TICKETS_DESCUENTOS] SET Estado = @status, Adjunto_motivo = @obs WHERE ID_Descuentos_CAS = @id`);
         res.json({ success: true });
-    }
-    catch (err) {
-        res.status(500).json({ error: safeError(err) });
-    }
+    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
-app.get('/api/tickets/find/:ticket', verifyToken, async (req, res) => {
-    const ticket = req.params.ticket.trim();
-    if (!ticket)
-        return res.status(400).json({ error: 'Ticket es requerido' });
+
+
+
+app.get('/api/tickets/find/:ticket', verifyToken, async (req: Request, res: Response) => {
+    const ticket = (req.params.ticket as string).trim();
+    if (!ticket) return res.status(400).json({ error: 'Ticket es requerido' });
+
     try {
         const db = await getReadPool();
         const result = await db.request()
@@ -1686,24 +1753,23 @@ app.get('/api/tickets/find/:ticket', verifyToken, async (req, res) => {
                 ) rate
                 WHERE TRIM(s.Ticket) = @ticket
             `);
+
         if (result.recordset.length === 0) {
             return res.status(404).json({ error: 'Ticket no encontrado' });
         }
         res.json(result.recordset[0]);
-    }
-    catch (err) {
+    } catch (err: unknown) {
         console.error('Error in ticket find:', err);
         res.status(500).json({ error: safeError(err) });
     }
 });
-app.get('/api/tickets/search/:ruc', verifyToken, async (req, res) => {
+
+app.get('/api/tickets/search/:ruc', verifyToken, async (req: Request, res: Response) => {
     const { ruc } = req.params;
-    const currentUser = req.user;
+    const currentUser = (req as AuthRequest).user as JwtUserPayload;
     if (currentUser.casId) {
-        if (!currentUser.casRUC)
-            return res.status(403).json({ error: 'Usuario CAS sin empresa asignada' });
-        if (currentUser.casRUC !== String(ruc).trim())
-            return res.status(403).json({ error: 'Acceso denegado' });
+        if (!currentUser.casRUC) return res.status(403).json({ error: 'Usuario CAS sin empresa asignada' });
+        if (currentUser.casRUC !== String(ruc).trim()) return res.status(403).json({ error: 'Acceso denegado' });
     }
     const { q } = req.query;
     try {
@@ -1723,26 +1789,34 @@ app.get('/api/tickets/search/:ruc', verifyToken, async (req, res) => {
                 ORDER BY s.CheckOut DESC
             `);
         res.json(result.recordset);
-    }
-    catch (err) {
-        res.status(500).json({ error: safeError(err) });
-    }
+    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
-app.post('/api/valuations/close', verifyToken, async (req, res) => {
-    const { idCierre, // Si viene idCierre, es una actualización de un borrador
-    ruc, nombreCas, start, end, totalServicios, totalPenalidades, subtotalServicios, subtotalPenalidades, totalFinal, cerradoPor, estado, // 'BORRADOR' o 'CERRADO'
-    details } = req.body;
-    const currentUser = req.user;
-    if (!assertCasRuc(currentUser, ruc, res))
-        return;
+
+app.post('/api/valuations/close', verifyToken, async (req: Request, res: Response) => {
+    const {
+        idCierre, // Si viene idCierre, es una actualización de un borrador
+        ruc, nombreCas, start, end,
+        totalServicios, totalPenalidades,
+        subtotalServicios, subtotalPenalidades,
+        totalFinal, cerradoPor,
+        estado, // 'BORRADOR' o 'CERRADO'
+        details
+    } = req.body;
+
+    const currentUser = (req as AuthRequest).user as JwtUserPayload;
+    if (!assertCasRuc(currentUser, ruc, res)) return;
+
     const finalEstado = estado || 'CERRADO';
+
     try {
         const db = await getWritePool();
         const transaction = new sql.Transaction(db);
         await transaction.begin();
+
         try {
             let actualIdCierre = idCierre;
             let businessCode = '';
+
             if (!actualIdCierre) {
                 // Fail-safe: Check if a draft already exists for this RUC and period to avoid duplicates
                 const draftReq = new sql.Request(transaction);
@@ -1750,11 +1824,13 @@ app.post('/api/valuations/close', verifyToken, async (req, res) => {
                 addInput(draftReq, 'start', sql.VarChar(30), start);
                 addInput(draftReq, 'end', sql.VarChar(30), end);
                 const checkDraft = await draftReq.query("SELECT IdCierre, Codigo_Valorizacion FROM [dbo].[GAC_APP_TB_VALORIZACIONES_CIERRES] WHERE RUC = @ruc AND Fecha_Inicio = @start AND Fecha_Fin = @end AND Estado = 'BORRADOR'");
+                
                 if (checkDraft.recordset.length > 0) {
                     actualIdCierre = checkDraft.recordset[0].IdCierre;
                     businessCode = checkDraft.recordset[0].Codigo_Valorizacion;
                 }
             }
+
             if (actualIdCierre) {
                 // 1. Actualizar Cabecera
                 const updHdrReq = new sql.Request(transaction);
@@ -1778,18 +1854,20 @@ app.post('/api/valuations/close', verifyToken, async (req, res) => {
                             Cerrado_El = GETDATE()
                         WHERE IdCierre = @id
                     `);
+
                 if (!businessCode) {
                     const codeReq = new sql.Request(transaction);
                     addInput(codeReq, 'id', sql.Int, actualIdCierre);
                     const codeResult = await codeReq.query("SELECT Codigo_Valorizacion FROM [dbo].[GAC_APP_TB_VALORIZACIONES_CIERRES] WHERE IdCierre = @id");
                     businessCode = codeResult.recordset[0]?.Codigo_Valorizacion;
                 }
+
                 // 2. Limpiar detalles antiguos
                 const delDetReq = new sql.Request(transaction);
                 addInput(delDetReq, 'id', sql.Int, actualIdCierre);
                 await delDetReq.query("DELETE FROM [dbo].[GAC_APP_TB_VALORIZACIONES_DETALLE] WHERE IdCierre = @id");
-            }
-            else {
+
+            } else {
                 // 1. Insertar Cabecera Nueva
                 const insHdrReq = new sql.Request(transaction);
                 addInput(insHdrReq, 'ruc', sql.VarChar(20), ruc);
@@ -1809,15 +1887,18 @@ app.post('/api/valuations/close', verifyToken, async (req, res) => {
                         VALUES (@ruc, @nombreCas, @start, @end, @totalServicios, @totalPenalidades, @subtotalServicios, @subtotalPenalidades, @totalFinal, @cerradoPor, GETDATE(), @estado)
                         SELECT SCOPE_IDENTITY() as IdCierre
                     `);
+
                 actualIdCierre = result.recordset[0].IdCierre;
                 const year = new Date().getFullYear();
                 businessCode = `VAL-${year}-${actualIdCierre.toString().padStart(5, '0')}`;
+
                 // 1.1 Actualizar con el código de negocio
                 const codeUpdReq = new sql.Request(transaction);
                 addInput(codeUpdReq, 'id', sql.Int, actualIdCierre);
                 addInput(codeUpdReq, 'code', sql.VarChar(50), businessCode);
                 await codeUpdReq.query("UPDATE [dbo].[GAC_APP_TB_VALORIZACIONES_CIERRES] SET Codigo_Valorizacion = @code WHERE IdCierre = @id");
             }
+
             // 2. Insertar Detalles (Nuevos o Actualizados)
             if (details && Array.isArray(details) && details.length > 0) {
                 const table = new sql.Table('[dbo].[GAC_APP_TB_VALORIZACIONES_DETALLE]');
@@ -1839,115 +1920,148 @@ app.post('/api/valuations/close', verifyToken, async (req, res) => {
                 table.columns.add('Distrito', sql.VarChar(100), { nullable: true });
                 table.columns.add('Departamento', sql.VarChar(100), { nullable: true });
                 table.columns.add('Nombre_Equipo', sql.NVarChar(255), { nullable: true });
+
                 for (const item of details) {
-                    table.rows.add(actualIdCierre, item.ticket, item.monto, item.fecha ? new Date(item.fecha) : null, item.tipo, item.servicio, item.categoria, item.fechaVisita ? new Date(item.fechaVisita) : null, item.fechaCierre ? new Date(item.fechaCierre) : null, item.diasDiferencia, item.codigoExterno, item.tarifaBase, item.adicionales, item.idReferencia ? item.idReferencia.toString() : null, item.distrito, item.departamento, item.nombreEquipo);
+                    table.rows.add(
+                        actualIdCierre,
+                        item.ticket,
+                        item.monto,
+                        item.fecha ? new Date(item.fecha) : null,
+                        item.tipo,
+                        item.servicio,
+                        item.categoria,
+                        item.fechaVisita ? new Date(item.fechaVisita) : null,
+                        item.fechaCierre ? new Date(item.fechaCierre) : null,
+                        item.diasDiferencia,
+                        item.codigoExterno,
+                        item.tarifaBase,
+                        item.adicionales,
+                        item.idReferencia ? item.idReferencia.toString() : null,
+                        item.distrito,
+                        item.departamento,
+                        item.nombreEquipo
+                    );
                 }
+
                 const request = new sql.Request(transaction);
                 await request.bulk(table);
             }
+
             await transaction.commit();
-            res.json({
-                success: true,
-                message: finalEstado === 'BORRADOR' ? "Borrador guardado correctamente." : "Quincena cerrada correctamente.",
-                idCierre: actualIdCierre,
-                codigo: businessCode
+
+            res.json({ 
+                success: true, 
+                message: finalEstado === 'BORRADOR' ? "Borrador guardado correctamente." : "Quincena cerrada correctamente.", 
+                idCierre: actualIdCierre, 
+                codigo: businessCode 
             });
-        }
-        catch (error) {
+        } catch (error) {
             await transaction.rollback();
             throw error;
         }
-    }
-    catch (err) {
+    } catch (err: unknown) { 
         console.error("Error en operación de valorización:", err);
-        res.status(500).json({ error: safeError(err) });
+        res.status(500).json({ error: safeError(err) }); 
     }
 });
-app.post('/api/valuations/finalize/:id', verifyToken, async (req, res) => {
+
+app.post('/api/valuations/finalize/:id', verifyToken, async (req: Request, res: Response) => {
     const { id } = req.params;
-    const currentUser = req.user;
+    const currentUser = (req as AuthRequest).user as JwtUserPayload;
     try {
         const db = await getWritePool();
+
         // Verificar ownership para usuarios CAS
         if (currentUser.casId) {
             const closureResult = await db.request()
                 .input('id', sql.Int, Number(id))
                 .query("SELECT RUC FROM [dbo].[GAC_APP_TB_VALORIZACIONES_CIERRES] WHERE IdCierre = @id");
             const closure = closureResult.recordset[0];
-            if (!closure)
-                return res.status(404).json({ error: 'Cierre no encontrado' });
+            if (!closure) return res.status(404).json({ error: 'Cierre no encontrado' });
             if (String(closure.RUC || '').trim() !== String(currentUser.casRUC || '').trim()) {
                 return res.status(403).json({ error: 'Acceso denegado' });
             }
         }
+
         await db.request()
             .input('id', sql.Int, Number(id))
             .query("UPDATE [dbo].[GAC_APP_TB_VALORIZACIONES_CIERRES] SET Estado = 'CERRADO', Cerrado_El = GETDATE() WHERE IdCierre = @id");
-        await logAudit(req, 'FINALIZE_DRAFT', 'VALUATION', id, { status: 'CERRADO' });
+
+        await logAudit(req, 'FINALIZE_DRAFT', 'VALUATION', id as string, { status: 'CERRADO' });
         res.json({ success: true, message: "Valorización cerrada correctamente." });
-    }
-    catch (err) {
+    } catch (err: unknown) {
         res.status(500).json({ error: safeError(err) });
     }
 });
-app.post('/api/valuations/reopen/:id', verifyToken, verifyPermission('val.reopen'), async (req, res) => {
+
+
+app.post('/api/valuations/reopen/:id', verifyToken, verifyPermission('val.reopen'), async (req: Request, res: Response) => {
     const { id } = req.params;
-    const currentUser = req.user;
+    const currentUser = (req as AuthRequest).user as JwtUserPayload;
     try {
         const db = await getWritePool();
+
         // Verificar ownership para usuarios CAS antes de abrir la transacción
         if (currentUser.casId) {
             const ownerCheck = await db.request()
                 .input('id', sql.Int, Number(id))
                 .query("SELECT RUC FROM [dbo].[GAC_APP_TB_VALORIZACIONES_CIERRES] WHERE IdCierre = @id");
             const closure = ownerCheck.recordset[0];
-            if (!closure)
-                return res.status(404).json({ error: 'Cierre no encontrado' });
+            if (!closure) return res.status(404).json({ error: 'Cierre no encontrado' });
             if (String(closure.RUC || '').trim() !== String(currentUser.casRUC || '').trim()) {
                 return res.status(403).json({ error: 'Acceso denegado' });
             }
         }
+
         const transaction = new sql.Transaction(db);
         await transaction.begin();
+
         try {
             const infoReq = new sql.Request(transaction);
             addInput(infoReq, 'id', sql.Int, Number(id));
+
             // Get closure info for audit
             const closureInfo = await infoReq.query("SELECT Codigo_Valorizacion, RUC, Total_Final FROM [dbo].[GAC_APP_TB_VALORIZACIONES_CIERRES] WHERE IdCierre = @id");
             if (closureInfo.recordset.length === 0) {
                 return res.status(404).json({ error: 'Cierre no encontrado' });
             }
+
             // 1. Delete details
             const delDetReq2 = new sql.Request(transaction);
             addInput(delDetReq2, 'id', sql.Int, Number(id));
             await delDetReq2.query("DELETE FROM [dbo].[GAC_APP_TB_VALORIZACIONES_DETALLE] WHERE IdCierre = @id");
+
             // 2. Delete header
             const delHdrReq = new sql.Request(transaction);
             addInput(delHdrReq, 'id', sql.Int, Number(id));
             await delHdrReq.query("DELETE FROM [dbo].[GAC_APP_TB_VALORIZACIONES_CIERRES] WHERE IdCierre = @id");
+
             await transaction.commit();
+            
             const info = closureInfo.recordset[0];
             await logAudit(req, 'REOPEN_FORTNIGHT', 'VALUATION', info.Codigo_Valorizacion, { id, ruc: info.RUC, total: info.Total_Final });
+
             res.json({ success: true, message: "Quincena reaperturada correctamente. Los tickets vuelven a estar disponibles." });
-        }
-        catch (error) {
+        } catch (error) {
             await transaction.rollback();
             throw error;
         }
-    }
-    catch (err) {
+    } catch (err: unknown) {
         console.error("Error reopening valuation:", err);
         res.status(500).json({ error: safeError(err) });
     }
 });
-app.post('/api/valuations/send-email', verifyToken, async (req, res) => {
+
+app.post('/api/valuations/send-email', verifyToken, async (req: Request, res: Response) => {
     const { to, subject, body, attachmentName, attachmentBase64 } = req.body;
     try {
         const token = await getGraphToken();
         const url = `https://graph.microsoft.com/v1.0/users/${MS_GRAPH_SENDER_EMAIL}/sendMail`;
-        const recipients = to.split(/[,;]/).filter((email) => email.trim() !== "").map((email) => ({
+        
+        const recipients = to.split(/[,;]/).filter((email: string) => email.trim() !== "").map((email: string) => ({
             emailAddress: { address: email.trim() }
         }));
+
         const emailData = {
             message: {
                 subject: subject,
@@ -1965,29 +2079,29 @@ app.post('/api/valuations/send-email', verifyToken, async (req, res) => {
                 ] : []
             }
         };
+
         await axios.post(url, emailData, {
             headers: {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
             }
         });
+
         await logAudit(req, 'EMAIL_SENT', 'VALUATION', attachmentName, { recipients: to });
         res.json({ success: true, message: 'Email enviado correctamente' });
-    }
-    catch (err) {
-        const axiosErr = err;
+    } catch (err: unknown) {
+        const axiosErr = err as { response?: { data?: { error?: { message?: string } } }; message?: string };
         console.error('Error enviando email:', axiosErr.response?.data || (safeError(err)));
         res.status(500).json({ error: safeError(err) });
     }
 });
-app.get('/api/penalties/:ruc', verifyToken, async (req, res) => {
+
+app.get('/api/penalties/:ruc', verifyToken, async (req: Request, res: Response) => {
     const { ruc } = req.params;
-    const currentUser = req.user;
+    const currentUser = (req as AuthRequest).user as JwtUserPayload;
     if (currentUser.casId) {
-        if (!currentUser.casRUC)
-            return res.status(403).json({ error: 'Usuario CAS sin empresa asignada' });
-        if (currentUser.casRUC !== String(ruc).trim())
-            return res.status(403).json({ error: 'Acceso denegado' });
+        if (!currentUser.casRUC) return res.status(403).json({ error: 'Usuario CAS sin empresa asignada' });
+        if (currentUser.casRUC !== String(ruc).trim()) return res.status(403).json({ error: 'Acceso denegado' });
     }
     const { start, end } = req.query;
     try {
@@ -2019,60 +2133,60 @@ app.get('/api/penalties/:ruc', verifyToken, async (req, res) => {
                   )
             `);
         res.json(result.recordset);
-    }
-    catch (err) {
-        res.status(500).json({ error: safeError(err) });
-    }
+    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
-app.get('/api/closures', verifyToken, async (req, res) => {
+
+app.get('/api/closures', verifyToken, async (req: Request, res: Response) => {
     const { start, end } = req.query;
-    const currentUser = req.user;
-    const efectiveRuc = enforceCasRuc(currentUser, req.query.ruc);
+    const currentUser = (req as AuthRequest).user as JwtUserPayload;
+    const efectiveRuc = enforceCasRuc(currentUser, req.query.ruc as string | undefined);
     try {
         const db = await getReadPool();
         const request = db.request();
         let query = `SELECT * FROM [dbo].[GAC_APP_TB_VALORIZACIONES_CIERRES]`;
-        const conditions = [];
+
+        const conditions: string[] = [];
         if (efectiveRuc !== null) {
             conditions.push(`TRIM(RUC) = TRIM(@ruc)`);
             request.input('ruc', sql.VarChar(255), efectiveRuc);
         }
         if (start) {
             conditions.push(`Fecha_Inicio = @start`);
-            request.input('start', sql.VarChar(255), start);
+            request.input('start', sql.VarChar(255), start as string);
         }
         if (end) {
             conditions.push(`Fecha_Fin = @end`);
-            request.input('end', sql.VarChar(255), end);
+            request.input('end', sql.VarChar(255), end as string);
         }
+        
         if (conditions.length > 0) {
             query += ` WHERE ` + conditions.join(' AND ');
         }
+        
         query += ` ORDER BY Cerrado_El DESC`;
         const result = await request.query(query);
         res.json(result.recordset);
-    }
-    catch (err) {
-        res.status(500).json({ error: safeError(err) });
-    }
+    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
-app.get('/api/valuations/details/:id', verifyToken, async (req, res) => {
+
+app.get('/api/valuations/details/:id', verifyToken, async (req: Request, res: Response) => {
     const { id } = req.params;
-    const currentUser = req.user;
+    const currentUser = (req as AuthRequest).user as JwtUserPayload;
     try {
         const db = await getReadPool();
+
         // Verificar ownership del cierre para usuarios CAS
         if (currentUser.casId) {
             const closureCheck = await db.request()
                 .input('id', sql.Int, Number(id))
                 .query("SELECT RUC FROM [dbo].[GAC_APP_TB_VALORIZACIONES_CIERRES] WHERE IdCierre = @id");
             const closure = closureCheck.recordset[0];
-            if (!closure)
-                return res.status(404).json({ error: 'No encontrado' });
+            if (!closure) return res.status(404).json({ error: 'No encontrado' });
             if (String(closure.RUC || '').trim() !== String(currentUser.casRUC || '').trim()) {
                 return res.status(403).json({ error: 'Acceso denegado' });
             }
         }
+
         const result = await db.request()
             .input('id', sql.Int, Number(id))
             .query(`
@@ -2098,14 +2212,13 @@ app.get('/api/valuations/details/:id', verifyToken, async (req, res) => {
                 WHERE d.IdCierre = @id
             `);
         res.json({ tickets: result.recordset });
-    }
-    catch (err) {
-        res.status(500).json({ error: safeError(err) });
-    }
+    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
-app.get('/api/tarifarios/:casId', verifyToken, async (req, res) => {
+
+
+app.get('/api/tarifarios/:casId', verifyToken, async (req: Request, res: Response) => {
     const { casId } = req.params;
-    const currentUser = req.user;
+    const currentUser = (req as AuthRequest).user!;
     if (currentUser.casId !== null && currentUser.casId !== casId) {
         return res.status(403).json({ error: 'Acceso denegado.' });
     }
@@ -2129,14 +2242,12 @@ app.get('/api/tarifarios/:casId', verifyToken, async (req, res) => {
                 ORDER BY t.Categoria, t.Servicio, t.Fecha_inicio DESC
             `);
         res.json(result.recordset);
-    }
-    catch (err) {
-        res.status(500).json({ error: safeError(err) });
-    }
+    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
-app.post('/api/tarifarios/create', verifyToken, verifyPermission('val.tarifario.edit'), async (req, res) => {
+
+app.post('/api/tarifarios/create', verifyToken, verifyPermission('val.tarifario.edit'), async (req: Request, res: Response) => {
     const { empresa, categoria, servicio, importe, fecha_inicio, fecha_fin, estado } = req.body;
-    const currentUser = req.user;
+    const currentUser = (req as AuthRequest).user!;
     try {
         const db = await getWritePool();
         const newId = crypto.randomBytes(4).toString('hex');
@@ -2162,39 +2273,34 @@ app.post('/api/tarifarios/create', verifyToken, verifyPermission('val.tarifario.
                 )
             `);
         res.json({ success: true, id: newId });
-    }
-    catch (err) {
-        res.status(500).json({ error: safeError(err) });
-    }
+    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
+
 // --- MATERIALES ---
-app.get('/api/materials', verifyToken, async (req, res) => {
+app.get('/api/materials', verifyToken, async (req: Request, res: Response) => {
     try {
         const db = await getReadPool();
         const result = await db.request().query("SELECT ID_Material, ID_Externo, Nombre, Categoria, Estado, Sector FROM [dbo].[GAC_APP_TB_MATERIALES] ORDER BY Categoria, Nombre");
         res.json(result.recordset);
-    }
-    catch (err) {
-        res.status(500).json({ error: safeError(err) });
-    }
+    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
-app.get('/api/materials/categories', verifyToken, async (req, res) => {
+
+app.get('/api/materials/categories', verifyToken, async (req: Request, res: Response) => {
     try {
         const db = await getReadPool();
         const result = await db.request().query("SELECT DISTINCT Categoria FROM [dbo].[GAC_APP_TB_MATERIALES] WHERE Categoria IS NOT NULL AND Categoria != '' ORDER BY Categoria");
         res.json(result.recordset.map(r => r.Categoria));
-    }
-    catch (err) {
-        res.status(500).json({ error: safeError(err) });
-    }
+    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
-app.post('/api/materials', verifyToken, async (req, res) => {
+
+app.post('/api/materials', verifyToken, async (req: Request, res: Response) => {
     const { idExterno, nombre, categoria, sector } = req.body;
     try {
         const db = await getWritePool();
         const checkReq = db.request();
         addInput(checkReq, 'ext', sql.VarChar(50), idExterno);
         const check = await checkReq.query("SELECT ID_Material FROM [dbo].[GAC_APP_TB_MATERIALES] WHERE ID_Externo = @ext");
+
         if (check.recordset.length > 0) {
             const id = check.recordset[0].ID_Material;
             const matUpdReq = db.request();
@@ -2204,8 +2310,7 @@ app.post('/api/materials', verifyToken, async (req, res) => {
             addInput(matUpdReq, 'sec', sql.NVarChar(50), sector || 'GAC');
             await matUpdReq.query(`UPDATE [dbo].[GAC_APP_TB_MATERIALES] SET Nombre = @nombre, Categoria = @cat, Sector = @sec WHERE ID_Material = @id`);
             res.json({ success: true, id, action: 'updated' });
-        }
-        else {
+        } else {
             const newId = crypto.randomBytes(4).toString('hex');
             const matInsReq = db.request();
             addInput(matInsReq, 'id', sql.VarChar(8), newId);
@@ -2216,14 +2321,12 @@ app.post('/api/materials', verifyToken, async (req, res) => {
             await matInsReq.query(`INSERT INTO [dbo].[GAC_APP_TB_MATERIALES] (ID_Material, ID_Externo, Nombre, Categoria, Sector, Estado, EstadoEnCatalogo) VALUES (@id, @ext, @nombre, @cat, @sec, 'Activo', 'Publicado')`);
             res.json({ success: true, id: newId, action: 'created' });
         }
-    }
-    catch (err) {
-        res.status(500).json({ error: safeError(err) });
-    }
+    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
-app.post('/api/tarifarios/update', verifyToken, verifyPermission('val.tarifario.edit'), async (req, res) => {
+
+app.post('/api/tarifarios/update', verifyToken, verifyPermission('val.tarifario.edit'), async (req: Request, res: Response) => {
     const { id, importe, estado } = req.body;
-    const currentUser = req.user;
+    const currentUser = (req as AuthRequest).user!;
     try {
         const db = await getWritePool();
         const tarUpdReq = db.request();
@@ -2237,18 +2340,17 @@ app.post('/api/tarifarios/update', verifyToken, verifyPermission('val.tarifario.
                 WHERE ID_Tarifario = @id
             `);
         res.json({ success: true });
-    }
-    catch (err) {
-        res.status(500).json({ error: safeError(err) });
-    }
+    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
-app.post('/api/tarifarios/batch', verifyToken, verifyPermission('val.tarifario.edit'), async (req, res) => {
+
+app.post('/api/tarifarios/batch', verifyToken, verifyPermission('val.tarifario.edit'), async (req: Request, res: Response) => {
     const { casId, rates } = req.body;
-    const currentUser = req.user;
+    const currentUser = (req as AuthRequest).user!;
     try {
         const db = await getWritePool();
         const transaction = new sql.Transaction(db);
         await transaction.begin();
+
         try {
             for (const rate of rates) {
                 const batchReq = transaction.request();
@@ -2278,20 +2380,18 @@ app.post('/api/tarifarios/batch', verifyToken, verifyPermission('val.tarifario.e
                         END
                     `);
             }
+            
             await transaction.commit();
             res.json({ success: true });
-        }
-        catch (error) {
+        } catch (error) {
             await transaction.rollback();
             throw error;
         }
-    }
-    catch (err) {
-        res.status(500).json({ error: safeError(err) });
-    }
+    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
+
 // --- TARIFARIO EXCEPCIONES ---
-app.get('/api/tarifarios/exceptions/:casId', verifyToken, async (req, res) => {
+app.get('/api/tarifarios/exceptions/:casId', verifyToken, async (req: Request, res: Response) => {
     const { casId } = req.params;
     try {
         const db = await getReadPool();
@@ -2299,16 +2399,15 @@ app.get('/api/tarifarios/exceptions/:casId', verifyToken, async (req, res) => {
         addInput(excReq, 'casId', sql.VarChar(50), casId);
         const result = await excReq.query("SELECT * FROM [dbo].[GAC_APP_TB_TARIFARIO_EXCEPCIONES] WHERE Empresa = @casId AND Estado = 'A' ORDER BY Prioridad DESC, Creado_El DESC");
         res.json(result.recordset);
-    }
-    catch (err) {
-        res.status(500).json({ error: safeError(err) });
-    }
+    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
-app.post('/api/tarifarios/exceptions/save', verifyToken, verifyPermission('val.tarifario.edit'), async (req, res) => {
+
+app.post('/api/tarifarios/exceptions/save', verifyToken, verifyPermission('val.tarifario.edit'), async (req: Request, res: Response) => {
     const { id, empresa, nombre, zonasIncluidas, zonasExcluidas, categorias, servicios, importe, prioridad, estado } = req.body;
     try {
         const db = await getWritePool();
         const finalId = id || crypto.randomBytes(4).toString('hex');
+
         const excSaveReq = db.request();
         addInput(excSaveReq, 'id', sql.VarChar(8), finalId);
         addInput(excSaveReq, 'empresa', sql.VarChar(50), empresa);
@@ -2337,12 +2436,10 @@ app.post('/api/tarifarios/exceptions/save', verifyToken, verifyPermission('val.t
                 END
             `);
         res.json({ success: true, id: finalId });
-    }
-    catch (err) {
-        res.status(500).json({ error: safeError(err) });
-    }
+    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
-app.delete('/api/tarifarios/exceptions/:id', verifyToken, verifyPermission('val.tarifario.edit'), async (req, res) => {
+
+app.delete('/api/tarifarios/exceptions/:id', verifyToken, verifyPermission('val.tarifario.edit'), async (req: Request, res: Response) => {
     const { id } = req.params;
     try {
         const db = await getWritePool();
@@ -2350,32 +2447,48 @@ app.delete('/api/tarifarios/exceptions/:id', verifyToken, verifyPermission('val.
         addInput(excDelReq, 'id', sql.VarChar(8), id);
         await excDelReq.query("UPDATE [dbo].[GAC_APP_TB_TARIFARIO_EXCEPCIONES] SET Estado = 'I' WHERE IdExcepcion = @id");
         res.json({ success: true });
-    }
-    catch (err) {
-        res.status(500).json({ error: safeError(err) });
-    }
+    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
+
+// --- TARIFARIO IMPORT ---
+interface TarifarioImportRow {
+    CAS_Nombre: string;
+    Categoria: string;
+    Servicio: string;
+    Fecha_inicio: string;
+    Fecha_fin: string;
+    Importe: string;
+    Estado?: string;
+    CAS_ID?: number;
+    Status?: string;
+    Message?: string;
+    Importe_Actual?: number | null;
+    ID_Tarifario?: string;
+}
+
 // Construye una sola vez el mapa Descripcion(mayus/trim) -> Id de FSM_TipoServicio,
 // para resolver códigos de servicio en memoria en vez de 1 query SQL por fila.
-async function buildServicioCodigoResolver(db) {
+async function buildServicioCodigoResolver(db: sql.ConnectionPool): Promise<(servicio: string) => string> {
     const result = await db.request().query("SELECT Id, Descripcion FROM [SIATC].[FSM_TipoServicio]");
-    const map = new Map();
-    result.recordset.forEach((r) => map.set((r.Descripcion || '').trim().toUpperCase(), r.Id));
-    return (servicio) => {
+    const map = new Map<string, string>();
+    result.recordset.forEach((r: { Id: string; Descripcion: string }) => map.set((r.Descripcion || '').trim().toUpperCase(), r.Id));
+    return (servicio: string) => {
         const trimmed = (servicio || '').trim();
-        if (/^CA_\d+$/i.test(trimmed))
-            return trimmed;
+        if (/^CA_\d+$/i.test(trimmed)) return trimmed;
         return map.get(trimmed.toUpperCase()) || trimmed;
     };
 }
-app.post('/api/tarifarios/import/preview', verifyToken, async (req, res) => {
-    const { rows } = req.body;
+
+app.post('/api/tarifarios/import/preview', verifyToken, async (req: Request, res: Response) => {
+    const { rows } = req.body as { rows: TarifarioImportRow[] };
     try {
         const db = await getWritePool();
         const casResult = await db.request().query("SELECT ID_CAS, Nombre_CAS FROM [dbo].[GAC_APP_TB_CAS]");
-        const casMap = new Map();
-        casResult.recordset.forEach((c) => casMap.set(c.Nombre_CAS.toUpperCase().trim(), c.ID_CAS));
+        const casMap = new Map<string, number>();
+        casResult.recordset.forEach((c: { Nombre_CAS: string; ID_CAS: number }) => casMap.set(c.Nombre_CAS.toUpperCase().trim(), c.ID_CAS));
+
         const resolveServicio = await buildServicioCodigoResolver(db);
+
         // Todas las tarifas activas en una sola consulta, para lookup en memoria
         // en vez de 1 query SQL por fila (evita N+1 con archivos grandes).
         const existingResult = await db.request().query(`
@@ -2383,12 +2496,13 @@ app.post('/api/tarifarios/import/preview', verifyToken, async (req, res) => {
             FROM [dbo].[GAC_APP_TB_TARIFARIO]
             WHERE Estado = 'A'
         `);
-        const existingMap = new Map();
-        existingResult.recordset.forEach((r) => {
+        const existingMap = new Map<string, { ID_Tarifario: string; Importe: number }>();
+        existingResult.recordset.forEach((r: { ID_Tarifario: string; Empresa: number; Categoria: string; Servicio: string; Importe: number }) => {
             const key = `${r.Empresa}|${(r.Categoria || '').trim()}|${(r.Servicio || '').trim()}`;
             existingMap.set(key, { ID_Tarifario: r.ID_Tarifario, Importe: r.Importe });
         });
-        const preview = [];
+
+        const preview: TarifarioImportRow[] = [];
         for (const row of rows) {
             const casName = (row.CAS_Nombre || '').trim().toUpperCase();
             const casId = casMap.get(casName);
@@ -2411,23 +2525,19 @@ app.post('/api/tarifarios/import/preview', verifyToken, async (req, res) => {
             const cur = existingMap.get(key);
             if (!cur) {
                 preview.push({ ...row, CAS_ID: casId, Status: 'INSERT', Message: 'Nueva tarifa', Importe_Actual: null });
-            }
-            else if (Math.abs(cur.Importe - importe) < 0.001) {
+            } else if (Math.abs(cur.Importe - importe) < 0.001) {
                 preview.push({ ...row, CAS_ID: casId, Status: 'OK', Message: 'Sin cambios', Importe_Actual: cur.Importe, ID_Tarifario: cur.ID_Tarifario });
-            }
-            else {
+            } else {
                 preview.push({ ...row, CAS_ID: casId, Status: 'UPDATE', Message: `${cur.Importe} → ${importe}`, Importe_Actual: cur.Importe, ID_Tarifario: cur.ID_Tarifario });
             }
         }
         res.json({ preview });
-    }
-    catch (err) {
-        res.status(500).json({ error: safeError(err) });
-    }
+    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
-app.post('/api/tarifarios/import/confirm', verifyToken, async (req, res) => {
-    const { rows } = req.body;
-    const currentUser = req.user;
+
+app.post('/api/tarifarios/import/confirm', verifyToken, async (req: Request, res: Response) => {
+    const { rows } = req.body as { rows: TarifarioImportRow[] };
+    const currentUser = (req as AuthRequest).user!;
     try {
         const db = await getWritePool();
         const resolveServicio = await buildServicioCodigoResolver(db);
@@ -2439,6 +2549,7 @@ app.post('/api/tarifarios/import/confirm', verifyToken, async (req, res) => {
                 const cat = row.Categoria.trim();
                 const serv = resolveServicio(row.Servicio);
                 const casId = row.CAS_ID;
+
                 if (row.Status === 'INSERT') {
                     // Inactivar registros anteriores con la misma combinación (Empresa + Categoria + Servicio)
                     if (casId != null) {
@@ -2472,8 +2583,7 @@ app.post('/api/tarifarios/import/confirm', verifyToken, async (req, res) => {
                             VALUES (@id, @casId, @cat, @serv, @imp, @fi, @ff, @est, GETDATE(), @user)
                         `);
                     inserted++;
-                }
-                else if (row.Status === 'UPDATE') {
+                } else if (row.Status === 'UPDATE') {
                     // Inactivar otros registros activos con la misma combinación (no el que se va a actualizar)
                     if (casId != null && row.ID_Tarifario) {
                         const deacReq = new sql.Request(transaction);
@@ -2508,26 +2618,25 @@ app.post('/api/tarifarios/import/confirm', verifyToken, async (req, res) => {
             }
             await transaction.commit();
             res.json({ success: true, inserted, updated });
-        }
-        catch (err) {
+        } catch (err) {
             await transaction.rollback();
             throw err;
         }
-    }
-    catch (err) {
-        res.status(500).json({ error: safeError(err) });
-    }
+    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
+
 // --- DASHBOARD ANALYTICS ---
-app.get('/api/dashboard/stats', verifyToken, async (req, res) => {
+app.get('/api/dashboard/stats', verifyToken, async (req: Request, res: Response) => {
     try {
-        const { start, end } = req.query;
-        const currentUser = req.user;
-        const efectiveRuc = enforceCasRuc(currentUser, req.query.ruc);
+        const { start, end } = req.query as { start?: string; end?: string; ruc?: string };
+        const currentUser = (req as AuthRequest).user as JwtUserPayload;
+        const efectiveRuc = enforceCasRuc(currentUser, req.query.ruc as string | undefined);
         const db = await getReadPool();
         const request = db.request();
+
         request.input('start', sql.DateTime, start || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000));
         request.input('end', sql.DateTime, end || new Date());
+
         let query = `
             WITH TicketsFilt AS (
                 SELECT s.Ticket,
@@ -2549,10 +2658,12 @@ app.get('/api/dashboard/stats', verifyToken, async (req, res) => {
                 ) m
                 WHERE 1=1
         `;
+
         if (efectiveRuc !== null && efectiveRuc !== 'all') {
             query += ` AND cas.RUC = @ruc `;
             request.input('ruc', sql.VarChar(255), efectiveRuc);
         }
+
         query += `
             ),
             ResumenServicios AS (
@@ -2637,28 +2748,30 @@ app.get('/api/dashboard/stats', verifyToken, async (req, res) => {
                 ISNULL((SELECT Total FROM ValAdicionales), 0) as Adicionales,
                 ISNULL((SELECT Total FROM ValSanciones), 0) as Sanciones
         `;
+
         const stats = await request.query(query);
         const result = stats.recordset[0];
         const bruto = (result.BaseImporte || 0) + (result.Adicionales || 0);
+
         res.json({
             TotalTickets: result.TotalTickets || 0,
             Bruto: bruto,
             Sanciones: result.Sanciones || 0,
             Neto: bruto - (result.Sanciones || 0)
         });
-    }
-    catch (err) {
-        res.status(500).json({ error: safeError(err) });
-    }
+    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
-app.get('/api/dashboard/trends', verifyToken, async (req, res) => {
+
+app.get('/api/dashboard/trends', verifyToken, async (req: Request, res: Response) => {
     try {
-        const { months = 6 } = req.query;
-        const currentUser = req.user;
-        const efectiveRuc = enforceCasRuc(currentUser, req.query.ruc);
+        const { months = 6 } = req.query as { months?: string; ruc?: string };
+        const currentUser = (req as AuthRequest).user as JwtUserPayload;
+        const efectiveRuc = enforceCasRuc(currentUser, req.query.ruc as string | undefined);
         const db = await getReadPool();
         const request = db.request();
+
         request.input('m', sql.Int, -Number(months));
+
         let query = `
             WITH TicketsFilt AS (
                 SELECT s.Ticket, s.CheckOut, s.IdServicio, s.CodigoExternoEquipo, s.FechaVisita, s.Ciudad, s.Distrito,
@@ -2677,10 +2790,12 @@ app.get('/api/dashboard/trends', verifyToken, async (req, res) => {
                 ) m
                 WHERE 1=1
         `;
+
         if (efectiveRuc !== null && efectiveRuc !== 'all') {
             query += ` AND cas.RUC = @ruc `;
             request.input('ruc', sql.VarChar(255), efectiveRuc);
         }
+
         query += `
             ),
             CalculoTarifas AS (
@@ -2741,22 +2856,23 @@ app.get('/api/dashboard/trends', verifyToken, async (req, res) => {
             LEFT JOIN SancionesMensuales sm ON rm.Anio = sm.Anio AND rm.MesNum = sm.MesNum
             ORDER BY rm.Anio ASC, rm.MesNum ASC
         `;
+
         const trends = await request.query(query);
         res.json(trends.recordset);
-    }
-    catch (err) {
-        res.status(500).json({ error: safeError(err) });
-    }
+    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
-app.get('/api/dashboard/top-cas', verifyToken, async (req, res) => {
+
+app.get('/api/dashboard/top-cas', verifyToken, async (req: Request, res: Response) => {
     try {
-        const { start, end } = req.query;
-        const currentUser = req.user;
-        const efectiveRuc = enforceCasRuc(currentUser, req.query.ruc);
+        const { start, end } = req.query as { start?: string; end?: string; ruc?: string };
+        const currentUser = (req as AuthRequest).user as JwtUserPayload;
+        const efectiveRuc = enforceCasRuc(currentUser, req.query.ruc as string | undefined);
         const db = await getReadPool();
         const request = db.request();
+
         request.input('start', sql.DateTime, start || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000));
         request.input('end', sql.DateTime, end || new Date());
+
         let query = `
             WITH RawTickets AS (
                 SELECT
@@ -2776,10 +2892,12 @@ app.get('/api/dashboard/top-cas', verifyToken, async (req, res) => {
                 JOIN [dbo].[GAC_APP_TB_CAS] cas ON TRIM(pc.Prefix) = TRIM(cas.Abrev_nombre_colaboradores)
                 WHERE 1=1
         `;
+
         if (efectiveRuc !== null && efectiveRuc !== 'all') {
             query += ` AND cas.RUC = @ruc `;
             request.input('ruc', sql.VarChar(255), efectiveRuc);
         }
+
         query += `
             )
             SELECT TOP 5 
@@ -2789,35 +2907,39 @@ app.get('/api/dashboard/top-cas', verifyToken, async (req, res) => {
             GROUP BY Nombre_CAS
             ORDER BY value DESC
         `;
+
         const top = await request.query(query);
         res.json(top.recordset);
-    }
-    catch (err) {
-        res.status(500).json({ error: safeError(err) });
-    }
+    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
+
 // --- C4C INTEGRATION ---
-app.get('/api/c4c/report/:ticketId', verifyToken, async (req, res) => {
+app.get('/api/c4c/report/:ticketId', verifyToken, async (req: Request, res: Response) => {
     try {
         const { ticketId } = req.params;
+
         if (!C4C_BASE_URL || !process.env.C4C_USER || !process.env.C4C_PASSWORD) {
-            return res.status(500).json({
-                error: 'C4C Integration not configured',
-                details: 'Missing C4C_BASE_URL or credentials in environment variables'
+            return res.status(500).json({ 
+                error: 'C4C Integration not configured', 
+                details: 'Missing C4C_BASE_URL or credentials in environment variables' 
             });
         }
+        
         // 1. Find the Service Request
         const searchUrl = `${C4C_BASE_URL}/ServiceRequestCollection?$filter=ID eq '${ticketId}'`;
         const searchResponse = await axios.get(searchUrl, {
             headers: { 'Authorization': `Basic ${C4C_AUTH}` }
         });
+
         const ticket = searchResponse.data.d.results[0];
         if (!ticket) {
             return res.status(404).json({ error: `Ticket ${ticketId} no encontrado en C4C` });
         }
+
         // 2. Fetch Attachments using the ObjectID
         // We try to get from the expanded folder or fetch it directly
         let attachments = ticket.ServiceRequestAttachmentFolder?.results;
+        
         if (!attachments || attachments.length === 0) {
             const attachmentUrl = `${C4C_BASE_URL}/ServiceRequestCollection('${ticket.ObjectID}')/ServiceRequestAttachmentFolder`;
             try {
@@ -2825,41 +2947,49 @@ app.get('/api/c4c/report/:ticketId', verifyToken, async (req, res) => {
                     headers: { 'Authorization': `Basic ${C4C_AUTH}` }
                 });
                 attachments = attachResponse.data.d.results;
-            }
-            catch (attachErr) {
+            } catch (attachErr) {
                 console.warn('Could not fetch attachments directly:', attachErr);
             }
         }
+
         if (!attachments || attachments.length === 0) {
-            return res.status(404).json({
+            return res.status(404).json({ 
                 error: `No se encontraron adjuntos para el ticket ${ticketId}`,
                 details: 'El ticket existe pero no tiene archivos asociados en la pestaña de Adjuntos de C4C.'
             });
         }
+
         // 3. Look for the technical report PDF
         // We prioritize PDFs with "Informe" or "Report" in the name
-        let report = attachments.find((a) => a.MimeType === 'application/pdf' &&
-            (a.Name.toLowerCase().includes('informe') || a.Name.toLowerCase().includes('report')));
+        let report = attachments.find((a: { MimeType: string; Name: string }) =>
+            a.MimeType === 'application/pdf' &&
+            (a.Name.toLowerCase().includes('informe') || a.Name.toLowerCase().includes('report'))
+        );
+
         // Fallback: take any PDF if no specific name match
         if (!report) {
-            report = attachments.find((a) => a.MimeType === 'application/pdf');
+            report = attachments.find((a: { MimeType: string; Name: string }) => a.MimeType === 'application/pdf');
         }
+
         if (!report) {
             return res.status(404).json({ error: `No se encontró un informe en PDF para el ticket ${ticketId}` });
         }
+
         // 4. Fetch the actual PDF binary content
         // In C4C OData, the content is in the /Binary/$value endpoint of the attachment
         const downloadUrl = `${C4C_BASE_URL}/ServiceRequestAttachmentFolderCollection('${report.ObjectID}')/Binary/$value`;
+        
         const pdfResponse = await axios.get(downloadUrl, {
             headers: { 'Authorization': `Basic ${C4C_AUTH}` },
             responseType: 'arraybuffer'
         });
+
         res.setHeader('Content-Type', 'application/pdf');
         res.setHeader('Content-Disposition', `inline; filename="${report.Name}"`);
         res.send(pdfResponse.data);
-    }
-    catch (err) {
-        const axiosErr = err;
+
+    } catch (err: unknown) {
+        const axiosErr = err as { response?: { data?: { error?: { message?: { value?: string } } }; status?: number }; message?: string };
         console.error('C4C Proxy Error:', axiosErr.response?.data || (safeError(err)));
         res.status(axiosErr.response?.status || 500).json({
             error: 'Failed to retrieve report from C4C',
@@ -2867,27 +2997,31 @@ app.get('/api/c4c/report/:ticketId', verifyToken, async (req, res) => {
         });
     }
 });
+
 // --- CONFIG & MANAGEMENT (Standardized) ---
+
 // MANAGEMENTS
-app.get('/api/managements', verifyToken, async (req, res) => {
+app.get('/api/managements', verifyToken, async (req: Request, res: Response) => {
     try {
         const db = await getReadPool();
         const result = await db.request().query('SELECT Id as id, Name as name, Code as code FROM EBM.Managements');
         res.json(result.recordset);
-    }
-    catch (err) {
+    } catch (err: unknown) {
         res.status(500).json({ error: safeError(err) });
     }
 });
+
 // PREFERENCES
-app.get('/api/config/preferences', verifyToken, (req, res) => {
+app.get('/api/config/preferences', verifyToken, (req: Request, res: Response) => {
     res.json({});
 });
-app.post('/api/config/preferences', verifyToken, (req, res) => {
+
+app.post('/api/config/preferences', verifyToken, (req: Request, res: Response) => {
     res.json({ success: true });
 });
+
 // USERS
-app.get('/api/users', verifyToken, verifyPermission('val.config.users'), async (req, res) => {
+app.get('/api/users', verifyToken, verifyPermission('val.config.users'), async (req: Request, res: Response) => {
     try {
         const db = await getReadPool();
         const result = await db.request().query(`
@@ -2898,19 +3032,19 @@ app.get('/api/users', verifyToken, verifyPermission('val.config.users'), async (
             LEFT JOIN EBM.Roles r ON u.RoleId = r.Id
         `);
         res.json(result.recordset);
-    }
-    catch (err) {
-        res.status(500).json({ error: safeError(err) });
-    }
+    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
-app.post('/api/users', verifyToken, verifyPermission('val.config.users'), async (req, res) => {
+
+app.post('/api/users', verifyToken, verifyPermission('val.config.users'), async (req: Request, res: Response) => {
     try {
         const { full_name, username, email, password_hash, role_id, apps, avatar_url } = req.body;
         const db = await getWritePool();
+
         const userChkReq = db.request();
         addInput(userChkReq, 'u', sql.NVarChar(255), username);
         addInput(userChkReq, 'e', sql.NVarChar(255), email);
         const checkResult = await userChkReq.query("SELECT Id, Apps FROM EBM.Users WHERE Username = @u OR Email = @e");
+
         if (checkResult.recordset.length > 0) {
             // UPSERT/REACTIVATE
             const existing = checkResult.recordset[0];
@@ -2925,9 +3059,11 @@ app.post('/api/users', verifyToken, verifyPermission('val.config.users'), async 
             await logAudit(req, 'REACTIVATE', 'USERS', username, { apps: mergedApps });
             return res.json({ id: existing.Id, username });
         }
+
         const salt = await bcrypt.genSalt(10);
         const hashed = await bcrypt.hash(password_hash || 'temp1234', salt);
         const appsInsert = cleanApps(apps || APP_IDENTIFIER);
+
         const userInsReq = db.request();
         addInput(userInsReq, 'name', sql.NVarChar(255), full_name);
         addInput(userInsReq, 'u', sql.NVarChar(255), username);
@@ -2943,25 +3079,25 @@ app.post('/api/users', verifyToken, verifyPermission('val.config.users'), async 
             `);
         await logAudit(req, 'CREATE', 'USERS', username, { apps: appsInsert });
         res.status(201).json(result.recordset[0]);
-    }
-    catch (err) {
-        res.status(500).json({ error: safeError(err) });
-    }
+    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
+
 // ─── Perfil propio (autoservicio) ────────────────────────────────────────────
 // Solo verifyToken -- cualquier usuario autenticado puede guardar SU PROPIO
 // avatar y/o contraseña. A diferencia de PUT /api/users/:id (abajo, gateado
 // por val.config.users), nunca acepta un id por parametro: siempre opera sobre
 // (req as any).user.id, y solo toca AvatarUrl/PasswordHash -- nunca
 // full_name/username/email/role_id/management_id/apps de nadie.
-app.put('/api/profile', verifyToken, async (req, res) => {
+app.put('/api/profile', verifyToken, async (req: any, res: Response) => { // eslint-disable-line @typescript-eslint/no-explicit-any
     try {
         const userId = req.user.id;
         const { avatar_url, password_hash } = req.body;
+
         const db = await getWritePool();
         const request = db.request();
         addInput(request, 'id', sql.UniqueIdentifier, userId);
-        const sets = [];
+
+        const sets: string[] = [];
         if (avatar_url !== undefined) {
             addInput(request, 'avatarUrl', sql.NVarChar(sql.MAX), avatar_url || null);
             sets.push('AvatarUrl = @avatarUrl');
@@ -2972,26 +3108,28 @@ app.put('/api/profile', verifyToken, async (req, res) => {
             addInput(request, 'password', sql.NVarChar(255), hashedPwd);
             sets.push('PasswordHash = @password', 'RequiresPasswordChange = 0');
         }
+
         if (sets.length > 0) {
             await request.query(`UPDATE EBM.Users SET ${sets.join(', ')} WHERE Id = @id`);
         }
+
         const selectRequest = db.request();
         addInput(selectRequest, 'id', sql.UniqueIdentifier, userId);
         const result = await selectRequest.query('SELECT FullName as full_name, AvatarUrl as avatar_url, CAST(RequiresPasswordChange AS BIT) as requires_password_change FROM EBM.Users WHERE Id = @id');
-        if (result.recordset.length === 0)
-            return res.status(404).json({ error: 'Usuario no encontrado' });
+        if (result.recordset.length === 0) return res.status(404).json({ error: 'Usuario no encontrado' });
         res.json(result.recordset[0]);
-    }
-    catch (err) {
+    } catch (err: unknown) {
         res.status(500).json({ error: safeError(err) });
     }
 });
-app.put('/api/users/:id', verifyToken, verifyPermission('val.config.users'), async (req, res) => {
+
+app.put('/api/users/:id', verifyToken, verifyPermission('val.config.users'), async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
         const { full_name, username, email, role_id, is_active, apps, avatar_url } = req.body;
         const db = await getWritePool();
         const appsSave = cleanApps(apps);
+
         const userUpdReq = db.request();
         addInput(userUpdReq, 'id', sql.UniqueIdentifier, id);
         addInput(userUpdReq, 'name', sql.NVarChar(255), full_name);
@@ -3002,54 +3140,51 @@ app.put('/api/users/:id', verifyToken, verifyPermission('val.config.users'), asy
         addInput(userUpdReq, 'apps', sql.NVarChar(500), appsSave);
         addInput(userUpdReq, 'photo', sql.NVarChar(500), avatar_url ?? null);
         await userUpdReq.query(`UPDATE EBM.Users SET FullName = @name, Username = @u, Email = @e, RoleId = @rid, IsActive = @active, Apps = @apps, AvatarUrl = @photo WHERE Id = @id`);
-        await logAudit(req, 'UPDATE', 'USERS', id, { apps: appsSave });
+        
+        await logAudit(req, 'UPDATE', 'USERS', id as string, { apps: appsSave });
         res.json({ success: true });
-    }
-    catch (err) {
-        res.status(500).json({ error: safeError(err) });
-    }
+    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
-app.delete('/api/users/:id', verifyToken, verifyPermission('val.config.users'), async (req, res) => {
+
+app.delete('/api/users/:id', verifyToken, verifyPermission('val.config.users'), async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
         const db = await getWritePool();
         const userDelReq = db.request();
         addInput(userDelReq, 'id', sql.UniqueIdentifier, id);
         await userDelReq.query("UPDATE EBM.Users SET IsActive = 0 WHERE Id = @id");
-        await logAudit(req, 'DEACTIVATE', 'USERS', id, {});
+        await logAudit(req, 'DEACTIVATE', 'USERS', id as string, {});
         res.status(204).send();
-    }
-    catch (err) {
-        res.status(500).json({ error: safeError(err) });
-    }
+    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
+
 // ROLES
-app.get('/api/roles', verifyToken, verifyPermission('val.config.roles'), async (req, res) => {
+app.get('/api/roles', verifyToken, verifyPermission('val.config.roles'), async (req: Request, res: Response) => {
     try {
         const db = await getReadPool();
         const roles = (await db.request().query("SELECT Id as id, Name as name, Apps as apps FROM EBM.Roles")).recordset;
         const allPerms = (await db.request().query("SELECT RoleId, Permission FROM EBM.RolePermissions")).recordset;
-        const result = roles.map((r) => ({
+        const result = roles.map((r: { id: string; name: string; apps: string }) => ({
             ...r,
-            permissions: allPerms.filter((p) => p.RoleId === r.id).map((p) => p.Permission)
+            permissions: allPerms.filter((p: { RoleId: string; Permission: string }) => p.RoleId === r.id).map((p: { RoleId: string; Permission: string }) => p.Permission)
         }));
         res.json(result);
-    }
-    catch (err) {
-        res.status(500).json({ error: safeError(err) });
-    }
+    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
-app.post('/api/roles', verifyToken, verifyPermission('val.config.roles'), async (req, res) => {
+
+app.post('/api/roles', verifyToken, verifyPermission('val.config.roles'), async (req: Request, res: Response) => {
     try {
         const { name, permissions, apps } = req.body;
         const db = await getWritePool();
         const appsSave = cleanApps(apps || APP_IDENTIFIER);
         const roleId = crypto.randomUUID().toUpperCase();
+
         const roleInsReq = db.request();
         addInput(roleInsReq, 'id', sql.UniqueIdentifier, roleId);
         addInput(roleInsReq, 'name', sql.NVarChar(100), name);
         addInput(roleInsReq, 'apps', sql.NVarChar(500), appsSave);
         await roleInsReq.query("INSERT INTO EBM.Roles (Id, Name, Apps) VALUES (@id, @name, @apps)");
+
         if (permissions && permissions.length > 0) {
             for (const p of permissions) {
                 const permInsReq = db.request();
@@ -3060,22 +3195,22 @@ app.post('/api/roles', verifyToken, verifyPermission('val.config.roles'), async 
         }
         await logAudit(req, 'CREATE', 'ROLES', name, { apps: appsSave });
         res.status(201).json({ id: roleId, name, permissions });
-    }
-    catch (err) {
-        res.status(500).json({ error: safeError(err) });
-    }
+    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
-app.put('/api/roles/:id', verifyToken, verifyPermission('val.config.roles'), async (req, res) => {
+
+app.put('/api/roles/:id', verifyToken, verifyPermission('val.config.roles'), async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
         const { name, permissions, apps } = req.body;
         const db = await getWritePool();
         const appsSave = cleanApps(apps || APP_IDENTIFIER);
+
         const roleUpdReq = db.request();
         addInput(roleUpdReq, 'id', sql.UniqueIdentifier, id);
         addInput(roleUpdReq, 'name', sql.NVarChar(100), name);
         addInput(roleUpdReq, 'apps', sql.NVarChar(500), appsSave);
         await roleUpdReq.query("UPDATE EBM.Roles SET Name = @name, Apps = @apps WHERE Id = @id");
+
         const delPermReq = db.request();
         addInput(delPermReq, 'rid', sql.UniqueIdentifier, id);
         await delPermReq.query("DELETE FROM EBM.RolePermissions WHERE RoleId = @rid");
@@ -3089,15 +3224,14 @@ app.put('/api/roles/:id', verifyToken, verifyPermission('val.config.roles'), asy
         }
         await logAudit(req, 'UPDATE', 'ROLES', name, { apps: appsSave });
         res.json({ id, name, permissions });
-    }
-    catch (err) {
-        res.status(500).json({ error: safeError(err) });
-    }
+    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
-app.delete('/api/roles/:id', verifyToken, verifyPermission('val.config.roles'), async (req, res) => {
+
+app.delete('/api/roles/:id', verifyToken, verifyPermission('val.config.roles'), async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
         const db = await getWritePool();
+        
         // Check if users are assigned to this role
         const usersChkReq = db.request();
         addInput(usersChkReq, 'rid', sql.UniqueIdentifier, id);
@@ -3105,22 +3239,25 @@ app.delete('/api/roles/:id', verifyToken, verifyPermission('val.config.roles'), 
         if (usersInRole.recordset[0].count > 0) {
             return res.status(400).json({ error: "No se puede eliminar el perfil porque tiene usuarios asignados." });
         }
+
         const delRolePermReq = db.request();
         addInput(delRolePermReq, 'rid', sql.UniqueIdentifier, id);
         await delRolePermReq.query("DELETE FROM EBM.RolePermissions WHERE RoleId = @rid");
+
         const delRoleReq = db.request();
         addInput(delRoleReq, 'id', sql.UniqueIdentifier, id);
         await delRoleReq.query("DELETE FROM EBM.Roles WHERE Id = @id");
-        await logAudit(req, 'DELETE', 'ROLES', id, {});
+        
+        await logAudit(req, 'DELETE', 'ROLES', id as string, {});
         res.status(204).send();
-    }
-    catch (err) {
-        res.status(500).json({ error: safeError(err) });
-    }
+    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
+
+
 // AUDIT LOGS: solo servia a la pagina local AuditLogPage.tsx (eliminada) -- la escritura de
 // auditoria sigue viva via logAudit(), sin relacion con este endpoint de lectura.
-app.get('/api/diagnose/redis', async (req, res) => {
+
+app.get('/api/diagnose/redis', async (req: Request, res: Response) => {
     try {
         const secret = req.query.secret;
         if (secret !== 'redis_debug_2026') {
@@ -3130,18 +3267,19 @@ app.get('/api/diagnose/redis', async (req, res) => {
         const port = process.env.REDIS_PORT || '6379';
         const username = process.env.REDIS_USERNAME || 'not set';
         const password = process.env.REDIS_PASSWORD || '';
-        const mask = (str) => {
-            if (!str)
-                return 'empty/not set';
-            if (str.length <= 4)
-                return '*'.repeat(str.length);
+        
+        const mask = (str: string) => {
+            if (!str) return 'empty/not set';
+            if (str.length <= 4) return '*'.repeat(str.length);
             return str.substring(0, 2) + '*'.repeat(str.length - 4) + str.substring(str.length - 2);
         };
-        const logs = [];
+
+        const logs: string[] = [];
         logs.push(`Host: ${host}`);
         logs.push(`Port: ${port}`);
         logs.push(`Username: ${username}`);
         logs.push(`Password (Masked): ${mask(password)} (Length: ${password.length})`);
+        
         logs.push('Attempting test connection to Redis...');
         const testClient = new Redis({
             host: host,
@@ -3151,14 +3289,14 @@ app.get('/api/diagnose/redis', async (req, res) => {
             lazyConnect: true,
             connectTimeout: 5000,
         });
+
         try {
             await testClient.connect();
             logs.push('Test connection status: CONNECTED');
             const pingRes = await testClient.ping();
             logs.push(`Ping response: ${pingRes}`);
             await testClient.disconnect();
-        }
-        catch (connErr) {
+        } catch (connErr: unknown) {
             const msg = connErr instanceof Error ? connErr.message : String(connErr);
             const stack = connErr instanceof Error ? connErr.stack : '';
             logs.push(`Connection failed: ${msg}`);
@@ -3166,20 +3304,24 @@ app.get('/api/diagnose/redis', async (req, res) => {
                 logs.push(`Stack: ${stack}`);
             }
         }
+
         res.json({ success: true, logs });
-    }
-    catch (err) {
+    } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
         const stack = err instanceof Error ? err.stack : '';
         res.status(500).json({ error: msg, stack: stack });
     }
 });
+
 // --- SERVE STATIC FILES (PROD) ---
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 app.use(express.static(path.join(__dirname, '..', 'dist')));
-let appMeta = null;
-async function fetchAppMeta() {
+
+interface AppMeta { label: string; logoUrl: string; url: string; }
+let appMeta: AppMeta | null = null;
+
+async function fetchAppMeta(): Promise<void> {
     try {
         const db = await getReadPool();
         const code = process.env.APP_CODE || APP_IDENTIFIER;
@@ -3191,12 +3333,14 @@ async function fetchAppMeta() {
             appMeta = { label: row.Label, logoUrl: row.LogoUrl, url: row.Url };
             console.log(`[AppConfig] Loaded meta for ${code}: ${appMeta.label}`);
         }
-    }
-    catch (err) {
+    } catch (err: unknown) {
         console.warn('[AppConfig] Could not fetch app meta from DB:', safeError(err));
     }
 }
-async function fetchSessionConfig() {
+
+interface SessionConfig { rateLimitMaxAttempts: number; rateLimitWindowMinutes: number; }
+
+async function fetchSessionConfig(): Promise<SessionConfig> {
     try {
         const db = await getReadPool();
         const r = db.request();
@@ -3206,14 +3350,14 @@ async function fetchSessionConfig() {
             const row = result.recordset[0];
             return { rateLimitMaxAttempts: row.RateLimitMaxAttempts, rateLimitWindowMinutes: row.RateLimitWindowMinutes };
         }
-    }
-    catch (err) {
+    } catch (err: unknown) {
         console.warn('[SessionConfig] Could not fetch from DB, using defaults:', safeError(err));
     }
     return { rateLimitMaxAttempts: 10, rateLimitWindowMinutes: 15 };
 }
+
 // SPA Fallback: Serve index.html for any remaining routes
-app.use((req, res) => {
+app.use((req: Request, res: Response) => {
     const indexPath = path.join(__dirname, '..', 'dist', 'index.html');
     try {
         let html = fs.readFileSync(indexPath, 'utf-8');
@@ -3235,22 +3379,25 @@ app.use((req, res) => {
         }
         res.setHeader('Content-Type', 'text/html');
         res.send(html);
-    }
-    catch {
+    } catch {
         res.sendFile(indexPath);
     }
 });
+
 if (!process.env.JWT_SECRET) {
     console.error('CRITICAL: JWT_SECRET environment variable is missing. Server will not start.');
     process.exit(1);
 }
+
 if (process.env.NODE_ENV === 'production' && !(process.env.ALLOWED_ORIGINS || '').trim()) {
     console.warn('⚠️  WARNING: ALLOWED_ORIGINS is not set. CORS will block all cross-origin requests in production.');
 }
-app.use((err, req, res, _next) => {
+
+app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
     console.error(`[ERROR] ${sanitizeLog(req.method)} ${sanitizeLog(req.path)}:`, err);
     res.status(500).json({ error: safeError(err) });
 });
+
 app.listen(port, () => {
     console.log(`Server Valorizaciones running on http://localhost:${port}`);
     // Etapa 6 -- dispara runMigrations() via el pool admin al arrancar, independientemente
@@ -3264,7 +3411,7 @@ app.listen(port, () => {
             skipSuccessfulRequests: true,
             keyGenerator: authKeyGenerator,
             message: { error: `Too many login attempts, please try again after ${cfg.rateLimitWindowMinutes} minutes.` },
-            store: new RedisStore({ sendCommand: (...args) => getRedisClient().call(...args), prefix: 'rl:val:auth:' }), // eslint-disable-line @typescript-eslint/no-explicit-any
+            store: new RedisStore({ sendCommand: (...args: string[]) => (getRedisClient() as any).call(...args) as any, prefix: 'rl:val:auth:' }), // eslint-disable-line @typescript-eslint/no-explicit-any
         });
         console.log(`[SessionConfig] Auth limiter: ${cfg.rateLimitMaxAttempts} intentos / ${cfg.rateLimitWindowMinutes} min`);
     }).catch(err => console.error('[SessionConfig] Failed to load rate limit config:', err));

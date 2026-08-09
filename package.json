@@ -7,7 +7,7 @@
     "prepare": "bash install-hooks.sh || true",
     "dev": "vite",
     "build": "vite build && tsc -p tsconfig.server.json",
-    "start": "node dist-server/server.js",
+    "start": "node dist-server/index.js",
     "lint": "eslint .",
     "preview": "vite preview"
   },
