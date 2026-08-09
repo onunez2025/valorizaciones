@@ -30,7 +30,32 @@ const JWT_SECRET = process.env.JWT_SECRET || '';
 // Fase 20: dominio de la cookie SSO compartida configurable por entorno. Sin definir, el
 // comportamiento es idéntico al de siempre (.siatc.cloud) -- producción real no cambia.
 // En QA se configura como .qa.siatc.cloud para aislar la sesión compartida de producción.
-const COOKIE_DOMAIN = process.env.COOKIE_DOMAIN || '.siatc.cloud';
+/**
+ * Dominio con el que se escribe la cookie de sesion SSO, derivado del HOST DE LA PETICION.
+ *
+ * Va aqui y no en un modulo compartido porque en esta app el servidor es un unico archivo; las
+ * apps con `server/routes/` usan `server/lib/dominioCookie.ts`, con esta misma logica.
+ *
+ * `process.env.COOKIE_DOMAIN` sigue mandando si esta definida: se conserva como anulacion manual.
+ * Pero depender SOLO de ella significa que basta olvidarla en un despliegue para que QA vuelva a
+ * escribir la cookie en el dominio de produccion, en silencio y sin error. Eso es lo que pasaba.
+ *
+ * EL ORDEN IMPORTA: "flow.qa.siatc.cloud" tambien termina en ".siatc.cloud", asi que preguntar
+ * primero por produccion da verdadero en QA y no separa nada. QA se comprueba PRIMERO.
+ */
+function dominioCookie(req) {
+    if (process.env.COOKIE_DOMAIN)
+        return process.env.COOKIE_DOMAIN;
+    const reenviado = req.headers['x-forwarded-host'];
+    const original = req.headers.host;
+    const host = String((typeof reenviado === 'string' ? reenviado : original) ?? '');
+    const nombre = host.split(':')[0].toLowerCase();
+    if (nombre.endsWith('.qa.siatc.cloud'))
+        return '.qa.siatc.cloud';
+    if (nombre.endsWith('.siatc.cloud'))
+        return '.siatc.cloud';
+    return undefined;
+}
 if (process.env.NODE_ENV === 'production' && !JWT_SECRET) {
     console.error('CRITICAL FATAL ERROR: JWT_SECRET environment variable is not set. Server cannot start securely.');
     process.exit(1);
@@ -306,9 +331,13 @@ async function isSessionInvalidated(userId, iat) {
 // antes de la siguiente navegación -- evita el bucle de recarga infinita que eso puede causar
 // (ver bitácora Fase 20: la limpieza vía document.cookie + window.location.href en el mismo
 // tick no siempre alcanza a comprometerse antes de que la página navegue).
-function clearSharedCookie(res) {
-    if (process.env.NODE_ENV === 'production') {
-        res.cookie('token', '', { domain: COOKIE_DOMAIN, maxAge: 0, httpOnly: false, secure: true, sameSite: 'lax', path: '/' });
+function clearSharedCookie(res, req) {
+    // La cookie compartida se escribe segun el DOMINIO de la peticion, no segun NODE_ENV: esa
+    // variable puede faltar en el despliegue sin que nada avise, y entonces la cookie no se
+    // escribe nunca -- se entra a la app pero el salto a cualquier otra pide login.
+    const dominioCompartido = req ? dominioCookie(req) : process.env.COOKIE_DOMAIN?.trim();
+    if (dominioCompartido) {
+        res.cookie('token', '', { domain: dominioCompartido, maxAge: 0, httpOnly: false, secure: true, sameSite: 'lax', path: '/' });
     }
 }
 // --- SECURITY HELPERS (ver CLAUDE.md) ---
@@ -321,11 +350,11 @@ const verifyToken = async (req, res, next) => {
     try {
         const decoded = jwt.verify(token, JWT_SECRET);
         if (await isTokenBlacklisted(token)) {
-            clearSharedCookie(res);
+            clearSharedCookie(res, req);
             return res.status(401).json({ error: 'Sesión cerrada. Inicia sesión nuevamente.' });
         }
         if (await isSessionInvalidated(decoded.id, decoded.iat)) {
-            clearSharedCookie(res);
+            clearSharedCookie(res, req);
             return res.status(401).json({ error: 'Sesión cerrada. Inicia sesión nuevamente.' });
         }
         req.user = decoded;
@@ -530,8 +559,12 @@ app.post('/api/auth/login', async (req, res) => {
         const warningMinutes = user.role_warning ?? appCfg?.DefaultWarningBeforeMinutes ?? 2;
         const token = jwt.sign({ id: user.Id, username: user.Username, role: user.RoleName, perms, casId: user.cas_id || null, casRUC: user.cas_ruc || null }, JWT_SECRET, { expiresIn: '12h' });
         const ssoToken = jwt.sign({ id: user.Id, role: user.RoleName, role_name: user.RoleName, username: user.Username, apps: user.Apps || '', casId: user.cas_id || null }, JWT_SECRET, { expiresIn: '12h' });
-        if (process.env.NODE_ENV === 'production') {
-            res.cookie('token', ssoToken, { domain: COOKIE_DOMAIN, maxAge: 12 * 60 * 60 * 1000, httpOnly: false, secure: true, sameSite: 'lax', path: '/' });
+        // La cookie compartida se escribe segun el DOMINIO de la peticion, no segun NODE_ENV: esa
+        // variable puede faltar en el despliegue sin que nada avise, y entonces la cookie no se
+        // escribe nunca -- se entra a la app pero el salto a cualquier otra pide login.
+        const dominioCompartido = dominioCookie(req);
+        if (dominioCompartido) {
+            res.cookie('token', ssoToken, { domain: dominioCompartido, maxAge: 12 * 60 * 60 * 1000, httpOnly: false, secure: true, sameSite: 'lax', path: '/' });
         }
         res.json({ token, user: { id: user.Id, username: user.Username, full_name: user.FullName, email: user.Email, role_name: user.RoleName, management_id: user.ManagementId, management_name: user.ManagementName, avatar_url: user.AvatarUrl, permissions: perms, apps: user.Apps, requires_password_change: user.RequiresPasswordChange === 1 }, sessionConfig: { timeoutMinutes, warningMinutes } });
     }
@@ -549,7 +582,7 @@ app.post('/api/auth/logout', verifyToken, async (req, res) => {
     // Borrar la cookie compartida aquí mismo (Set-Cookie de la respuesta) en vez de depender
     // solo del document.cookie del cliente, que puede no alcanzar a comprometerse antes de que
     // la página navegue tras el logout.
-    clearSharedCookie(res);
+    clearSharedCookie(res, req);
     res.json({ message: 'Sesión cerrada correctamente.' });
 });
 app.get('/api/auth/me', verifyToken, async (req, res) => {
@@ -585,8 +618,12 @@ app.get('/api/auth/me', verifyToken, async (req, res) => {
         // Emitir token fresco con casRUC para soporte SSO cross-app
         const freshToken = jwt.sign({ id: user.Id, username: user.Username, role: user.RoleName, perms, casId: user.cas_id || null, casRUC: user.cas_ruc || null, ...(ssoPilot ? { ssoPilot: true } : {}) }, JWT_SECRET, { expiresIn: '12h' });
         const ssoTokenMe = jwt.sign({ id: user.Id, role: user.RoleName, role_name: user.RoleName, username: user.Username, apps: user.Apps || '', casId: user.cas_id || null }, JWT_SECRET, { expiresIn: '12h' });
-        if (process.env.NODE_ENV === 'production' && !ssoPilot) {
-            res.cookie('token', ssoTokenMe, { domain: COOKIE_DOMAIN, maxAge: 12 * 60 * 60 * 1000, httpOnly: false, secure: true, sameSite: 'lax', path: '/' });
+        // La cookie compartida se escribe segun el DOMINIO de la peticion, no segun NODE_ENV: esa
+        // variable puede faltar en el despliegue sin que nada avise, y entonces la cookie no se
+        // escribe nunca -- se entra a la app pero el salto a cualquier otra pide login.
+        const dominioCompartido = dominioCookie(req);
+        if (dominioCompartido && !ssoPilot) {
+            res.cookie('token', ssoTokenMe, { domain: dominioCompartido, maxAge: 12 * 60 * 60 * 1000, httpOnly: false, secure: true, sameSite: 'lax', path: '/' });
         }
         res.json({ token: freshToken, user: { id: user.Id, username: user.Username, full_name: user.FullName, email: user.Email, role_name: user.RoleName, management_id: user.ManagementId, management_name: user.ManagementName, avatar_url: user.AvatarUrl, permissions: perms, apps: user.Apps, casId: user.cas_id || null, casRUC: user.cas_ruc || null } });
     }
@@ -654,11 +691,12 @@ app.get('/api/auth/sso/callback', async (req, res) => {
             const token = jwt.sign({
                 id: user.id, username: user.username, role: user.role_name, perms,
                 casId: user.cas_id || null, casRUC: user.cas_ruc || null,
-                // Fase 20: ssoPilot solo se firma si no hay un COOKIE_DOMAIN propio configurado (ej.
-                // producción real todavía sin dominio QA aislado). Con COOKIE_DOMAIN configurada
-                // (entorno QA, dominio .qa.siatc.cloud), se omite para permitir la cookie compartida
-                // real entre las 10 apps QA sin arriesgar sesiones de producción.
-                ...(process.env.COOKIE_DOMAIN ? {} : { ssoPilot: true }),
+                // El flag `ssoPilot` marca que la sesion sale del piloto de Casdoor y NO debe
+                // compartirse. Se omite en QA, donde el dominio de cookie esta aislado y el SSO
+                // cruzado entre las apps de QA es justamente lo que se quiere probar.
+                // El chequeo era `process.env.COOKIE_DOMAIN`: bastaba olvidar esa variable en un
+                // despliegue para que QA se comportara como produccion, en silencio.
+                ...(dominioCookie(req) === '.qa.siatc.cloud' ? {} : { ssoPilot: true }),
             }, JWT_SECRET, { expiresIn: '12h' });
             const params = new URLSearchParams({ ssoToken: token });
             return res.redirect(`${FRONTEND_URL}/sso-login?${params.toString()}`);
@@ -701,17 +739,29 @@ app.get('/api/auth/sso/callback', async (req, res) => {
             return redirectToSsoStatus(res, 'rejected', existing.RejectionReason, retriesLeft);
         }
         // 3. Crear la solicitud nueva
-        await db.request()
-            .input('email', sql.VarChar(255), email)
-            .input('fullName', sql.VarChar(200), profile.name || profile.preferred_username || null)
-            .input('provider', sql.VarChar(50), 'sso')
-            .input('casdoorUserId', sql.VarChar(100), profile.sub || '')
-            .input('appCode', sql.VarChar(20), SSO_APP_CODE)
-            .query(`
-                INSERT INTO EBM.PendingSSORequests (Email, FullName, Provider, CasdoorUserId, AppCode)
-                VALUES (@email, @fullName, @provider, @casdoorUserId, @appCode)
-            `);
-        await sendSsoPendingEmail(email, SSO_APP_LABEL);
+        try {
+            await db.request()
+                .input('email', sql.VarChar(255), email)
+                .input('fullName', sql.VarChar(200), profile.name || profile.preferred_username || null)
+                .input('provider', sql.VarChar(50), 'sso')
+                .input('casdoorUserId', sql.VarChar(100), profile.sub || '')
+                .input('appCode', sql.VarChar(20), SSO_APP_CODE)
+                .query(`
+                    INSERT INTO EBM.PendingSSORequests (Email, FullName, Provider, CasdoorUserId, AppCode)
+                    VALUES (@email, @fullName, @provider, @casdoorUserId, @appCode)
+                `);
+            await sendSsoPendingEmail(email, SSO_APP_LABEL);
+        }
+        catch (insertErr) {
+            // Condición de carrera: dos requests casi simultáneas (doble click, doble pestaña)
+            // pueden pasar el chequeo de "no existe" de arriba antes de que cualquiera inserte.
+            // El índice único filtrado UX_PendingSSORequests_Email_Pending (Email, WHERE
+            // Status='pending') rechaza la segunda con "duplicate key" -- se trata como éxito
+            // (alguien más ya ganó la carrera y creó la fila), no como error real.
+            const msg = insertErr?.message || '';
+            if (!msg.includes('duplicate key'))
+                throw insertErr;
+        }
         return redirectToSsoStatus(res, 'pending');
     }
     catch (error) {

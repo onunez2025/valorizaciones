@@ -349,8 +349,12 @@ async function isSessionInvalidated(userId: string, iat: number | undefined): Pr
 // (ver bitácora Fase 20: la limpieza vía document.cookie + window.location.href en el mismo
 // tick no siempre alcanza a comprometerse antes de que la página navegue).
 function clearSharedCookie(res: Response, req?: Request): void {
-    if (process.env.NODE_ENV === 'production') {
-        res.cookie('token', '', { domain: req ? dominioCookie(req) : process.env.COOKIE_DOMAIN, maxAge: 0, httpOnly: false, secure: true, sameSite: 'lax', path: '/' });
+    // La cookie compartida se escribe segun el DOMINIO de la peticion, no segun NODE_ENV: esa
+    // variable puede faltar en el despliegue sin que nada avise, y entonces la cookie no se
+    // escribe nunca -- se entra a la app pero el salto a cualquier otra pide login.
+    const dominioCompartido = req ? dominioCookie(req) : process.env.COOKIE_DOMAIN?.trim();
+    if (dominioCompartido) {
+        res.cookie('token', '', { domain: dominioCompartido, maxAge: 0, httpOnly: false, secure: true, sameSite: 'lax', path: '/' });
     }
 }
 
@@ -585,8 +589,12 @@ app.post('/api/auth/login', async (req: Request, res: Response) => {
             { id: user.Id, role: user.RoleName, role_name: user.RoleName, username: user.Username, apps: user.Apps || '', casId: user.cas_id || null },
             JWT_SECRET, { expiresIn: '12h' }
         );
-        if (process.env.NODE_ENV === 'production') {
-            res.cookie('token', ssoToken, { domain: dominioCookie(req), maxAge: 12 * 60 * 60 * 1000, httpOnly: false, secure: true, sameSite: 'lax', path: '/' });
+        // La cookie compartida se escribe segun el DOMINIO de la peticion, no segun NODE_ENV: esa
+        // variable puede faltar en el despliegue sin que nada avise, y entonces la cookie no se
+        // escribe nunca -- se entra a la app pero el salto a cualquier otra pide login.
+        const dominioCompartido = dominioCookie(req);
+        if (dominioCompartido) {
+            res.cookie('token', ssoToken, { domain: dominioCompartido, maxAge: 12 * 60 * 60 * 1000, httpOnly: false, secure: true, sameSite: 'lax', path: '/' });
         }
 
         res.json({ token, user: { id: user.Id, username: user.Username, full_name: user.FullName, email: user.Email, role_name: user.RoleName, management_id: user.ManagementId, management_name: user.ManagementName, avatar_url: user.AvatarUrl, permissions: perms, apps: user.Apps, requires_password_change: user.RequiresPasswordChange === 1 }, sessionConfig: { timeoutMinutes, warningMinutes } });
@@ -647,8 +655,12 @@ app.get('/api/auth/me', verifyToken, async (req: Request, res: Response) => {
             { id: user.Id, role: user.RoleName, role_name: user.RoleName, username: user.Username, apps: user.Apps || '', casId: user.cas_id || null },
             JWT_SECRET, { expiresIn: '12h' }
         );
-        if (process.env.NODE_ENV === 'production' && !ssoPilot) {
-            res.cookie('token', ssoTokenMe, { domain: dominioCookie(req), maxAge: 12 * 60 * 60 * 1000, httpOnly: false, secure: true, sameSite: 'lax', path: '/' });
+        // La cookie compartida se escribe segun el DOMINIO de la peticion, no segun NODE_ENV: esa
+        // variable puede faltar en el despliegue sin que nada avise, y entonces la cookie no se
+        // escribe nunca -- se entra a la app pero el salto a cualquier otra pide login.
+        const dominioCompartido = dominioCookie(req);
+        if (dominioCompartido && !ssoPilot) {
+            res.cookie('token', ssoTokenMe, { domain: dominioCompartido, maxAge: 12 * 60 * 60 * 1000, httpOnly: false, secure: true, sameSite: 'lax', path: '/' });
         }
         res.json({ token: freshToken, user: { id: user.Id, username: user.Username, full_name: user.FullName, email: user.Email, role_name: user.RoleName, management_id: user.ManagementId, management_name: user.ManagementName, avatar_url: user.AvatarUrl, permissions: perms, apps: user.Apps, casId: user.cas_id || null, casRUC: user.cas_ruc || null } });
     } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
