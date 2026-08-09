@@ -2,6 +2,9 @@ import type { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { dominioCookie } from '../lib/dominioCookie.js';
 import { isTokenBlacklisted, isSessionInvalidated } from '../lib/redis.js';
+// El import de logAudit crea un ciclo aparente con lib/audit.ts, pero audit.ts solo importa
+// AuthRequest como TIPO (`import type`), que se borra al compilar: en ejecucion no hay ciclo.
+import { logAudit } from '../lib/audit.js';
 
 // Leer process.env a nivel de modulo es seguro AQUI porque index.ts importa './lib/env.js' como su
 // primera linea, asi que dotenv.config() ya corrio cuando este modulo se evalua. No mover ese
@@ -59,4 +62,27 @@ export const verifyToken = async (req: Request, res: Response, next: NextFunctio
         (req as AuthRequest).user = decoded;
         next();
     } catch (_err) { res.status(401).json({ error: 'Token inválido o expirado' }); }
+};
+
+export const verifyPermission = (permission: string) => {
+    return async (req: Request, res: Response, next: NextFunction) => {
+        const user = (req as AuthRequest).user;
+        if (!user) return res.status(401).json({ error: 'No autenticado' });
+
+        // Handles both local and SSO token payloads
+        const roleName = (user.role || user.role_name || '').trim().toLowerCase();
+        if (roleName === 'administrador') return next();
+
+        const perms = user.perms || user.permissions || [];
+        if (perms.includes(permission)) return next();
+
+        await logAudit(req, 'ACCESO_DENEGADO', `Endpoint: ${req.method} ${req.path}`, permission, {
+            ip: req.ip,
+            userAgent: req.get('user-agent'),
+            params: req.params,
+            query: req.query
+        });
+
+        res.status(403).json({ error: `Permiso denegado: ${permission}` });
+    };
 };

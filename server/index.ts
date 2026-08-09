@@ -12,6 +12,12 @@ import ticketsRouter from './routes/tickets.js';
 import materialsRouter from './routes/materials.js';
 import dashboardRouter from './routes/dashboard.js';
 import c4cRouter from './routes/c4c.js';
+import penaltiesRouter from './routes/penalties.js';
+import adicionalesRouter from './routes/adicionales.js';
+import usersRouter from './routes/users.js';
+import profileRouter from './routes/profile.js';
+import rolesRouter from './routes/roles.js';
+import { verifyPermission } from './middleware/auth.js';
 import express from 'express';
 import { fileURLToPath } from 'url';
 import type { Request, Response, NextFunction } from 'express';
@@ -45,7 +51,6 @@ if (process.env.NODE_ENV === 'production' && !JWT_SECRET) {
 
 
 
-const cleanApps = (str: string) => [...new Set((str || '').split(',').map(s => s.trim()).filter(Boolean))].join(', ');
 
 
 app.set('trust proxy', 1);
@@ -243,28 +248,6 @@ app.get('/api/applications', verifyToken, async (req: Request, res: Response) =>
     }
 });
 
-const verifyPermission = (permission: string) => {
-    return async (req: Request, res: Response, next: NextFunction) => {
-        const user = (req as AuthRequest).user;
-        if (!user) return res.status(401).json({ error: 'No autenticado' });
-
-        // Handles both local and SSO token payloads
-        const roleName = (user.role || user.role_name || '').trim().toLowerCase();
-        if (roleName === 'administrador') return next();
-
-        const perms = user.perms || user.permissions || [];
-        if (perms.includes(permission)) return next();
-
-        await logAudit(req, 'ACCESO_DENEGADO', `Endpoint: ${req.method} ${req.path}`, permission, {
-            ip: req.ip,
-            userAgent: req.get('user-agent'),
-            params: req.params,
-            query: req.query
-        });
-
-        res.status(403).json({ error: `Permiso denegado: ${permission}` });
-    };
-};
 
 // --- AUTH ---
 const loginSchema = z.object({
@@ -968,252 +951,9 @@ app.get('/api/penalty-motives', verifyToken, async (req: Request, res: Response)
     } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
 
-const crearPenalidadSchema = z.object({
-    ticket: z.string().min(1).max(50),
-    fecha: z.string().min(1),
-    motivo: z.string().min(1).max(200),
-    descripcion: z.string().max(500).optional(),
-    importe: z.number().positive(),
-    ruc: z.string().min(1).max(20),
-});
-app.post('/api/penalties', verifyToken, validateBody(crearPenalidadSchema), async (req: Request, res: Response) => {
-    const { ticket, fecha, motivo, descripcion, importe, ruc } = req.body;
-    const currentUser = (req as AuthRequest).user as JwtUserPayload;
-    const userId = currentUser.username;
-    const penaltyId = crypto.randomBytes(4).toString('hex');
-    try {
-        const db = await getWritePool();
+app.use(penaltiesRouter);
 
-        if (currentUser.casId) {
-            if (!currentUser.casRUC || String(ruc).trim() !== String(currentUser.casRUC).trim()) {
-                return res.status(403).json({ error: 'No puede crear penalidades para otra empresa.' });
-            }
-        }
-        const penReq = db.request();
-        addInput(penReq, 'id', sql.VarChar(8), penaltyId);
-        addInput(penReq, 'ticket', sql.VarChar(50), ticket);
-        addInput(penReq, 'fecha', sql.Date, fecha);
-        addInput(penReq, 'motivo', sql.NVarChar(200), motivo);
-        addInput(penReq, 'desc', sql.NVarChar(500), descripcion ?? null);
-        addInput(penReq, 'importe', sql.Decimal(10, 2), importe);
-        addInput(penReq, 'user', sql.NVarChar(255), userId);
-        await penReq.query(`
-                INSERT INTO [dbo].[GAC_APP_TB_TICKETS_DESCUENTOS]
-                (ID_Descuentos_CAS, Ticket, Fecha, Motivo, Descripcion, Importe, Creado_por, Creado_el, Estado)
-                VALUES (@id, @ticket, @fecha, @motivo, @desc, @importe, @user, GETDATE(), 'Pendiente')
-            `);
-        res.status(201).json({ id: penaltyId });
-    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
-});
-
-app.put('/api/penalties/:id', verifyToken, async (req: Request, res: Response) => {
-    const { id } = req.params;
-    const { fecha, motivo, descripcion, importe } = req.body;
-    const currentUser = (req as AuthRequest).user as JwtUserPayload;
-    try {
-        const db = await getWritePool();
-
-        if (currentUser.casId) {
-            const ownerCheck = await db.request()
-                .input('id', sql.VarChar(8), id)
-                .input('casId', sql.VarChar(50), currentUser.casId)
-                .query(`
-                    SELECT 1
-                    FROM [dbo].[GAC_APP_TB_TICKETS_DESCUENTOS] D
-                    INNER JOIN [dbo].[GAC_PAGOS_CACHE] PC ON PC.Ticket_Original = D.Ticket
-                    WHERE D.ID_Descuentos_CAS = @id AND PC.ID_cas = @casId
-                `);
-            if (ownerCheck.recordset.length === 0) {
-                return res.status(403).json({ error: 'La penalidad no pertenece a su empresa.' });
-            }
-        }
-
-        // Validation: Check if already in a closure
-        const check = await db.request().input('id', sql.VarChar(8), id).query(`
-            SELECT 1 FROM [dbo].[GAC_APP_TB_VALORIZACIONES_DETALLE]
-            WHERE ID_Referencia = @id
-        `);
-        if (check.recordset.length > 0) {
-            return res.status(403).json({ error: "No se puede editar una penalidad que ya ha sido cerrada en una valorización." });
-        }
-
-        const existing = await db.request().input('id', sql.VarChar(8), id).query("SELECT * FROM [dbo].[GAC_APP_TB_TICKETS_DESCUENTOS] WHERE ID_Descuentos_CAS = @id");
-
-        const updPenReq = db.request();
-        addInput(updPenReq, 'id', sql.VarChar(8), id);
-        addInput(updPenReq, 'fecha', sql.Date, fecha);
-        addInput(updPenReq, 'motivo', sql.NVarChar(200), motivo);
-        addInput(updPenReq, 'desc', sql.NVarChar(500), descripcion ?? null);
-        addInput(updPenReq, 'importe', sql.Decimal(10, 2), importe);
-        await updPenReq.query(`
-                UPDATE [dbo].[GAC_APP_TB_TICKETS_DESCUENTOS]
-                SET Fecha = @fecha, Motivo = @motivo, Descripcion = @desc, Importe = @importe
-                WHERE ID_Descuentos_CAS = @id
-            `);
-            
-        await logAudit(req, 'UPDATE', 'PENALTY', id as string, { 
-            before: existing.recordset[0], 
-            after: { fecha, motivo, descripcion, importe } 
-        });
-        
-        res.json({ success: true });
-    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
-});
-
-const crearAdicionalSchema = z.object({
-    ticket: z.string().min(1).max(50),
-    motivo: z.string().min(1).max(200),
-    importe: z.number().positive(),
-});
-app.post('/api/adicionales', verifyToken, validateBody(crearAdicionalSchema), async (req: Request, res: Response) => {
-    const { ticket, motivo, importe } = req.body;
-    const currentUser = (req as AuthRequest).user as JwtUserPayload;
-    const id = crypto.randomBytes(4).toString('hex');
-    try {
-        const db = await getWritePool();
-
-        if (currentUser.casId) {
-            if (!currentUser.casRUC) return res.status(403).json({ error: 'Usuario CAS sin empresa asignada.' });
-            const ticketCheck = await db.request()
-                .input('ticket', sql.NVarChar(50), ticket)
-                .input('casRUC', sql.VarChar(20), currentUser.casRUC)
-                .query(`
-                    SELECT 1
-                    FROM [APPGAC].[ServiciosViewSQL] s
-                    JOIN [dbo].[GAC_APP_TB_CAS] cas ON s.IdCAS = cas.ID_CAS
-                    WHERE TRIM(s.Ticket) = @ticket AND TRIM(cas.RUC) = TRIM(@casRUC)
-                `);
-            if (ticketCheck.recordset.length === 0)
-                return res.status(403).json({ error: 'El ticket no pertenece a su empresa.' });
-        }
-
-        const addReq = db.request();
-        addInput(addReq, 'id', sql.VarChar(8), id);
-        addInput(addReq, 'ticket', sql.VarChar(50), ticket);
-        addInput(addReq, 'motivo', sql.NVarChar(200), motivo);
-        addInput(addReq, 'importe', sql.Decimal(10, 2), importe);
-        await addReq.query(`
-                INSERT INTO [dbo].[GAC_APP_TB_TICKETS_VALORIZACION_ADICIONAL]
-                (ID_valorizacion_adicional, Ticket, Motivo, Importe)
-                VALUES (@id, @ticket, @motivo, @importe)
-            `);
-        await logAudit(req, 'CREATE', 'ADICIONAL', ticket, { id, motivo, importe });
-        res.status(201).json({ id });
-    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
-});
-
-app.put('/api/adicionales/:id', verifyToken, async (req: Request, res: Response) => {
-    const { id } = req.params;
-    const { motivo, importe } = req.body;
-    const currentUser = (req as AuthRequest).user as JwtUserPayload;
-    try {
-        const db = await getWritePool();
-
-        if (currentUser.casId) {
-            if (!currentUser.casRUC) return res.status(403).json({ error: 'Usuario CAS sin empresa asignada.' });
-            const ownerCheck = await db.request()
-                .input('id', sql.VarChar(8), id)
-                .input('casRUC', sql.VarChar(20), currentUser.casRUC)
-                .query(`
-                    SELECT 1
-                    FROM [dbo].[GAC_APP_TB_TICKETS_VALORIZACION_ADICIONAL] a
-                    JOIN [APPGAC].[ServiciosViewSQL] s ON TRIM(s.Ticket) = TRIM(a.Ticket)
-                    JOIN [dbo].[GAC_APP_TB_CAS] cas ON s.IdCAS = cas.ID_CAS
-                    WHERE a.ID_valorizacion_adicional = @id AND TRIM(cas.RUC) = TRIM(@casRUC)
-                `);
-            if (ownerCheck.recordset.length === 0)
-                return res.status(403).json({ error: 'El adicional no pertenece a su empresa.' });
-        }
-
-        const existing = await db.request()
-            .input('id', sql.VarChar(8), id)
-            .query("SELECT * FROM [dbo].[GAC_APP_TB_TICKETS_VALORIZACION_ADICIONAL] WHERE ID_valorizacion_adicional = @id");
-
-        const updAddReq = db.request();
-        addInput(updAddReq, 'id', sql.VarChar(8), id);
-        addInput(updAddReq, 'motivo', sql.NVarChar(200), motivo);
-        addInput(updAddReq, 'importe', sql.Decimal(10, 2), importe);
-        await updAddReq.query(`
-                UPDATE [dbo].[GAC_APP_TB_TICKETS_VALORIZACION_ADICIONAL]
-                SET Motivo = @motivo, Importe = @importe
-                WHERE ID_valorizacion_adicional = @id
-            `);
-            
-        await logAudit(req, 'UPDATE', 'ADICIONAL', id as string, { 
-            before: existing.recordset[0], 
-            after: { motivo, importe } 
-        });
-        
-        res.json({ success: true });
-    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
-});
-
-app.get('/api/adicionales/:ticket', verifyToken, async (req: Request, res: Response) => {
-    const { ticket } = req.params;
-    const currentUser = (req as AuthRequest).user as JwtUserPayload;
-    try {
-        const db = await getReadPool();
-
-        // Verificar que el ticket pertenece al CAS del usuario
-        if (currentUser.casId) {
-            const ticketCheck = await db.request()
-                .input('ticket', sql.NVarChar(50), ticket)
-                .input('casRUC', sql.VarChar(20), currentUser.casRUC || '')
-                .query(`
-                    SELECT 1
-                    FROM [APPGAC].[ServiciosViewSQL] s
-                    JOIN [dbo].[GAC_APP_TB_CAS] cas ON s.IdCAS = cas.ID_CAS
-                    WHERE TRIM(s.Ticket) = @ticket AND TRIM(cas.RUC) = TRIM(@casRUC)
-                `);
-            if (ticketCheck.recordset.length === 0) {
-                return res.status(403).json({ error: 'Acceso denegado' });
-            }
-        }
-
-        const result = await db.request()
-            .input('ticket', sql.NVarChar(50), ticket)
-            .query(`
-                SELECT ID_valorizacion_adicional as Id, Ticket, Motivo, CAST(Importe AS FLOAT) as Importe
-                FROM [dbo].[GAC_APP_TB_TICKETS_VALORIZACION_ADICIONAL]
-                WHERE Ticket = @ticket
-                ORDER BY ID_valorizacion_adicional
-            `);
-        res.json(result.recordset);
-    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
-});
-
-app.delete('/api/adicionales/:id', verifyToken, async (req: Request, res: Response) => {
-    const { id } = req.params;
-    const currentUser = (req as AuthRequest).user as JwtUserPayload;
-    try {
-        const db = await getWritePool();
-
-        if (currentUser.casId) {
-            if (!currentUser.casRUC) return res.status(403).json({ error: 'Usuario CAS sin empresa asignada.' });
-            const ownerCheck = await db.request()
-                .input('id', sql.VarChar(8), id)
-                .input('casRUC', sql.VarChar(20), currentUser.casRUC)
-                .query(`
-                    SELECT 1
-                    FROM [dbo].[GAC_APP_TB_TICKETS_VALORIZACION_ADICIONAL] a
-                    JOIN [APPGAC].[ServiciosViewSQL] s ON TRIM(s.Ticket) = TRIM(a.Ticket)
-                    JOIN [dbo].[GAC_APP_TB_CAS] cas ON s.IdCAS = cas.ID_CAS
-                    WHERE a.ID_valorizacion_adicional = @id AND TRIM(cas.RUC) = TRIM(@casRUC)
-                `);
-            if (ownerCheck.recordset.length === 0)
-                return res.status(403).json({ error: 'El adicional no pertenece a su empresa.' });
-        }
-
-        const existing = await db.request()
-            .input('id', sql.VarChar(8), id)
-            .query("SELECT Ticket, Motivo, Importe FROM [dbo].[GAC_APP_TB_TICKETS_VALORIZACION_ADICIONAL] WHERE ID_valorizacion_adicional = @id");
-        await db.request()
-            .input('id', sql.VarChar(8), id)
-            .query("DELETE FROM [dbo].[GAC_APP_TB_TICKETS_VALORIZACION_ADICIONAL] WHERE ID_valorizacion_adicional = @id");
-        await logAudit(req, 'DELETE', 'ADICIONAL', id as string, existing.recordset[0] || {});
-        res.json({ success: true });
-    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
-});
+app.use(adicionalesRouter);
 
 app.post('/api/valuations/batch-adjustment', verifyToken, async (req: Request, res: Response) => {
     const { tickets, targetAmount, motivo, ruc } = req.body;
@@ -1386,36 +1126,6 @@ app.post('/api/valuations/batch-discount', verifyToken, async (req: Request, res
     }
 });
 
-app.post('/api/penalties/:id/status', verifyToken, async (req: Request, res: Response) => {
-    const { id } = req.params;
-    const { status, observation, isCas } = req.body;
-    const currentUser = (req as AuthRequest).user as JwtUserPayload;
-    try {
-        const db = await getWritePool();
-
-        if (currentUser.casId) {
-            const ownerCheck = await db.request()
-                .input('id', sql.VarChar(8), id)
-                .input('casId', sql.VarChar(50), currentUser.casId)
-                .query(`
-                    SELECT 1
-                    FROM [dbo].[GAC_APP_TB_TICKETS_DESCUENTOS] D
-                    INNER JOIN [dbo].[GAC_PAGOS_CACHE] PC ON PC.Ticket_Original = D.Ticket
-                    WHERE D.ID_Descuentos_CAS = @id AND PC.ID_cas = @casId
-                `);
-            if (ownerCheck.recordset.length === 0)
-                return res.status(403).json({ error: 'La penalidad no pertenece a su empresa.' });
-        }
-
-        const _field = isCas ? 'Adjunto_motivo' : 'Adjunto_motivo';
-        const statusReq = db.request();
-        addInput(statusReq, 'id', sql.VarChar(8), id);
-        addInput(statusReq, 'status', sql.NVarChar(50), status);
-        addInput(statusReq, 'obs', sql.NVarChar(1000), observation ?? null);
-        await statusReq.query(`UPDATE [dbo].[GAC_APP_TB_TICKETS_DESCUENTOS] SET Estado = @status, Adjunto_motivo = @obs WHERE ID_Descuentos_CAS = @id`);
-        res.json({ success: true });
-    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
-});
 
 
 
@@ -1725,45 +1435,6 @@ app.post('/api/valuations/send-email', verifyToken, async (req: Request, res: Re
     }
 });
 
-app.get('/api/penalties/:ruc', verifyToken, async (req: Request, res: Response) => {
-    const { ruc } = req.params;
-    const currentUser = (req as AuthRequest).user as JwtUserPayload;
-    if (currentUser.casId) {
-        if (!currentUser.casRUC) return res.status(403).json({ error: 'Usuario CAS sin empresa asignada' });
-        if (currentUser.casRUC !== String(ruc).trim()) return res.status(403).json({ error: 'Acceso denegado' });
-    }
-    const { start, end } = req.query;
-    try {
-        const db = await getReadPool();
-        const penListReq = db.request();
-        addInput(penListReq, 'ruc', sql.VarChar(20), ruc);
-        addInput(penListReq, 'start', sql.VarChar(30), `${start} 00:00:00`);
-        addInput(penListReq, 'end', sql.VarChar(30), `${end} 23:59:59`);
-        const result = await penListReq.query(`
-                SELECT
-                    d.ID_Descuentos_CAS as Id,
-                    d.Ticket,
-                    d.Fecha,
-                    COALESCE(m.Motivo, d.Motivo) as Motivo,
-                    d.Descripcion,
-                    d.Importe,
-                    d.Estado,
-                    d.Creado_por as CreadoPor,
-                    d.Creado_el as CreadoEl
-                FROM [dbo].[GAC_APP_TB_TICKETS_DESCUENTOS] d
-                JOIN [APPGAC].[ServiciosViewSQL] s ON d.Ticket = s.Ticket
-                JOIN [dbo].[GAC_APP_TB_CAS] cas ON s.IdCAS = cas.ID_CAS
-                LEFT JOIN [dbo].[GAC_APP_TB_TICKETS_DESCUENTOS_MOTIVOS] m ON d.Motivo = m.IdMotivo
-                WHERE cas.RUC = @ruc
-                  AND d.Creado_el BETWEEN @start AND @end
-                  AND NOT EXISTS (
-                      SELECT 1 FROM [dbo].[GAC_APP_TB_VALORIZACIONES_DETALLE] det
-                      WHERE det.ID_Referencia = d.ID_Descuentos_CAS
-                  )
-            `);
-        res.json(result.recordset);
-    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
-});
 
 app.get('/api/closures', verifyToken, async (req: Request, res: Response) => {
     const { start, end } = req.query;
@@ -2234,238 +1905,12 @@ app.post('/api/config/preferences', verifyToken, (req: Request, res: Response) =
     res.json({ success: true });
 });
 
-// USERS
-app.get('/api/users', verifyToken, verifyPermission('val.config.users'), async (req: Request, res: Response) => {
-    try {
-        const db = await getReadPool();
-        const result = await db.request().query(`
-            SELECT u.Id as id, u.FullName as full_name, u.Username as username, u.Email as email,
-                   u.RoleId as role_id, r.Name as role_name, CAST(u.IsActive AS BIT) as is_active, 
-                   u.Apps as apps, u.AvatarUrl as avatar_url
-            FROM EBM.Users u
-            LEFT JOIN EBM.Roles r ON u.RoleId = r.Id
-        `);
-        res.json(result.recordset);
-    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
-});
+app.use(usersRouter);
 
-app.post('/api/users', verifyToken, verifyPermission('val.config.users'), async (req: Request, res: Response) => {
-    try {
-        const { full_name, username, email, password_hash, role_id, apps, avatar_url } = req.body;
-        const db = await getWritePool();
+app.use(profileRouter);
 
-        const userChkReq = db.request();
-        addInput(userChkReq, 'u', sql.NVarChar(255), username);
-        addInput(userChkReq, 'e', sql.NVarChar(255), email);
-        const checkResult = await userChkReq.query("SELECT Id, Apps FROM EBM.Users WHERE Username = @u OR Email = @e");
 
-        if (checkResult.recordset.length > 0) {
-            // UPSERT/REACTIVATE
-            const existing = checkResult.recordset[0];
-            const mergedApps = cleanApps(existing.Apps + ', ' + APP_IDENTIFIER);
-            const reactReq = db.request();
-            addInput(reactReq, 'id', sql.UniqueIdentifier, existing.Id);
-            addInput(reactReq, 'name', sql.NVarChar(255), full_name);
-            addInput(reactReq, 'rid', sql.UniqueIdentifier, role_id);
-            addInput(reactReq, 'apps', sql.NVarChar(500), mergedApps);
-            addInput(reactReq, 'photo', sql.NVarChar(500), avatar_url ?? null);
-            await reactReq.query(`UPDATE EBM.Users SET FullName = @name, RoleId = @rid, Apps = @apps, AvatarUrl = @photo, IsActive = 1 WHERE Id = @id`);
-            await logAudit(req, 'REACTIVATE', 'USERS', username, { apps: mergedApps });
-            return res.json({ id: existing.Id, username });
-        }
-
-        const salt = await bcrypt.genSalt(10);
-        const hashed = await bcrypt.hash(password_hash || 'temp1234', salt);
-        const appsInsert = cleanApps(apps || APP_IDENTIFIER);
-
-        const userInsReq = db.request();
-        addInput(userInsReq, 'name', sql.NVarChar(255), full_name);
-        addInput(userInsReq, 'u', sql.NVarChar(255), username);
-        addInput(userInsReq, 'e', sql.NVarChar(255), email);
-        addInput(userInsReq, 'pass', sql.NVarChar(255), hashed);
-        addInput(userInsReq, 'rid', sql.UniqueIdentifier, role_id);
-        addInput(userInsReq, 'apps', sql.NVarChar(500), appsInsert);
-        addInput(userInsReq, 'photo', sql.NVarChar(500), avatar_url ?? null);
-        const result = await userInsReq.query(`
-                INSERT INTO EBM.Users (FullName, Username, Email, PasswordHash, RoleId, Apps, AvatarUrl, IsActive, RequiresPasswordChange)
-                OUTPUT INSERTED.Id as id
-                VALUES (@name, @u, @e, @pass, @rid, @apps, @photo, 1, 1)
-            `);
-        await logAudit(req, 'CREATE', 'USERS', username, { apps: appsInsert });
-        res.status(201).json(result.recordset[0]);
-    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
-});
-
-// ─── Perfil propio (autoservicio) ────────────────────────────────────────────
-// Solo verifyToken -- cualquier usuario autenticado puede guardar SU PROPIO
-// avatar y/o contraseña. A diferencia de PUT /api/users/:id (abajo, gateado
-// por val.config.users), nunca acepta un id por parametro: siempre opera sobre
-// (req as any).user.id, y solo toca AvatarUrl/PasswordHash -- nunca
-// full_name/username/email/role_id/management_id/apps de nadie.
-app.put('/api/profile', verifyToken, async (req: any, res: Response) => { // eslint-disable-line @typescript-eslint/no-explicit-any
-    try {
-        const userId = req.user.id;
-        const { avatar_url, password_hash } = req.body;
-
-        const db = await getWritePool();
-        const request = db.request();
-        addInput(request, 'id', sql.UniqueIdentifier, userId);
-
-        const sets: string[] = [];
-        if (avatar_url !== undefined) {
-            addInput(request, 'avatarUrl', sql.NVarChar(sql.MAX), avatar_url || null);
-            sets.push('AvatarUrl = @avatarUrl');
-        }
-        if (password_hash && String(password_hash).trim() !== '') {
-            const salt = await bcrypt.genSalt(10);
-            const hashedPwd = await bcrypt.hash(password_hash, salt);
-            addInput(request, 'password', sql.NVarChar(255), hashedPwd);
-            sets.push('PasswordHash = @password', 'RequiresPasswordChange = 0');
-        }
-
-        if (sets.length > 0) {
-            await request.query(`UPDATE EBM.Users SET ${sets.join(', ')} WHERE Id = @id`);
-        }
-
-        const selectRequest = db.request();
-        addInput(selectRequest, 'id', sql.UniqueIdentifier, userId);
-        const result = await selectRequest.query('SELECT FullName as full_name, AvatarUrl as avatar_url, CAST(RequiresPasswordChange AS BIT) as requires_password_change FROM EBM.Users WHERE Id = @id');
-        if (result.recordset.length === 0) return res.status(404).json({ error: 'Usuario no encontrado' });
-        res.json(result.recordset[0]);
-    } catch (err: unknown) {
-        res.status(500).json({ error: safeError(err) });
-    }
-});
-
-app.put('/api/users/:id', verifyToken, verifyPermission('val.config.users'), async (req: Request, res: Response) => {
-    try {
-        const { id } = req.params;
-        const { full_name, username, email, role_id, is_active, apps, avatar_url } = req.body;
-        const db = await getWritePool();
-        const appsSave = cleanApps(apps);
-
-        const userUpdReq = db.request();
-        addInput(userUpdReq, 'id', sql.UniqueIdentifier, id);
-        addInput(userUpdReq, 'name', sql.NVarChar(255), full_name);
-        addInput(userUpdReq, 'u', sql.NVarChar(255), username);
-        addInput(userUpdReq, 'e', sql.NVarChar(255), email);
-        addInput(userUpdReq, 'rid', sql.UniqueIdentifier, role_id);
-        addInput(userUpdReq, 'active', sql.Bit, is_active ? 1 : 0);
-        addInput(userUpdReq, 'apps', sql.NVarChar(500), appsSave);
-        addInput(userUpdReq, 'photo', sql.NVarChar(500), avatar_url ?? null);
-        await userUpdReq.query(`UPDATE EBM.Users SET FullName = @name, Username = @u, Email = @e, RoleId = @rid, IsActive = @active, Apps = @apps, AvatarUrl = @photo WHERE Id = @id`);
-        
-        await logAudit(req, 'UPDATE', 'USERS', id as string, { apps: appsSave });
-        res.json({ success: true });
-    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
-});
-
-app.delete('/api/users/:id', verifyToken, verifyPermission('val.config.users'), async (req: Request, res: Response) => {
-    try {
-        const { id } = req.params;
-        const db = await getWritePool();
-        const userDelReq = db.request();
-        addInput(userDelReq, 'id', sql.UniqueIdentifier, id);
-        await userDelReq.query("UPDATE EBM.Users SET IsActive = 0 WHERE Id = @id");
-        await logAudit(req, 'DEACTIVATE', 'USERS', id as string, {});
-        res.status(204).send();
-    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
-});
-
-// ROLES
-app.get('/api/roles', verifyToken, verifyPermission('val.config.roles'), async (req: Request, res: Response) => {
-    try {
-        const db = await getReadPool();
-        const roles = (await db.request().query("SELECT Id as id, Name as name, Apps as apps FROM EBM.Roles")).recordset;
-        const allPerms = (await db.request().query("SELECT RoleId, Permission FROM EBM.RolePermissions")).recordset;
-        const result = roles.map((r: { id: string; name: string; apps: string }) => ({
-            ...r,
-            permissions: allPerms.filter((p: { RoleId: string; Permission: string }) => p.RoleId === r.id).map((p: { RoleId: string; Permission: string }) => p.Permission)
-        }));
-        res.json(result);
-    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
-});
-
-app.post('/api/roles', verifyToken, verifyPermission('val.config.roles'), async (req: Request, res: Response) => {
-    try {
-        const { name, permissions, apps } = req.body;
-        const db = await getWritePool();
-        const appsSave = cleanApps(apps || APP_IDENTIFIER);
-        const roleId = crypto.randomUUID().toUpperCase();
-
-        const roleInsReq = db.request();
-        addInput(roleInsReq, 'id', sql.UniqueIdentifier, roleId);
-        addInput(roleInsReq, 'name', sql.NVarChar(100), name);
-        addInput(roleInsReq, 'apps', sql.NVarChar(500), appsSave);
-        await roleInsReq.query("INSERT INTO EBM.Roles (Id, Name, Apps) VALUES (@id, @name, @apps)");
-
-        if (permissions && permissions.length > 0) {
-            for (const p of permissions) {
-                const permInsReq = db.request();
-                addInput(permInsReq, 'rid', sql.UniqueIdentifier, roleId);
-                addInput(permInsReq, 'p', sql.NVarChar(100), p);
-                await permInsReq.query("INSERT INTO EBM.RolePermissions (RoleId, Permission) VALUES (@rid, @p)");
-            }
-        }
-        await logAudit(req, 'CREATE', 'ROLES', name, { apps: appsSave });
-        res.status(201).json({ id: roleId, name, permissions });
-    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
-});
-
-app.put('/api/roles/:id', verifyToken, verifyPermission('val.config.roles'), async (req: Request, res: Response) => {
-    try {
-        const { id } = req.params;
-        const { name, permissions, apps } = req.body;
-        const db = await getWritePool();
-        const appsSave = cleanApps(apps || APP_IDENTIFIER);
-
-        const roleUpdReq = db.request();
-        addInput(roleUpdReq, 'id', sql.UniqueIdentifier, id);
-        addInput(roleUpdReq, 'name', sql.NVarChar(100), name);
-        addInput(roleUpdReq, 'apps', sql.NVarChar(500), appsSave);
-        await roleUpdReq.query("UPDATE EBM.Roles SET Name = @name, Apps = @apps WHERE Id = @id");
-
-        const delPermReq = db.request();
-        addInput(delPermReq, 'rid', sql.UniqueIdentifier, id);
-        await delPermReq.query("DELETE FROM EBM.RolePermissions WHERE RoleId = @rid");
-        if (permissions && permissions.length > 0) {
-            for (const p of permissions) {
-                const permUpdReq = db.request();
-                addInput(permUpdReq, 'rid', sql.UniqueIdentifier, id);
-                addInput(permUpdReq, 'p', sql.NVarChar(100), p);
-                await permUpdReq.query("INSERT INTO EBM.RolePermissions (RoleId, Permission) VALUES (@rid, @p)");
-            }
-        }
-        await logAudit(req, 'UPDATE', 'ROLES', name, { apps: appsSave });
-        res.json({ id, name, permissions });
-    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
-});
-
-app.delete('/api/roles/:id', verifyToken, verifyPermission('val.config.roles'), async (req: Request, res: Response) => {
-    try {
-        const { id } = req.params;
-        const db = await getWritePool();
-        
-        // Check if users are assigned to this role
-        const usersChkReq = db.request();
-        addInput(usersChkReq, 'rid', sql.UniqueIdentifier, id);
-        const usersInRole = await usersChkReq.query("SELECT COUNT(*) as count FROM EBM.Users WHERE RoleId = @rid AND IsActive = 1");
-        if (usersInRole.recordset[0].count > 0) {
-            return res.status(400).json({ error: "No se puede eliminar el perfil porque tiene usuarios asignados." });
-        }
-
-        const delRolePermReq = db.request();
-        addInput(delRolePermReq, 'rid', sql.UniqueIdentifier, id);
-        await delRolePermReq.query("DELETE FROM EBM.RolePermissions WHERE RoleId = @rid");
-
-        const delRoleReq = db.request();
-        addInput(delRoleReq, 'id', sql.UniqueIdentifier, id);
-        await delRoleReq.query("DELETE FROM EBM.Roles WHERE Id = @id");
-        
-        await logAudit(req, 'DELETE', 'ROLES', id as string, {});
-        res.status(204).send();
-    } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
-});
+app.use(rolesRouter);
 
 
 // AUDIT LOGS: solo servia a la pagina local AuditLogPage.tsx (eliminada) -- la escritura de
