@@ -3,6 +3,11 @@ import { APP_IDENTIFIER, C4C_BASE_URL, C4C_AUTH, MS_GRAPH_SENDER_EMAIL } from '.
 import { dominioCookie } from './lib/dominioCookie.js';
 import { safeError, sanitizeLog } from './lib/security.js';
 import { getGraphToken } from './lib/graph.js';
+import { getDb, getReadPool, getWritePool } from './db.js';
+import { getRedisClient, blacklistToken, invalidateAllUserSessions } from './lib/redis.js';
+import type { JwtUserPayload, AuthRequest } from './middleware/auth.js';
+import { clearSharedCookie, verifyToken } from './middleware/auth.js';
+import { logAudit } from './lib/audit.js';
 import express from 'express';
 import { fileURLToPath } from 'url';
 import type { Request, Response, NextFunction } from 'express';
@@ -10,7 +15,6 @@ import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import { Redis } from 'ioredis';
-import { createHash } from 'crypto';
 import { RedisStore } from 'rate-limit-redis';
 import sql from 'mssql';
 import jwt from 'jsonwebtoken';
@@ -39,51 +43,9 @@ if (process.env.NODE_ENV === 'production' && !JWT_SECRET) {
 
 const cleanApps = (str: string) => [...new Set((str || '').split(',').map(s => s.trim()).filter(Boolean))].join(', ');
 
-// Helper for Auditing
-async function logAudit(req: Request, action: string, entity: string, entityId: string, details: Record<string, unknown>) {
-  try {
-    const user = (req as AuthRequest).user;
-    if (!user) return;
-    const db = await getWritePool();
-    const auditReq = db.request();
-    addInput(auditReq, 'uid', sql.UniqueIdentifier, user.id);
-    addInput(auditReq, 'un', sql.NVarChar(255), user.full_name || user.username);
-    addInput(auditReq, 'acc', sql.NVarChar(100), action);
-    addInput(auditReq, 'ent', sql.NVarChar(100), entity);
-    addInput(auditReq, 'eid', sql.NVarChar(100), entityId);
-    addInput(auditReq, 'det', sql.NVarChar(4000), JSON.stringify(details));
-    addInput(auditReq, 'app', sql.VarChar(20), 'VAL');
-    addInput(auditReq, 'ip', sql.VarChar(50), req.ip || null);
-    await auditReq.query(`INSERT INTO [dbo].[GAC_APP_TB_AUDIT_LOG] (UsuarioID, UsuarioNombre, Accion, Entidad, EntidadID, Detalle, ApplicationCode, IPAddress, Fecha)
-              VALUES (@uid, @un, @acc, @ent, @eid, @det, @app, @ip, GETDATE())`);
-  } catch (err) {
-    console.error('❌ Falla en Log de Auditoría VAL:', err);
-  }
-}
 
 app.set('trust proxy', 1);
 
-// --- REDIS CLIENT (declarado antes de rateLimit para evitar TDZ) ---
-let _redis: Redis | null = null;
-function getRedisClient(): Redis {
-    if (!_redis) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const redisOptions: any = {
-            host: process.env.REDIS_HOST || 'localhost',
-            port: parseInt(process.env.REDIS_PORT || '6379'),
-            password: process.env.REDIS_PASSWORD,
-            db: parseInt(process.env.REDIS_DB || '0'),
-            lazyConnect: true,
-            retryStrategy: (times: number) => Math.min(times * 100, 3000),
-        };
-        if (process.env.REDIS_USERNAME) {
-            redisOptions.username = process.env.REDIS_USERNAME;
-        }
-        _redis = new Redis(redisOptions);
-        _redis.on('error', (err: Error) => console.error('[Redis] Error:', err.message));
-    }
-    return _redis;
-}
 
 app.use(helmet({
     contentSecurityPolicy: {
@@ -144,194 +106,10 @@ app.use(cors({
 app.use(express.json({ limit: '2mb' }));
 app.use(express.urlencoded({ limit: '2mb', extended: true }));
 
-const dbConfig: sql.config = {
-    user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    database: process.env.DB_DATABASE,
-    server: process.env.DB_SERVER || '',
-    port: 1433,
-    pool: { max: 30, min: 0, idleTimeoutMillis: 30000 },
-    options: { encrypt: true, trustServerCertificate: false, requestTimeout: 60000 }
-};
-
-let pool: sql.ConnectionPool | null = null;
-
-// Etapa 6 -- pool admin. getDb() dispara runMigrations() (ALTER TABLE/CREATE TABLE) en su
-// primera conexion -- se sigue llamando explicitamente una vez al arrancar el server (ver
-// app.listen mas abajo) para garantizar que las migraciones corran, independientemente de
-// que los endpoints de negocio ahora usen getReadPool()/getWritePool() en su lugar. Ni
-// siatc_reader ni siatc_writer pueden ejecutar DDL (privilegio minimo), por eso este pool
-// admin queda reservado solo para esto.
-async function getDb() {
-    if (!pool) {
-        try {
-            pool = await new sql.ConnectionPool(dbConfig).connect();
-            console.log('✅ Conectado a Azure SQL: ' + dbConfig.database);
-            runMigrations(pool);
-        } catch (err: unknown) {
-            console.error('❌ Error de conexión DB:', safeError(err));
-            pool = null;
-            throw err;
-        }
-    }
-    return pool;
-}
-
-// Etapa 6 -- usuarios de BD de privilegio minimo (siatc_reader/siatc_writer). Si las env
-// vars DB_USER_READ/DB_USER_WRITE todavia no estan configuradas en Dokploy, caen de vuelta
-// al usuario admin original -- permite desplegar este codigo antes de agregar esas env vars,
-// y revertir a admin-only con solo quitarlas, sin tocar codigo.
-const readDbConfig: sql.config = {
-    ...dbConfig,
-    user: process.env.DB_USER_READ || process.env.DB_USER,
-    password: process.env.DB_PASS_READ || process.env.DB_PASSWORD,
-};
-const writeDbConfig: sql.config = {
-    ...dbConfig,
-    user: process.env.DB_USER_WRITE || process.env.DB_USER,
-    password: process.env.DB_PASS_WRITE || process.env.DB_PASSWORD,
-};
-
-let readPool: sql.ConnectionPool | null = null;
-let writePool: sql.ConnectionPool | null = null;
-
-/** Endpoints GET -- solo lectura, usa siatc_reader (privilegio minimo). */
-async function getReadPool() {
-    if (!readPool) {
-        try {
-            readPool = await new sql.ConnectionPool(readDbConfig).connect();
-        } catch (err: unknown) {
-            console.error('❌ Error de conexión DB (read pool):', safeError(err));
-            readPool = null;
-            throw err;
-        }
-    }
-    return readPool;
-}
-
-/** Endpoints POST/PUT/DELETE/PATCH -- usa siatc_writer (lectura + escritura en dbo/EBM). */
-async function getWritePool() {
-    if (!writePool) {
-        try {
-            writePool = await new sql.ConnectionPool(writeDbConfig).connect();
-        } catch (err: unknown) {
-            console.error('❌ Error de conexión DB (write pool):', safeError(err));
-            writePool = null;
-            throw err;
-        }
-    }
-    return writePool;
-}
-
-let _migrationsRan = false;
-async function runMigrations(db: sql.ConnectionPool) {
-    if (_migrationsRan) return;
-    _migrationsRan = true;
-    try {
-        // Migración: Canal Institucional pasa de Usuario_Creador a Cupo_Area
-        await db.request().query(`
-            IF NOT EXISTS (
-                SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
-                WHERE TABLE_NAME = 'GAC_APP_TB_CONFIG_CANAL_INSTITUCIONAL'
-                AND COLUMN_NAME = 'Cupo_Area'
-            )
-            BEGIN
-                ALTER TABLE [dbo].[GAC_APP_TB_CONFIG_CANAL_INSTITUCIONAL]
-                    ADD Cupo_Area NVARCHAR(50) NULL;
-                DELETE FROM [dbo].[GAC_APP_TB_CONFIG_CANAL_INSTITUCIONAL];
-                PRINT 'Migración Canal Institucional completada';
-            END
-        `);
-        console.log('[Migration] Canal Institucional → Cupo_Area OK');
-    } catch (err) {
-        console.error('[Migration] Error:', err);
-    }
-}
-
-interface JwtUserPayload {
-    id: string;
-    username: string;
-    full_name?: string;
-    role: string;
-    role_name?: string;
-    perms: string[];
-    permissions?: string[];
-    casId: string | null;
-    casRUC: string | null;
-    ssoPilot?: boolean;
-    iat?: number;
-    exp?: number;
-}
-
-interface AuthRequest extends Request {
-    user?: JwtUserPayload;
-}
-
-async function isTokenBlacklisted(token: string): Promise<boolean> {
-    try {
-        const hash = createHash('sha256').update(token).digest('hex');
-        return (await getRedisClient().exists(`bl:${hash}`)) === 1;
-    } catch { return false; }
-}
-async function blacklistToken(token: string, exp: number): Promise<void> {
-    try {
-        const hash = createHash('sha256').update(token).digest('hex');
-        const ttl = Math.max(exp - Math.floor(Date.now() / 1000), 0);
-        if (ttl > 0) await getRedisClient().set(`bl:${hash}`, '1', 'EX', ttl);
-    } catch (err) { console.error('[Redis] Error al blacklistear token:', err); }
-}
-
-// Invalida TODOS los tokens de un usuario emitidos hasta ahora, sin importar cuántas apps del
-// ecosistema los hayan re-firmado (cada /auth/me emite un JWT nuevo con hash distinto, así que
-// blacklistToken() por sí solo no alcanza para un logout real entre apps -- ver bitácora Fase 20).
-// verifyToken rechaza cualquier token con iat <= este timestamp, sin importar su hash.
-async function invalidateAllUserSessions(userId: string): Promise<void> {
-    try {
-        const now = Math.floor(Date.now() / 1000);
-        await getRedisClient().set(`logout-after:${userId}`, String(now), 'EX', 30 * 24 * 60 * 60);
-    } catch (err) { console.error('[Redis] Error al invalidar sesiones del usuario:', err); }
-}
-async function isSessionInvalidated(userId: string, iat: number | undefined): Promise<boolean> {
-    if (!iat) return false;
-    try {
-        const logoutAfter = await getRedisClient().get(`logout-after:${userId}`);
-        return logoutAfter !== null && iat <= parseInt(logoutAfter, 10);
-    } catch { return false; }
-}
-
-// Borra la cookie compartida del lado del servidor (Set-Cookie en la respuesta) cuando se
-// detecta un token invalidado/blacklisteado. No depende de que el JS del cliente logre borrarla
-// antes de la siguiente navegación -- evita el bucle de recarga infinita que eso puede causar
-// (ver bitácora Fase 20: la limpieza vía document.cookie + window.location.href en el mismo
-// tick no siempre alcanza a comprometerse antes de que la página navegue).
-function clearSharedCookie(res: Response, req?: Request): void {
-    // La cookie compartida se escribe segun el DOMINIO de la peticion, no segun NODE_ENV: esa
-    // variable puede faltar en el despliegue sin que nada avise, y entonces la cookie no se
-    // escribe nunca -- se entra a la app pero el salto a cualquier otra pide login.
-    const dominioCompartido = req ? dominioCookie(req) : process.env.COOKIE_DOMAIN?.trim();
-    if (dominioCompartido) {
-        res.cookie('token', '', { domain: dominioCompartido, maxAge: 0, httpOnly: false, secure: true, sameSite: 'lax', path: '/' });
-    }
-}
 
 
-const verifyToken = async (req: Request, res: Response, next: NextFunction) => {
-    const token = req.headers.authorization?.split(' ')[1];
-    if (!token) return res.status(401).json({ error: 'Token no encontrado' });
-    try {
-        const decoded = jwt.verify(token, JWT_SECRET) as JwtUserPayload;
-        if (await isTokenBlacklisted(token)) {
-            clearSharedCookie(res, req);
-            return res.status(401).json({ error: 'Sesión cerrada. Inicia sesión nuevamente.' });
-        }
-        if (await isSessionInvalidated(decoded.id, decoded.iat)) {
-            clearSharedCookie(res, req);
-            return res.status(401).json({ error: 'Sesión cerrada. Inicia sesión nuevamente.' });
-        }
-        (req as AuthRequest).user = decoded;
-        next();
-    } catch (_err) { res.status(401).json({ error: 'Token inválido o expirado' }); }
-};
+
+
 
 app.get('/api/applications', verifyToken, async (req: Request, res: Response) => {
     try {
