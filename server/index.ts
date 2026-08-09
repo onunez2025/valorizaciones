@@ -21,7 +21,6 @@ import ssoAuthRouter from './routes/ssoAuth.js';
 import casRouter from './routes/cas.js';
 import configRouter from './routes/config.js';
 import managementsRouter from './routes/managements.js';
-import diagnoseRouter from './routes/diagnose.js';
 import express from 'express';
 import { fileURLToPath } from 'url';
 import type { Request, Response, NextFunction } from 'express';
@@ -325,7 +324,6 @@ app.use(rolesRouter);
 // AUDIT LOGS: solo servia a la pagina local AuditLogPage.tsx (eliminada) -- la escritura de
 // auditoria sigue viva via logAudit(), sin relacion con este endpoint de lectura.
 
-app.use(diagnoseRouter);
 
 // --- SERVE STATIC FILES (PROD) ---
 const __filename = fileURLToPath(import.meta.url);
