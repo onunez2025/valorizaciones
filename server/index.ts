@@ -1,4 +1,8 @@
 import './lib/env.js';   // PRIMERO: carga el .env antes de que ningun modulo lea process.env
+import { APP_IDENTIFIER, C4C_BASE_URL, C4C_AUTH, MS_GRAPH_SENDER_EMAIL } from './lib/config.js';
+import { dominioCookie } from './lib/dominioCookie.js';
+import { safeError, sanitizeLog } from './lib/security.js';
+import { getGraphToken } from './lib/graph.js';
 import express from 'express';
 import { fileURLToPath } from 'url';
 import type { Request, Response, NextFunction } from 'express';
@@ -25,60 +29,13 @@ import fs from 'fs';
 
 const app = express();
 const port = process.env.PORT || 3000;
-const APP_IDENTIFIER = 'VAL';
-const C4C_BASE_URL = process.env.C4C_BASE_URL;
-const C4C_AUTH = Buffer.from(`${process.env.C4C_USER}:${process.env.C4C_PASSWORD}`).toString('base64');
 const JWT_SECRET = process.env.JWT_SECRET || '';
-// Fase 20: dominio de la cookie SSO compartida configurable por entorno. Sin definir, el
-// comportamiento es idéntico al de siempre (.siatc.cloud) -- producción real no cambia.
-// En QA se configura como .qa.siatc.cloud para aislar la sesión compartida de producción.
-/**
- * Dominio con el que se escribe la cookie de sesion SSO, derivado del HOST DE LA PETICION.
- *
- * Va aqui y no en un modulo compartido porque en esta app el servidor es un unico archivo; las
- * apps con `server/routes/` usan `server/lib/dominioCookie.ts`, con esta misma logica.
- *
- * `process.env.COOKIE_DOMAIN` sigue mandando si esta definida: se conserva como anulacion manual.
- * Pero depender SOLO de ella significa que basta olvidarla en un despliegue para que QA vuelva a
- * escribir la cookie en el dominio de produccion, en silencio y sin error. Eso es lo que pasaba.
- *
- * EL ORDEN IMPORTA: "flow.qa.siatc.cloud" tambien termina en ".siatc.cloud", asi que preguntar
- * primero por produccion da verdadero en QA y no separa nada. QA se comprueba PRIMERO.
- */
-function dominioCookie(req: { headers: Record<string, unknown> }): string | undefined {
-    if (process.env.COOKIE_DOMAIN) return process.env.COOKIE_DOMAIN;
-    const reenviado = req.headers['x-forwarded-host'];
-    const original = req.headers.host;
-    const host = String((typeof reenviado === 'string' ? reenviado : original) ?? '');
-    const nombre = host.split(':')[0].toLowerCase();
-    if (nombre.endsWith('.qa.siatc.cloud')) return '.qa.siatc.cloud';
-    if (nombre.endsWith('.siatc.cloud')) return '.siatc.cloud';
-    return undefined;
-}
 if (process.env.NODE_ENV === 'production' && !JWT_SECRET) {
     console.error('CRITICAL FATAL ERROR: JWT_SECRET environment variable is not set. Server cannot start securely.');
     process.exit(1);
 }
 
-// MS Graph API Config
-const MS_GRAPH_TENANT_ID = process.env.MS_GRAPH_TENANT_ID;
-const MS_GRAPH_CLIENT_ID = process.env.MS_GRAPH_CLIENT_ID;
-const MS_GRAPH_CLIENT_SECRET = process.env.MS_GRAPH_CLIENT_SECRET;
-const MS_GRAPH_SENDER_EMAIL = process.env.MS_GRAPH_SENDER_EMAIL;
 
-async function getGraphToken() {
-    const url = `https://login.microsoftonline.com/${MS_GRAPH_TENANT_ID}/oauth2/v2.0/token`;
-    const params = new URLSearchParams({
-        client_id: MS_GRAPH_CLIENT_ID || '',
-        client_secret: MS_GRAPH_CLIENT_SECRET || '',
-        grant_type: 'client_credentials',
-        scope: 'https://graph.microsoft.com/.default'
-    });
-    const resp = await axios.post(url, params.toString(), {
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
-    });
-    return resp.data.access_token;
-}
 
 const cleanApps = (str: string) => [...new Set((str || '').split(',').map(s => s.trim()).filter(Boolean))].join(', ');
 
@@ -357,12 +314,6 @@ function clearSharedCookie(res: Response, req?: Request): void {
     }
 }
 
-// --- SECURITY HELPERS (ver CLAUDE.md) ---
-const safeError = (err: unknown): string =>
-    err instanceof Error ? `${err.message}\n${err.stack}` : String(err);
-
-const sanitizeLog = (val: unknown, maxLen = 200): string =>
-    String(val ?? '').replace(/[\r\n\t\x00-\x1F\x7F]/g, ' ').slice(0, maxLen); // eslint-disable-line no-control-regex
 
 const verifyToken = async (req: Request, res: Response, next: NextFunction) => {
     const token = req.headers.authorization?.split(' ')[1];
