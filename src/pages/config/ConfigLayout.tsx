@@ -1,4 +1,4 @@
-import { NavLink, Outlet, useLocation, Navigate } from 'react-router-dom';
+import { NavLink, Outlet, useLocation, Navigate } from 'react-router';
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ChevronRight, Settings2, MapPin, Briefcase } from 'lucide-react';
