@@ -5,11 +5,11 @@ import { isTokenBlacklisted, isSessionInvalidated } from '../lib/redis.js';
 // El import de logAudit crea un ciclo aparente con lib/audit.ts, pero audit.ts solo importa
 // AuthRequest como TIPO (`import type`), que se borra al compilar: en ejecucion no hay ciclo.
 import { logAudit } from '../lib/audit.js';
+import { JWT_SECRET } from '../lib/env.js';
 
 // Leer process.env a nivel de modulo es seguro AQUI porque index.ts importa './lib/env.js' como su
 // primera linea, asi que dotenv.config() ya corrio cuando este modulo se evalua. No mover ese
 // import ni ponerlo despues de este.
-const JWT_SECRET = process.env.JWT_SECRET || '';
 
 export interface JwtUserPayload {
     id: string;

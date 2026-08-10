@@ -12,9 +12,9 @@ import { blacklistToken, invalidateAllUserSessions } from '../lib/redis.js';
 import { safeError } from '../lib/security.js';
 import { clearSharedCookie, verifyToken } from '../middleware/auth.js';
 import type { AuthRequest } from '../middleware/auth.js';
+import { JWT_SECRET } from '../lib/env.js';
 
 // JWT_SECRET: se lee a nivel de modulo, seguro porque index.ts importa './lib/env.js' primero.
-const JWT_SECRET = process.env.JWT_SECRET || '';
 
 // Este router se monta en `/` conservando las rutas completas y en la posicion de su primer
 // bloque. Comprobado con scripts/verificar-orden-rutas.py: ningun par de rutas de esta app

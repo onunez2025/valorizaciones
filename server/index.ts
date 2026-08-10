@@ -1,4 +1,4 @@
-import './lib/env.js';   // PRIMERO: carga el .env antes de que ningun modulo lea process.env
+import './lib/env.js';   // PRIMERO: carga el .env y valida los secretos antes que nada
 import { APP_IDENTIFIER } from './lib/config.js';
 import { safeError, sanitizeLog } from './lib/security.js';
 import { getDb, getReadPool } from './db.js';
@@ -32,11 +32,11 @@ import sql from 'mssql';
 import { addInput } from './lib/db.js';
 import path from 'path';
 import fs from 'fs';
+import { JWT_SECRET } from './lib/env.js';
 
 
 const app = express();
 const port = process.env.PORT || 3000;
-const JWT_SECRET = process.env.JWT_SECRET || '';
 if (process.env.NODE_ENV === 'production' && !JWT_SECRET) {
     console.error('CRITICAL FATAL ERROR: JWT_SECRET environment variable is not set. Server cannot start securely.');
     process.exit(1);
@@ -396,10 +396,6 @@ app.use((req: Request, res: Response) => {
     }
 });
 
-if (!process.env.JWT_SECRET) {
-    console.error('CRITICAL: JWT_SECRET environment variable is missing. Server will not start.');
-    process.exit(1);
-}
 
 if (process.env.NODE_ENV === 'production' && !(process.env.ALLOWED_ORIGINS || '').trim()) {
     console.warn('⚠️  WARNING: ALLOWED_ORIGINS is not set. CORS will block all cross-origin requests in production.');
