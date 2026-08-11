@@ -32,15 +32,10 @@ import sql from 'mssql';
 import { addInput } from './lib/db.js';
 import path from 'path';
 import fs from 'fs';
-import { JWT_SECRET } from './lib/env.js';
 
 
 const app = express();
 const port = process.env.PORT || 3000;
-if (process.env.NODE_ENV === 'production' && !JWT_SECRET) {
-    console.error('CRITICAL FATAL ERROR: JWT_SECRET environment variable is not set. Server cannot start securely.');
-    process.exit(1);
-}
 
 
 
