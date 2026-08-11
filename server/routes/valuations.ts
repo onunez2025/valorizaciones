@@ -82,6 +82,11 @@ router.get('/api/valuations/:ruc', verifyToken, async (req: Request, res: Respon
     }
     const { start, end } = req.query;
 
+    // Cronometro por etapas: la vista tarda 35-40 s y hay dos sospechosos —la consulta SQL
+    // (con OPENJSON por fila dentro de subconsultas correlacionadas) y la llamada a SAP C4C—.
+    // Sin medir cada tramo no hay forma de saber cual manda.
+    const t0 = Date.now();
+    const seg = (desde: number) => ((Date.now() - desde) / 1000).toFixed(1);
     console.log(`[VALUATION] Starting request - RUC: ${sanitizeLog(ruc)}, Range: ${sanitizeLog(start)} to ${sanitizeLog(end)}`);
 
     try {
@@ -174,7 +179,7 @@ router.get('/api/valuations/:ruc', verifyToken, async (req: Request, res: Respon
 
         interface SqlTicket { Ticket: string; TarifaBaseCalculada: number; FechaCierre: string; [key: string]: unknown; }
         let tickets: SqlTicket[] = sqlResult.recordset;
-        console.log(`[VALUATION] SQL query returned ${tickets.length} tickets`);
+        console.log(`[VALUATION] SQL query returned ${tickets.length} tickets — SQL tardo ${seg(t0)} s`);
 
         // Fetch Institutional Rules
         const rules = (await db.request().query("SELECT * FROM [dbo].[GAC_APP_TB_CONFIG_CANAL_INSTITUCIONAL] WHERE Activo = 1")).recordset;
@@ -184,7 +189,9 @@ router.get('/api/valuations/:ruc', verifyToken, async (req: Request, res: Respon
             // independientemente de si hay reglas institucionales activas.
             console.log(`[VALUATION] Fetching OData for ${tickets.length} tickets (Rules active: ${rules.length})`);
             const ticketIds = tickets.map(t => t.Ticket);
+            const tC4C = Date.now();
             const c4cDetails = await getC4CDetails(ticketIds);
+            console.log(`[VALUATION] C4C tardo ${seg(tC4C)} s para ${ticketIds.length} tickets (${Math.ceil(ticketIds.length / 50)} lotes en paralelo)`);
             const detailCount = Object.keys(c4cDetails).length;
             console.log(`[VALUATION] OData results: ${detailCount}/${tickets.length} found`);
 
@@ -224,6 +231,7 @@ router.get('/api/valuations/:ruc', verifyToken, async (req: Request, res: Respon
             });
         }
 
+        console.log(`[VALUATION] TOTAL ${seg(t0)} s`);
         res.json(tickets);
     } catch (err: unknown) {
         console.error('[VALUATION] Server Error:', safeError(err));
@@ -379,6 +387,7 @@ router.post('/api/valuations/batch-discount', verifyToken, async (req: Request, 
                 tickets_total: tickets.length, 
                 motivo 
             });
+            
             
             res.json({ success: true, processed: tickets.length });
 
