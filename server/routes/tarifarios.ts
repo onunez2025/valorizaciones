@@ -180,7 +180,7 @@ router.get('/api/tarifarios/exceptions/:casId', verifyToken, async (req: Request
 });
 
 router.post('/api/tarifarios/exceptions/save', verifyToken, verifyPermission('val.tarifario.edit'), async (req: Request, res: Response) => {
-    const { id, empresa, nombre, zonasIncluidas, zonasExcluidas, categorias, servicios, importe, prioridad, estado } = req.body;
+    const { id, empresa, nombre, zonasIncluidas, zonasExcluidas, categorias, servicios, importe, prioridad, estado, servicioInicial, fechaInicio, fechaFin } = req.body;
     try {
         const db = await getWritePool();
         const finalId = id || crypto.randomBytes(4).toString('hex');
@@ -189,27 +189,36 @@ router.post('/api/tarifarios/exceptions/save', verifyToken, verifyPermission('va
         addInput(excSaveReq, 'id', sql.VarChar(8), finalId);
         addInput(excSaveReq, 'empresa', sql.VarChar(50), empresa);
         addInput(excSaveReq, 'nombre', sql.NVarChar(255), nombre);
-        addInput(excSaveReq, 'zi', sql.NVarChar(sql.MAX), JSON.stringify(zonasIncluidas || null));
-        addInput(excSaveReq, 'ze', sql.NVarChar(sql.MAX), JSON.stringify(zonasExcluidas || null));
-        addInput(excSaveReq, 'cat', sql.NVarChar(sql.MAX), JSON.stringify(categorias || null));
-        addInput(excSaveReq, 'serv', sql.NVarChar(sql.MAX), JSON.stringify(servicios || null));
+        // Portado de main (b422713). Un array vacio ([]) significa "sin restriccion" (aplica a
+        // todo), igual que null o ausente. Pero `JSON.stringify([])` produce '[]', que NO encaja
+        // con el comodin ('null' / IS NULL) que usan las consultas de resolucion de precio, asi
+        // que la excepcion no se aplicaba nunca. Se normaliza a null antes de guardar.
+        const arr = (v: unknown) => JSON.stringify(Array.isArray(v) && v.length ? v : null);
+        addInput(excSaveReq, 'zi', sql.NVarChar(sql.MAX), arr(zonasIncluidas));
+        addInput(excSaveReq, 'ze', sql.NVarChar(sql.MAX), arr(zonasExcluidas));
+        addInput(excSaveReq, 'cat', sql.NVarChar(sql.MAX), arr(categorias));
+        addInput(excSaveReq, 'serv', sql.NVarChar(sql.MAX), arr(servicios));
         addInput(excSaveReq, 'imp', sql.Decimal(18, 2), importe);
         addInput(excSaveReq, 'prio', sql.Int, prioridad || 0);
         addInput(excSaveReq, 'est', sql.VarChar(1), estado || 'A');
+        addInput(excSaveReq, 'servInicial', sql.NVarChar(100), servicioInicial || null);
+        addInput(excSaveReq, 'fechaIni', sql.Date, fechaInicio || null);
+        addInput(excSaveReq, 'fechaFin', sql.Date, fechaFin || null);
         await excSaveReq.query(`
                 IF EXISTS (SELECT 1 FROM [dbo].[GAC_APP_TB_TARIFARIO_EXCEPCIONES] WHERE IdExcepcion = @id)
                 BEGIN
                     UPDATE [dbo].[GAC_APP_TB_TARIFARIO_EXCEPCIONES]
                     SET Nombre = @nombre, Zonas_Incluidas = @zi, Zonas_Excluidas = @ze, 
                         Categorias = @cat, Servicios = @serv, Importe = @imp, 
-                        Prioridad = @prio, Estado = @est
+                        Prioridad = @prio, Estado = @est,
+                        ServicioInicial = @servInicial, Fecha_Inicio = @fechaIni, Fecha_Fin = @fechaFin
                     WHERE IdExcepcion = @id
                 END
                 ELSE
                 BEGIN
                     INSERT INTO [dbo].[GAC_APP_TB_TARIFARIO_EXCEPCIONES] 
-                    (IdExcepcion, Empresa, Nombre, Zonas_Incluidas, Zonas_Excluidas, Categorias, Servicios, Importe, Prioridad, Estado)
-                    VALUES (@id, @empresa, @nombre, @zi, @ze, @cat, @serv, @imp, @prio, @est)
+                    (IdExcepcion, Empresa, Nombre, Zonas_Incluidas, Zonas_Excluidas, Categorias, Servicios, Importe, Prioridad, Estado, ServicioInicial, Fecha_Inicio, Fecha_Fin)
+                    VALUES (@id, @empresa, @nombre, @zi, @ze, @cat, @serv, @imp, @prio, @est, @servInicial, @fechaIni, @fechaFin)
                 END
             `);
         res.json({ success: true, id: finalId });

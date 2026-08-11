@@ -72,6 +72,8 @@ export interface ValuationTicket {
   UsuarioCreador?: string;
   CupoArea?: string;
   C4CSubject?: string;
+  ServicioInicial?: string | null;
+  ReglaAplicada?: string | null;
 }
 
 export interface Material {

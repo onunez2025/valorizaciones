@@ -66,6 +66,9 @@ router.get('/api/tickets/find/:ticket', verifyToken, async (req: Request, res: R
                           AND (ex.Servicios IS NULL OR ex.Servicios = 'null' OR EXISTS (SELECT 1 FROM OPENJSON(ex.Servicios) WHERE value = s.IdServicio OR value = s.Servicio))
                           AND (ex.Zonas_Excluidas IS NULL OR ex.Zonas_Excluidas = 'null' OR NOT EXISTS (SELECT 1 FROM OPENJSON(ex.Zonas_Excluidas) WHERE value = s.Ciudad OR value = s.Distrito))
                           AND (ex.Zonas_Incluidas IS NULL OR ex.Zonas_Incluidas = 'null' OR EXISTS (SELECT 1 FROM OPENJSON(ex.Zonas_Incluidas) WHERE value = s.Ciudad OR value = s.Distrito))
+                          -- Portado de main (b422713): vigencia de la excepcion.
+                          AND (ex.Fecha_Inicio IS NULL OR s.CheckOut >= ex.Fecha_Inicio)
+                          AND (ex.Fecha_Fin IS NULL OR s.CheckOut <= ex.Fecha_Fin)
                         UNION ALL
                         SELECT t.Importe, 0 as Prioridad, t.Fecha_inicio as Creado_El, 0 as Source
                         FROM [dbo].[GAC_APP_TB_TARIFARIO] t

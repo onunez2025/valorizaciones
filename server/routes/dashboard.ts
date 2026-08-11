@@ -109,6 +109,10 @@ router.get('/api/dashboard/stats', verifyToken, async (req: Request, res: Respon
                            AND (ex.Servicios IS NULL OR ex.Servicios = 'null' OR EXISTS (SELECT 1 FROM OPENJSON(ex.Servicios) WHERE value = tc.IdServicio))
                            AND (ex.Zonas_Excluidas IS NULL OR ex.Zonas_Excluidas = 'null' OR NOT EXISTS (SELECT 1 FROM OPENJSON(ex.Zonas_Excluidas) WHERE value = tc.Ciudad OR value = tc.Distrito))
                            AND (ex.Zonas_Incluidas IS NULL OR ex.Zonas_Incluidas = 'null' OR EXISTS (SELECT 1 FROM OPENJSON(ex.Zonas_Incluidas) WHERE value = tc.Ciudad OR value = tc.Distrito))
+                           -- Portado de main (b422713): vigencia de la excepcion. Sin esto se
+                           -- aplicaban Casos Especiales fuera de su periodo de validez.
+                           AND (ex.Fecha_Inicio IS NULL OR tc.CheckOut >= ex.Fecha_Inicio)
+                           AND (ex.Fecha_Fin IS NULL OR tc.CheckOut <= ex.Fecha_Fin)
                          ORDER BY ex.Prioridad DESC, ex.Creado_El DESC),
                         -- 2. Tarifario Base
                         (SELECT TOP 1 t.Importe
@@ -202,6 +206,10 @@ router.get('/api/dashboard/trends', verifyToken, async (req: Request, res: Respo
                            AND (ex.Servicios IS NULL OR ex.Servicios = 'null' OR EXISTS (SELECT 1 FROM OPENJSON(ex.Servicios) WHERE value = tc.IdServicio))
                            AND (ex.Zonas_Excluidas IS NULL OR ex.Zonas_Excluidas = 'null' OR NOT EXISTS (SELECT 1 FROM OPENJSON(ex.Zonas_Excluidas) WHERE value = tc.Ciudad OR value = tc.Distrito))
                            AND (ex.Zonas_Incluidas IS NULL OR ex.Zonas_Incluidas = 'null' OR EXISTS (SELECT 1 FROM OPENJSON(ex.Zonas_Incluidas) WHERE value = tc.Ciudad OR value = tc.Distrito))
+                           -- Portado de main (b422713): vigencia de la excepcion. Sin esto se
+                           -- aplicaban Casos Especiales fuera de su periodo de validez.
+                           AND (ex.Fecha_Inicio IS NULL OR tc.CheckOut >= ex.Fecha_Inicio)
+                           AND (ex.Fecha_Fin IS NULL OR tc.CheckOut <= ex.Fecha_Fin)
                          ORDER BY ex.Prioridad DESC, ex.Creado_El DESC),
                         -- 2. Tarifario Base
                         (SELECT TOP 1 t.Importe

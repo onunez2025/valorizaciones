@@ -136,17 +136,20 @@ router.get('/api/valuations/:ruc', verifyToken, async (req: Request, res: Respon
                               AND (cfg.Fecha_Fin IS NULL OR s.CheckOut <= cfg.Fecha_Fin)
                         ), 0)
                     )
-                END as Adicionales
+                END as Adicionales,
+                -- Portado de main (a0cc3f6): se expone que regla se aplico y su Servicio Inicial
+                rate.ServicioInicial as ServicioInicial,
+                rate.Nombre as ReglaAplicada
             FROM [APPGAC].[ServiciosViewSQL] s
             JOIN [dbo].[GAC_APP_TB_CAS] cas ON s.IdCAS = cas.ID_CAS
             OUTER APPLY (
                 SELECT TOP 1 Categoria FROM [dbo].[GAC_APP_TB_MATERIALES] WHERE ID_Externo = s.CodigoExternoEquipo
             ) m
             OUTER APPLY (
-                SELECT TOP 1 CAST(Importe AS FLOAT) as Importe 
+                SELECT TOP 1 CAST(Importe AS FLOAT) as Importe, ServicioInicial, Nombre
                 FROM (
                     -- 1. Buscar en Excepciones
-                    SELECT ex.Importe, ex.Prioridad, ex.Creado_El, 1 as Source
+                    SELECT ex.Importe, ex.Prioridad, ex.Creado_El, 1 as Source, ex.ServicioInicial, ex.Nombre
                     FROM [dbo].[GAC_APP_TB_TARIFARIO_EXCEPCIONES] ex
                     WHERE ex.Empresa = s.IdCAS
                       AND ex.Estado = 'A'
@@ -154,11 +157,14 @@ router.get('/api/valuations/:ruc', verifyToken, async (req: Request, res: Respon
                       AND (ex.Servicios IS NULL OR ex.Servicios = 'null' OR EXISTS (SELECT 1 FROM OPENJSON(ex.Servicios) WHERE value = s.IdServicio OR value = s.Servicio))
                       AND (ex.Zonas_Excluidas IS NULL OR ex.Zonas_Excluidas = 'null' OR NOT EXISTS (SELECT 1 FROM OPENJSON(ex.Zonas_Excluidas) WHERE value = s.Ciudad OR value = s.Distrito))
                       AND (ex.Zonas_Incluidas IS NULL OR ex.Zonas_Incluidas = 'null' OR EXISTS (SELECT 1 FROM OPENJSON(ex.Zonas_Incluidas) WHERE value = s.Ciudad OR value = s.Distrito))
+                      -- Portado de main (b422713): vigencia de la excepcion.
+                      AND (ex.Fecha_Inicio IS NULL OR s.CheckOut >= ex.Fecha_Inicio)
+                      AND (ex.Fecha_Fin IS NULL OR s.CheckOut <= ex.Fecha_Fin)
                     
                     UNION ALL
                     
                     -- 2. Tarifario Base
-                    SELECT t.Importe, 0 as Prioridad, t.Fecha_inicio as Creado_El, 0 as Source
+                    SELECT t.Importe, 0 as Prioridad, t.Fecha_inicio as Creado_El, 0 as Source, NULL as ServicioInicial, NULL as Nombre
                     FROM [dbo].[GAC_APP_TB_TARIFARIO] t 
                     WHERE t.Empresa = s.IdCAS 
                       AND (t.Servicio = s.IdServicio OR t.Servicio = s.Servicio)
@@ -529,6 +535,8 @@ router.post('/api/valuations/close', verifyToken, async (req: Request, res: Resp
                 table.columns.add('Distrito', sql.VarChar(100), { nullable: true });
                 table.columns.add('Departamento', sql.VarChar(100), { nullable: true });
                 table.columns.add('Nombre_Equipo', sql.NVarChar(255), { nullable: true });
+                // Portado de main (9a7138b): el detalle guarda el Servicio Inicial documental
+                table.columns.add('Servicio_Inicial', sql.VarChar(100), { nullable: true });
 
                 for (const item of details) {
                     table.rows.add(
@@ -548,7 +556,8 @@ router.post('/api/valuations/close', verifyToken, async (req: Request, res: Resp
                         item.idReferencia ? item.idReferencia.toString() : null,
                         item.distrito,
                         item.departamento,
-                        item.nombreEquipo
+                        item.nombreEquipo,
+                        item.servicioInicial || null
                     );
                 }
 
@@ -742,7 +751,8 @@ router.get('/api/valuations/details/:id', verifyToken, async (req: Request, res:
                     d.ID_Referencia,
                     d.Distrito,
                     d.Departamento,
-                    d.Nombre_Equipo
+                    d.Nombre_Equipo,
+                    d.Servicio_Inicial
                 FROM [dbo].[GAC_APP_TB_VALORIZACIONES_DETALLE] d
                 WHERE d.IdCierre = @id
             `);

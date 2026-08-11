@@ -272,7 +272,8 @@ export default function ValuationsPage() {
                             Adicionales: row.Adicionales,
                             Distrito: row.Distrito,
                             Departamento: row.Departamento,
-                            NombreEquipo: row.Nombre_Equipo
+                            NombreEquipo: row.Nombre_Equipo,
+                            ServicioInicial: row.Servicio_Inicial
                         }));
 
                     const savedPenalties = detailResult.tickets
@@ -861,7 +862,8 @@ export default function ValuationsPage() {
             comentarioTecnico: tk.ComentarioTecnico,
             distrito: tk.Distrito,
             departamento: tk.Departamento,
-            nombreEquipo: tk.NombreEquipo
+            nombreEquipo: tk.NombreEquipo,
+            servicioInicial: tk.ServicioInicial
         }));
 
         const penaltyDetails = activePenalties.map(p => {
@@ -936,7 +938,8 @@ export default function ValuationsPage() {
             idReferencia: null,
             distrito: tk.Distrito,
             departamento: tk.Departamento,
-            nombreEquipo: tk.NombreEquipo
+            nombreEquipo: tk.NombreEquipo,
+            servicioInicial: tk.ServicioInicial
         }));
 
         const penaltyDetails = activePenalties.map(p => {
@@ -1256,7 +1259,7 @@ export default function ValuationsPage() {
         footerRow.getCell(3).numFmt = '"S/" #,##0.00';
 
         // --- HOJA DETALLE ---
-        const dHeaders = ["TICKET", "FECHA VISITA", "FECHA CIERRE", "DÍAS DIF.", "SERVICIO", "TECNICO", "COMENTARIO TECNICO", "CÓD. EQUIPO", "DESCRIPCIÓN EQUIPO", "CATEGORÍA", "CATEGORÍA VIRTUAL", "DISTRITO", "DEPARTAMENTO", "TARIFA BASE", "ADICIONALES", "TOTAL"];
+        const dHeaders = ["TICKET", "FECHA VISITA", "FECHA CIERRE", "DÍAS DIF.", "SERVICIO", "TECNICO", "COMENTARIO TECNICO", "CÓD. EQUIPO", "DESCRIPCIÓN EQUIPO", "CATEGORÍA", "CATEGORÍA VIRTUAL", "DISTRITO", "DEPARTAMENTO", "TARIFA BASE", "ADICIONALES", "TOTAL", "SERVICIO INICIAL"];
         sheetDetalle.getRow(1).values = dHeaders;
         sheetDetalle.getRow(1).eachCell(c => {
             c.font = { bold: true, color: { argb: 'FFFFFFFF' } };
@@ -1281,7 +1284,8 @@ export default function ValuationsPage() {
                 tk.Departamento || '-',
                 tk.TarifaBase ?? (tk.TarifaBase + (tk.Adicionales || 0)), // Si TarifaBase es null, usar el total
                 tk.Adicionales || 0,
-                (tk.TarifaBase + (tk.Adicionales || 0))
+                (tk.TarifaBase + (tk.Adicionales || 0)),
+                tk.ServicioInicial || '-'
             ]);
             row.getCell(2).numFmt = 'dd/mm/yyyy';
             row.getCell(3).numFmt = 'dd/mm/yyyy';
@@ -1293,7 +1297,7 @@ export default function ValuationsPage() {
             }
             row.eachCell(c => { c.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} }; });
         });
-        sheetDetalle.autoFilter = { from: 'A1', to: 'M1' };
+        sheetDetalle.autoFilter = { from: 'A1', to: 'Q1' };
         sheetDetalle.columns.forEach(col => { col.width = 18; });
 
         // --- HOJA PENALIDADES ---
@@ -1456,7 +1460,7 @@ export default function ValuationsPage() {
         footerRow.getCell(3).numFmt = '"S/" #,##0.00';
 
         // --- HOJA SERVICIOS ---
-        const sHeaders = ["TICKET", "FECHA VISITA", "FECHA CIERRE", "DÍAS DIF.", "SERVICIO", "TECNICO", "COMENTARIO TECNICO", "CÓD. EQUIPO", "DESCRIPCIÓN EQUIPO", "CATEGORÍA", "CATEGORÍA VIRTUAL", "DISTRITO", "DEPARTAMENTO", "TARIFA BASE", "ADICIONALES", "TOTAL"];
+        const sHeaders = ["TICKET", "FECHA VISITA", "FECHA CIERRE", "DÍAS DIF.", "SERVICIO", "TECNICO", "COMENTARIO TECNICO", "CÓD. EQUIPO", "DESCRIPCIÓN EQUIPO", "CATEGORÍA", "CATEGORÍA VIRTUAL", "DISTRITO", "DEPARTAMENTO", "TARIFA BASE", "ADICIONALES", "TOTAL", "SERVICIO INICIAL"];
         sheetDetalle.getRow(1).values = sHeaders;
         sheetDetalle.getRow(1).eachCell(c => { c.font = { bold: true, color: { argb: 'FFFFFFFF' } }; c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E3A8A' } }; });
         
@@ -1480,7 +1484,8 @@ export default function ValuationsPage() {
                 (s.Departamento as string) || '-',
                 (s.Tarifa_Base as number | undefined) ?? (s.Monto as number), // Fallback para cierres antiguos
                 (s.Adicionales as number | undefined) ?? 0,
-                s.Monto as number
+                s.Monto as number,
+                (s.Servicio_Inicial as string) || '-'
             ]);
             row.getCell(2).numFmt = 'dd/mm/yyyy';
             row.getCell(3).numFmt = 'dd/mm/yyyy';
@@ -1489,7 +1494,7 @@ export default function ValuationsPage() {
             row.getCell(16).numFmt = '"S/" #,##0.00';
             row.eachCell(c => { c.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} }; });
         });
-        sheetDetalle.autoFilter = { from: 'A1', to: 'M1' };
+        sheetDetalle.autoFilter = { from: 'A1', to: 'Q1' };
         sheetDetalle.columns.forEach(col => { col.width = 15; });
 
         // --- HOJA PENALIDADES ---
@@ -2038,6 +2043,16 @@ export default function ValuationsPage() {
                                                                                                     <span className="font-medium text-foreground text-sm">
                                                                                                         {toTitleCase(ticket.ServicioNombre || 'General')}
                                                                                                     </span>
+                                                                                                    {ticket.ReglaAplicada && (
+                                                                                                        <div className="mt-1">
+                                                                                                            <span
+                                                                                                                className="px-2 py-0.5 bg-amber-500/10 text-amber-600 dark:text-amber-400 rounded text-[9px] font-black tracking-tight"
+                                                                                                                title={`Servicio inicial: ${ticket.ServicioInicial || 'N/D'} — Regla: ${ticket.ReglaAplicada}`}
+                                                                                                            >
+                                                                                                                CASO ESPECIAL
+                                                                                                            </span>
+                                                                                                        </div>
+                                                                                                    )}
                                                                                                 </td>
                                                                                                 <td className="px-6 py-4">
                                                                                                     <div className="flex flex-col">
