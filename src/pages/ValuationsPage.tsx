@@ -17,16 +17,6 @@ import { LottiePlayer } from '../components/common/LottiePlayer';
 import { useTranslation } from 'react-i18next';
 
 
-/**
- * Mide el tiempo REAL que percibe el usuario: desde que se pide el dato hasta que la tabla
- * esta pintada. El servidor ya se cronometra en sus propios logs; esto cubre el otro tramo.
- */
-const medirPintado = (etiqueta: string, filas: number, desde: number) => {
-    requestAnimationFrame(() => requestAnimationFrame(() => {
-        console.log(`[MEDICION] ${etiqueta}: ${filas} filas — ${((performance.now() - desde) / 1000).toFixed(1)} s desde la peticion hasta pintarlo`);
-    }));
-};
-
 const isValuable = (code?: string) => ['3120', '3121', '5120', '5121'].some(prefix => code?.startsWith(prefix));
 
 // Version 1.0.1 - Fix Timezone UTC
@@ -228,7 +218,6 @@ export default function ValuationsPage() {
         }
         setLoadingData(true);
         setCurrentDraft(null); // Reset current draft
-        const t0 = performance.now();
         try {
             const [ticketsData, penaltiesData, closuresData] = await Promise.all([
                 ApiClient.request(`/valuations/${selectedCas.RUC}?start=${startDate}&end=${endDate}`),
@@ -238,7 +227,6 @@ export default function ValuationsPage() {
 
             setTickets(ticketsData);
             setPenalties(penaltiesData);
-            medirPintado('Valorizaciones', (ticketsData as unknown[]).length, t0);
 
             // Check if there is an active draft for this period and CAS
             const draft = closuresData.find((c: Record<string, unknown>) => {
