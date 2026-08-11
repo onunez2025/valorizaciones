@@ -1,4 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { useVirtualizer } from '@tanstack/react-virtual';
+import { useMediaQuery } from '../hooks/useMediaQuery';
 import { useTranslation } from 'react-i18next';
 import { ApiClient } from '../services/apiClient';
 import {
@@ -55,6 +57,20 @@ export default function MaterialsPage() {
         }
     };
 
+    // El catalogo tiene mas de 14.000 productos y la pantalla los pintaba TODOS, ademas por
+    // duplicado: la tabla de escritorio y las tarjetas de movil se generan las dos aunque una
+    // este oculta por CSS —`hidden` esconde, pero React construye igual los elementos—. Eran
+    // cerca de 30.000 bloques en el DOM y ahi se iban los segundos, no en la consulta (0,5 s).
+    //
+    // Dos medidas: renderizar SOLO la vista que corresponde al ancho real, y dibujar
+    // unicamente las filas visibles reciclandolas al desplazar.
+    //
+    // Se virtualiza en vez de paginar a proposito: asi el buscador y el filtro de categoria
+    // siguen trabajando sobre el catalogo COMPLETO y siguen siendo instantaneos, sin viajes al
+    // servidor por cada tecleo.
+    const esEscritorio = useMediaQuery('(min-width: 768px)');
+    const contenedorScroll = useRef<HTMLDivElement>(null);
+
     const categories = ['Todas', ...Array.from(new Set(materials.map(m => m.Categoria))).sort()];
 
     const filteredMaterials = materials.filter(m => {
@@ -64,6 +80,19 @@ export default function MaterialsPage() {
         const matchesCategory = selectedCategory === 'Todas' || m.Categoria === selectedCategory;
         return matchesSearch && matchesCategory;
     });
+
+    const virtualizador = useVirtualizer({
+        count: filteredMaterials.length,
+        getScrollElement: () => contenedorScroll.current,
+        // Alto aproximado de fila; el virtualizador lo corrige midiendo las reales.
+        estimateSize: () => (esEscritorio ? 57 : 96),
+        overscan: 8,
+    });
+    const filasVisibles = virtualizador.getVirtualItems();
+    const rellenoArriba = filasVisibles.length ? filasVisibles[0].start : 0;
+    const rellenoAbajo = filasVisibles.length
+        ? virtualizador.getTotalSize() - filasVisibles[filasVisibles.length - 1].end
+        : 0;
 
     const handleSaveMaterial = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -148,9 +177,9 @@ export default function MaterialsPage() {
 
             {/* Table */}
             <div className={cn("flex-1 overflow-hidden flex flex-col", SIATC_THEME.COMPONENTS.CARD_CONTAINER)}>
-                <div className="flex-1 overflow-auto custom-scrollbar">
-                    {/* Desktop Table View */}
-                    <div className="hidden md:block h-full">
+                <div ref={contenedorScroll} className="flex-1 overflow-auto custom-scrollbar">
+                    {/* Vista de escritorio — solo se monta si el ancho la corresponde */}
+                    {esEscritorio !== false && <div className="hidden md:block h-full">
                         {loading ? (
                             <div className="h-full flex flex-col items-center justify-center gap-4 opacity-40">
                                 <Activity className="w-10 h-10 animate-spin text-primary" />
@@ -174,8 +203,13 @@ export default function MaterialsPage() {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-border/10">
-                                    {filteredMaterials.map(m => (
-                                        <tr key={m.ID_Material} className="hover:bg-primary/[0.02] transition-colors group">
+                                    {/* Filas de relleno: sostienen la barra de desplazamiento como si
+                                        estuvieran todas las filas, sin construirlas. */}
+                                    {rellenoArriba > 0 && <tr><td colSpan={5} style={{ height: rellenoArriba }} /></tr>}
+                                    {filasVisibles.map(fila => {
+                                        const m = filteredMaterials[fila.index];
+                                        return (
+                                        <tr key={m.ID_Material} data-index={fila.index} ref={virtualizador.measureElement} className="hover:bg-primary/[0.02] transition-colors group">
                                             <td className="px-6 py-4 font-black text-primary text-sm tracking-tighter">
                                                 {m.ID_Externo}
                                             </td>
@@ -213,14 +247,16 @@ export default function MaterialsPage() {
                                                 </div>
                                             </td>
                                         </tr>
-                                    ))}
+                                        );
+                                    })}
+                                    {rellenoAbajo > 0 && <tr><td colSpan={5} style={{ height: rellenoAbajo }} /></tr>}
                                 </tbody>
                             </table>
                         )}
-                    </div>
+                    </div>}
 
-                    {/* Mobile Card View */}
-                    <div className="md:hidden space-y-3 p-3">
+                    {/* Vista movil — solo se monta si el ancho la corresponde */}
+                    {esEscritorio !== true && <div className="md:hidden space-y-3 p-3">
                         {loading ? (
                             <div className="flex flex-col items-center justify-center gap-4 py-12 opacity-40">
                                 <Activity className="w-10 h-10 animate-spin text-primary" />
@@ -232,8 +268,12 @@ export default function MaterialsPage() {
                                 <h3 className="text-lg font-black">{t('materials.empty')}</h3>
                                 <p className="text-xs font-bold mt-2">{t('materials.emptyHint')}</p>
                             </div>
-                        ) : filteredMaterials.map(m => (
-                            <div key={m.ID_Material} className={cn(SIATC_THEME.COMPONENTS.CARD_CONTAINER, "p-4 space-y-3")}>
+                        ) : <>
+                        {rellenoArriba > 0 && <div style={{ height: rellenoArriba }} />}
+                        {filasVisibles.map(fila => {
+                            const m = filteredMaterials[fila.index];
+                            return (
+                            <div key={m.ID_Material} data-index={fila.index} ref={virtualizador.measureElement} className={cn(SIATC_THEME.COMPONENTS.CARD_CONTAINER, "p-4 space-y-3")}>
                                 <div className="flex items-start justify-between gap-3">
                                     <div className="min-w-0">
                                         <span className="font-black text-primary text-[11px] tracking-tighter font-mono">{m.ID_Externo}</span>
@@ -266,8 +306,11 @@ export default function MaterialsPage() {
                                     </button>
                                 </div>
                             </div>
-                        ))}
-                    </div>
+                            );
+                        })}
+                        {rellenoAbajo > 0 && <div style={{ height: rellenoAbajo }} />}
+                        </>}
+                    </div>}
                 </div>
             </div>
 
