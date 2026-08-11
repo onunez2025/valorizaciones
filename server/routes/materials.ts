@@ -17,7 +17,11 @@ const router = Router();
 router.get('/api/materials', verifyToken, async (req: Request, res: Response) => {
     try {
         const db = await getReadPool();
+        const t0 = Date.now();
         const result = await db.request().query("SELECT ID_Material, ID_Externo, Nombre, Categoria, Estado, Sector FROM [dbo].[GAC_APP_TB_MATERIALES] ORDER BY Categoria, Nombre");
+        // Devuelve el catalogo ENTERO sin paginar (mas de 14.000 productos). Se cronometra
+        // para separar el coste de la consulta del de transportar y pintar tantas filas.
+        console.log(`[MATERIALES] ${result.recordset.length} productos en ${((Date.now() - t0) / 1000).toFixed(1)} s`);
         res.json(result.recordset);
     } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });

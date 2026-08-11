@@ -50,6 +50,7 @@ router.get('/api/tarifarios/:casId', verifyToken, async (req: Request, res: Resp
         const db = await getReadPool();
         const tarListReq = db.request();
         addInput(tarListReq, 'casId', sql.VarChar(50), casId);
+        const t0 = Date.now();
         const result = await tarListReq.query(`
                 SELECT
                     t.ID_Tarifario as Id,
@@ -65,6 +66,7 @@ router.get('/api/tarifarios/:casId', verifyToken, async (req: Request, res: Resp
                 WHERE t.Empresa = @casId
                 ORDER BY t.Categoria, t.Servicio, t.Fecha_inicio DESC
             `);
+        console.log(`[TARIFARIO] ${result.recordset.length} filas en ${((Date.now() - t0) / 1000).toFixed(1)} s`);
         res.json(result.recordset);
     } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
