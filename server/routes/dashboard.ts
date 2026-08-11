@@ -137,7 +137,9 @@ router.get('/api/dashboard/stats', verifyToken, async (req: Request, res: Respon
                 ISNULL((SELECT Total FROM ValSanciones), 0) as Sanciones
         `;
 
+        const t0 = Date.now();
         const stats = await request.query(query);
+        console.log(`[DASHBOARD] stats — ${stats.recordset.length} filas en ${((Date.now() - t0) / 1000).toFixed(1)} s`);
         const result = stats.recordset[0];
         const bruto = (result.BaseImporte || 0) + (result.Adicionales || 0);
 
@@ -245,7 +247,9 @@ router.get('/api/dashboard/trends', verifyToken, async (req: Request, res: Respo
             ORDER BY rm.Anio ASC, rm.MesNum ASC
         `;
 
+        const t0 = Date.now();
         const trends = await request.query(query);
+        console.log(`[DASHBOARD] trends — ${trends.recordset.length} filas en ${((Date.now() - t0) / 1000).toFixed(1)} s`);
         res.json(trends.recordset);
     } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
@@ -296,7 +300,9 @@ router.get('/api/dashboard/top-cas', verifyToken, async (req: Request, res: Resp
             ORDER BY value DESC
         `;
 
+        const t0 = Date.now();
         const top = await request.query(query);
+        console.log(`[DASHBOARD] top-cas — ${top.recordset.length} filas en ${((Date.now() - t0) / 1000).toFixed(1)} s`);
         res.json(top.recordset);
     } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
