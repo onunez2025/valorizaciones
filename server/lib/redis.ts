@@ -26,6 +26,10 @@ export function getRedisClient(): Redis {
             redisOptions.username = process.env.REDIS_USERNAME;
         }
         _redis = new Redis(redisOptions);
+        // Deja dicho A DONDE intenta conectarse, sin la contrasena. Cuando falla, el error de
+        // ioredis no dice el destino, asi que no se puede distinguir "el servicio no existe" de
+        // "la contrasena no coincide" ni saber si el contenedor recogio las variables nuevas.
+        console.log(`[Redis] Destino: ${process.env.REDIS_HOST || 'localhost'}:${process.env.REDIS_PORT || '6379'} db=${process.env.REDIS_DB || '0'} contrasena=${process.env.REDIS_PASSWORD ? 'definida' : 'SIN DEFINIR'}`);
         _redis.on('error', (err: Error) => console.error('[Redis] Error:', err.message));
     }
     return _redis;

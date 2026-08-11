@@ -12,6 +12,18 @@ import { cn } from '../utils/cn';
 import type { Material } from '../types';
 import { SIATC_THEME } from '../utils/siatc-theme';
 
+
+/**
+ * Mide el tiempo REAL que percibe el usuario: desde que se pide el dato hasta que la tabla
+ * esta pintada. El servidor ya se cronometra en sus propios logs; esto cubre el otro tramo,
+ * que es donde puede estar el problema cuando la consulta tarda menos de un segundo.
+ */
+const medirPintado = (etiqueta: string, filas: number, desde: number) => {
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+        console.log(`[MEDICION] ${etiqueta}: ${filas} filas — ${((performance.now() - desde) / 1000).toFixed(1)} s desde la peticion hasta pintarlo`);
+    }));
+};
+
 export default function MaterialsPage() {
     const { t } = useTranslation();
     const [materials, setMaterials] = useState<Material[]>([]);
@@ -29,9 +41,11 @@ export default function MaterialsPage() {
 
     const fetchMaterials = async () => {
         setLoading(true);
+        const t0 = performance.now();
         try {
             const data = await ApiClient.request('/materials');
             setMaterials(data);
+            medirPintado('Materiales', (data as unknown[]).length, t0);
         } catch (error: unknown) {
             if (error instanceof Error && error.message === 'AUTH_EXPIRED') return;
             console.error("Error fetching materials:", error);

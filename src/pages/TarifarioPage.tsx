@@ -36,6 +36,17 @@ interface Rate {
     Estado?: string;
 }
 
+
+/**
+ * Mide el tiempo REAL que percibe el usuario: desde que se pide el dato hasta que la tabla
+ * esta pintada. El servidor ya se cronometra en sus propios logs; esto cubre el otro tramo.
+ */
+const medirPintado = (etiqueta: string, filas: number, desde: number) => {
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+        console.log(`[MEDICION] ${etiqueta}: ${filas} filas — ${((performance.now() - desde) / 1000).toFixed(1)} s desde la peticion hasta pintarlo`);
+    }));
+};
+
 export default function TarifarioPage() {
     const { t } = useTranslation();
     const { alert } = useDialog();
@@ -89,6 +100,7 @@ export default function TarifarioPage() {
 
     const fetchRates = async (cas: CAS) => {
         setLoading(true);
+        const t0 = performance.now();
         try {
             // RUTA PLURALIZADA CORRECTA
             const data = await ApiClient.request(`/tarifarios/${cas.ID_CAS}`);
@@ -100,6 +112,7 @@ export default function TarifarioPage() {
             }));
             setRates(mappedData);
             setEditRates(mappedData);
+            medirPintado('Tarifario', mappedData.length, t0);
 
             // Expandir todas al cargar por defecto si el usuario lo prefiere, o dejarlas contraídas.
             // Por el requerimiento "ver todas las categorías primero", las dejaremos contraídas.
