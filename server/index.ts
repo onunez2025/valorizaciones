@@ -104,6 +104,7 @@ const limiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 1000,
     store: new RedisStore({ sendCommand: (...args: string[]) => (getRedisClient() as any).call(...args) as any, prefix: 'rl:val:' }), // eslint-disable-line @typescript-eslint/no-explicit-any
+    passOnStoreError: true,   // si Redis cae, la app sigue sirviendo (sin limitar) en vez de dar 500
 });
 app.use(limiter);
 
@@ -120,6 +121,7 @@ let authLimiter = rateLimit({
     keyGenerator: authKeyGenerator,
     handler: avisoLimite('limite de login'),
     store: new RedisStore({ sendCommand: (...args: string[]) => (getRedisClient() as any).call(...args) as any, prefix: 'rl:val:auth:' }), // eslint-disable-line @typescript-eslint/no-explicit-any
+    passOnStoreError: true,   // si Redis cae, la app sigue sirviendo (sin limitar) en vez de dar 500
 });
 
 app.use(cors({
@@ -451,6 +453,7 @@ app.listen(port, () => {
             keyGenerator: authKeyGenerator,
             message: { error: `Too many login attempts, please try again after ${cfg.rateLimitWindowMinutes} minutes.` },
             store: new RedisStore({ sendCommand: (...args: string[]) => (getRedisClient() as any).call(...args) as any, prefix: 'rl:val:auth:' }), // eslint-disable-line @typescript-eslint/no-explicit-any
+            passOnStoreError: true,   // si Redis cae, la app sigue sirviendo (sin limitar) en vez de dar 500
         });
         console.log(`[SessionConfig] Auth limiter: ${cfg.rateLimitMaxAttempts} intentos / ${cfg.rateLimitWindowMinutes} min`);
     }).catch(err => console.error('[SessionConfig] Failed to load rate limit config:', err));

@@ -12,6 +12,14 @@ export function getRedisClient(): Redis {
             password: process.env.REDIS_PASSWORD,
             db: parseInt(process.env.REDIS_DB || '0'),
             lazyConnect: true,
+            // Si Redis no responde, fallar RAPIDO en vez de encolar. Medido: con la cola activada
+            // una sola orden tarda 21 s en rendirse, y como el limitador corre al principio de la
+            // cadena, CADA peticion se quedaba colgada ese tiempo. Va junto con
+            // `passOnStoreError: true` en los limitadores: sin eso, fallar rapido convertiria la
+            // lentitud en un 500 en todas las peticiones.
+            enableOfflineQueue: false,
+            maxRetriesPerRequest: 1,
+            connectTimeout: 2000,
             retryStrategy: (times: number) => Math.min(times * 100, 3000),
         };
         if (process.env.REDIS_USERNAME) {
