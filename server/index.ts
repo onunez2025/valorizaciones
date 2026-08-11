@@ -26,7 +26,9 @@ import { fileURLToPath } from 'url';
 import type { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
-import rateLimit from 'express-rate-limit';
+import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
+import jwt from 'jsonwebtoken';
+import { JWT_SECRET } from './lib/env.js';
 import { RedisStore } from 'rate-limit-redis';
 import sql from 'mssql';
 import { addInput } from './lib/db.js';
@@ -63,10 +65,44 @@ app.use(helmet({
     hsts: process.env.NODE_ENV === 'production' ? { maxAge: 31536000, includeSubDomains: true } : false,
 }));
 
+/**
+ * Clave del limitador general.
+ *
+ * Contar por IP hacia que una oficina entera compartiera un solo cupo: con decenas de
+ * personas saliendo por la misma IP, entre login, configuracion y primera pantalla se
+ * agotaban las 1.000 peticiones y quedaban bloqueadas TODAS a la vez — incluido el propio
+ * login, porque este limitador corre antes que esa ruta.
+ *
+ * Con sesion iniciada el contador es de esa persona. El token se VERIFICA, no solo se lee:
+ * si bastara con leerlo, cualquiera podria inventarse un `id` distinto en cada peticion y
+ * saltarse el limite. Sin sesion valida se cuenta por IP, que es la unica identidad que hay.
+ */
+const claveLimitador = (req: Request): string => {
+    const cabecera = req.headers.authorization;
+    if (cabecera?.startsWith('Bearer ')) {
+        try {
+            const datos = jwt.verify(cabecera.slice(7), JWT_SECRET) as { id?: string };
+            if (datos?.id) return `u:${datos.id}`;
+        } catch {
+            // Token invalido o caducado: se cuenta por IP, como cualquier anonimo.
+        }
+    }
+    return `ip:${ipKeyGenerator(req.ip ?? '')}`;
+};
+
+/** Deja constancia de quien choco con un limite. Antes no habia forma de saberlo. */
+const avisoLimite = (cual: string) => (req: Request, res: Response) => {
+    // `rateLimit` lo pone express-rate-limit en la peticion; su tipo no viene aumentado.
+    const clave = (req as Request & { rateLimit?: { key?: string } }).rateLimit?.key;
+    console.warn(`[RateLimit] ${cual} agotado — clave=${sanitizeLog(clave)} ruta=${sanitizeLog(req.originalUrl)}`);
+    res.status(429).json({ error: 'Demasiadas peticiones. Espera unos minutos e intenta de nuevo.' });
+};
+
 const limiter = rateLimit({
+    keyGenerator: claveLimitador,
+    handler: avisoLimite('limite general'),
     windowMs: 15 * 60 * 1000,
     max: 1000,
-    message: { error: 'Too many requests from this IP, please try again later.' },
     store: new RedisStore({ sendCommand: (...args: string[]) => (getRedisClient() as any).call(...args) as any, prefix: 'rl:val:' }), // eslint-disable-line @typescript-eslint/no-explicit-any
 });
 app.use(limiter);
@@ -82,10 +118,9 @@ let authLimiter = rateLimit({
     max: 10,
     skipSuccessfulRequests: true,
     keyGenerator: authKeyGenerator,
-    message: { error: 'Too many login attempts, please try again later.' },
+    handler: avisoLimite('limite de login'),
     store: new RedisStore({ sendCommand: (...args: string[]) => (getRedisClient() as any).call(...args) as any, prefix: 'rl:val:auth:' }), // eslint-disable-line @typescript-eslint/no-explicit-any
 });
-app.use('/api/auth/login', (req: Request, res: Response, next: NextFunction) => authLimiter(req, res, next));
 
 app.use(cors({
     origin: (origin, callback) => {
@@ -101,6 +136,7 @@ app.use(cors({
     credentials: true
 }));
 app.use(express.json({ limit: '2mb' }));
+app.use('/api/auth/login', (req: Request, res: Response, next: NextFunction) => authLimiter(req, res, next));
 app.use(express.urlencoded({ limit: '2mb', extended: true }));
 
 
