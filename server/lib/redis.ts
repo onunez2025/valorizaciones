@@ -29,6 +29,14 @@ export function getRedisClient(): Redis {
         // Deja dicho A DONDE intenta conectarse, sin la contrasena. Cuando falla, el error de
         // ioredis no dice el destino, asi que no se puede distinguir "el servicio no existe" de
         // "la contrasena no coincide" ni saber si el contenedor recogio las variables nuevas.
+        // Con `lazyConnect` el socket no se abre hasta la primera orden, y con la cola
+        // desactivada esa primera orden falla al instante ("Stream isn't writeable"). Eso hacia
+        // que el arranque escupiera un error aparatoso aunque Redis estuviera perfectamente:
+        // el limitador intenta precargar su script Lua nada mas montarse.
+        //
+        // Se abre la conexion aqui, sin esperar a nadie. Si Redis no esta, el `catch` deja seguir
+        // —la app tiene que arrancar igual— y los ayudantes ya fallan abiertos.
+        _redis.connect().catch(() => { /* sin Redis: la app sigue, sin limitador ni lista negra */ });
         console.log(`[Redis] Destino: ${process.env.REDIS_HOST || 'localhost'}:${process.env.REDIS_PORT || '6379'} db=${process.env.REDIS_DB || '0'} contrasena=${process.env.REDIS_PASSWORD ? 'definida' : 'SIN DEFINIR'}`);
         _redis.on('error', (err: Error) => console.error('[Redis] Error:', err.message));
     }
