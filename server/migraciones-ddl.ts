@@ -18,7 +18,11 @@
  * Requiere DB_USER y DB_PASSWORD (el usuario con permiso de DDL) en el entorno. El servidor web
  * ya no las necesita.
  */
-import './lib/env.js';
+// Solo se carga el .env. No se usa lib/env.js a proposito: ese modulo valida JWT_SECRET y las
+// credenciales de los pools de la aplicacion, y un script de esquema no necesita ninguna de las
+// dos — pedirlas solo impediria ejecutarlo.
+import dotenv from 'dotenv';
+dotenv.config();
 import sql from 'mssql';
 
 const PASOS: Array<{ nombre: string; sql: string }> = [
