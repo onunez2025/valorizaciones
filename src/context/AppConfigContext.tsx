@@ -45,7 +45,12 @@ export const AppConfigProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         const loadConfig = () => {
         const getSsoToken = () => { const m = document.cookie.match(/(?:^|;\s*)token=([^;]+)/); return m ? decodeURIComponent(m[1]) : null; };
         const token = StorageService.getToken() || getSsoToken();
-        const headers: HeadersInit = token ? { Authorization: `Bearer ${token}` } : {};
+        // El JWT vive en memoria, asi que al recargar la pagina todavia no existe en este
+        // instante. Sin esta guarda se lanzaba la peticion sin credencial, el servidor
+        // respondia 401 y el error quedaba en la consola del navegador en cada carga. Cuando la
+        // sesion se restablece, el evento 'siatc:token-updated' vuelve a llamar a loadConfig.
+        if (!token) return;
+        const headers: HeadersInit = { Authorization: `Bearer ${token}` };
         fetch(`${API_BASE_URL}/applications?activeOnly=true`, { headers })
             .then(r => r.ok ? r.json() : [])
             .then((apps: AppApiResponse[]) => {
