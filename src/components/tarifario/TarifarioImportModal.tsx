@@ -1,4 +1,4 @@
-﻿import { useState, useRef } from 'react';
+import { useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { X, Upload, Download, CheckCircle, RefreshCw, FileSpreadsheet, ArrowRight } from 'lucide-react';
 import ExcelJS from 'exceljs';
