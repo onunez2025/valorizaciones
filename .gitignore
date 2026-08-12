@@ -31,3 +31,9 @@ dist-ssr
 # el que habia en git llevaba sin recompilarse desde el 2026-08-08 y mostraba codigo que ya no
 # corria en ninguna parte.
 dist-server/
+
+# Configuracion local de agentes de IA (Claude Code, Gemini/Antigravity).
+# Es de cada maquina, no del proyecto.
+.claude/
+.gemini/
+skills-lock.json
