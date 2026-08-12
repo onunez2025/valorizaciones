@@ -1,7 +1,7 @@
 import './lib/env.js';   // PRIMERO: carga el .env y valida los secretos antes que nada
 import { APP_IDENTIFIER } from './lib/config.js';
 import { safeError, sanitizeLog } from './lib/security.js';
-import { getDb, getReadPool } from './db.js';
+import { getReadPool } from './db.js';
 import { getRedisClient } from './lib/redis.js';
 import { verifyToken } from './middleware/auth.js';
 import ticketsRouter from './routes/tickets.js';
@@ -445,9 +445,6 @@ app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
 
 app.listen(port, () => {
     console.log(`Server Valorizaciones running on http://localhost:${port}`);
-    // Etapa 6 -- dispara runMigrations() via el pool admin al arrancar, independientemente
-    // de que los endpoints de negocio ahora usen getReadPool()/getWritePool().
-    getDb().catch(err => console.error('❌ Error ejecutando migraciones al arrancar:', safeError(err)));
     fetchAppMeta();
     fetchSessionConfig().then(cfg => {
         authLimiter = rateLimit({
