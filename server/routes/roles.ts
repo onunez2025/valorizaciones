@@ -17,7 +17,7 @@ import { verifyPermission, verifyToken } from '../middleware/auth.js';
 const router = Router();
 
 // ROLES
-router.get('/api/roles', verifyToken, verifyPermission('val.config.roles'), async (req: Request, res: Response) => {
+router.get('/api/roles', verifyToken, verifyPermission('val.config.roles'), async (_req: Request, res: Response) => {
     try {
         const db = await getReadPool();
         const roles = (await db.request().query("SELECT Id as id, Name as name, Apps as apps FROM EBM.Roles")).recordset;

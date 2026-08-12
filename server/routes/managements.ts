@@ -10,7 +10,7 @@ import { verifyToken } from '../middleware/auth.js';
 
 const router = Router();
 
-router.get('/api/managements', verifyToken, async (req: Request, res: Response) => {
+router.get('/api/managements', verifyToken, async (_req: Request, res: Response) => {
     try {
         const db = await getReadPool();
         const result = await db.request().query('SELECT Id as id, Name as name, Code as code FROM EBM.Managements');

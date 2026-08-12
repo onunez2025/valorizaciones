@@ -112,7 +112,11 @@ router.put('/api/penalties/:id', verifyToken, async (req: Request, res: Response
 
 router.post('/api/penalties/:id/status', verifyToken, async (req: Request, res: Response) => {
     const { id } = req.params;
-    const { status, observation, isCas } = req.body;
+    // Nota: aqui se recibia tambien `isCas` del cuerpo de la peticion — es decir, el cliente
+    // se autodeclaraba empresa CAS. No se usaba para nada (su unica lectura era una linea
+    // muerta), y la comprobacion real se hace con `currentUser.casId`, que sale del token.
+    // Se retira para que nadie lo confunda con una fuente de verdad.
+    const { status, observation } = req.body;
     const currentUser = (req as AuthRequest).user as JwtUserPayload;
     try {
         const db = await getWritePool();
@@ -131,7 +135,6 @@ router.post('/api/penalties/:id/status', verifyToken, async (req: Request, res: 
                 return res.status(403).json({ error: 'La penalidad no pertenece a su empresa.' });
         }
 
-        const _field = isCas ? 'Adjunto_motivo' : 'Adjunto_motivo';
         const statusReq = db.request();
         addInput(statusReq, 'id', sql.VarChar(8), id);
         addInput(statusReq, 'status', sql.NVarChar(50), status);

@@ -406,7 +406,7 @@ async function fetchSessionConfig(): Promise<SessionConfig> {
 }
 
 // SPA Fallback: Serve index.html for any remaining routes
-app.use((req: Request, res: Response) => {
+app.use((_req: Request, res: Response) => {
     const indexPath = path.join(__dirname, '..', 'dist', 'index.html');
     try {
         let html = fs.readFileSync(indexPath, 'utf-8');

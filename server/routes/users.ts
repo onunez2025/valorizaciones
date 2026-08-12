@@ -17,7 +17,7 @@ import { verifyPermission, verifyToken } from '../middleware/auth.js';
 const router = Router();
 
 // USERS
-router.get('/api/users', verifyToken, verifyPermission('val.config.users'), async (req: Request, res: Response) => {
+router.get('/api/users', verifyToken, verifyPermission('val.config.users'), async (_req: Request, res: Response) => {
     try {
         const db = await getReadPool();
         const result = await db.request().query(`

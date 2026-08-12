@@ -17,7 +17,7 @@ import type { AuthRequest } from '../middleware/auth.js';
 
 const router = Router();
 
-router.get('/api/config', verifyToken, async (req: Request, res: Response) => {
+router.get('/api/config', verifyToken, async (_req: Request, res: Response) => {
     try {
         const db = await getReadPool();
         const result = await db.request().query("SELECT * FROM [dbo].[GAC_APP_TB_VALORIZACIONES_CONFIG]");
@@ -52,7 +52,7 @@ router.post('/api/config', verifyToken, verifyPermission('val.config.admin'), va
     } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
 
-router.get('/api/config-distritos', verifyToken, async (req: Request, res: Response) => {
+router.get('/api/config-distritos', verifyToken, async (_req: Request, res: Response) => {
     try {
         const db = await getReadPool();
         const result = await db.request().query("SELECT * FROM [dbo].[GAC_APP_TB_CONFIG_VALORIZACION_DISTRITO] ORDER BY Creado_El DESC");
@@ -112,7 +112,7 @@ router.delete('/api/config-distritos/:id', verifyToken, async (req: Request, res
     } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
 
-router.get('/api/distritos', verifyToken, async (req: Request, res: Response) => {
+router.get('/api/distritos', verifyToken, async (_req: Request, res: Response) => {
     try {
         const db = await getReadPool();
         const result = await db.request().query('SELECT DISTINCT Ciudad, Distrito FROM APPGAC.ServiciosViewSQL WHERE Ciudad IS NOT NULL AND Distrito IS NOT NULL ORDER BY Ciudad, Distrito');
@@ -120,7 +120,7 @@ router.get('/api/distritos', verifyToken, async (req: Request, res: Response) =>
     } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
 
-router.get('/api/config-canal-institucional', verifyToken, async (req: Request, res: Response) => {
+router.get('/api/config-canal-institucional', verifyToken, async (_req: Request, res: Response) => {
     try {
         const db = await getReadPool();
         const result = await db.request().query("SELECT * FROM [dbo].[GAC_APP_TB_CONFIG_CANAL_INSTITUCIONAL] ORDER BY Creado_El DESC");
@@ -177,7 +177,7 @@ router.delete('/api/config-canal-institucional/:id', verifyToken, async (req: Re
     }
 });
 
-router.get('/api/c4c-creators', verifyToken, async (req: Request, res: Response) => {
+router.get('/api/c4c-creators', verifyToken, async (_req: Request, res: Response) => {
     try {
         const url = `${C4C_BASE_URL}/ServiceRequestCollection?$select=CreatedBy&$top=2000&$orderby=CreationDateTime desc`;
         const resp = await axios.get(url, { headers: { 'Authorization': `Basic ${C4C_AUTH}` } });
@@ -190,7 +190,7 @@ router.get('/api/c4c-creators', verifyToken, async (req: Request, res: Response)
     }
 });
 
-router.get('/api/penalty-motives', verifyToken, async (req: Request, res: Response) => {
+router.get('/api/penalty-motives', verifyToken, async (_req: Request, res: Response) => {
     try {
         const db = await getReadPool();
         const result = await db.request().query('SELECT IdMotivo, Motivo FROM [dbo].[GAC_APP_TB_TICKETS_DESCUENTOS_MOTIVOS] ORDER BY Motivo');
@@ -198,7 +198,7 @@ router.get('/api/penalty-motives', verifyToken, async (req: Request, res: Respon
     } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
 
-router.get('/api/discount-motivos', verifyToken, async (req: Request, res: Response) => {
+router.get('/api/discount-motivos', verifyToken, async (_req: Request, res: Response) => {
     try {
         const db = await getReadPool();
         const result = await db.request().query('SELECT * FROM [dbo].[GAC_APP_TB_TICKETS_DESCUENTOS_MOTIVOS] ORDER BY Motivo ASC');
@@ -208,11 +208,11 @@ router.get('/api/discount-motivos', verifyToken, async (req: Request, res: Respo
     }
 });
 
-router.get('/api/config/preferences', verifyToken, (req: Request, res: Response) => {
+router.get('/api/config/preferences', verifyToken, (_req: Request, res: Response) => {
     res.json({});
 });
 
-router.post('/api/config/preferences', verifyToken, (req: Request, res: Response) => {
+router.post('/api/config/preferences', verifyToken, (_req: Request, res: Response) => {
     res.json({ success: true });
 });
 

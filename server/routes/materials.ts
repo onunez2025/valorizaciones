@@ -14,7 +14,7 @@ import { verifyToken } from '../middleware/auth.js';
 const router = Router();
 
 // --- MATERIALES ---
-router.get('/api/materials', verifyToken, async (req: Request, res: Response) => {
+router.get('/api/materials', verifyToken, async (_req: Request, res: Response) => {
     try {
         const db = await getReadPool();
         const t0 = Date.now();
@@ -30,7 +30,7 @@ router.get('/api/materials', verifyToken, async (req: Request, res: Response) =>
 // Catalogo de tipos de servicio FSM. Lo necesita la pantalla de Casos Especiales para
 // elegir Servicio Inicial y Servicio Final por codigo en vez de por descripcion.
 // En main vivia en el monolito; aqui va con materiales por ser tambien un maestro.
-router.get('/api/services', verifyToken, async (req: Request, res: Response) => {
+router.get('/api/services', verifyToken, async (_req: Request, res: Response) => {
     try {
         const db = await getReadPool();
         const result = await db.request().query("SELECT Id, Descripcion FROM [SIATC].[FSM_TipoServicio] ORDER BY Descripcion");
@@ -38,7 +38,7 @@ router.get('/api/services', verifyToken, async (req: Request, res: Response) => 
     } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
 
-router.get('/api/materials/categories', verifyToken, async (req: Request, res: Response) => {
+router.get('/api/materials/categories', verifyToken, async (_req: Request, res: Response) => {
     try {
         const db = await getReadPool();
         const result = await db.request().query("SELECT DISTINCT Categoria FROM [dbo].[GAC_APP_TB_MATERIALES] WHERE Categoria IS NOT NULL AND Categoria != '' ORDER BY Categoria");
