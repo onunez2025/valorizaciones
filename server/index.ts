@@ -1,4 +1,5 @@
 import './lib/env.js';   // PRIMERO: carga el .env y valida los secretos antes que nada
+import { ES_DESPLIEGUE } from './lib/env.js';
 import { APP_IDENTIFIER } from './lib/config.js';
 import { safeError, sanitizeLog } from './lib/security.js';
 import { getReadPool } from './db.js';
@@ -130,7 +131,7 @@ let authLimiter = rateLimit({
 
 app.use(cors({
     origin: (origin, callback) => {
-        if (process.env.NODE_ENV !== 'production') return callback(null, true);
+        if (!ES_DESPLIEGUE) return callback(null, true);  // sin ALLOWED_ORIGINS = entorno local
         const allowedOrigins = (process.env.ALLOWED_ORIGINS || '').split(',').map(s => s.trim()).filter(Boolean);
         if (!origin || allowedOrigins.includes(origin)) {
             callback(null, true);
