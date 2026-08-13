@@ -63,7 +63,7 @@ app.use(helmet({
             baseUri: ["'self'"],
         }
     },
-    hsts: process.env.NODE_ENV === 'production' ? { maxAge: 31536000, includeSubDomains: true } : false,
+    hsts: { maxAge: 31536000, includeSubDomains: true },
 }));
 
 /**
@@ -435,9 +435,6 @@ app.use((_req: Request, res: Response) => {
 });
 
 
-if (process.env.NODE_ENV === 'production' && !(process.env.ALLOWED_ORIGINS || '').trim()) {
-    console.warn('⚠️  WARNING: ALLOWED_ORIGINS is not set. CORS will block all cross-origin requests in production.');
-}
 
 app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
     console.error(`[ERROR] ${sanitizeLog(req.method)} ${sanitizeLog(req.path)}:`, err);
