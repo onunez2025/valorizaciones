@@ -37,3 +37,9 @@ dist-server/
 .claude/
 .gemini/
 skills-lock.json
+
+# Cache incremental de TypeScript: se regenera en cada `tsc -b`.
+*.tsbuildinfo
+
+# Arboles de trabajo temporales de git (portado de main, 01744bc).
+.worktrees/

@@ -824,7 +824,11 @@ export default function ValuationsPage() {
 
     const effectivePenaltyIds = new Set(Object.values(effectivePenaltiesMap).map(p => p.Id));
 
-    const totalTickets = tickets.reduce((sum, tk) => sum + (isValuable(tk.CodigoEquipo) ? (tk.TarifaBase + (tk.Adicionales || 0)) : 0), 0);
+    // No re-filtrar por isValuable(): el backend ya decide si TarifaBase/Adicionales
+    // se cobran o no (incluye adicionales manuales registrados aunque el ticket no
+    // tenga CodigoEquipo reconocido). Re-aplicar el filtro aqui zera esos adicionales
+    // manuales y desalinea este total del que se ve en la hoja "Detalle Servicios".
+    const totalTickets = tickets.reduce((sum, tk) => sum + (tk.TarifaBase + (tk.Adicionales || 0)), 0);
     const totalPenalties = Object.values(effectivePenaltiesMap).reduce((sum: number, p: Penalty) => sum + p.Importe, 0);
     const grandTotal = totalTickets - totalPenalties;
 
