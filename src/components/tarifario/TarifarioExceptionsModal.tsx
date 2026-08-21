@@ -397,14 +397,14 @@ export default function TarifarioExceptionsModal({ cas, isOpen, onClose }: Props
                                             <button 
                                                 onClick={() => handleSave(ex)}
                                                 disabled={saving}
-                                                className="p-3 bg-[#05B169] text-white rounded-cb-btn shadow-cb-level-1 hover:bg-[#05B169]/90 transition-all active:scale-95 flex items-center justify-center cursor-pointer"
+                                                className="p-3 bg-cb-success text-white rounded-cb-btn shadow-cb-level-1 hover:bg-cb-success/90 transition-all active:scale-95 flex items-center justify-center cursor-pointer"
                                                 title={t('tarifarioExceptions.saveRule')}
                                             >
                                                 <Save className="w-5 h-5" />
                                             </button>
                                             <button 
                                                 onClick={() => handleDelete(ex.IdExcepcion)}
-                                                className="p-3 bg-[#DF2935]/10 text-[#DF2935] rounded-cb-btn hover:bg-[#DF2935]/20 transition-all active:scale-95 flex items-center justify-center cursor-pointer"
+                                                className="p-3 bg-cb-error/10 text-cb-error rounded-cb-btn hover:bg-cb-error/20 transition-all active:scale-95 flex items-center justify-center cursor-pointer"
                                                 title={t('tarifarioExceptions.deleteRule')}
                                             >
                                                 <Trash2 className="w-5 h-5" />

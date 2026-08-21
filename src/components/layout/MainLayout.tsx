@@ -112,7 +112,7 @@ export function MainLayout() {
     }
 
     return (
-        <div className="h-dvh bg-[#F8FAFC] dark:bg-[#020617] text-foreground flex overflow-hidden font-sans">
+        <div className="h-dvh bg-cb-bg text-foreground flex overflow-hidden font-sans">
             {isLoggingOut && (
                 <AuthTransitionOverlay
                     variant="farewell"

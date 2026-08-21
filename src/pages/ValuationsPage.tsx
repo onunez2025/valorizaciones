@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Search, Calendar, ChevronRight, Calculator, Download, AlertTriangle, CheckCircle2, FileText, X, ChevronDown, Briefcase, Building2, Check, Activity, AlertCircle, Info, Lock, ArrowUpDown, Package, History, BarChart2, Eye, PlusCircle, Trash2, DollarSign, Mail, RotateCcw, Pencil, Loader2 } from 'lucide-react';
 import ExcelJS from 'exceljs';
 import { ApiClient } from '../services/apiClient';
-import { StorageService } from '../services/storageService';
 import type { CAS, ValuationTicket, Penalty, ValuationAdicional, PenaltyMotive } from '../types';
 import { cn } from '../utils/cn';
 import { toTitleCase } from '../utils/formatters';
@@ -15,6 +14,7 @@ import { SIATC_THEME } from '../utils/siatc-theme';
 import { useAuth } from '../hooks/useAuth';
 import { LottiePlayer } from '../components/common/LottiePlayer';
 import { useTranslation } from 'react-i18next';
+import { SIATCTable, SIATCTableCell, SIATCTableHead, SIATCTableHeader, SIATCTableRow } from '../components/siatc/table/SIATCTable';
 
 
 const isValuable = (code?: string) => ['3120', '3121', '5120', '5121'].some(prefix => code?.startsWith(prefix));
@@ -1076,17 +1076,9 @@ export default function ValuationsPage() {
     const handleViewC4CReport = async (ticketId: string) => {
         try {
             setLoadingPdf(ticketId);
-            const token = StorageService.getToken();
-            const response = await fetch(`/api/c4c/report/${ticketId}`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-
-            if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.details || error.error || t('valuations.errors.technicalReport'));
-            }
-
-            const blob = await response.blob();
+            // ApiClient.download pone el token y traduce el error del servidor: es lo mismo que
+            // hacia este fetch a mano, pero igual en todas las aplicaciones.
+            const blob = await ApiClient.download(`/c4c/report/${ticketId}`);
             const url = window.URL.createObjectURL(blob);
             const win = window.open(url, '_blank');
             if (!win) {
@@ -1816,10 +1808,10 @@ export default function ValuationsPage() {
                                         </div>                                               
                                         <div className="flex flex-col px-5 py-6 bg-card border-l-[6px] border-emerald-600 rounded-xl shadow-sm hover:shadow-md transition-all duration-300 group/neto">
                                             <div className="flex items-center justify-between mb-3">
-                                                <span className="text-[11px] font-bold text-[#059669]">{t('valuations.summaryNetTotal')}</span>
+                                                <span className="text-[11px] font-bold text-emerald-600">{t('valuations.summaryNetTotal')}</span>
                                                 <div className="flex items-center gap-1.5 bg-emerald-50 px-2 py-1 rounded-md">
-                                                    <div className="w-1.5 h-1.5 bg-[#059669] rounded-full animate-pulse" />
-                                                    <span className="text-[11px] font-bold text-[#059669]">{t('valuations.summarySiatcLive')}</span>
+                                                    <div className="w-1.5 h-1.5 bg-emerald-600 rounded-full animate-pulse" />
+                                                    <span className="text-[11px] font-bold text-emerald-600">{t('valuations.summarySiatcLive')}</span>
                                                 </div>
                                             </div>
                                             <div className="flex items-center gap-2 whitespace-nowrap overflow-hidden">
@@ -1926,20 +1918,20 @@ export default function ValuationsPage() {
                                         ) : (
                                           <>
                                             <div className="hidden md:block">
-                                            <table className={SIATC_THEME.TABLE.TABLE_ELEMENT}>
-                                                <thead className={SIATC_THEME.TABLE.HEADER_ROW}>
+                                            <SIATCTable className={SIATC_THEME.TABLE.TABLE_ELEMENT}>
+                                                <SIATCTableHead className={SIATC_THEME.TABLE.HEADER_ROW}>
                                                     <tr>
-                                                        <th className={SIATC_THEME.TABLE.HEADER_TH}>{t('valuations.tableHeaderProcessDate')}</th>
-                                                        <th className={cn(SIATC_THEME.TABLE.HEADER_TH, "text-center")}>{t('valuations.tableHeaderServices')}</th>
-                                                        <th className={cn(SIATC_THEME.TABLE.HEADER_TH, "text-center")}>{t('valuations.tableHeaderAuditStatus')}</th>
-                                                        <th className={cn(SIATC_THEME.TABLE.HEADER_TH, "text-right")}>{t('valuations.tableHeaderDailyAccumulation')}</th>
-                                                        <th className={cn(SIATC_THEME.TABLE.HEADER_TH, "w-10")}></th>
+                                                        <SIATCTableHeader className={SIATC_THEME.TABLE.HEADER_TH}>{t('valuations.tableHeaderProcessDate')}</SIATCTableHeader>
+                                                        <SIATCTableHeader className={cn(SIATC_THEME.TABLE.HEADER_TH, "text-center")}>{t('valuations.tableHeaderServices')}</SIATCTableHeader>
+                                                        <SIATCTableHeader className={cn(SIATC_THEME.TABLE.HEADER_TH, "text-center")}>{t('valuations.tableHeaderAuditStatus')}</SIATCTableHeader>
+                                                        <SIATCTableHeader className={cn(SIATC_THEME.TABLE.HEADER_TH, "text-right")}>{t('valuations.tableHeaderDailyAccumulation')}</SIATCTableHeader>
+                                                        <SIATCTableHeader className={cn(SIATC_THEME.TABLE.HEADER_TH, "w-10")}></SIATCTableHeader>
                                                     </tr>
-                                                </thead>
+                                                </SIATCTableHead>
                                                     <tbody className="divide-y divide-border/10">
                                                         {sortedDates.map(date => (
                                                             <React.Fragment key={date}>
-                                                                <tr 
+                                                                <SIATCTableRow 
                                                                     onClick={() => toggleDate(date)} 
                                                                     className={cn(
                                                                         SIATC_THEME.TABLE.BODY_ROW,
@@ -1947,7 +1939,7 @@ export default function ValuationsPage() {
                                                                         expandedDates.includes(date) ? "bg-primary/[0.02]" : ""
                                                                     )}
                                                                 >
-                                                                    <td className={SIATC_THEME.TABLE.CELL}>
+                                                                    <SIATCTableCell className={SIATC_THEME.TABLE.CELL}>
                                                                         <div className="flex items-center gap-3">
                                                                             <div className={cn(
                                                                                 "p-2 rounded-lg transition-all duration-300", 
@@ -1957,13 +1949,13 @@ export default function ValuationsPage() {
                                                                             </div>
                                                                             <span className="text-sm font-medium tracking-tight">{date}</span>
                                                                         </div>
-                                                                    </td>
-                                                                    <td className="px-5 py-4 text-center">
+                                                                    </SIATCTableCell>
+                                                                    <SIATCTableCell className="px-5 py-4 text-center">
                                                                         <span className="px-3 py-1 bg-muted/60 rounded-full text-[11px] font-medium text-muted-foreground">
                                                                             {groupedTickets[date].count} servicios
                                                                         </span>
-                                                                    </td>
-                                                                    <td className="px-5 py-4 text-center">
+                                                                    </SIATCTableCell>
+                                                                    <SIATCTableCell className="px-5 py-4 text-center">
                                                                         <div className="flex justify-center">
                                                                             {groupedTickets[date].zeroPriceCount > 0 ? (
                                                                                 <span className="px-3 py-1 bg-amber-50 text-amber-600 rounded-full text-[10px] font-medium border border-amber-100 flex items-center gap-1.5 animate-pulse">
@@ -1977,61 +1969,60 @@ export default function ValuationsPage() {
                                                                                 </span>
                                                                             )}
                                                                         </div>
-                                                                    </td>
-                                                                    <td className="px-5 py-4 text-right">
+                                                                    </SIATCTableCell>
+                                                                    <SIATCTableCell className="px-5 py-4 text-right">
                                                                         <span className="text-sm font-data">
                                                                             S/ {(groupedTickets[date].totalBase + groupedTickets[date].totalAdicional).toLocaleString('es-PE', { minimumFractionDigits: 2 })}
                                                                         </span>
-                                                                    </td>
-                                                                    <td className="px-5 py-4 text-center">
+                                                                    </SIATCTableCell>
+                                                                    <SIATCTableCell className="px-5 py-4 text-center">
                                                                         <ChevronRight className={cn("w-5 h-5 transition-transform duration-300", expandedDates.includes(date) && "rotate-90 text-primary")} />
-                                                                    </td>
-                                                                </tr>
+                                                                    </SIATCTableCell>
+                                                                </SIATCTableRow>
 
                                                                 {expandedDates.includes(date) && (
-                                                                    <tr>
-                                                                        <td colSpan={5} className="p-0 border-b border-border/40 bg-muted/[0.03]">
-                                                                            <div className="max-h-[480px] overflow-y-auto custom-scrollbar animate-in slide-in-from-top-4 duration-500 shadow-[inset_0_2px_10px_rgba(0,0,0,0.02)]">
-                                                                                <table className="w-full border-collapse">
-                                                                                    <thead className="sticky top-0 z-10 bg-white/95 backdrop-blur-md shadow-sm">
+                                                                    <SIATCTableRow>
+                                                                        <SIATCTableCell colSpan={5} className="p-0 border-b border-border/40 bg-muted/[0.03]">
+                                                                                <SIATCTable className="w-full border-collapse" containerClassName="max-h-[480px] overflow-y-auto custom-scrollbar animate-in slide-in-from-top-4 duration-500 shadow-[inset_0_2px_10px_rgba(0,0,0,0.02)]">
+                                                                                    <SIATCTableHead className="sticky top-0 z-10 bg-white/95 backdrop-blur-md shadow-sm">
                                                                                         <tr className="crypto-table-header border-b border-border/30">
-                                                                                            <th onClick={() => handleDetailSort('Ticket')} className="px-5 py-3 text-left cursor-pointer hover:text-primary transition-colors">
+                                                                                            <SIATCTableHeader onClick={() => handleDetailSort('Ticket')} className="px-5 py-3 text-left cursor-pointer hover:text-primary transition-colors">
                                                                                                 <div className="flex items-center gap-1">Ticket <ArrowUpDown className="w-3 h-3 opacity-40" /></div>
-                                                                                            </th>
-                                                                                            <th className="px-2 py-3 text-center">{t('valuations.detailTableVisitClosureDates')}</th>
-                                                                                            <th className="px-2 py-3 text-center">{t('valuations.detailTableDays')}</th>
-                                                                                            <th onClick={() => handleDetailSort('ServicioNombre')} className="px-6 py-3 text-left cursor-pointer hover:text-primary transition-colors">
+                                                                                            </SIATCTableHeader>
+                                                                                            <SIATCTableHeader className="px-2 py-3 text-center">{t('valuations.detailTableVisitClosureDates')}</SIATCTableHeader>
+                                                                                            <SIATCTableHeader className="px-2 py-3 text-center">{t('valuations.detailTableDays')}</SIATCTableHeader>
+                                                                                            <SIATCTableHeader onClick={() => handleDetailSort('ServicioNombre')} className="px-6 py-3 text-left cursor-pointer hover:text-primary transition-colors">
                                                                                                 <div className="flex items-center gap-1">{t('valuations.detailTableServicePerformed')} <ArrowUpDown className="w-3 h-3 opacity-40" /></div>
-                                                                                            </th>
-                                                                                            <th onClick={() => handleDetailSort('Categoria')} className="px-6 py-3 text-left cursor-pointer hover:text-primary transition-colors">
+                                                                                            </SIATCTableHeader>
+                                                                                            <SIATCTableHeader onClick={() => handleDetailSort('Categoria')} className="px-6 py-3 text-left cursor-pointer hover:text-primary transition-colors">
                                                                                                 <div className="flex items-center gap-1">{t('valuations.detailTableCategory')} <ArrowUpDown className="w-3 h-3 opacity-40" /></div>
-                                                                                            </th>
-                                                                                            <th className="px-4 py-3 text-center">{t('valuations.detailTableAreaQuota')}</th>
-                                                                                            <th onClick={() => handleDetailSort('Subtotal')} className="px-6 py-3 text-right cursor-pointer hover:text-primary transition-colors">
+                                                                                            </SIATCTableHeader>
+                                                                                            <SIATCTableHeader className="px-4 py-3 text-center">{t('valuations.detailTableAreaQuota')}</SIATCTableHeader>
+                                                                                            <SIATCTableHeader onClick={() => handleDetailSort('Subtotal')} className="px-6 py-3 text-right cursor-pointer hover:text-primary transition-colors">
                                                                                                 <div className="flex items-center gap-1 justify-end">{t('valuations.detailTableSubtotal')} <ArrowUpDown className="w-3 h-3 opacity-40" /></div>
-                                                                                            </th>
-                                                                                            <th className="px-6 py-3 text-right">Acciones</th>
+                                                                                            </SIATCTableHeader>
+                                                                                            <SIATCTableHeader className="px-6 py-3 text-right">Acciones</SIATCTableHeader>
                                                                                         </tr>
-                                                                                    </thead>
+                                                                                    </SIATCTableHead>
                                                                                     <tbody className="divide-y divide-border/10">
                                                                                         {getSortedTickets(groupedTickets[date].tickets).map((ticket) => (
-                                                                                            <tr key={ticket.Ticket} className="hover:bg-primary/[0.01] transition-colors group/row">
-                                                                                                <td className="px-5 py-4 font-data text-primary text-sm cursor-default">{ticket.Ticket}</td>
-                                                                                                <td className="px-2 py-4 text-center">
+                                                                                            <SIATCTableRow key={ticket.Ticket} className="hover:bg-primary/[0.01] transition-colors group/row">
+                                                                                                <SIATCTableCell className="px-5 py-4 font-data text-primary text-sm cursor-default">{ticket.Ticket}</SIATCTableCell>
+                                                                                                <SIATCTableCell className="px-2 py-4 text-center">
                                                                                                     <div className="flex flex-col items-center">
                                                                                                         <span className="text-[10px] font-bold text-muted-foreground">{ticket.FechaVisita ? new Date(ticket.FechaVisita).toLocaleDateString('es-PE', {day:'2-digit', month:'2-digit'}) : '-'}</span>
                                                                                                         <span className="text-[10px] font-bold text-foreground">{ticket.FechaCierre ? new Date(ticket.FechaCierre).toLocaleDateString('es-PE', {day:'2-digit', month:'2-digit'}) : '-'}</span>
                                                                                                     </div>
-                                                                                                </td>
-                                                                                                <td className="px-2 py-4 text-center">
+                                                                                                </SIATCTableCell>
+                                                                                                <SIATCTableCell className="px-2 py-4 text-center">
                                                                                                     <span className={cn(
                                                                                                         "px-2 py-0.5 rounded text-[10px] font-black",
                                                                                                         (ticket.DiasDiferencia || 0) > diasMaxCierre ? "bg-red-100 text-red-700" : "bg-blue-100 text-blue-700"
                                                                                                     )}>
                                                                                                         {ticket.DiasDiferencia ?? '-'}
                                                                                                     </span>
-                                                                                                </td>
-                                                                                                <td className="px-6 py-4">
+                                                                                                </SIATCTableCell>
+                                                                                                <SIATCTableCell className="px-6 py-4">
                                                                                                     <span className="font-medium text-foreground text-sm">
                                                                                                         {toTitleCase(ticket.ServicioNombre || 'General')}
                                                                                                     </span>
@@ -2045,8 +2036,8 @@ export default function ValuationsPage() {
                                                                                                             </span>
                                                                                                         </div>
                                                                                                     )}
-                                                                                                </td>
-                                                                                                <td className="px-6 py-4">
+                                                                                                </SIATCTableCell>
+                                                                                                <SIATCTableCell className="px-6 py-4">
                                                                                                     <div className="flex flex-col">
                                                                                                         <span className="font-medium text-muted-foreground text-[10px] uppercase opacity-60">
                                                                                                             {ticket.CodigoEquipo}
@@ -2055,8 +2046,8 @@ export default function ValuationsPage() {
                                                                                                             {toTitleCase(ticket.Categoria)}
                                                                                                         </span>
                                                                                                     </div>
-                                                                                                </td>
-                                                                                                <td className="px-4 py-4 text-center">
+                                                                                                </SIATCTableCell>
+                                                                                                <SIATCTableCell className="px-4 py-4 text-center">
                                                                                                     {ticket.CupoArea === 'OBRAS' ? (
                                                                                                         <span className="px-2 py-1 bg-orange-500/10 text-orange-600 dark:text-orange-400 rounded text-[10px] font-black tracking-tight">
                                                                                                             OBRAS
@@ -2072,8 +2063,8 @@ export default function ValuationsPage() {
                                                                                                     ) : (
                                                                                                         <span className="text-muted-foreground/30 text-[10px]">—</span>
                                                                                                     )}
-                                                                                                </td>
-                                                                                                <td className="px-6 py-4 text-right">
+                                                                                                </SIATCTableCell>
+                                                                                                <SIATCTableCell className="px-6 py-4 text-right">
                                                                                                     {!isValuable(ticket.CodigoEquipo) ? (
                                                                                                         <span className="text-[10px] font-bold text-muted-foreground/40 italic">{t('valuations.detailLabelExempt')}</span>
                                                                                                     ) : (ticket.ServicioNombre || '').toLowerCase().includes('visita') ? (
@@ -2120,8 +2111,8 @@ export default function ValuationsPage() {
                                                                                                             )}
                                                                                                         </div>
                                                                                                     )}
-                                                                                                </td>
-                                                                                                <td className="px-6 py-4 text-right">
+                                                                                                </SIATCTableCell>
+                                                                                                <SIATCTableCell className="px-6 py-4 text-right">
                                                                                                     <div className="flex items-center justify-end gap-1.5 relative">
                                                                                                         <button 
                                                                                                             onClick={() => handleViewC4CReport(ticket.Ticket)}
@@ -2248,19 +2239,18 @@ export default function ValuationsPage() {
                                                                                                             </button>
                                                                                                         )}
                                                                                                     </div>
-                                                                                                </td>
-                                                                                            </tr>
+                                                                                                </SIATCTableCell>
+                                                                                            </SIATCTableRow>
                                                                                         ))}
                                                                                     </tbody>
-                                                                                </table>
-                                                                            </div>
-                                                                        </td>
-                                                                    </tr>
+                                                                                </SIATCTable>
+                                                                        </SIATCTableCell>
+                                                                    </SIATCTableRow>
                                                                 )}
                                                             </React.Fragment>
                                                         ))}
                                                     </tbody>
-                                                </table>
+                                                </SIATCTable>
                                             </div>
 
                                             {/* Mobile Card View - Grupos por fecha */}
@@ -2804,17 +2794,17 @@ export default function ValuationsPage() {
                                     </div>
                                 </div>
                                 <div className="hidden md:block">
-                                <table className="w-full border-separate border-spacing-0">
-                                    <thead className="sticky top-0 z-20 bg-card/95 backdrop-blur-md">
+                                <SIATCTable className="w-full border-separate border-spacing-0">
+                                    <SIATCTableHead className="sticky top-0 z-20 bg-card/95 backdrop-blur-md">
                                         <tr className="text-[14px] font-semibold text-muted-foreground text-left">
-                                            <th className="px-6 py-4 border-b border-border shadow-[0_1px_2px_rgba(0,0,0,0.05)]">Ticket</th>
-                                            <th className="px-4 py-4 border-b border-border shadow-[0_1px_2px_rgba(0,0,0,0.05)]">Fecha</th>
-                                            <th className="px-4 py-4 border-b border-border shadow-[0_1px_2px_rgba(0,0,0,0.05)] text-center">Tipo</th>
-                                            <th className="px-4 py-4 border-b border-border shadow-[0_1px_2px_rgba(0,0,0,0.05)]">Descripción</th>
-                                            <th className="px-6 py-4 border-b border-border shadow-[0_1px_2px_rgba(0,0,0,0.05)] text-right">Monto</th>
-                                            <th className="px-6 py-4 border-b border-border shadow-[0_1px_2px_rgba(0,0,0,0.05)] text-center">Acciones</th>
+                                            <SIATCTableHeader className="px-6 py-4 border-b border-border shadow-[0_1px_2px_rgba(0,0,0,0.05)]">Ticket</SIATCTableHeader>
+                                            <SIATCTableHeader className="px-4 py-4 border-b border-border shadow-[0_1px_2px_rgba(0,0,0,0.05)]">Fecha</SIATCTableHeader>
+                                            <SIATCTableHeader className="px-4 py-4 border-b border-border shadow-[0_1px_2px_rgba(0,0,0,0.05)] text-center">Tipo</SIATCTableHeader>
+                                            <SIATCTableHeader className="px-4 py-4 border-b border-border shadow-[0_1px_2px_rgba(0,0,0,0.05)]">Descripción</SIATCTableHeader>
+                                            <SIATCTableHeader className="px-6 py-4 border-b border-border shadow-[0_1px_2px_rgba(0,0,0,0.05)] text-right">Monto</SIATCTableHeader>
+                                            <SIATCTableHeader className="px-6 py-4 border-b border-border shadow-[0_1px_2px_rgba(0,0,0,0.05)] text-center">Acciones</SIATCTableHeader>
                                         </tr>
-                                    </thead>
+                                    </SIATCTableHead>
                                     <tbody className="divide-y divide-border/10">
                                         {closureDetails
                                             .filter(d => detailActiveTab === 'services' ? d.Tipo === 'SERVICIO' : d.Tipo === 'PENALIDAD')
@@ -2822,27 +2812,27 @@ export default function ValuationsPage() {
                                                 (d.Ticket?.toString() || '').includes(detailSearchQuery) ||
                                                 ((d.Servicio_Nombre as string) || '').toLowerCase().includes(detailSearchQuery.toLowerCase())
                                             ).map((det) => (
-                                            <tr key={det.IdDetalle as string} className="hover:bg-muted/30 transition-all group/det">
-                                                <td className="px-8 py-4 font-bold text-sm text-primary">{det.Ticket as string}</td>
-                                                <td className="px-4 py-4 text-xs font-medium">{new Date(det.Fecha_Ticket as string).toLocaleDateString('es-PE', { timeZone: 'UTC' })}</td>
-                                                <td className="px-4 py-4 text-center">
+                                            <SIATCTableRow key={det.IdDetalle as string} className="hover:bg-muted/30 transition-all group/det">
+                                                <SIATCTableCell className="px-8 py-4 font-bold text-sm text-primary">{det.Ticket as string}</SIATCTableCell>
+                                                <SIATCTableCell className="px-4 py-4 text-xs font-medium">{new Date(det.Fecha_Ticket as string).toLocaleDateString('es-PE', { timeZone: 'UTC' })}</SIATCTableCell>
+                                                <SIATCTableCell className="px-4 py-4 text-center">
                                                     <span className={cn("px-2 py-0.5 rounded text-[10px] font-black uppercase", det.Tipo === 'SERVICIO' ? "bg-blue-100 text-blue-700" : "bg-red-500 text-white shadow-sm")}>
                                                         {det.Tipo as string}
                                                     </span>
-                                                </td>
-                                                <td className="px-4 py-4">
+                                                </SIATCTableCell>
+                                                <SIATCTableCell className="px-4 py-4">
                                                     <p className="text-xs font-bold truncate max-w-[400px]" title={det.Servicio_Nombre as string | undefined}>{det.Servicio_Nombre as string}</p>
                                                     <p className="text-[10px] text-muted-foreground font-medium">
                                                         {det.Categoria as string}{det.Tipo === 'PENALIDAD' && ` • Registrado por: ${(det.CreadoPor as string) || 'N/D'}`}
                                                     </p>
 
-                                                </td>
-                                                <td className="px-8 py-4 text-right">
+                                                </SIATCTableCell>
+                                                <SIATCTableCell className="px-8 py-4 text-right">
                                                     <span className={cn("text-sm font-black tracking-tight", (det.Monto as number) < 0 ? "text-red-600" : "text-slate-800")}>
                                                         {(det.Monto as number) < 0 ? '-' : ''} S/ {Math.abs(det.Monto as number).toLocaleString('es-PE', { minimumFractionDigits: 2 })}
                                                     </span>
-                                                </td>
-                                                <td className="px-4 py-4 text-center">
+                                                </SIATCTableCell>
+                                                <SIATCTableCell className="px-4 py-4 text-center">
                                                     {det.Tipo === 'SERVICIO' && hasPermission('val.penalties.create') && (
                                                         <button
                                                             onClick={() => setShowPenaltyModal({
@@ -2857,21 +2847,21 @@ export default function ValuationsPage() {
                                                             <AlertTriangle className="w-3.5 h-3.5" />
                                                         </button>
                                                     )}
-                                                </td>
-                                            </tr>
+                                                </SIATCTableCell>
+                                            </SIATCTableRow>
                                         ))}
                                         {closureDetails
                                             .filter(d => detailActiveTab === 'services' ? d.Tipo === 'SERVICIO' : d.Tipo === 'PENALIDAD')
                                             .filter(d => (d.Ticket?.toString() || '').includes(detailSearchQuery) || ((d.Servicio_Nombre as string) || '').toLowerCase().includes(detailSearchQuery.toLowerCase())).length === 0 && (
-                                            <tr>
-                                                <td colSpan={5} className="py-20 text-center text-muted-foreground opacity-40">
+                                            <SIATCTableRow>
+                                                <SIATCTableCell colSpan={5} className="py-20 text-center text-muted-foreground opacity-40">
                                                     <Search className="w-10 h-10 mx-auto mb-3" />
                                                     <p className="text-xs font-bold">{t('valuations.modalDetailEmptySearch', { type: detailActiveTab === 'services' ? t('valuations.modalDetailEmptySearchServices') : t('valuations.modalDetailEmptySearchPenalties') })}</p>
-                                                </td>
-                                            </tr>
+                                                </SIATCTableCell>
+                                            </SIATCTableRow>
                                         )}
                                     </tbody>
-                                </table>
+                                </SIATCTable>
                                 </div>
 
                                 {/* Mobile Card View - Detalle de cierre */}

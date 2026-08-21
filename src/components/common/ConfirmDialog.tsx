@@ -26,14 +26,14 @@ export function ConfirmDialog({
 }: ConfirmDialogProps) {
     
     const iconMap = {
-        danger: <AlertCircle className="h-6 w-6 text-[#DF2935]" />,
-        warning: <AlertCircle className="h-6 w-6 text-[#F0AD4E]" />,
+        danger: <AlertCircle className="h-6 w-6 text-cb-error" />,
+        warning: <AlertCircle className="h-6 w-6 text-cb-warning" />,
         info: <Info className="h-6 w-6 text-primary" />
     };
 
     const confirmButtonClasses = {
         danger: SIATC_THEME.COMPONENTS.BUTTON_DANGER,
-        warning: 'h-[36px] px-4 inline-flex items-center justify-center gap-2 bg-[#F0AD4E] hover:bg-[#F0AD4E]/90 text-white rounded-cb-btn transition-all active:scale-95 font-bold text-sm shadow-sm',
+        warning: 'h-[36px] px-4 inline-flex items-center justify-center gap-2 bg-cb-warning hover:bg-cb-warning/90 text-white rounded-cb-btn transition-all active:scale-95 font-bold text-sm shadow-sm',
         info: SIATC_THEME.COMPONENTS.BUTTON_INFO
     };
 

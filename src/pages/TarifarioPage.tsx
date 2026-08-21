@@ -13,6 +13,7 @@ import TarifarioImportModal from '../components/tarifario/TarifarioImportModal';
 import { downloadTarifarioTemplate } from '../utils/tarifarioTemplate';
 import { SIATC_THEME } from '../utils/siatc-theme';
 import { LottiePlayer } from '../components/common/LottiePlayer';
+import { SIATCTable, SIATCTableCell, SIATCTableHead, SIATCTableHeader, SIATCTableRow } from '../components/siatc/table/SIATCTable';
 
 interface CAS {
     ID_CAS: number;
@@ -430,17 +431,17 @@ export default function TarifarioPage() {
                                                      <div className="animate-in slide-in-from-top-2 duration-300">
                                                      {/* Desktop Table View */}
                                                      <div className="hidden md:block">
-                                                         <table className="w-full text-left">
-                                                             <thead>
+                                                         <SIATCTable className="w-full text-left">
+                                                             <SIATCTableHead>
                                                                  <tr className="border-b border-border/20 bg-muted/5">
-                                                                     <th className="px-6 py-2.5 font-bold text-[9px] uppercase tracking-widest text-muted-foreground/50 w-[35%]">{t('tarifario.table.service')}</th>
-                                                                     <th className="px-4 py-2.5 font-bold text-[9px] uppercase tracking-widest text-muted-foreground/50">{t('tarifario.table.startDate')}</th>
-                                                                     <th className="px-4 py-2.5 font-bold text-[9px] uppercase tracking-widest text-muted-foreground/50">{t('tarifario.table.endDate')}</th>
-                                                                     <th className="px-4 py-2.5 font-bold text-[9px] uppercase tracking-widest text-muted-foreground/50 text-right">{t('tarifario.table.amount')}</th>
-                                                                     <th className="px-4 py-2.5 font-bold text-[9px] uppercase tracking-widest text-muted-foreground/50 text-center">{t('tarifario.table.status')}</th>
-                                                                     <th className="px-3 py-2.5 w-8"></th>
+                                                                     <SIATCTableHeader className="px-6 py-2.5 font-bold text-[9px] uppercase tracking-widest text-muted-foreground/50 w-[35%]">{t('tarifario.table.service')}</SIATCTableHeader>
+                                                                     <SIATCTableHeader className="px-4 py-2.5 font-bold text-[9px] uppercase tracking-widest text-muted-foreground/50">{t('tarifario.table.startDate')}</SIATCTableHeader>
+                                                                     <SIATCTableHeader className="px-4 py-2.5 font-bold text-[9px] uppercase tracking-widest text-muted-foreground/50">{t('tarifario.table.endDate')}</SIATCTableHeader>
+                                                                     <SIATCTableHeader className="px-4 py-2.5 font-bold text-[9px] uppercase tracking-widest text-muted-foreground/50 text-right">{t('tarifario.table.amount')}</SIATCTableHeader>
+                                                                     <SIATCTableHeader className="px-4 py-2.5 font-bold text-[9px] uppercase tracking-widest text-muted-foreground/50 text-center">{t('tarifario.table.status')}</SIATCTableHeader>
+                                                                     <SIATCTableHeader className="px-3 py-2.5 w-8"></SIATCTableHeader>
                                                                  </tr>
-                                                             </thead>
+                                                             </SIATCTableHead>
                                                              <tbody>
                                                                  {serviceNames.map(serviceName => {
                                                                      const serviceRates = serviceMap[serviceName];
@@ -454,7 +455,7 @@ export default function TarifarioPage() {
                                                                          const isVencida = ff && ff < today && !isInactive;
 
                                                                          return (
-                                                                             <tr
+                                                                             <SIATCTableRow
                                                                                  key={`${category}-${serviceName}-${periodIdx}`}
                                                                                  className={cn(
                                                                                      "group transition-colors border-t border-border/[0.07]",
@@ -465,7 +466,7 @@ export default function TarifarioPage() {
                                                                                  )}
                                                                              >
                                                                                  {/* Servicio — solo primera fila del grupo */}
-                                                                                 <td className="px-6 py-2.5">
+                                                                                 <SIATCTableCell className="px-6 py-2.5">
                                                                                      {isFirst ? (
                                                                                          <div className="flex items-center gap-2.5">
                                                                                              <div className={cn("w-[3px] h-5 rounded-full shrink-0", isInactive ? "bg-muted-foreground/20" : "bg-primary/40")} />
@@ -493,9 +494,9 @@ export default function TarifarioPage() {
                                                                                              <div className="w-px h-3 bg-border/25 ml-[1px]" />
                                                                                          </div>
                                                                                      )}
-                                                                                 </td>
+                                                                                 </SIATCTableCell>
                                                                                  {/* Fecha inicio */}
-                                                                                 <td className="px-4 py-2.5">
+                                                                                 <SIATCTableCell className="px-4 py-2.5">
                                                                                      {isEditing ? (
                                                                                          <input
                                                                                              type="date"
@@ -513,9 +514,9 @@ export default function TarifarioPage() {
                                                                                              {fi ? fi.toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—'}
                                                                                          </span>
                                                                                      )}
-                                                                                 </td>
+                                                                                 </SIATCTableCell>
                                                                                  {/* Fecha fin */}
-                                                                                 <td className="px-4 py-2.5">
+                                                                                 <SIATCTableCell className="px-4 py-2.5">
                                                                                      {isEditing ? (
                                                                                          <input
                                                                                              type="date"
@@ -533,9 +534,9 @@ export default function TarifarioPage() {
                                                                                              {ff ? ff.toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '∞'}
                                                                                          </span>
                                                                                      )}
-                                                                                 </td>
+                                                                                 </SIATCTableCell>
                                                                                  {/* Importe */}
-                                                                                 <td className="px-4 py-2.5 text-right">
+                                                                                 <SIATCTableCell className="px-4 py-2.5 text-right">
                                                                                      {isEditing ? (
                                                                                          <div className="flex items-center justify-end gap-1">
                                                                                              <span className="text-[10px] font-bold text-primary/40">S/</span>
@@ -556,9 +557,9 @@ export default function TarifarioPage() {
                                                                                              S/ {Number(rate.Importe).toFixed(2)}
                                                                                          </span>
                                                                                      )}
-                                                                                 </td>
+                                                                                 </SIATCTableCell>
                                                                                  {/* Estado — toggle siempre visible */}
-                                                                                 <td className="px-4 py-2.5 text-center">
+                                                                                 <SIATCTableCell className="px-4 py-2.5 text-center">
                                                                                      <div className="flex items-center justify-center gap-1.5">
                                                                                          {!isEditing && (
                                                                                              <span className={cn(
@@ -593,9 +594,9 @@ export default function TarifarioPage() {
                                                                                              {togglingId === (rate.ID_TARIFARIO ?? '') ? '...' : isInactive ? 'Activar' : 'Inactivar'}
                                                                                          </button>
                                                                                      </div>
-                                                                                 </td>
+                                                                                 </SIATCTableCell>
                                                                                  {/* Acciones */}
-                                                                                 <td className="px-3 py-2.5 text-right transition-all">
+                                                                                 <SIATCTableCell className="px-3 py-2.5 text-right transition-all">
                                                                                      {isEditing && (
                                                                                          <button
                                                                                              onClick={() => {
@@ -608,13 +609,13 @@ export default function TarifarioPage() {
                                                                                              <Trash2 className="w-3.5 h-3.5" />
                                                                                          </button>
                                                                                      )}
-                                                                                 </td>
-                                                                             </tr>
+                                                                                 </SIATCTableCell>
+                                                                             </SIATCTableRow>
                                                                          );
                                                                      });
                                                                  })}
                                                              </tbody>
-                                                         </table>
+                                                         </SIATCTable>
                                                      </div>
 
                                                      {/* Mobile Card View */}

@@ -138,7 +138,7 @@ export default function ConfigLayout() {
                         <div className="hidden lg:block p-4 bg-cb-bg/30 border-t border-cb-border">
                             <div className="p-4 bg-cb-bg/50 rounded-cb-card border border-cb-border shadow-cb-level-1">
                                 <div className="flex items-center gap-2 mb-1.5 font-bold text-[11px] text-cb-text-primary tracking-wider uppercase">
-                                    <div className="w-1.5 h-1.5 rounded-full bg-[#05B169] animate-pulse" />
+                                    <div className="w-1.5 h-1.5 rounded-full bg-cb-success animate-pulse" />
                                     {t('config.siatcSystem')}
                                 </div>
                                 <p className="text-[11px] text-cb-text-secondary font-bold leading-relaxed">

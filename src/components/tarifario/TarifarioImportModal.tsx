@@ -6,6 +6,7 @@ import { ApiClient } from '../../services/apiClient';
 import { cn } from '../../utils/cn';
 import { useDialog } from '../../context/DialogContext';
 import { downloadTarifarioTemplate } from '../../utils/tarifarioTemplate';
+import { SIATCTable, SIATCTableCell, SIATCTableHead, SIATCTableHeader, SIATCTableRow } from '../siatc/table/SIATCTable';
 
 interface PreviewRow {
     CAS_Nombre: string;
@@ -209,37 +210,35 @@ export default function TarifarioImportModal({ isOpen, onClose, onSuccess }: Pro
                             {/* Format guide */}
                             <div className="bg-blue-50/50 border border-blue-100 rounded-xl p-6">
                                 <h3 className="text-[11px] font-black uppercase tracking-widest text-blue-700 mb-4">{t('tarifarioImport.format.title')}</h3>
-                                <div className="overflow-x-auto">
-                                    <table className="w-full text-left text-[11px]">
-                                        <thead>
+                                    <SIATCTable densa className="w-full text-left text-[11px]" containerClassName="overflow-x-auto">
+                                        <SIATCTableHead>
                                             <tr className="border-b border-blue-200">
                                                 {['CAS_Nombre','Categoria','Servicio','Fecha_inicio','Fecha_fin','Importe','Estado'].map(h => (
-                                                    <th key={h} className="px-3 py-2 font-black text-blue-800 bg-blue-100/50">{h}</th>
+                                                    <SIATCTableHeader key={h} className="px-3 py-2 font-black text-blue-800 bg-blue-100/50">{h}</SIATCTableHeader>
                                                 ))}
                                             </tr>
-                                        </thead>
+                                        </SIATCTableHead>
                                         <tbody>
-                                            <tr className="border-b border-blue-100/50">
-                                                <td className="px-3 py-2 font-bold text-blue-700">Black</td>
-                                                <td className="px-3 py-2 text-blue-600">CALENTADORES A GAS</td>
-                                                <td className="px-3 py-2 text-blue-600">Instalación</td>
-                                                <td className="px-3 py-2 text-blue-600">01/01/2025</td>
-                                                <td className="px-3 py-2 text-blue-600">31/12/2026</td>
-                                                <td className="px-3 py-2 font-bold text-blue-700">42</td>
-                                                <td className="px-3 py-2 text-blue-600">A</td>
-                                            </tr>
-                                            <tr>
-                                                <td className="px-3 py-2 font-bold text-blue-700">Silar</td>
-                                                <td className="px-3 py-2 text-blue-600">TERMAS ELECTRICAS -50LT</td>
-                                                <td className="px-3 py-2 text-blue-600">Revisión</td>
-                                                <td className="px-3 py-2 text-blue-600">01/01/2025</td>
-                                                <td className="px-3 py-2 text-blue-600">31/12/2026</td>
-                                                <td className="px-3 py-2 font-bold text-blue-700">35</td>
-                                                <td className="px-3 py-2 text-blue-600">A</td>
-                                            </tr>
+                                            <SIATCTableRow className="border-b border-blue-100/50">
+                                                <SIATCTableCell className="px-3 py-2 font-bold text-blue-700">Black</SIATCTableCell>
+                                                <SIATCTableCell className="px-3 py-2 text-blue-600">CALENTADORES A GAS</SIATCTableCell>
+                                                <SIATCTableCell className="px-3 py-2 text-blue-600">Instalación</SIATCTableCell>
+                                                <SIATCTableCell className="px-3 py-2 text-blue-600">01/01/2025</SIATCTableCell>
+                                                <SIATCTableCell className="px-3 py-2 text-blue-600">31/12/2026</SIATCTableCell>
+                                                <SIATCTableCell className="px-3 py-2 font-bold text-blue-700">42</SIATCTableCell>
+                                                <SIATCTableCell className="px-3 py-2 text-blue-600">A</SIATCTableCell>
+                                            </SIATCTableRow>
+                                            <SIATCTableRow>
+                                                <SIATCTableCell className="px-3 py-2 font-bold text-blue-700">Silar</SIATCTableCell>
+                                                <SIATCTableCell className="px-3 py-2 text-blue-600">TERMAS ELECTRICAS -50LT</SIATCTableCell>
+                                                <SIATCTableCell className="px-3 py-2 text-blue-600">Revisión</SIATCTableCell>
+                                                <SIATCTableCell className="px-3 py-2 text-blue-600">01/01/2025</SIATCTableCell>
+                                                <SIATCTableCell className="px-3 py-2 text-blue-600">31/12/2026</SIATCTableCell>
+                                                <SIATCTableCell className="px-3 py-2 font-bold text-blue-700">35</SIATCTableCell>
+                                                <SIATCTableCell className="px-3 py-2 text-blue-600">A</SIATCTableCell>
+                                            </SIATCTableRow>
                                         </tbody>
-                                    </table>
-                                </div>
+                                    </SIATCTable>
                                 <div className="mt-4 grid grid-cols-2 gap-3 text-[10px] font-bold text-blue-600">
                                     <div><span className="text-blue-800">CAS_Nombre:</span> {t('tarifarioImport.format.casName')}</div>
                                     <div><span className="text-blue-800">Categoria:</span> {t('tarifarioImport.format.categoria')}</div>
@@ -314,54 +313,52 @@ export default function TarifarioImportModal({ isOpen, onClose, onSuccess }: Pro
                             </div>
 
                             {/* Table */}
-                            <div className="border border-border/40 rounded-xl overflow-hidden">
-                                <table className="w-full text-left text-[11px]">
-                                    <thead>
+                                <SIATCTable densa className="w-full text-left text-[11px]" containerClassName="border border-border/40 rounded-xl overflow-hidden">
+                                    <SIATCTableHead>
                                         <tr className="border-b border-border/40 bg-muted/10">
-                                            <th className="px-4 py-3 font-black text-muted-foreground/60 uppercase tracking-widest">{t('tarifarioImport.preview.headers.cas')}</th>
-                                            <th className="px-4 py-3 font-black text-muted-foreground/60 uppercase tracking-widest">{t('tarifarioImport.preview.headers.category')}</th>
-                                            <th className="px-4 py-3 font-black text-muted-foreground/60 uppercase tracking-widest">{t('tarifarioImport.preview.headers.service')}</th>
-                                            <th className="px-4 py-3 font-black text-muted-foreground/60 uppercase tracking-widest text-center">{t('tarifarioImport.preview.headers.validity')}</th>
-                                            <th className="px-4 py-3 font-black text-muted-foreground/60 uppercase tracking-widest text-right">{t('tarifarioImport.preview.headers.current')}</th>
-                                            <th className="px-4 py-3 font-black text-muted-foreground/60 uppercase tracking-widest text-right">{t('tarifarioImport.preview.headers.new')}</th>
-                                            <th className="px-4 py-3 font-black text-muted-foreground/60 uppercase tracking-widest text-center">{t('tarifarioImport.preview.headers.status')}</th>
+                                            <SIATCTableHeader className="px-4 py-3 font-black text-muted-foreground/60 uppercase tracking-widest">{t('tarifarioImport.preview.headers.cas')}</SIATCTableHeader>
+                                            <SIATCTableHeader className="px-4 py-3 font-black text-muted-foreground/60 uppercase tracking-widest">{t('tarifarioImport.preview.headers.category')}</SIATCTableHeader>
+                                            <SIATCTableHeader className="px-4 py-3 font-black text-muted-foreground/60 uppercase tracking-widest">{t('tarifarioImport.preview.headers.service')}</SIATCTableHeader>
+                                            <SIATCTableHeader className="px-4 py-3 font-black text-muted-foreground/60 uppercase tracking-widest text-center">{t('tarifarioImport.preview.headers.validity')}</SIATCTableHeader>
+                                            <SIATCTableHeader className="px-4 py-3 font-black text-muted-foreground/60 uppercase tracking-widest text-right">{t('tarifarioImport.preview.headers.current')}</SIATCTableHeader>
+                                            <SIATCTableHeader className="px-4 py-3 font-black text-muted-foreground/60 uppercase tracking-widest text-right">{t('tarifarioImport.preview.headers.new')}</SIATCTableHeader>
+                                            <SIATCTableHeader className="px-4 py-3 font-black text-muted-foreground/60 uppercase tracking-widest text-center">{t('tarifarioImport.preview.headers.status')}</SIATCTableHeader>
                                         </tr>
-                                    </thead>
+                                    </SIATCTableHead>
                                     <tbody className="divide-y divide-border/20">
                                         {preview.map((row, i) => {
                                             const cfg = STATUS_CONFIG[row.Status];
                                             return (
-                                                <tr key={i} className={cn('transition-colors', cfg.bg, cfg.text)}>
-                                                    <td className="px-4 py-2.5 font-bold">{row.CAS_Nombre}</td>
-                                                    <td className="px-4 py-2.5 font-bold opacity-80">{row.Categoria}</td>
-                                                    <td className="px-4 py-2.5 opacity-70">{row.Servicio}</td>
-                                                    <td className="px-4 py-2.5 text-center opacity-60 whitespace-nowrap">
+                                                <SIATCTableRow key={i} className={cn('transition-colors', cfg.bg, cfg.text)}>
+                                                    <SIATCTableCell className="px-4 py-2.5 font-bold">{row.CAS_Nombre}</SIATCTableCell>
+                                                    <SIATCTableCell className="px-4 py-2.5 font-bold opacity-80">{row.Categoria}</SIATCTableCell>
+                                                    <SIATCTableCell className="px-4 py-2.5 opacity-70">{row.Servicio}</SIATCTableCell>
+                                                    <SIATCTableCell className="px-4 py-2.5 text-center opacity-60 whitespace-nowrap">
                                                         {row.Fecha_inicio} — {row.Fecha_fin}
-                                                    </td>
-                                                    <td className="px-4 py-2.5 text-right font-bold opacity-60">
+                                                    </SIATCTableCell>
+                                                    <SIATCTableCell className="px-4 py-2.5 text-right font-bold opacity-60">
                                                         {row.Importe_Actual != null ? `S/ ${Number(row.Importe_Actual).toFixed(2)}` : '—'}
-                                                    </td>
-                                                    <td className="px-4 py-2.5 text-right font-black">
+                                                    </SIATCTableCell>
+                                                    <SIATCTableCell className="px-4 py-2.5 text-right font-black">
                                                         {row.Status !== 'ERROR' && (
                                                             <span className={cn(row.Status === 'UPDATE' ? 'text-amber-700' : row.Status === 'INSERT' ? 'text-emerald-700' : 'text-foreground/60')}>
                                                                 S/ {Number(row.Importe).toFixed(2)}
                                                             </span>
                                                         )}
-                                                    </td>
-                                                    <td className="px-4 py-2.5 text-center">
+                                                    </SIATCTableCell>
+                                                    <SIATCTableCell className="px-4 py-2.5 text-center">
                                                         <div className={cn('inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border', cfg.border)}>
                                                             <div className={cn('w-1.5 h-1.5 rounded-full', cfg.dot)} />
                                                             <span className={cn('text-[9px] font-black uppercase tracking-widest', cfg.text)}>
                                                                 {row.Status === 'ERROR' ? row.Message : cfg.label}
                                                             </span>
                                                         </div>
-                                                    </td>
-                                                </tr>
+                                                    </SIATCTableCell>
+                                                </SIATCTableRow>
                                             );
                                         })}
                                     </tbody>
-                                </table>
-                            </div>
+                                </SIATCTable>
                         </div>
                     )}
 

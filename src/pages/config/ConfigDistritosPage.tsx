@@ -11,12 +11,7 @@ import { useDialog } from '../../context/DialogContext';
 import { cn } from '../../utils/cn';
 import { format } from 'date-fns';
 import { SIATC_THEME } from '../../utils/siatc-theme';
-import { 
-    SIATCTable, 
-    SIATCTableRow, 
-    SIATCTableCell, 
-    SIATCTableFooter 
-} from '../../components/siatc/table/SIATCTable';
+import { SIATCTable, SIATCTableCell, SIATCTableFooter, SIATCTableRow } from '../../components/siatc/table/SIATCTable';
 
 interface DistritoInfo {
     Distrito: string;

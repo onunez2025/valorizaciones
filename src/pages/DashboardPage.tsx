@@ -12,6 +12,7 @@ import { cn } from '../utils/cn';
 import { toTitleCase } from '../utils/formatters';
 import { SIATC_THEME } from '../utils/siatc-theme';
 import { LottiePlayer } from '../components/common/LottiePlayer';
+import { PALETA_GRAFICOS } from '../utils/paletaGraficos';
 
 interface DashboardStats {
     TotalTickets: number;
@@ -420,8 +421,8 @@ export default function DashboardPage() {
                                         <stop offset="95%" stopColor="var(--primary)" stopOpacity={0}/>
                                     </linearGradient>
                                     <linearGradient id="colorSanciones" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%" stopColor="#ef4444" stopOpacity={0.4}/>
-                                        <stop offset="95%" stopColor="#ef4444" stopOpacity={0}/>
+                                        <stop offset="5%" stopColor={PALETA_GRAFICOS.SANCIONES} stopOpacity={0.4}/>
+                                        <stop offset="95%" stopColor={PALETA_GRAFICOS.SANCIONES} stopOpacity={0}/>
                                     </linearGradient>
                                 </defs>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.05)" />
@@ -432,7 +433,7 @@ export default function DashboardPage() {
                                     itemStyle={{fontSize: '12px', fontWeight: 'bold'}}
                                 />
                                 <Area type="monotone" dataKey="Bruto" stroke="var(--primary)" strokeWidth={4} fillOpacity={1} fill="url(#colorBruto)" />
-                                <Area type="monotone" dataKey="Sanciones" stroke="#ef4444" strokeWidth={3} fillOpacity={1} fill="url(#colorSanciones)" />
+                                <Area type="monotone" dataKey="Sanciones" stroke={PALETA_GRAFICOS.SANCIONES} strokeWidth={3} fillOpacity={1} fill="url(#colorSanciones)" />
                             </AreaChart>
                         </ResponsiveContainer>
                     </div>

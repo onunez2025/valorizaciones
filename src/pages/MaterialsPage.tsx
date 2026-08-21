@@ -13,6 +13,7 @@ import { toTitleCase } from '../utils/formatters';
 import { cn } from '../utils/cn';
 import type { Material } from '../types';
 import { SIATC_THEME } from '../utils/siatc-theme';
+import { SIATCTable, SIATCTableCell, SIATCTableHead, SIATCTableHeader, SIATCTableRow } from '../components/siatc/table/SIATCTable';
 
 
 export default function MaterialsPage() {
@@ -179,46 +180,46 @@ export default function MaterialsPage() {
                                 <p className="text-xs font-bold mt-2">{t('materials.emptyHint')}</p>
                             </div>
                         ) : (
-                            <table className="w-full border-separate border-spacing-0">
-                                <thead className="bg-muted/30 sticky top-0 z-10 border-b border-border">
+                            <SIATCTable className="w-full border-separate border-spacing-0">
+                                <SIATCTableHead className="bg-muted/30 sticky top-0 z-10 border-b border-border">
                                     <tr className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">
-                                        <th className="px-6 py-4 text-left">{t('materials.table.externalCode')}</th>
-                                        <th className="px-6 py-4 text-left">{t('materials.table.productName')}</th>
-                                        <th className="px-6 py-4 text-left">{t('materials.table.category')}</th>
-                                        <th className="px-6 py-4 text-center">{t('materials.table.status')}</th>
-                                        <th className="px-6 py-4 text-right">{t('materials.table.actions')}</th>
+                                        <SIATCTableHeader className="px-6 py-4 text-left">{t('materials.table.externalCode')}</SIATCTableHeader>
+                                        <SIATCTableHeader className="px-6 py-4 text-left">{t('materials.table.productName')}</SIATCTableHeader>
+                                        <SIATCTableHeader className="px-6 py-4 text-left">{t('materials.table.category')}</SIATCTableHeader>
+                                        <SIATCTableHeader className="px-6 py-4 text-center">{t('materials.table.status')}</SIATCTableHeader>
+                                        <SIATCTableHeader className="px-6 py-4 text-right">{t('materials.table.actions')}</SIATCTableHeader>
                                     </tr>
-                                </thead>
+                                </SIATCTableHead>
                                 <tbody className="divide-y divide-border/10">
                                     {/* Filas de relleno: sostienen la barra de desplazamiento como si
                                         estuvieran todas las filas, sin construirlas. */}
-                                    {rellenoArriba > 0 && <tr><td colSpan={5} style={{ height: rellenoArriba }} /></tr>}
+                                    {rellenoArriba > 0 && <SIATCTableRow><SIATCTableCell colSpan={5} style={{ height: rellenoArriba }} /></SIATCTableRow>}
                                     {filasVisibles.map(fila => {
                                         const m = filteredMaterials[fila.index];
                                         return (
-                                        <tr key={m.ID_Material} data-index={fila.index} ref={virtualizador.measureElement} className="hover:bg-primary/[0.02] transition-colors group">
-                                            <td className="px-6 py-4 font-black text-primary text-sm tracking-tighter">
+                                        <SIATCTableRow key={m.ID_Material} data-index={fila.index} ref={virtualizador.measureElement} className="hover:bg-primary/[0.02] transition-colors group">
+                                            <SIATCTableCell className="px-6 py-4 font-black text-primary text-sm tracking-tighter">
                                                 {m.ID_Externo}
-                                            </td>
-                                            <td className="px-6 py-4">
+                                            </SIATCTableCell>
+                                            <SIATCTableCell className="px-6 py-4">
                                                 <span className="font-bold text-foreground text-sm block max-w-[400px] truncate" title={m.Nombre}>
                                                     {toTitleCase(m.Nombre)}
                                                 </span>
-                                            </td>
-                                            <td className="px-6 py-4">
+                                            </SIATCTableCell>
+                                            <SIATCTableCell className="px-6 py-4">
                                                 <span className="px-3 py-1 bg-primary/5 text-primary rounded-lg text-[10px] font-black border border-primary/10">
                                                     {m.Categoria || t('materials.noCategory')}
                                                 </span>
-                                            </td>
-                                            <td className="px-6 py-4 text-center">
+                                            </SIATCTableCell>
+                                            <SIATCTableCell className="px-6 py-4 text-center">
                                                 <span className={cn(
                                                     "px-2.5 py-1 rounded-lg text-[10px] font-black",
                                                     m.Estado === 'Activo' ? "bg-emerald-50 text-emerald-600 border border-emerald-100" : "bg-red-50 text-red-600 border border-red-100"
                                                 )}>
                                                     {m.Estado}
                                                 </span>
-                                            </td>
-                                            <td className="px-6 py-4 text-right">
+                                            </SIATCTableCell>
+                                            <SIATCTableCell className="px-6 py-4 text-right">
                                                 <div className="flex justify-end gap-2 transition-opacity">
                                                     <button
                                                         onClick={() => {
@@ -232,13 +233,13 @@ export default function MaterialsPage() {
                                                         <Edit2 className="w-3.5 h-3.5" />
                                                     </button>
                                                 </div>
-                                            </td>
-                                        </tr>
+                                            </SIATCTableCell>
+                                        </SIATCTableRow>
                                         );
                                     })}
-                                    {rellenoAbajo > 0 && <tr><td colSpan={5} style={{ height: rellenoAbajo }} /></tr>}
+                                    {rellenoAbajo > 0 && <SIATCTableRow><SIATCTableCell colSpan={5} style={{ height: rellenoAbajo }} /></SIATCTableRow>}
                                 </tbody>
-                            </table>
+                            </SIATCTable>
                         )}
                     </div>}
 

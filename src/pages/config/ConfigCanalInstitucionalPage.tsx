@@ -7,7 +7,7 @@ import { useDialog } from '../../context/DialogContext';
 import { cn } from '../../utils/cn';
 import { format } from 'date-fns';
 import { SIATC_THEME } from '../../utils/siatc-theme';
-import { SIATCTable, SIATCTableRow, SIATCTableCell, SIATCTableFooter } from '../../components/siatc/table/SIATCTable';
+import { SIATCTable, SIATCTableCell, SIATCTableFooter, SIATCTableRow } from '../../components/siatc/table/SIATCTable';
 
 const CUPO_AREAS = ['OBRAS', 'TALLER', 'GENERAL'] as const;
 type CupoArea = typeof CUPO_AREAS[number];
