@@ -9,6 +9,7 @@ import { cn } from '../utils/cn';
 import { API_BASE_URL } from '../services/apiClient';
 import { SIATC_THEME } from '../utils/siatc-theme';
 import { LogoGoogle, LogoMicrosoft } from '../components/common/LogosProveedores';
+import { recordarUsuario, usuarioRecordado } from '../utils/recordarUsuario';
 
 const prefersReducedMotion = () =>
     typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -23,7 +24,11 @@ export default function LoginPage() {
     const isExpired = searchParams.get('expired') === 'true';
     const navigate = useNavigate();
 
-    const [username, setUsername] = useState('');
+    // «Recordarme» arranca marcada si la última vez se pidió recordar: si no, el usuario la marca, vuelve y la ve
+    // desmarcada, y concluye que no sirve para nada.
+    const recordado = usuarioRecordado();
+    const [username, setUsername] = useState(recordado);
+    const [rememberMe, setRememberMe] = useState(recordado !== '');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState('');
@@ -50,6 +55,7 @@ export default function LoginPage() {
             // skipSharedCookie=true: el backend ya escribe la cookie compartida via Set-Cookie
             // -- reescribirla aca duplica la cookie "token" y rompe su parseo en cualquier
             // otra app a la que se navegue despues.
+            recordarUsuario(username, rememberMe);
             login(data.user, data.token, undefined, data.sessionConfig, true);
 
             if (data.user.requires_password_change) {
@@ -80,11 +86,11 @@ export default function LoginPage() {
         i18n.changeLanguage(i18n.language === 'es' ? 'en' : 'es');
     };
 
-    const renderFormFields = () => (
+    const renderFormFields = (donde: string) => (
         <form onSubmit={handleLogin} className="space-y-6">
             <div className="space-y-4">
                 <div>
-                    <label className="block text-sm font-medium mb-1.5 ml-1 text-cb-text-primary">
+                    <label htmlFor={`${donde}-username`} className="block text-sm font-medium mb-1.5 ml-1 text-cb-text-primary">
                         {t('auth.username')}
                     </label>
                     <div className={SIATC_THEME.LOGIN_LAYOUT.INPUT_WRAPPER}>
@@ -92,19 +98,22 @@ export default function LoginPage() {
                             <User className="w-5 h-5" />
                         </div>
                         <input
+                            id={`${donde}-username`}
+                            name="username"
+                            autoComplete="username"
                             type="text"
                             value={username}
                             onChange={(e) => setUsername(e.target.value)}
                             className={SIATC_THEME.LOGIN_LAYOUT.INPUT}
                             placeholder="Ingrese usuario"
                             required
-                            autoFocus
+                            autoFocus={recordado === ''}
                         />
                     </div>
                 </div>
 
                 <div>
-                    <label className="block text-sm font-medium mb-1.5 ml-1 text-cb-text-primary">
+                    <label htmlFor={`${donde}-current-password`} className="block text-sm font-medium mb-1.5 ml-1 text-cb-text-primary">
                         {t('auth.password')}
                     </label>
                     <div className={SIATC_THEME.LOGIN_LAYOUT.INPUT_WRAPPER}>
@@ -112,6 +121,10 @@ export default function LoginPage() {
                             <Lock className="w-5 h-5" />
                         </div>
                         <input
+                            id={`${donde}-current-password`}
+                            name="password"
+                            autoComplete="current-password"
+                            autoFocus={recordado !== ''}
                             type={showPassword ? 'text' : 'password'}
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
@@ -132,7 +145,12 @@ export default function LoginPage() {
 
             <div className="flex items-center justify-between text-sm">
                 <label className="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" className="w-4 h-4 rounded border-input text-primary focus:ring-primary" />
+                    <input
+                        type="checkbox"
+                        checked={rememberMe}
+                        onChange={(e) => setRememberMe(e.target.checked)}
+                        className="w-4 h-4 rounded border-input text-primary focus:ring-primary"
+                    />
                     <span className="text-cb-text-secondary">{t('auth.rememberMe')}</span>
                 </label>
                 <button
@@ -244,7 +262,7 @@ export default function LoginPage() {
                                 </div>
                             </div>
                         )}
-                        {renderFormFields()}
+                        {renderFormFields('movil')}
                         <div className="mt-6">
                             {renderSsoButtons()}
                         </div>
@@ -324,7 +342,7 @@ export default function LoginPage() {
                         )}
 
                         <div className={SIATC_THEME.LOGIN_LAYOUT.CARD}>
-                            {renderFormFields()}
+                            {renderFormFields('escritorio')}
                             <div className="mt-6">
                                 {renderSsoButtons()}
                             </div>
