@@ -1,3 +1,4 @@
+import { igualA } from '../lib/odata.js';
 import { Router } from 'express';
 import type { Request, Response } from 'express';
 import axios from 'axios';
@@ -24,7 +25,7 @@ router.get('/api/c4c/report/:ticketId', verifyToken, async (req: Request, res: R
         }
         
         // 1. Find the Service Request
-        const searchUrl = `${C4C_BASE_URL}/ServiceRequestCollection?$filter=ID eq '${ticketId}'`;
+        const searchUrl = `${C4C_BASE_URL}/ServiceRequestCollection?$filter=${encodeURIComponent(igualA('ID', ticketId))}`;
         const searchResponse = await axios.get(searchUrl, {
             headers: { 'Authorization': `Basic ${C4C_AUTH}` }
         });

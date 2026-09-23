@@ -1,3 +1,4 @@
+import { alguno, igualA } from '../lib/odata.js';
 import { Router } from 'express';
 import { C4C_BASE_URL, C4C_AUTH } from '../lib/config.js';
 import type { Request, Response } from 'express';
@@ -32,7 +33,7 @@ async function getC4CDetails(ticketIds: string[]) {
 
     for (let i = 0; i < ticketIds.length; i += chunkSize) {
         const chunk = ticketIds.slice(i, i + chunkSize);
-        const filter = chunk.map(id => `ID eq '${id}'`).join(' or ');
+        const filter = alguno(...chunk.map(id => igualA('ID', id)));
         const url = `${C4C_BASE_URL}/ServiceRequestCollection?$filter=${encodeURIComponent(filter)}&$select=ID,CreatedBy,Name,CupoTomado_SDK,zTicketArea_SDK&$format=json`;
 
         if (i === 0) console.log('[C4C] URL base:', url.split('?')[0]);
