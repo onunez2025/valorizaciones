@@ -22,6 +22,9 @@ importers:
       '@azure/msal-node':
         specifier: ^5.4.0
         version: 5.4.3
+      '@siatc/c4c-client':
+        specifier: git+ssh://git@git.siatc.cloud:MT_Ind/SIATC-C4C-Client.git#v0.3.0
+        version: git+ssh://git@git.siatc.cloud/MT_Ind/SIATC-C4C-Client.git#e8b7eb55af2e288750209602e7cbc7f6cd9a4c32
       '@tanstack/react-virtual':
         specifier: ^3.14.9
         version: 3.14.9(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
@@ -706,6 +709,10 @@ packages:
 
   '@rolldown/pluginutils@1.0.1':
     resolution: {integrity: sha512-2j9bGt5Jh8hj+vPtgzPtl72j0yRxHAyumoo6TNfAjsLB04UtpSvPbPcDcBMxz7n+9CYB0c1GxQFxYRg2jimqGw==}
+
+  '@siatc/c4c-client@git+ssh://git@git.siatc.cloud/MT_Ind/SIATC-C4C-Client.git#e8b7eb55af2e288750209602e7cbc7f6cd9a4c32':
+    resolution: {commit: e8b7eb55af2e288750209602e7cbc7f6cd9a4c32, repo: ssh://git@git.siatc.cloud/MT_Ind/SIATC-C4C-Client.git, type: git}
+    version: 0.3.0
 
   '@standard-schema/spec@1.1.0':
     resolution: {integrity: sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w==}
@@ -1455,6 +1462,7 @@ packages:
   eslint@9.39.5:
     resolution: {integrity: sha512-DgZS62aPLXKlnxILS/AYCoRvHaZeXceIzlXPkkGGzJWSow1aEk0lbTlxUSlyjC8jcaKxAdOnTDz+o1JFSBsyjw==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
+    deprecated: This version is no longer supported. Please see https://eslint.org/version-support for other options.
     hasBin: true
     peerDependencies:
       jiti: '*'
@@ -3261,6 +3269,8 @@ snapshots:
     optional: true
 
   '@rolldown/pluginutils@1.0.1': {}
+
+  '@siatc/c4c-client@git+ssh://git@git.siatc.cloud/MT_Ind/SIATC-C4C-Client.git#e8b7eb55af2e288750209602e7cbc7f6cd9a4c32': {}
 
   '@standard-schema/spec@1.1.0': {}
 

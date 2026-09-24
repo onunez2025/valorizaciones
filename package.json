@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@azure/msal-node": "^5.4.0",
+    "@siatc/c4c-client": "git+ssh://git@git.siatc.cloud:MT_Ind/SIATC-C4C-Client.git#v0.3.0",
     "@tanstack/react-virtual": "^3.14.9",
     "axios": "^1.19.0",
     "bcrypt": "^6.0.0",

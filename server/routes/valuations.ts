@@ -1,6 +1,5 @@
-import { alguno, igualA } from '../lib/odata.js';
 import { Router } from 'express';
-import { C4C_BASE_URL, C4C_AUTH } from '../lib/config.js';
+import { buscarTickets } from '@siatc/c4c-client';
 import type { Request, Response } from 'express';
 import sql from 'mssql';
 import crypto from 'crypto';
@@ -28,47 +27,21 @@ const C4C_AREA_NAMES: Record<number, string> = {
 async function getC4CDetails(ticketIds: string[]) {
     if (ticketIds.length === 0) return {};
     const results: Record<string, { creator: string; subject: string; cupoArea: string }> = {};
-    const chunkSize = 50;
-    const promises = [];
 
-    for (let i = 0; i < ticketIds.length; i += chunkSize) {
-        const chunk = ticketIds.slice(i, i + chunkSize);
-        const filter = alguno(...chunk.map(id => igualA('ID', id)));
-        const url = `${C4C_BASE_URL}/ServiceRequestCollection?$filter=${encodeURIComponent(filter)}&$select=ID,CreatedBy,Name,CupoTomado_SDK,zTicketArea_SDK&$format=json`;
+    // El troceado de 50 en 50 y las peticiones simultáneas los hace ya `buscarTickets`.
+    const filas = await buscarTickets(ticketIds, ['ID', 'CreatedBy', 'Name', 'CupoTomado_SDK', 'zTicketArea_SDK']);
 
-        if (i === 0) console.log('[C4C] URL base:', url.split('?')[0]);
-
-        promises.push(
-            axios.get(url, {
-                headers: { 'Authorization': `Basic ${C4C_AUTH}`, 'Accept': 'application/json' },
-                timeout: 20000
-            })
-            .then(resp => {
-                const items: Record<string, string>[] = resp.data?.d?.results ?? resp.data?.value ?? [];
-                if (i === 0 && items.length > 0) {
-                    console.log('[C4C DEBUG] Campos disponibles:', Object.keys(items[0]).join(', '));
-                }
-                items.forEach(item => {
-                    results[item.ID] = {
-                        creator: item.CreatedBy || '',
-                        subject: item.Name || '',
-                        cupoArea: (() => {
-                            const code = parseInt(item.zTicketArea_SDK, 10);
-                            if (!code) return 'GENERAL';
-                            return C4C_AREA_NAMES[code] ?? 'GENERAL';
-                        })()
-                    };
-                });
-            })
-            .catch(err => {
-                const status = err.response?.status;
-                const body = JSON.stringify(err.response?.data)?.slice(0, 300);
-                console.error(`[C4C] Error chunk ${i}-${i + chunkSize}: HTTP ${status ?? 'N/A'} — ${body ?? err.message}`);
-            })
-        );
+    for (const item of filas) {
+        results[String(item.ID)] = {
+            creator: String(item.CreatedBy ?? ''),
+            subject: String(item.Name ?? ''),
+            cupoArea: (() => {
+                const code = parseInt(String(item.zTicketArea_SDK ?? ''), 10);
+                if (!code) return 'GENERAL';
+                return C4C_AREA_NAMES[code] ?? 'GENERAL';
+            })(),
+        };
     }
-
-    await Promise.all(promises);
     return results;
 }
 

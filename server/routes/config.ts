@@ -2,9 +2,8 @@ import { Router } from 'express';
 import type { Request, Response } from 'express';
 import sql from 'mssql';
 import { z } from 'zod';
-import axios from 'axios';
 import { getReadPool, getWritePool } from '../db.js';
-import { C4C_AUTH, C4C_BASE_URL } from '../lib/config.js';
+import { pedirFilas } from '@siatc/c4c-client';
 import { addInput } from '../lib/db.js';
 import { safeError, sanitizeLog } from '../lib/security.js';
 import { validateBody } from '../lib/validate.js';
@@ -179,10 +178,8 @@ router.delete('/api/config-canal-institucional/:id', verifyToken, async (req: Re
 
 router.get('/api/c4c-creators', verifyToken, async (_req: Request, res: Response) => {
     try {
-        const url = `${C4C_BASE_URL}/ServiceRequestCollection?$select=CreatedBy&$top=2000&$orderby=CreationDateTime desc`;
-        const resp = await axios.get(url, { headers: { 'Authorization': `Basic ${C4C_AUTH}` } });
-        const items = resp.data.d.results;
-        const creators = Array.from(new Set(items.map((item: { CreatedBy: string }) => item.CreatedBy))).sort();
+        const items = await pedirFilas('ServiceRequestCollection?$select=CreatedBy&$top=2000&$orderby=CreationDateTime desc');
+        const creators = Array.from(new Set(items.map((item) => String(item.CreatedBy ?? '')))).filter(Boolean).sort();
         res.json(creators);
     } catch (err: unknown) {
         console.error('C4C Creators Error:', safeError(err));
