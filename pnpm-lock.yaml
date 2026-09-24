@@ -23,8 +23,8 @@ importers:
         specifier: ^5.4.0
         version: 5.4.3
       '@siatc/c4c-client':
-        specifier: git+ssh://git@git.siatc.cloud:MT_Ind/SIATC-C4C-Client.git#v0.3.0
-        version: git+ssh://git@git.siatc.cloud/MT_Ind/SIATC-C4C-Client.git#e8b7eb55af2e288750209602e7cbc7f6cd9a4c32
+        specifier: ^0.5.0
+        version: 0.5.0
       '@tanstack/react-virtual':
         specifier: ^3.14.9
         version: 3.14.9(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
@@ -710,9 +710,8 @@ packages:
   '@rolldown/pluginutils@1.0.1':
     resolution: {integrity: sha512-2j9bGt5Jh8hj+vPtgzPtl72j0yRxHAyumoo6TNfAjsLB04UtpSvPbPcDcBMxz7n+9CYB0c1GxQFxYRg2jimqGw==}
 
-  '@siatc/c4c-client@git+ssh://git@git.siatc.cloud/MT_Ind/SIATC-C4C-Client.git#e8b7eb55af2e288750209602e7cbc7f6cd9a4c32':
-    resolution: {commit: e8b7eb55af2e288750209602e7cbc7f6cd9a4c32, repo: ssh://git@git.siatc.cloud/MT_Ind/SIATC-C4C-Client.git, type: git}
-    version: 0.3.0
+  '@siatc/c4c-client@0.5.0':
+    resolution: {integrity: sha512-PkgZklldthR+29fDUlay9V5X9IjaDUX2CFDyRJxnsB0S5pChoDYx9hynSA7sk8Aau4A3k9m1O5hxYF6cWusQcg==, tarball: https://git.siatc.cloud/api/packages/MT_Ind/npm/%40siatc%2Fc4c-client/-/0.5.0/c4c-client-0.5.0.tgz}
 
   '@standard-schema/spec@1.1.0':
     resolution: {integrity: sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w==}
@@ -3270,7 +3269,7 @@ snapshots:
 
   '@rolldown/pluginutils@1.0.1': {}
 
-  '@siatc/c4c-client@git+ssh://git@git.siatc.cloud/MT_Ind/SIATC-C4C-Client.git#e8b7eb55af2e288750209602e7cbc7f6cd9a4c32': {}
+  '@siatc/c4c-client@0.5.0': {}
 
   '@standard-schema/spec@1.1.0': {}
 
