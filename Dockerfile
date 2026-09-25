@@ -30,6 +30,8 @@ RUN corepack enable && corepack prepare pnpm@11.18.0 --activate
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/dist-server ./dist-server
 COPY --from=builder /app/package.json /app/pnpm-lock.yaml /app/pnpm-workspace.yaml ./
+# El .npmrc tambien: sin el, pnpm no sabe que @siatc vive en Forgejo y lo busca en npmjs.org.
+COPY .npmrc ./
 
 # Install only production dependencies
 RUN printf '//git.siatc.cloud/api/packages/MT_Ind/npm/:_authToken=%s\n' "$FORGEJO_TOKEN" > /root/.npmrc \
