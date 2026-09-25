@@ -1,3 +1,5 @@
+import { z } from 'zod';
+import { validateBody } from '../lib/validate.js';
 import { Router } from 'express';
 import type { Response } from 'express';
 import sql from 'mssql';
@@ -19,7 +21,25 @@ const router = Router();
 // por val.config.users), nunca acepta un id por parametro: siempre opera sobre
 // (req as any).user.id, y solo toca AvatarUrl/PasswordHash -- nunca
 // full_name/username/email/role_id/management_id/apps de nadie.
-router.put('/api/profile', verifyToken, async (req: any, res: Response) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+/**
+ * Cambio del perfil propio.
+ *
+ * ⚠️ La contraseña NO se validaba: llegaba, se hasheaba y se guardaba. Un usuario podía dejarse una
+ * contraseña de UN carácter desde su propio perfil. Barrido del 2026-09-25: pasaba en las 9 aplicaciones
+ * que tienen este endpoint, con el mismo código copiado.
+ *
+ * El mínimo de 8 es el que ya exigía SIATC Console al dar de alta; aquí se aplica el mismo para que la
+ * política sea una sola en todas las puertas.
+ *
+ * El campo se llama `password_hash` por historia, pero lo que llega es la contraseña en claro: el hash lo
+ * hace este endpoint con bcrypt. Por eso el límite de 100 es de contraseña, no de hash.
+ */
+const actualizarPerfilSchema = z.object({
+    avatar_url: z.string().max(2048).nullable().optional(),
+    password_hash: z.string().min(8, 'La contraseña debe tener al menos 8 caracteres.').max(100).optional(),
+});
+
+router.put('/api/profile', verifyToken, validateBody(actualizarPerfilSchema), async (req: any, res: Response) => { // eslint-disable-line @typescript-eslint/no-explicit-any
     try {
         const userId = req.user.id;
         const { avatar_url, password_hash } = req.body;
