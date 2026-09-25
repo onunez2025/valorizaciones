@@ -60,7 +60,23 @@ router.post('/api/adicionales', verifyToken, validateBody(crearAdicionalSchema),
     } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
 
-router.put('/api/adicionales/:id', verifyToken, async (req: Request, res: Response) => {
+/**
+ * Esquema de la EDICIÓN de un adicional.
+ *
+ * Como en las penalidades, el POST validaba y el PUT no: crear con importe válido y editar después
+ * dejaba escribir cualquier cosa en `Importe decimal(18,2)`.
+ *
+ * Aquí el importe SÍ admite negativos, y eso es deliberado: de los 1.841 adicionales existentes, 123
+ * tienen importe cero o negativo (mínimo -60), con motivos como «Servicio no realizado» o «Zona
+ * alejada» — son descuentos registrados como adicional negativo (medido el 2026-09-25). El
+ * `positive()` del POST hermano no los admitiría, así que copiarlo aquí impediría editarlos.
+ */
+const editarAdicionalSchema = z.object({
+    motivo: z.string().trim().min(1).max(200),
+    importe: z.number().finite().min(-1_000_000).max(1_000_000),
+});
+
+router.put('/api/adicionales/:id', verifyToken, validateBody(editarAdicionalSchema), async (req: Request, res: Response) => {
     const { id } = req.params;
     const { motivo, importe } = req.body;
     const currentUser = (req as AuthRequest).user as JwtUserPayload;
@@ -90,7 +106,7 @@ router.put('/api/adicionales/:id', verifyToken, async (req: Request, res: Respon
         const updAddReq = db.request();
         addInput(updAddReq, 'id', sql.VarChar(8), id);
         addInput(updAddReq, 'motivo', sql.NVarChar(200), motivo);
-        addInput(updAddReq, 'importe', sql.Decimal(10, 2), importe);
+        addInput(updAddReq, 'importe', sql.Decimal(18, 2), importe);
         await updAddReq.query(`
                 UPDATE [dbo].[GAC_APP_TB_TICKETS_VALORIZACION_ADICIONAL]
                 SET Motivo = @motivo, Importe = @importe

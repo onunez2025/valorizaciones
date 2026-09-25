@@ -56,7 +56,37 @@ router.post('/api/penalties', verifyToken, validateBody(crearPenalidadSchema), a
     } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
 
-router.put('/api/penalties/:id', verifyToken, async (req: Request, res: Response) => {
+/**
+ * Esquema de la EDICIÓN de una penalidad.
+ *
+ * El POST hermano ya validaba; el PUT escribía en `Importe decimal(18,2)` lo que llegase, así que
+ * bastaba crear una penalidad con importe válido y editarla después para saltarse la comprobación.
+ *
+ * Lo que este esquema NO hace, y es deliberado: exigir que `motivo` e `importe` vengan. Se perfilaron
+ * las 9.685 penalidades existentes el 2026-09-25 y el histórico no lo permite:
+ *   - 804 tienen `Motivo` NULL. Son todas de 2024 (abril a agosto), todas con `Descripcion` rellena —
+ *     el formato anterior a que existiera el campo `Motivo` — y las 804 siguen en estado «Pendiente»
+ *     sin cerrar en ninguna valorización, o sea que hoy se pueden editar. Un `min(1)` devolvería 400
+ *     al guardarlas.
+ *   - 14 tienen `Importe` NULL y 23 lo tienen a 0, también «Pendiente». Por eso tampoco se copia el
+ *     `positive()` del POST hermano: impediría corregir justo las que están sin cerrar.
+ * Obligar a rellenar el motivo al editar sería una mejora razonable, pero es una decisión funcional,
+ * no de seguridad, y cambiaría el comportamiento de una pantalla en producción.
+ *
+ * Lo que sí cierra: que en `Importe decimal(18,2)` se escriba un texto, un objeto o un array, y que
+ * los textos desborden. Los máximos son los del `.input()` de abajo, no los de la columna: `Motivo` es
+ * `varchar(MAX)` en la BD pero se escribe con `NVarChar(200)`, y admitir más sería truncar en silencio.
+ */
+const editarPenalidadSchema = z.object({
+    fecha: z.string().trim()
+        .regex(/^\d{4}-\d{2}-\d{2}/, 'Se esperaba una fecha yyyy-mm-dd.')
+        .transform((v) => v.slice(0, 10)),
+    motivo: z.string().trim().max(200).nullish(),
+    descripcion: z.string().max(500).nullish(),
+    importe: z.number().finite().min(0).max(99_999_999.99).nullish(),
+});
+
+router.put('/api/penalties/:id', verifyToken, validateBody(editarPenalidadSchema), async (req: Request, res: Response) => {
     const { id } = req.params;
     const { fecha, motivo, descripcion, importe } = req.body;
     const currentUser = (req as AuthRequest).user as JwtUserPayload;
@@ -94,7 +124,7 @@ router.put('/api/penalties/:id', verifyToken, async (req: Request, res: Response
         addInput(updPenReq, 'fecha', sql.Date, fecha);
         addInput(updPenReq, 'motivo', sql.NVarChar(200), motivo);
         addInput(updPenReq, 'desc', sql.NVarChar(500), descripcion ?? null);
-        addInput(updPenReq, 'importe', sql.Decimal(10, 2), importe);
+        addInput(updPenReq, 'importe', sql.Decimal(18, 2), importe);
         await updPenReq.query(`
                 UPDATE [dbo].[GAC_APP_TB_TICKETS_DESCUENTOS]
                 SET Fecha = @fecha, Motivo = @motivo, Descripcion = @desc, Importe = @importe

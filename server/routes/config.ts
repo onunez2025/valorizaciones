@@ -59,7 +59,47 @@ router.get('/api/config-distritos', verifyToken, async (_req: Request, res: Resp
     } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
 
-router.post('/api/config-distritos', verifyToken, async (req: Request, res: Response) => {
+/**
+ * Esquemas de las dos reglas de importe que se aplican por distrito y por canal institucional.
+ *
+ * Una sola de estas filas fija lo que se paga por CADA ticket de los distritos o del área que liste, así
+ * que su importe es tan sensible como el del cierre. Los dos endpoints escribían `Importe decimal(18,2)`
+ * y dos `date` de vigencia con lo que llegase en el body.
+ *
+ * Perfilado el 2026-09-25: 2 reglas de distrito (importes 5 y 10) y 1 de canal (25). `CAS_Ids` y
+ * `Distritos` se guardan como JSON en `nvarchar(MAX)`, y las fechas de vigencia son `date`.
+ */
+const fechaVigencia = z.string().trim()
+    .regex(/^\d{4}-\d{2}-\d{2}/, 'Se esperaba una fecha yyyy-mm-dd.')
+    .transform((v) => v.slice(0, 10));
+
+/** Importe unitario de la regla: positivo y dentro de `decimal(18,2)`. */
+const importeRegla = z.number().finite().positive().max(99_999_999.99);
+
+const configDistritoSchema = z.object({
+    id: z.number().int().positive().nullish(),
+    cas_ids: z.array(z.string().trim().min(1).max(50)).min(1).max(500),
+    distritos: z.array(z.string().trim().min(1).max(120)).min(1).max(2_000),
+    importe: importeRegla,
+    fecha_inicio: fechaVigencia,
+    fecha_fin: fechaVigencia.nullish(),
+    activo: z.boolean().nullish(),
+}).refine((v) => !v.fecha_fin || v.fecha_inicio <= v.fecha_fin, {
+    message: 'La vigencia no puede terminar antes de empezar.', path: ['fecha_fin'],
+});
+
+const configCanalSchema = z.object({
+    id: z.number().int().positive().nullish(),
+    cupo_area: z.string().trim().min(1).max(50),
+    importe: importeRegla,
+    fecha_inicio: fechaVigencia,
+    fecha_fin: fechaVigencia.nullish(),
+    activo: z.boolean().nullish(),
+}).refine((v) => !v.fecha_fin || v.fecha_inicio <= v.fecha_fin, {
+    message: 'La vigencia no puede terminar antes de empezar.', path: ['fecha_fin'],
+});
+
+router.post('/api/config-distritos', verifyToken, validateBody(configDistritoSchema), async (req: Request, res: Response) => {
     try {
         const { id, cas_ids, distritos, importe, fecha_inicio, fecha_fin, activo } = req.body;
         const user = (req as AuthRequest).user!.username;
@@ -127,7 +167,7 @@ router.get('/api/config-canal-institucional', verifyToken, async (_req: Request,
     } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
 
-router.post('/api/config-canal-institucional', verifyToken, async (req: Request, res: Response) => {
+router.post('/api/config-canal-institucional', verifyToken, validateBody(configCanalSchema), async (req: Request, res: Response) => {
     try {
         const { id, cupo_area, fecha_inicio, fecha_fin, importe, activo } = req.body;
         const user = (req as AuthRequest).user!.username;

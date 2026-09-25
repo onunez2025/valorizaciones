@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { z } from 'zod';
 import { buscarTickets } from '@siatc/c4c-client';
 import type { Request, Response } from 'express';
 import sql from 'mssql';
@@ -9,6 +10,7 @@ import { logAudit } from '../lib/audit.js';
 import { assertCasRuc } from '../lib/casFilter.js';
 import { MS_GRAPH_SENDER_EMAIL } from '../lib/config.js';
 import { addInput } from '../lib/db.js';
+import { validateBody } from '../lib/validate.js';
 import { getGraphToken } from '../lib/graph.js';
 import { safeError, sanitizeLog } from '../lib/security.js';
 import { verifyPermission, verifyToken } from '../middleware/auth.js';
@@ -381,7 +383,108 @@ router.post('/api/valuations/batch-discount', verifyToken, async (req: Request, 
     }
 });
 
-router.post('/api/valuations/close', verifyToken, async (req: Request, res: Response) => {
+/**
+ * Esquemas del cierre de quincena — el dato que termina siendo la factura del CAS.
+ *
+ * Hasta aquí este endpoint desestructuraba once campos de `req.body` y los metía en columnas
+ * `decimal(18,2)` sin mirarlos: cualquier usuario autenticado podía fijar el importe a facturar.
+ *
+ * Los límites de abajo salen de perfilar las 113 valorizaciones y sus 93.440 líneas de detalle
+ * (2026-09-25), no de suponer:
+ *   - `Total_Servicios` y `Total_Penalidades` son `int` en la BD: son CONTEOS de líneas, no importes
+ *     (rangos reales 1..2334 y 0..82). El código los pasaba como `Decimal(18,2)`.
+ *   - Los importes viven en `Subtotal_Servicios`, `Subtotal_Penalidades` y `Total_Final`
+ *     (rangos reales 179..78.498 y 179..76.578,50).
+ *   - `Cerrado_Por` es `varchar(100)`, no 255 como declaraba el `.input()`.
+ *   - En el detalle, las penalidades se guardan con `Monto` NEGATIVO (-1081,50..0) mientras el
+ *     subtotal de la cabecera es positivo: de ahí el `Math.abs` de la comprobación cruzada.
+ */
+const importeCierre = z.number().finite().min(0).max(99_999_999.99);
+
+/** Conteo de líneas: `int` en la BD. */
+const conteoLineas = z.number().int().min(0).max(1_000_000);
+
+/** Llega `yyyy-mm-dd`, o ISO completo según el navegador; la columna es `date`, así que se queda el día. */
+const fechaDia = z.string().trim()
+    .regex(/^\d{4}-\d{2}-\d{2}/, 'Se esperaba una fecha yyyy-mm-dd.')
+    .transform((v) => v.slice(0, 10));
+
+/** Fecha que el handler pasa por `new Date(...)`: se exige que sea parseable o no habrá fila que insertar. */
+const fechaSuelta = z.string().trim().min(1).max(40)
+    .refine((v) => !Number.isNaN(new Date(v).getTime()), 'Fecha no interpretable.')
+    .nullish();
+
+/** Texto opcional de una celda del detalle, acotado al ancho de su columna. */
+const textoDetalle = (max: number) => z.string().max(max).nullish();
+
+/** Una línea del detalle. Los máximos son los de la columna, no los observados, para no rechazar casos nuevos. */
+const detalleCierreSchema = z.object({
+    ticket: textoDetalle(50),
+    monto: z.number().finite().min(-1_000_000).max(1_000_000).nullish(),
+    fecha: fechaSuelta,
+    tipo: z.enum(['SERVICIO', 'PENALIDAD']).nullish(),
+    servicio: textoDetalle(255),
+    categoria: textoDetalle(100),
+    fechaVisita: fechaSuelta,
+    fechaCierre: fechaSuelta,
+    diasDiferencia: z.number().int().min(-10_000).max(10_000).nullish(),
+    codigoExterno: textoDetalle(100),
+    tarifaBase: z.number().finite().min(-1_000_000).max(1_000_000).nullish(),
+    adicionales: z.number().finite().min(-1_000_000).max(1_000_000).nullish(),
+    // El handler le aplica `.toString()`: puede venir como número.
+    idReferencia: z.union([z.string().max(50), z.number()]).nullish(),
+    distrito: textoDetalle(100),
+    departamento: textoDetalle(100),
+    nombreEquipo: textoDetalle(255),
+    servicioInicial: textoDetalle(100),
+});
+
+const cerrarValorizacionSchema = z.object({
+    idCierre: z.number().int().positive().nullish(),
+    ruc: z.string().trim().min(8).max(20),
+    nombreCas: z.string().trim().min(1).max(255),
+    start: fechaDia,
+    end: fechaDia,
+    totalServicios: conteoLineas,
+    totalPenalidades: conteoLineas,
+    subtotalServicios: importeCierre,
+    subtotalPenalidades: importeCierre,
+    totalFinal: importeCierre,
+    cerradoPor: z.string().trim().min(1).max(100),
+    estado: z.enum(['BORRADOR', 'CERRADO']).nullish(),
+    details: z.array(detalleCierreSchema).max(50_000).nullish(),
+})
+    .refine((v) => v.start <= v.end, {
+        message: 'La fecha de inicio no puede ser posterior a la de fin.', path: ['start'],
+    })
+    // Las dos comprobaciones que siguen cuadran en las 113 valorizaciones existentes, medido antes de
+    // activarlas. Son las que impiden que el total facturado sea un número inventado por el cliente.
+    .refine((v) => Math.abs(v.totalFinal - (v.subtotalServicios - v.subtotalPenalidades)) <= 0.05, {
+        message: 'El total no cuadra: debe ser el subtotal de servicios menos el de penalidades.',
+        path: ['totalFinal'],
+    })
+    .refine((v) => {
+        if (!v.details || v.details.length === 0) return true;
+        const suma = v.details
+            .filter((d) => d.tipo !== 'PENALIDAD')
+            .reduce((acc, d) => acc + (d.monto ?? 0), 0);
+        return Math.abs(v.subtotalServicios - suma) <= 0.05;
+    }, {
+        message: 'El subtotal de servicios no coincide con la suma de su propio detalle.',
+        path: ['subtotalServicios'],
+    })
+    .refine((v) => {
+        if (!v.details || v.details.length === 0) return true;
+        const suma = v.details
+            .filter((d) => d.tipo === 'PENALIDAD')
+            .reduce((acc, d) => acc + Math.abs(d.monto ?? 0), 0);
+        return Math.abs(v.subtotalPenalidades - suma) <= 0.05;
+    }, {
+        message: 'El subtotal de penalidades no coincide con la suma de su propio detalle.',
+        path: ['subtotalPenalidades'],
+    });
+
+router.post('/api/valuations/close', verifyToken, validateBody(cerrarValorizacionSchema), async (req: Request, res: Response) => {
     const {
         idCierre, // Si viene idCierre, es una actualización de un borrador
         ruc, nombreCas, start, end,
@@ -424,13 +527,13 @@ router.post('/api/valuations/close', verifyToken, async (req: Request, res: Resp
                 // 1. Actualizar Cabecera
                 const updHdrReq = new sql.Request(transaction);
                 addInput(updHdrReq, 'id', sql.Int, actualIdCierre);
-                addInput(updHdrReq, 'totalServicios', sql.Decimal(18, 2), totalServicios);
-                addInput(updHdrReq, 'totalPenalidades', sql.Decimal(18, 2), totalPenalidades);
+                addInput(updHdrReq, 'totalServicios', sql.Int, totalServicios);
+                addInput(updHdrReq, 'totalPenalidades', sql.Int, totalPenalidades);
                 addInput(updHdrReq, 'subtotalServicios', sql.Decimal(18, 2), subtotalServicios);
                 addInput(updHdrReq, 'subtotalPenalidades', sql.Decimal(18, 2), subtotalPenalidades);
                 addInput(updHdrReq, 'totalFinal', sql.Decimal(18, 2), totalFinal);
                 addInput(updHdrReq, 'estado', sql.VarChar(20), finalEstado);
-                addInput(updHdrReq, 'user', sql.NVarChar(255), cerradoPor);
+                addInput(updHdrReq, 'user', sql.VarChar(100), cerradoPor);
                 await updHdrReq.query(`
                         UPDATE [dbo].[GAC_APP_TB_VALORIZACIONES_CIERRES]
                         SET Total_Servicios = @totalServicios,
@@ -463,12 +566,12 @@ router.post('/api/valuations/close', verifyToken, async (req: Request, res: Resp
                 addInput(insHdrReq, 'nombreCas', sql.NVarChar(255), nombreCas);
                 addInput(insHdrReq, 'start', sql.VarChar(30), start);
                 addInput(insHdrReq, 'end', sql.VarChar(30), end);
-                addInput(insHdrReq, 'totalServicios', sql.Decimal(18, 2), totalServicios);
-                addInput(insHdrReq, 'totalPenalidades', sql.Decimal(18, 2), totalPenalidades);
+                addInput(insHdrReq, 'totalServicios', sql.Int, totalServicios);
+                addInput(insHdrReq, 'totalPenalidades', sql.Int, totalPenalidades);
                 addInput(insHdrReq, 'subtotalServicios', sql.Decimal(18, 2), subtotalServicios);
                 addInput(insHdrReq, 'subtotalPenalidades', sql.Decimal(18, 2), subtotalPenalidades);
                 addInput(insHdrReq, 'totalFinal', sql.Decimal(18, 2), totalFinal);
-                addInput(insHdrReq, 'cerradoPor', sql.NVarChar(255), cerradoPor);
+                addInput(insHdrReq, 'cerradoPor', sql.VarChar(100), cerradoPor);
                 addInput(insHdrReq, 'estado', sql.VarChar(20), finalEstado);
                 const result = await insHdrReq.query(`
                         INSERT INTO [dbo].[GAC_APP_TB_VALORIZACIONES_CIERRES]
@@ -643,7 +746,34 @@ router.post('/api/valuations/reopen/:id', verifyToken, verifyPermission('val.reo
     }
 });
 
-router.post('/api/valuations/send-email', verifyToken, async (req: Request, res: Response) => {
+/**
+ * Esquema del envío de la valorización por correo.
+ *
+ * Este endpoint manda el correo desde la cuenta corporativa (`MS_GRAPH_SENDER_EMAIL`) vía Microsoft
+ * Graph. Sin validación, cualquier usuario con sesión podía elegir destinatario, asunto, cuerpo HTML y
+ * adjunto arbitrarios — es decir, redactar correo a nombre de la empresa. Aquí se exige que los
+ * destinatarios sean direcciones con formato de correo y se acotan los tamaños.
+ *
+ * Lo que esto NO hace: restringir a qué dominios se puede escribir. Eso es una decisión de negocio
+ * (hoy el Excel sale legítimamente a direcciones externas de cada CAS) y habría que sacar la lista de
+ * `GAC_APP_TB_CAS_EMAILS`, no codificarla aquí.
+ */
+const enviarValorizacionPorCorreoSchema = z.object({
+    to: z.string().trim().min(5).max(2_000),
+    subject: z.string().trim().min(1).max(500),
+    body: z.string().max(500_000),
+    attachmentName: z.string().trim().max(255).nullish(),
+    // ~15 MB de base64 ≈ 11 MB de fichero; Graph rechaza los adjuntos grandes por su cuenta.
+    attachmentBase64: z.string().max(15_000_000)
+        .refine((v) => /^[A-Za-z0-9+/=\r\n]*$/.test(v), 'El adjunto no es base64.')
+        .nullish(),
+}).refine((v) => {
+    const destinatarios = v.to.split(/[,;]/).map((e) => e.trim()).filter((e) => e !== '');
+    if (destinatarios.length === 0 || destinatarios.length > 50) return false;
+    return destinatarios.every((e) => z.string().email().max(254).safeParse(e).success);
+}, { message: 'Destinatarios inválidos: se esperan hasta 50 direcciones de correo separadas por , o ;', path: ['to'] });
+
+router.post('/api/valuations/send-email', verifyToken, validateBody(enviarValorizacionPorCorreoSchema), async (req: Request, res: Response) => {
     const { to, subject, body, attachmentName, attachmentBase64 } = req.body;
     try {
         const token = await getGraphToken();

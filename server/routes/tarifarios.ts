@@ -1,9 +1,11 @@
 import { Router } from 'express';
+import { z } from 'zod';
 import type { Request, Response } from 'express';
 import sql from 'mssql';
 import crypto from 'crypto';
 import { getReadPool, getWritePool } from '../db.js';
 import { addInput } from '../lib/db.js';
+import { validateBody } from '../lib/validate.js';
 import { safeError } from '../lib/security.js';
 import { verifyPermission, verifyToken } from '../middleware/auth.js';
 import type { AuthRequest } from '../middleware/auth.js';
@@ -292,7 +294,49 @@ router.post('/api/tarifarios/import/preview', verifyToken, async (req: Request, 
     } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
 
-router.post('/api/tarifarios/import/confirm', verifyToken, async (req: Request, res: Response) => {
+/**
+ * Esquema de la confirmación de la importación de tarifario — lo que se paga por servicio y categoría.
+ *
+ * El importe llega del Excel como texto y se escribía con `parseFloat(row.Importe)` sin comprobar el
+ * resultado: una celda con texto da `NaN`, y `NaN` no se queda en el aire, se guarda. La vista previa de
+ * este mismo fichero sí comprueba `isNaN` y marca la fila como ERROR; el confirm, que es el que escribe,
+ * no comprobaba nada — y nada obliga a pasar por la previa antes de confirmar.
+ *
+ * La regla del importe es a propósito la MISMA que la de la previa (`parseFloat` a secas, sin admitir
+ * coma decimal): si fuera más permisiva aquí, el confirm aceptaría filas que la previa marca en rojo, y si
+ * fuera más estricta rechazaría filas que la previa da por buenas. Solo se añade que no sea negativo.
+ *
+ * Perfilado el 2026-09-25 sobre las 3.423 tarifas vigentes: importes de 20 a 375, `Categoria` hasta 38
+ * caracteres (columna 100), `Servicio` hasta 20 (columna 50), `Empresa` hasta 8 (columna 50).
+ */
+const importeTarifa = z.union([z.string(), z.number()]).refine((v) => {
+    const n = typeof v === 'number' ? v : parseFloat(String(v));
+    return Number.isFinite(n) && n >= 0 && n <= 1_000_000;
+}, 'El importe de la tarifa debe ser un número no negativo.');
+
+const fechaTarifa = z.string().trim()
+    .regex(/^\d{4}-\d{2}-\d{2}/, 'Se esperaba una fecha yyyy-mm-dd.');
+
+const confirmarTarifarioSchema = z.object({
+    rows: z.array(z.object({
+        CAS_Nombre: z.string().max(255).nullish(),
+        Categoria: z.string().trim().min(1).max(100),
+        Servicio: z.string().trim().min(1).max(100),
+        Fecha_inicio: fechaTarifa,
+        Fecha_fin: fechaTarifa.nullish(),
+        Importe: importeTarifa,
+        // `VarChar(1)` en la BD: 'A' activa, 'I' inactiva.
+        Estado: z.enum(['A', 'I']).nullish(),
+        CAS_ID: z.number().int().nullish(),
+        // Lo pone la vista previa; el confirm decide con ello si inserta o actualiza.
+        Status: z.enum(['INSERT', 'UPDATE', 'OK']).nullish(),
+        Message: z.string().max(500).nullish(),
+        Importe_Actual: z.number().nullish(),
+        ID_Tarifario: z.string().max(50).nullish(),
+    })).min(1).max(20_000),
+});
+
+router.post('/api/tarifarios/import/confirm', verifyToken, validateBody(confirmarTarifarioSchema), async (req: Request, res: Response) => {
     const { rows } = req.body as { rows: TarifarioImportRow[] };
     const currentUser = (req as AuthRequest).user!;
     try {
@@ -329,7 +373,7 @@ router.post('/api/tarifarios/import/confirm', verifyToken, async (req: Request, 
                         .input('casId', sql.VarChar(50), row.CAS_ID)
                         .input('cat', sql.VarChar(100), cat)
                         .input('serv', sql.VarChar(100), serv)
-                        .input('imp', sql.Decimal(18, 2), parseFloat(row.Importe))
+                        .input('imp', sql.Decimal(18, 2), parseFloat(String(row.Importe)))
                         .input('fi', sql.Date, new Date(row.Fecha_inicio))
                         .input('ff', sql.Date, row.Fecha_fin ? new Date(row.Fecha_fin) : null)
                         .input('est', sql.VarChar(10), row.Estado || 'A')
@@ -360,7 +404,7 @@ router.post('/api/tarifarios/import/confirm', verifyToken, async (req: Request, 
                     }
                     await new sql.Request(transaction)
                         .input('id', sql.VarChar(8), row.ID_Tarifario)
-                        .input('imp', sql.Decimal(18, 2), parseFloat(row.Importe))
+                        .input('imp', sql.Decimal(18, 2), parseFloat(String(row.Importe)))
                         .input('ff', sql.Date, row.Fecha_fin ? new Date(row.Fecha_fin) : null)
                         .input('est', sql.VarChar(10), row.Estado || 'A')
                         .input('user', sql.VarChar(100), currentUser.username)
