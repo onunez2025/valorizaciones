@@ -11,9 +11,7 @@ import dashboardRouter from './routes/dashboard.js';
 import c4cRouter from './routes/c4c.js';
 import penaltiesRouter from './routes/penalties.js';
 import adicionalesRouter from './routes/adicionales.js';
-import usersRouter from './routes/users.js';
 import profileRouter from './routes/profile.js';
-import rolesRouter from './routes/roles.js';
 import tarifariosRouter from './routes/tarifarios.js';
 import valuationsRouter from './routes/valuations.js';
 import closuresRouter from './routes/closures.js';
@@ -351,12 +349,13 @@ app.use(managementsRouter);
 
 // PREFERENCES
 
-app.use(usersRouter);
 
+// Unica ruta de esta app que escribe en EBM.Users, y solo sobre el usuario de la sesion. El CRUD
+// completo de usuarios y roles vivia aqui duplicado y se retiro el 2026-09-25: ninguna pantalla lo
+// llamaba desde que la administracion de usuarios se centralizo en SIATC Console.
 app.use(profileRouter);
 
 
-app.use(rolesRouter);
 
 
 // AUDIT LOGS: solo servia a la pagina local AuditLogPage.tsx (eliminada) -- la escritura de
