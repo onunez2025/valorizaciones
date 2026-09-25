@@ -11,6 +11,7 @@ import { useAppConfig } from './context/AppConfigContext';
 const LoginPage = lazy(() => import('./pages/LoginPage'));
 const SsoLoginPage = lazy(() => import('./pages/SsoLoginPage'));
 const SsoStatusPage = lazy(() => import('./pages/SsoStatusPage'));
+const ForceChangePasswordPage = lazy(() => import('./pages/ForceChangePasswordPage'));
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
 const ValuationsPage = lazy(() => import('./pages/ValuationsPage'));
 const TarifarioPage = lazy(() => import('./pages/TarifarioPage'));
@@ -65,6 +66,7 @@ function App() {
               <Route path="/sso-login" element={<SsoLoginPage />} />
               <Route path="/sso-status" element={<SsoStatusPage />} />
 
+              <Route path="/force-change-password" element={<ForceChangePasswordPage />} />
               {/* Rutas protegidas se añadirán con MainLayout */}
               <Route element={<MainLayout />}>
                 <Route path="/dashboard" element={<DashboardPage />} />

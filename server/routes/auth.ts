@@ -13,6 +13,7 @@ import { safeError } from '../lib/security.js';
 import { clearSharedCookie, verifyToken } from '../middleware/auth.js';
 import type { AuthRequest } from '../middleware/auth.js';
 import { JWT_SECRET } from '../lib/env.js';
+import { validateBody } from '../lib/validate.js';
 
 // JWT_SECRET: se lee a nivel de modulo, seguro porque index.ts importa './lib/env.js' primero.
 
@@ -150,8 +151,59 @@ router.get('/api/auth/me', verifyToken, async (req: Request, res: Response) => {
         if (dominioCompartido && !ssoPilot) {
             res.cookie('token', ssoTokenMe, { domain: dominioCompartido, maxAge: 12 * 60 * 60 * 1000, httpOnly: false, secure: true, sameSite: 'lax', path: '/' });
         }
-        res.json({ token: freshToken, user: { id: user.Id, username: user.Username, full_name: user.FullName, email: user.Email, role_name: user.RoleName, management_id: user.ManagementId, management_name: user.ManagementName, avatar_url: user.AvatarUrl, permissions: perms, apps: user.Apps, casId: user.cas_id || null, casRUC: user.cas_ruc || null } });
+        res.json({ token: freshToken, user: { id: user.Id, username: user.Username, full_name: user.FullName, email: user.Email, role_name: user.RoleName, management_id: user.ManagementId, management_name: user.ManagementName, avatar_url: user.AvatarUrl, permissions: perms, apps: user.Apps, casId: user.cas_id || null, casRUC: user.cas_ruc || null, requires_password_change: user.RequiresPasswordChange === 1 } });
     } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
+});
+
+/**
+ * Cambio de contrasena obligatorio.
+ *
+ * El alta de usuarios graba `RequiresPasswordChange = 1` y el login devuelve ese dato, pero hasta el
+ * 2026-09-25 esta app no tenia el endpoint que limpia la marca, asi que la pantalla no podia existir y
+ * la proteccion no se aplicaba: el usuario entraba con la contrasena temporal y nadie se enteraba.
+ *
+ * Solo opera sobre el usuario de la sesion —nunca acepta un id por parametro— y exige la contrasena
+ * actual, para que un token robado no sirva para apropiarse de la cuenta cambiandole la clave.
+ */
+const cambioObligatorioSchema = z.object({
+    currentPassword: z.string().min(1, 'La contrasena actual es obligatoria.').max(100),
+    newPassword: z.string().min(8, 'La contrasena debe tener al menos 8 caracteres.').max(100),
+});
+
+router.post('/api/auth/force-change-password', verifyToken, validateBody(cambioObligatorioSchema), async (req: Request, res: Response) => {
+    try {
+        const userId = (req as AuthRequest).user?.id;
+        if (!userId) return res.status(401).json({ error: 'Sesion no valida.' });
+
+        const { currentPassword, newPassword } = req.body as { currentPassword: string; newPassword: string };
+
+        const pool = await getWritePool();
+        const userResult = await pool.request()
+            .input('id', sql.UniqueIdentifier, userId)
+            .query('SELECT PasswordHash FROM EBM.Users WHERE Id = @id');
+
+        const usuario = userResult.recordset[0];
+        if (!usuario) return res.status(400).json({ error: 'Usuario no encontrado.' });
+
+        const coincide = await bcrypt.compare(currentPassword, usuario.PasswordHash);
+        if (!coincide) return res.status(401).json({ error: 'La contrasena actual es incorrecta.' });
+
+        const esLaMisma = newPassword === currentPassword || await bcrypt.compare(newPassword, usuario.PasswordHash);
+        if (esLaMisma) return res.status(400).json({ error: 'La nueva contrasena no puede ser igual a la actual.' });
+
+        const salt = await bcrypt.genSalt(10);
+        const passwordHash = await bcrypt.hash(newPassword, salt);
+
+        await pool.request()
+            .input('hash', sql.NVarChar(sql.MAX), passwordHash)
+            .input('id', sql.UniqueIdentifier, userId)
+            .query('UPDATE EBM.Users SET PasswordHash = @hash, RequiresPasswordChange = 0 WHERE Id = @id');
+
+        res.json({ message: 'Contrasena actualizada correctamente.' });
+    } catch (err: unknown) {
+        console.error('Error en el cambio obligatorio de contrasena:', err);
+        res.status(500).json({ error: safeError(err) });
+    }
 });
 
 export default router;

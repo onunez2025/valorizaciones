@@ -665,5 +665,28 @@
       "title": "¡Éxito!",
       "message": "La tarifa ha sido creada y aplicada."
     }
+  },
+  "forcePassword": {
+    "title": "Cambiar Contraseña",
+    "subtitle": "Debe actualizar su contraseña antes de continuar",
+    "labels": {
+      "current": "Contraseña Actual",
+      "new": "Nueva Contraseña",
+      "confirm": "Confirmar Contraseña"
+    },
+    "placeholders": {
+      "current": "Ingrese contraseña actual",
+      "new": "Mínimo 8 caracteres",
+      "confirm": "Repita la nueva contraseña"
+    },
+    "submit": "Actualizar Contraseña",
+    "submitting": "Actualizando...",
+    "errors": {
+      "required": "Todos los campos son requeridos",
+      "mismatch": "Las contraseñas no coinciden",
+      "tooShort": "La nueva contraseña debe tener al menos 8 caracteres",
+      "failed": "Error al cambiar la contraseña",
+      "connection": "Error de conexión con el servidor"
+    }
   }
 }

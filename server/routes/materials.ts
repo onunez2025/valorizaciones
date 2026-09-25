@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { z } from 'zod';
 import crypto from 'crypto';
 import type { Request, Response } from 'express';
 import sql from 'mssql';
@@ -6,6 +7,7 @@ import { getReadPool, getWritePool } from '../db.js';
 import { addInput } from '../lib/db.js';
 import { safeError } from '../lib/security.js';
 import { verifyToken } from '../middleware/auth.js';
+import { validateBody } from '../lib/validate.js';
 
 // Este router se monta en `/` conservando las rutas completas y en la misma posicion en que se
 // definian en index.ts. Comprobado con scripts/verificar-orden-rutas.py que ningun par de rutas
@@ -46,7 +48,20 @@ router.get('/api/materials/categories', verifyToken, async (_req: Request, res: 
     } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
 
-router.post('/api/materials', verifyToken, async (req: Request, res: Response) => {
+/**
+ * Alta o actualizacion de un material del catalogo. Perfilado el 2026-09-25 sobre los 14.608 materiales:
+ * `ID_Externo` llega hasta 33 caracteres (columna 50), el nombre 50, la categoria 38, y el sector son
+ * siglas de 3 (`GAC`, `SE`, `EM`), con nulos. Los limites son los del `.input()`, no los observados.
+ */
+const materialSchema = z.object({
+    idExterno: z.string().trim().min(1).max(50),
+    nombre: z.string().trim().min(1).max(255),
+    categoria: z.string().trim().max(100).nullish(),
+    // El handler pone 'GAC' si no viene.
+    sector: z.string().trim().max(50).nullish(),
+});
+
+router.post('/api/materials', verifyToken, validateBody(materialSchema), async (req: Request, res: Response) => {
     const { idExterno, nombre, categoria, sector } = req.body;
     try {
         const db = await getWritePool();

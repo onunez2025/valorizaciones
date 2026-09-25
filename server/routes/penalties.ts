@@ -140,7 +140,20 @@ router.put('/api/penalties/:id', verifyToken, validateBody(editarPenalidadSchema
     } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
 
-router.post('/api/penalties/:id/status', verifyToken, async (req: Request, res: Response) => {
+/**
+ * Anular o rehabilitar una penalidad. El enum se puede cerrar con seguridad: la pantalla solo manda
+ * `Anulado` o `Pendiente` (ValuationsPage.tsx:772) y en la tabla no hay otros valores —medido el
+ * 2026-09-25: 9.641 «Pendiente» y 44 «Anulado»—.
+ *
+ * El cuerpo traia tambien `isCas`, con el que el cliente se autodeclaraba empresa CAS; ya no se lee y
+ * el esquema lo descarta, que es justo lo que se queria.
+ */
+const estadoPenalidadSchema = z.object({
+    status: z.enum(['Anulado', 'Pendiente']),
+    observation: z.string().max(500).nullish(),
+});
+
+router.post('/api/penalties/:id/status', verifyToken, validateBody(estadoPenalidadSchema), async (req: Request, res: Response) => {
     const { id } = req.params;
     // Nota: aqui se recibia tambien `isCas` del cuerpo de la peticion — es decir, el cliente
     // se autodeclaraba empresa CAS. No se usaba para nada (su unica lectura era una linea

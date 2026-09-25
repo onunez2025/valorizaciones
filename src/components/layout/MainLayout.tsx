@@ -111,6 +111,11 @@ export function MainLayout() {
         return <Navigate to="/login" replace />;
     }
 
+    // El alta de usuarios marca RequiresPasswordChange = 1: hasta que no cambie la contrasena
+    // temporal no se le deja pasar. Va aqui y no solo en el login para que valga tambien
+    // cuando la sesion se restaura o se entra por SSO.
+    if (user?.requires_password_change) return <Navigate to="/force-change-password" replace />;
+
     return (
         <div className="h-dvh bg-cb-bg text-foreground flex overflow-hidden font-sans">
             {isLoggingOut && (

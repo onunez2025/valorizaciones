@@ -221,14 +221,37 @@ router.get('/api/valuations/:ruc', verifyToken, async (req: Request, res: Respon
     }
 });
 
-router.post('/api/valuations/batch-adjustment', verifyToken, async (req: Request, res: Response) => {
+/**
+ * Esquemas de los dos ajustes en bloque.
+ *
+ * `batch-adjustment` calcula `delta = targetAmount - base` y escribe el delta en un `Decimal(10,2)`. Con
+ * un `targetAmount` que no fuera numero el delta salia NaN, y NaN no se queda en el aire: se guarda. Por
+ * eso aqui se exige numero de verdad y no se admite la cadena numerica.
+ *
+ * `batch-discount` recibe una lista de objetos `{ id, amount }` y mete cada `amount` en otro
+ * `Decimal(10,2)`. Los descuentos son negativos en el detalle, asi que el importe admite ambos signos.
+ */
+const ajusteEnBloqueSchema = z.object({
+    ruc: z.string().trim().min(8).max(20),
+    tickets: z.array(z.string().trim().min(1).max(50)).min(1, 'Debe proporcionar una lista de tickets.').max(20_000),
+    targetAmount: z.number().finite().min(-1_000_000).max(1_000_000),
+    motivo: z.string().trim().max(200).nullish(),
+});
+
+const descuentoEnBloqueSchema = z.object({
+    ruc: z.string().trim().min(8).max(20),
+    tickets: z.array(z.object({
+        id: z.union([z.string().max(50), z.number()]),
+        amount: z.number().finite().min(-1_000_000).max(1_000_000),
+    })).min(1, 'Debe proporcionar una lista de tickets.').max(20_000),
+    motivo: z.string().trim().max(200).nullish(),
+    descripcion: z.string().max(500).nullish(),
+});
+
+router.post('/api/valuations/batch-adjustment', verifyToken, validateBody(ajusteEnBloqueSchema), async (req: Request, res: Response) => {
     const { tickets, targetAmount, motivo, ruc } = req.body;
     const currentUser = (req as AuthRequest).user as JwtUserPayload;
     if (!assertCasRuc(currentUser, ruc, res)) return;
-
-    if (!tickets || !Array.isArray(tickets) || tickets.length === 0) {
-        return res.status(400).json({ error: "Debe proporcionar una lista de tickets." });
-    }
 
     try {
         const db = await getWritePool();
@@ -324,15 +347,11 @@ router.post('/api/valuations/batch-adjustment', verifyToken, async (req: Request
     }
 });
 
-router.post('/api/valuations/batch-discount', verifyToken, async (req: Request, res: Response) => {
+router.post('/api/valuations/batch-discount', verifyToken, validateBody(descuentoEnBloqueSchema), async (req: Request, res: Response) => {
     const { tickets, motivo, descripcion, ruc } = req.body;
     const user = (req as AuthRequest).user!;
     const currentUser = user as JwtUserPayload;
     if (!assertCasRuc(currentUser, ruc, res)) return;
-
-    if (!tickets || !Array.isArray(tickets) || tickets.length === 0) {
-        return res.status(400).json({ error: "Debe proporcionar una lista de tickets." });
-    }
 
     try {
         const db = await getWritePool();

@@ -73,7 +73,78 @@ router.get('/api/tarifarios/:casId', verifyToken, async (req: Request, res: Resp
     } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
 
-router.post('/api/tarifarios/create', verifyToken, verifyPermission('val.tarifario.edit'), async (req: Request, res: Response) => {
+/**
+ * Esquemas del tarifario: es la tabla que fija cuanto se paga por cada servicio y categoria, asi que su
+ * importe pesa tanto como el del cierre. Los cuatro endpoints de abajo escribian en `Importe
+ * decimal(18,2)` lo que llegase.
+ *
+ * Perfilado el 2026-09-25 sobre las 3.423 tarifas vigentes: importes de 20 a 375, `Categoria` hasta 38
+ * caracteres (columna 100), `Servicio` hasta 20 (columna 50), `Empresa` hasta 8 (columna 50), y el unico
+ * estado presente es 'A' (el codigo usa 'I' para inactivar, de ahi el enum de dos).
+ *
+ * La vista previa de la importacion NO se valida con el mismo rigor, y es deliberado: su trabajo es
+ * detectar filas malas y marcarlas en rojo para que el usuario las corrija. Un esquema estricto
+ * devolveria 400 y la pantalla dejaria de poder senalar el problema. Ahi solo se comprueba la forma.
+ */
+const importeTarifario = z.number().finite().min(0).max(1_000_000);
+const estadoTarifa = z.enum(['A', 'I']);
+const fechaTarifaria = z.string().trim().min(1).max(40)
+    .refine((v) => !Number.isNaN(new Date(v).getTime()), 'Fecha no interpretable.');
+
+const crearTarifaSchema = z.object({
+    empresa: z.string().trim().min(1).max(50),
+    categoria: z.string().trim().min(1).max(100),
+    servicio: z.string().trim().min(1).max(100),
+    importe: importeTarifario,
+    fecha_inicio: fechaTarifaria,
+    fecha_fin: fechaTarifaria.nullish(),
+    estado: estadoTarifa.nullish(),
+});
+
+const actualizarTarifaSchema = z.object({
+    id: z.string().trim().min(1).max(8),
+    importe: importeTarifario,
+    estado: estadoTarifa,
+});
+
+const tarifasEnBloqueSchema = z.object({
+    casId: z.string().trim().min(1).max(50),
+    rates: z.array(z.object({
+        ID_TARIFARIO: z.string().max(8).nullish(),
+        Categoria: z.string().trim().min(1).max(100),
+        Servicio: z.string().trim().min(1).max(100),
+        Importe: importeTarifario,
+        Fecha_inicio: fechaTarifaria.nullish(),
+        Fecha_fin: fechaTarifaria.nullish(),
+        Estado: estadoTarifa.nullish(),
+    })).min(1).max(20_000),
+});
+
+/** Una lista vacia significa «sin restriccion»: el handler ya la normaliza a null antes de guardar. */
+const listaDeZonas = z.array(z.string().max(200)).max(2_000).nullish();
+
+const excepcionTarifariaSchema = z.object({
+    id: z.string().max(8).nullish(),
+    empresa: z.string().trim().min(1).max(50),
+    nombre: z.string().trim().min(1).max(255),
+    zonasIncluidas: listaDeZonas,
+    zonasExcluidas: listaDeZonas,
+    categorias: listaDeZonas,
+    servicios: listaDeZonas,
+    importe: importeTarifario,
+    prioridad: z.number().int().min(0).max(100_000).nullish(),
+    estado: estadoTarifa.nullish(),
+    servicioInicial: z.string().max(100).nullish(),
+    fechaInicio: z.string().trim().regex(/^\d{4}-\d{2}-\d{2}/, 'Se esperaba yyyy-mm-dd.').nullish(),
+    fechaFin: z.string().trim().regex(/^\d{4}-\d{2}-\d{2}/, 'Se esperaba yyyy-mm-dd.').nullish(),
+});
+
+/** Laxo a proposito: la previa tiene que poder recibir filas malas para marcarlas. */
+const previaTarifarioSchema = z.object({
+    rows: z.array(z.record(z.string().max(300), z.unknown())).min(1).max(20_000),
+});
+
+router.post('/api/tarifarios/create', verifyToken, verifyPermission('val.tarifario.edit'), validateBody(crearTarifaSchema), async (req: Request, res: Response) => {
     const { empresa, categoria, servicio, importe, fecha_inicio, fecha_fin, estado } = req.body;
     const currentUser = (req as AuthRequest).user!;
     try {
@@ -104,7 +175,7 @@ router.post('/api/tarifarios/create', verifyToken, verifyPermission('val.tarifar
     } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
 
-router.post('/api/tarifarios/update', verifyToken, verifyPermission('val.tarifario.edit'), async (req: Request, res: Response) => {
+router.post('/api/tarifarios/update', verifyToken, verifyPermission('val.tarifario.edit'), validateBody(actualizarTarifaSchema), async (req: Request, res: Response) => {
     const { id, importe, estado } = req.body;
     const currentUser = (req as AuthRequest).user!;
     try {
@@ -123,7 +194,7 @@ router.post('/api/tarifarios/update', verifyToken, verifyPermission('val.tarifar
     } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
 
-router.post('/api/tarifarios/batch', verifyToken, verifyPermission('val.tarifario.edit'), async (req: Request, res: Response) => {
+router.post('/api/tarifarios/batch', verifyToken, verifyPermission('val.tarifario.edit'), validateBody(tarifasEnBloqueSchema), async (req: Request, res: Response) => {
     const { casId, rates } = req.body;
     const currentUser = (req as AuthRequest).user!;
     try {
@@ -181,7 +252,7 @@ router.get('/api/tarifarios/exceptions/:casId', verifyToken, async (req: Request
     } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
 
-router.post('/api/tarifarios/exceptions/save', verifyToken, verifyPermission('val.tarifario.edit'), async (req: Request, res: Response) => {
+router.post('/api/tarifarios/exceptions/save', verifyToken, verifyPermission('val.tarifario.edit'), validateBody(excepcionTarifariaSchema), async (req: Request, res: Response) => {
     const { id, empresa, nombre, zonasIncluidas, zonasExcluidas, categorias, servicios, importe, prioridad, estado, servicioInicial, fechaInicio, fechaFin } = req.body;
     try {
         const db = await getWritePool();
@@ -238,7 +309,7 @@ router.delete('/api/tarifarios/exceptions/:id', verifyToken, verifyPermission('v
     } catch (err: unknown) { res.status(500).json({ error: safeError(err) }); }
 });
 
-router.post('/api/tarifarios/import/preview', verifyToken, async (req: Request, res: Response) => {
+router.post('/api/tarifarios/import/preview', verifyToken, validateBody(previaTarifarioSchema), async (req: Request, res: Response) => {
     const { rows } = req.body as { rows: TarifarioImportRow[] };
     try {
         const db = await getWritePool();
