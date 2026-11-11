@@ -708,7 +708,7 @@ router.post('/api/valuations/finalize/:id', verifyToken, async (req: Request, re
     }
 });
 
-router.post('/api/valuations/reopen/:id', verifyToken, verifyPermission('val.reopen'), async (req: Request, res: Response) => {
+router.post('/api/valuations/reopen/:id', verifyToken, verifyPermission('val.valuations.reopen'), async (req: Request, res: Response) => {
     const { id } = req.params;
     const currentUser = (req as AuthRequest).user as JwtUserPayload;
     try {
